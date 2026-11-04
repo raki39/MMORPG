@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 1,
+  "description": "Metas de referência do mundo inicial (M2). Hipóteses iniciais propostas pelo Claude em 04/11/2026, definidas antes de olhar as rodadas grandes; ajustar com o criador. Não são regras do mundo.",
+  "warmupDays": 7,
+  "rareActivityPermille": 10,
+  "targets": [
+    {
+      "id": "horas_nivel_5", "name": "Horas jogadas até o nível 5 (mediana)", "metric": "hours_to_level", "level": 5,
+      "min": 2, "max": 6, "unit": "h",
+      "rationale": "As primeiras sessões precisam mostrar progresso: um casual (cerca de 3 h por semana) chega ao 5 entre a 1ª e a 2ª semana."
+    },
+    {
+      "id": "horas_nivel_10", "name": "Horas jogadas até o nível 10 (mediana)", "metric": "hours_to_level", "level": 10,
+      "min": 10, "max": 25, "unit": "h",
+      "rationale": "O nível 10 marca a saída da zona inicial (Floresta 1–8, Colinas 3–9) para a Mina (6–12): 1 a 2 meses para um casual, cerca de 1 semana para um hardcore."
+    },
+    {
+      "id": "casual_nivel_10", "name": "Casuais no nível 10 ou mais ao fim", "metric": "reached_level", "level": 10, "profile": "casual",
+      "min": 40, "max": 80, "unit": "%",
+      "rationale": "Em 90 dias, a maior parte dos casuais deve ter saído da zona inicial, mas não todos."
+    },
+    {
+      "id": "sessoes_casual", "name": "Sessões por semana — casual", "metric": "sessions_per_week", "profile": "casual",
+      "min": 2, "max": 4, "unit": "",
+      "rationale": "O perfil casual está configurado com média de 3 dias por semana; a rotina simulada deve respeitar isso."
+    },
+    {
+      "id": "sessoes_hardcore", "name": "Sessões por semana — hardcore", "metric": "sessions_per_week", "profile": "hardcore",
+      "min": 5, "max": 7, "unit": "",
+      "rationale": "O perfil hardcore está configurado com média de 6 dias por semana."
+    },
+    {
+      "id": "horas_casual", "name": "Horas por semana — casual", "metric": "hours_per_week", "profile": "casual",
+      "min": 2, "max": 6, "unit": "h",
+      "rationale": "Cerca de 3 sessões de 70 minutos, um pouco mais no fim de semana."
+    },
+    {
+      "id": "horas_hardcore", "name": "Horas por semana — hardcore", "metric": "hours_per_week", "profile": "hardcore",
+      "min": 15, "max": 35, "unit": "h",
+      "rationale": "Cerca de 6 sessões de 4 horas."
+    },
+    {
+      "id": "dau_dia_util", "name": "Jogadores ativos em dia útil / cadastrados", "metric": "dau_ratio", "dayKind": "weekday",
+      "min": 30, "max": 55, "unit": "%",
+      "rationale": "Sem abandono ainda, todos os cadastrados continuam na base; com abandono (fim do M2) essa razão deve cair."
+    },
+    {
+      "id": "fim_de_semana", "name": "Ativos no fim de semana ÷ ativos em dia útil", "metric": "weekend_lift",
+      "min": 1.3, "max": 2.0, "unit": "×",
+      "rationale": "O fim de semana deve ser claramente mais cheio, sem dobrar a base inteira."
+    },
+    {
+      "id": "pico_online", "name": "Pico online do dia / cadastrados", "metric": "peak_online_ratio",
+      "min": 15, "max": 35, "unit": "%",
+      "rationale": "Concentração no horário nobre: parte relevante dos ativos do dia ao mesmo tempo."
+    },
+    {
+      "id": "tempo_combate", "name": "Tempo em combate (caça, chefe, patrulha, emboscada)", "metric": "activity_share",
+      "types": ["hunt", "boss", "patrol", "ambush"], "min": 35, "max": 55, "unit": "%",
+      "rationale": "Caça é o núcleo do PvE de um MMORPG de fantasia, mas não pode ser tudo."
+    },
+    {
+      "id": "tempo_missao", "name": "Tempo em missões", "metric": "activity_share", "types": ["quest"],
+      "min": 10, "max": 25, "unit": "%",
+      "rationale": "Missões guiam o início, mas não substituem a caça."
+    },
+    {
+      "id": "tempo_coleta", "name": "Tempo em coleta", "metric": "activity_share", "types": ["gather"],
+      "min": 8, "max": 20, "unit": "%",
+      "rationale": "Coleta alimenta a economia futura (M5); precisa existir desde já."
+    },
+    {
+      "id": "tempo_exploracao", "name": "Tempo explorando", "metric": "activity_share", "types": ["explore"],
+      "min": 5, "max": 15, "unit": "%",
+      "rationale": "Explorar revela o mapa e é a motivação do perfil explorador, mas cansa depois de conhecer tudo."
+    },
+    {
+      "id": "tempo_cidade", "name": "Tempo na cidade (comércio, taverna, treino, conserto)", "metric": "activity_share",
+      "types": ["trade", "socialize", "train", "repair", "recruit"], "min": 10, "max": 25, "unit": "%",
+      "rationale": "A cidade é o ponto de encontro e de serviços; sem ela o mundo vira só caça."
+    },
+    {
+      "id": "tempo_deslocamento", "name": "Tempo andando ou esperando", "metric": "activity_share",
+      "types": ["travel", "idle"], "min": 5, "max": 20, "unit": "%",
+      "rationale": "Caminhar faz parte do mundo, mas acima de 20% da sessão vira perda de tempo."
+    }
+  ]
+}

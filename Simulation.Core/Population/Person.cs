@@ -211,6 +211,20 @@ public sealed class Character
     public int RepeatCount { get; internal set; }
     public DecisionRecord? LastDecision { get; internal set; }
 
+    // ---- Estatisticas de uso (validacao e fichas) ----
+    /// <summary>Tempo conectado acumulado (ticks), fechado a cada saida.</summary>
+    public long PlayedTicks { get; internal set; }
+    /// <summary>Tempo em atividade por tipo (ticks); "idle" = sem opcao viavel. O resto do tempo conectado e deslocamento.</summary>
+    internal SortedDictionary<string, long> ActivityTicks { get; } = new(StringComparer.Ordinal);
+    public IReadOnlyDictionary<string, long> ActivityTicksByType => ActivityTicks;
+    /// <summary>Tempo conectado (ticks) no instante em que atingiu cada nivel; indice 0 = nivel 2.</summary>
+    internal List<long> LevelTicks { get; } = new();
+    public IReadOnlyList<long> PlayedTicksAtLevel => LevelTicks;
+
+    /// <summary>Tempo conectado ate o instante informado, incluindo a sessao em andamento.</summary>
+    public long PlayedTicksAt(long now) =>
+        PlayedTicks + (Status != CharacterStatus.Offline ? Math.Max(0, now - SessionStartTick) : 0);
+
     public int Id { get; }
     public int AccountId { get; }
     public string Name { get; }

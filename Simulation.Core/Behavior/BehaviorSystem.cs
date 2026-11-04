@@ -235,7 +235,10 @@ public sealed class BehaviorSystem
             ch.Position = ch.PositionAt(Now);
             ch.Waypoints.Clear();
         }
+        // Atividade interrompida pela saida: o tempo gasto conta (sem recompensa).
+        if (ch.Status == CharacterStatus.Doing) AddActivityTime(ch, ActivityTypeOf(ch), Now - ch.ActivityStartTick);
         _w.Today.PlayMinutes += (Now - ch.SessionStartTick) / SimTime.TicksPerMinute;
+        ch.PlayedTicks += Now - ch.SessionStartTick;
         ch.Status = CharacterStatus.Offline;
         ch.ActivityId = "";
         ch.TargetRegionId = "";
@@ -260,6 +263,7 @@ public sealed class BehaviorSystem
             ch.Status = CharacterStatus.Doing;
             ch.TargetRegionId = ch.RegionId;
             ch.ActivityId = "";
+            ch.ActivityStartTick = Now;
             ch.ActivityEndTick = Now + BehaviorTuning.IdleRethinkMinutes * SimTime.TicksPerMinute;
             _w.Scheduler.Schedule(ch.ActivityEndTick, EvActivityEnd, ch.Id);
             return;
@@ -342,6 +346,7 @@ public sealed class BehaviorSystem
         var ch = _w.GetCharacter((int)ev.TargetId);
         if (ch.Status != CharacterStatus.Doing || ch.ActivityEndTick != ev.Tick) return;
         var p = _w.GetPerson(ch.PersonId);
+        AddActivityTime(ch, ActivityTypeOf(ch), ev.Tick - ch.ActivityStartTick);
 
         if (ch.ActivityId.Length > 0)
         {
@@ -359,10 +364,22 @@ public sealed class BehaviorSystem
         }
         ch.ActivityId = "";
         ch.TargetRegionId = "";
+        // Atividade encerrada e contabilizada: a saida abaixo nao pode conta-la de novo.
+        ch.Status = CharacterStatus.Idle;
 
         if (ch.LogoutPending || Now >= ch.SessionEndTick) { Logout(ch, "session_time"); return; }
-        ch.Status = CharacterStatus.Idle;
         Decide(ch, p);
+    }
+
+    /// <summary>Tipo da atividade atual; "idle" quando esperando sem opcao viavel.</summary>
+    private string ActivityTypeOf(Character ch) =>
+        ch.ActivityId.Length == 0 ? "idle" : _w.Content.Regions[ch.TargetRegionId].FindActivity(ch.ActivityId)!.Type;
+
+    private static void AddActivityTime(Character ch, string type, long ticks)
+    {
+        if (ticks <= 0) return;
+        ch.ActivityTicks.TryGetValue(type, out long t);
+        ch.ActivityTicks[type] = t + ticks;
     }
 
     private void AwardExperience(Character ch, ActivityDefinition a, RegionDefinition region, int minutes)
@@ -375,6 +392,7 @@ public sealed class BehaviorSystem
         {
             ch.Experience -= BehaviorTuning.XpToNextLevel(ch.Level);
             ch.Level++;
+            ch.LevelTicks.Add(ch.PlayedTicksAt(Now));
             _w.Today.LevelUps++;
             _w.Emit("level_up", EventImportance.Normal, new[] { new EntityRef("character", ch.Id) },
                 new[] { new EventCause(a.Type, 1000) }, $"nível {ch.Level}");

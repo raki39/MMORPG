@@ -9,6 +9,7 @@ using Simulation.Core.World;
 using Simulation.Infrastructure.Content;
 using Simulation.Infrastructure.Reports;
 using Simulation.Infrastructure.Scenarios;
+using Simulation.Infrastructure.Validation;
 
 namespace Simulation.Runner;
 
@@ -23,6 +24,11 @@ public sealed class RunOptions
     public string? ScenarioPath { get; set; }
     public bool NoScenario { get; set; }
     public bool DisableTickSkipping { get; set; }
+    /// <summary>Varias seeds (modo validacao); nulo = so Seed.</summary>
+    public List<ulong>? Seeds { get; set; }
+    /// <summary>Arquivo de metas; nulo = targets.json da pasta do mundo, se existir.</summary>
+    public string? TargetsPath { get; set; }
+    public bool NoTargets { get; set; }
 }
 
 public sealed class RunResult
@@ -68,7 +74,13 @@ public static class ScenarioRunner
             }
         }
 
+        var targets = LoadTargets(opt, content, msgs, out bool targetsFailed);
+        if (targetsFailed) return Fail(ExitInvalidScenario, msgs, "Metas inválidas.");
+
         int population = opt.PopulationOverride ?? scenario?.Scenario.PopulationSize ?? 100;
+        if (opt.Seeds is { Count: > 0 })
+            return RunBatch(opt, content, scenario, targets, population, msgs, wall);
+
         var engine = WorldFactory.Create(content.Database!, new WorldConfig { Seed = opt.Seed, PopulationSize = population });
         var profiler = new StopwatchProfiler();
         engine.Profiler = profiler;
@@ -89,6 +101,7 @@ public static class ScenarioRunner
         }
 
         var world = engine.World;
+        var collector = targets != null ? new ValidationCollector(content.Database!, targets.File.WarmupDays) : null;
         var events = new List<SimEvent>();
         var hashes = new List<DailyHash>();
         var simWatch = new Stopwatch();
@@ -101,7 +114,9 @@ public static class ScenarioRunner
             simWatch.Stop();
 
             // Fora do tick: drenar eventos e calcular hash do dia.
+            int before = events.Count;
             events.AddRange(world.Events.Drain());
+            collector?.Consume(events.Skip(before), world);
             hashWatch.Start();
             hashes.Add(new DailyHash(day, StateHasher.Compute(world)));
             hashWatch.Stop();
@@ -143,6 +158,13 @@ public static class ScenarioRunner
             var reportWatch = Stopwatch.StartNew();
             meta.WallTimeMs = wall.Elapsed.TotalMilliseconds;
             RunReportWriter.WriteAll(opt.OutDir, meta, world, events, hashes);
+            if (collector != null)
+            {
+                var metrics = collector.Finish(world, opt.Seed, opt.Days, targets!.File.Targets);
+                metrics.FinalStateHash = meta.FinalStateHash;
+                metrics.SimulationSeconds = simWatch.Elapsed.TotalSeconds;
+                ValidationReport.Write(opt.OutDir, Context(opt, content, targets, population, wall), targets.File, content.Database!, new[] { metrics });
+            }
             meta.ReportTimeMs = reportWatch.Elapsed.TotalMilliseconds;
             meta.WallTimeMs = wall.Elapsed.TotalMilliseconds;
             // Reescreve com os tempos finais (escrita e rapida e idempotente).
@@ -157,6 +179,78 @@ public static class ScenarioRunner
                  $"Simulação {meta.SimulationTimeMs:F1} ms; total {meta.WallTimeMs:F1} ms." +
                  (opt.OutDir != null ? $" Relatórios em {Path.GetFullPath(opt.OutDir)}" : ""));
         return new RunResult { ExitCode = ExitOk, Messages = msgs, Metadata = meta };
+    }
+
+    private static TargetsLoadResult? LoadTargets(RunOptions opt, ContentLoadResult content, List<string> msgs, out bool failed)
+    {
+        failed = false;
+        if (opt.NoTargets) return null;
+        string path = opt.TargetsPath ?? Path.Combine(content.Folder, TargetsLoader.FileName);
+        if (opt.TargetsPath == null && !File.Exists(path)) return null;
+        var t = TargetsLoader.Load(path, content.Database!);
+        if (!t.Success)
+        {
+            msgs.AddRange(t.Errors);
+            failed = true;
+            return null;
+        }
+        return t;
+    }
+
+    private static ValidationContext Context(RunOptions opt, ContentLoadResult content, TargetsLoadResult targets, int population, Stopwatch wall) => new()
+    {
+        WorldFolder = ToRepoRelative(content.Folder),
+        ContentHash = content.ContentHash,
+        TargetsFile = ToRepoRelative(Path.GetFullPath(targets.Path)),
+        TargetsHash = targets.Hash,
+        SimulatorVersion = SimulatorVersion(),
+        Population = population,
+        Days = opt.Days,
+        WallSeconds = wall.Elapsed.TotalSeconds,
+    };
+
+    /// <summary>
+    /// Modo validacao: roda varias seeds em paralelo (cada uma com seu proprio motor e
+    /// conteudo carregado), coleta medidas sem guardar eventos e escreve validation.md/.csv.
+    /// </summary>
+    private static RunResult RunBatch(RunOptions opt, ContentLoadResult content, ScenarioLoadResult? scenario,
+        TargetsLoadResult? targets, int population, List<string> msgs, Stopwatch wall)
+    {
+        if (targets == null) return Fail(ExitUsage, msgs, "--seeds precisa de metas (targets.json na pasta do mundo ou --targets).");
+        if (opt.OutDir == null) return Fail(ExitUsage, msgs, "--seeds precisa de --out.");
+
+        var seeds = opt.Seeds!;
+        var results = new RunMetrics[seeds.Count];
+        Parallel.For(0, seeds.Count, new ParallelOptions { MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount / 2) }, i =>
+        {
+            ulong seed = seeds[i];
+            var db = ContentLoader.LoadFolder(opt.WorldFolder).Database!;
+            var engine = WorldFactory.Create(db, new WorldConfig { Seed = seed, PopulationSize = population });
+            engine.DisableTickSkipping = opt.DisableTickSkipping;
+            if (scenario != null)
+                foreach (var c in scenario.Commands.OrderBy(c => c.Tick).Where(c => c.Tick <= SimTime.Days(opt.Days)))
+                    engine.Submit(c.Command, c.Tick);
+            var collector = new ValidationCollector(db, targets.File.WarmupDays);
+            var watch = Stopwatch.StartNew();
+            for (int day = 0; day < opt.Days; day++)
+            {
+                engine.AdvanceTo(SimTime.Days(day + 1));
+                collector.Consume(engine.World.Events.Drain(), engine.World);
+            }
+            watch.Stop();
+            var m = collector.Finish(engine.World, seed, opt.Days, targets.File.Targets);
+            m.FinalStateHash = StateHasher.Compute(engine.World);
+            m.SimulationSeconds = watch.Elapsed.TotalSeconds;
+            results[i] = m;
+        });
+
+        var ctx = Context(opt, content, targets, population, wall);
+        ValidationReport.Write(opt.OutDir, ctx, targets.File, content.Database!, results);
+        var outcomes = ValidationReport.Outcomes(targets.File, results);
+        msgs.Add($"OK: {results.Length} seeds × {opt.Days} dias × {population} pessoas em {wall.Elapsed.TotalSeconds:F1} s. " +
+                 $"Metas dentro da faixa: {outcomes.Count(o => o.Status == TargetStatus.Inside)}/{outcomes.Count}. " +
+                 $"Relatório em {Path.GetFullPath(Path.Combine(opt.OutDir, "validation.md"))}");
+        return new RunResult { ExitCode = ExitOk, Messages = msgs };
     }
 
     private static RunResult Fail(int code, List<string> msgs, string message)

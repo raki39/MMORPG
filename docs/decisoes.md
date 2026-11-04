@@ -201,3 +201,27 @@ Moldura comum (`ModalFrame`): banner com gradiente na cor do contexto, feixes e 
 - A campanha começa à meia-noite do dia do lançamento, e os jogadores simulados entram pela própria rotina, a maioria entre 19h e 22h. Na velocidade 1x o mapa ficava cerca de 19 minutos reais sem ninguém.
 - Por padrão, o cliente avança antes de abrir até o 6º dia, às 19h. Isso não muda o resultado autoritativo: é o mesmo avanço da simulação, com as métricas amostradas no caminho. A opção `--from-launch` começa do zero.
 - Quando ninguém está conectado, um aviso no mapa explica o motivo e oferece "Avançar até o próximo login". O tempo avança minuto a minuto até alguém entrar, no máximo 1 dia, sem pular acontecimentos.
+
+## D-024 — Validação com metas e várias seeds
+**Data:** 04/11/2026 · **Estado:** aceita
+
+Pedido do criador: validar o que já existe antes de seguir.
+
+- **Metas:** ficam em `Content/presets/<mundo>/targets.json`, que só o runner usa, como o `scenario.json`.
+  - São hipóteses de design ajustáveis, não regras do mundo. O Claude propôs as faixas antes das rodadas grandes, para não ajustar a meta ao resultado.
+  - Métricas disponíveis: horas até um nível, % que chegou a um nível, sessões e horas por semana, divisão do tempo por tipo de atividade, ativos ÷ cadastrados, efeito do fim de semana e pico online.
+- **Runner:** `--seeds 1-5` roda as seeds em paralelo, cada uma com seu próprio motor, e escreve `validation.md` e `validation.csv`.
+  - Uma meta só conta como "dentro" quando todas as seeds caem na faixa (plano 17.1).
+- **Estado novo no Core** (hash no formato v3), usado também nas fichas futuras:
+  - tempo conectado por personagem;
+  - tempo por tipo de atividade;
+  - tempo jogado ao atingir cada nível.
+  - O deslocamento é o restante do tempo conectado.
+- **Teste estatístico do "trabalhador 19h–23h":** compara a proporção calculada exatamente a partir da regra do calendário com a observada em 5 seeds. A tolerância é de 4 erros-padrão contados por pessoa.
+- **Achados da rodada de 5 seeds × 1.000 pessoas × 90 dias:** estão em [validacao.md](validacao.md).
+  - A rotina bate com os perfis.
+  - A progressão está cerca de 3 vezes mais lenta que a meta.
+  - O deslocamento ocupa 27% do tempo.
+  - As missões dominam as escolhas.
+  - O PvP ainda não tem combate.
+- **Correção de comportamento:** a atividade passa a ficar encerrada (personagem livre) antes da checagem de saída. Isso evita contar o mesmo tempo duas vezes.

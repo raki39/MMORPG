@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Text;
 using Simulation.Runner;
 
@@ -19,6 +19,10 @@ Opções:
   --scenario <arquivo>  Cenário a usar (padrão: scenario.json da pasta do mundo)
   --no-scenario         Ignora o cenário (sem comandos agendados)
   --no-skip             Processa tick a tick, sem saltar ticks ociosos (verificação)
+  --seeds <lista>       Validação com várias seeds, em paralelo: "1-5" ou "3,7,42".
+                        Escreve só validation.md e validation.csv (exige --out)
+  --targets <arquivo>   Metas da validação (padrão: targets.json da pasta do mundo)
+  --no-targets          Não calcula a validação na execução simples
   --help                Mostra esta ajuda
 
 Códigos de saída: 0 ok · 1 uso incorreto · 2 conteúdo inválido · 3 cenário inválido
@@ -50,6 +54,9 @@ for (int i = 0; i < args.Length; i++)
             case "--scenario": opt.ScenarioPath = Next(); break;
             case "--no-scenario": opt.NoScenario = true; break;
             case "--no-skip": opt.DisableTickSkipping = true; break;
+            case "--seeds": opt.Seeds = ParseSeeds(Next()); break;
+            case "--targets": opt.TargetsPath = Next(); break;
+            case "--no-targets": opt.NoTargets = true; break;
             default: throw new ArgumentException($"Opção desconhecida: {a}");
         }
     }
@@ -68,3 +75,22 @@ foreach (var m in result.Messages)
     else Console.Error.WriteLine(m);
 }
 return result.ExitCode;
+
+static List<ulong> ParseSeeds(string text)
+{
+    var seeds = new List<ulong>();
+    foreach (var part in text.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+    {
+        int dash = part.IndexOf('-');
+        if (dash > 0)
+        {
+            ulong a = ulong.Parse(part[..dash], CultureInfo.InvariantCulture);
+            ulong b = ulong.Parse(part[(dash + 1)..], CultureInfo.InvariantCulture);
+            if (b < a || b - a > 999) throw new ArgumentException($"Intervalo de seeds inválido: {part}");
+            for (ulong s = a; s <= b; s++) seeds.Add(s);
+        }
+        else seeds.Add(ulong.Parse(part, CultureInfo.InvariantCulture));
+    }
+    if (seeds.Count == 0) throw new ArgumentException("--seeds vazio.");
+    return seeds.Distinct().ToList();
+}

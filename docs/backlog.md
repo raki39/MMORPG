@@ -36,16 +36,22 @@ Objetivo (plano v1.4): provar na prática que o projeto Godot é criado e mantid
 - [x] Exportar build Windows pela linha de comando (`tools/godot.ps1 export`)
 - [x] Registrar resultado e limitações em `decisoes.md` (D-012 a D-014)
 
-## M1 — HUD e mapa
+## M1 — HUD e mapa (quase concluído)
 
-- [ ] Tokens visuais da seção 12.1 como `Theme` do Godot (cores, espaçamentos, tipografia)
-- [ ] Shell: barra superior (data/hora, pausa, velocidades 1x/2x/5x/10x, velocidade efetiva), navegação lateral, área central, painel de inspeção, faixa de eventos
-- [ ] Mapa estratégico com pan, zoom, seleção de região e painel lateral
-- [ ] Ponte cliente ↔ Core: snapshots de leitura e envio de comandos; simulação fora do frame de renderização
-- [ ] Capturas de revisão em 1920×1080 e 1366×768
+Critério do plano: revisar o padrão visual cedo, com fixtures identificadas e conexão mínima ao Core. Foi além disso: o mapa e as fichas já mostram a simulação real do M2.
+
+- [x] Tema do Godot com tokens próprios (cores, espaçamentos, tipografia). Não usa a paleta da seção 12.1, a pedido do criador (D-012, D-022).
+- [x] Shell: barra superior com data/hora, pausa, velocidades 1x/2x/5x/10x e velocidade efetiva; painel lateral (visão geral, zonas, jogadores, eventos) no lugar da navegação lateral e da faixa de eventos
+- [x] Mapa estratégico com pan, zoom, seleção de zona e fichas em modal
+- [x] Ponte cliente ↔ Core: snapshots de leitura, comandos por fila, simulação em thread própria (fora do frame)
+- [x] Capturas de revisão em 1920×1080 (automáticas, por linha de comando)
+- [ ] Capturas e revisão em 1366×768
 
 ## M2 — População (em andamento)
 
+Critério do plano: 100 pessoas entram e saem, escolhem atividades entre as oferecidas pelos locais que conhecem e exibem motivos reais. Hoje elas entram, escolhem e explicam, mas ninguém abandona o jogo.
+
+Feito:
 - [x] Registro progressivo no lançamento; conta e personagem (classe pelos traços, apelido)
 - [x] Sessões pelo calendário individual (horário preferido, dias por semana, fim de semana/feriado)
 - [x] Conhecimento de zonas (inicial, saídas visíveis, exploração)
@@ -53,9 +59,27 @@ Objetivo (plano v1.4): provar na prática que o projeto Godot é criado e mantid
 - [x] Deslocamento geométrico pelas estradas das zonas; posições reais no mapa (D-015, D-016)
 - [x] XP e níveis provisórios
 - [x] Relatório do runner com registros, DAU, pico online, sessões, escolhas por zona, níveis e exemplos de decisão
-- [ ] Abandono e retorno (satisfação, frustração, intenção de retorno)
-- [ ] Memória de experiências marcantes influenciando escolhas
-- [ ] Teste estatístico do critério "trabalhador 19h–23h" com amostra e tolerância documentadas
+
+Validação (D-024, [validacao.md](validacao.md)):
+- [x] Metas de referência em `targets.json` (hipóteses, ajustáveis pelo criador)
+- [x] Runner com várias seeds em paralelo e relatório de validação (metas, perfis, uso do tempo, atividades pouco usadas com diagnóstico)
+- [x] Tempo jogado, tempo por tipo de atividade e tempo até cada nível por personagem (hash v3)
+- [x] Teste estatístico do critério "trabalhador 19h–23h" (esperado 96,08%, observado 96,07%, tolerância documentada)
+- [x] Rodada de 5 seeds × 1.000 pessoas × 90 dias: rotina validada; progressão, deslocamento e divisão do tempo fora das metas (ver validacao.md)
+- [ ] Ajustar as metas com o criador (principalmente o ritmo de progressão)
+
+Conferência da fórmula de decisão (próximo passo; plano 4.4):
+- [ ] Comparar os termos atuais (afinidade, adequação ao nível, companhia, lotação, risco, viagem, tempo disponível, repetição, ruído) com os do plano (recompensa, diversão, social, objetivo, risco, tempo, custo, frustração) e registrar o desvio
+- [ ] Missões com faixa de nível (hoje o quadro da cidade vale para qualquer nível e domina 35% das escolhas)
+- [ ] Novidade na exploração (hoje explorar continua atraente com o mapa todo conhecido)
+- [ ] Deslocamento: 27% do tempo (atividades curtas e penalidade de repetição levam a trocar de zona)
+- [ ] Recompensa de atividades que não dão XP (taverna, comércio, conserto) e da coleta
+- [ ] Recalibrar XP e curva de níveis contra as metas de progressão
+
+Falta para fechar o M2:
+- [ ] Objetivos por sessão (plano 4.3: ao entrar, a pessoa define o que quer fazer)
+- [ ] Satisfação, abandono e retorno (estados inativo e desistente)
+- [ ] Memória de experiências marcantes influenciando escolhas (plano 4.5)
 
 ## Cliente (mapa e fichas)
 
@@ -75,6 +99,14 @@ Objetivo (plano v1.4): provar na prática que o projeto Godot é criado e mantid
 - [ ] Navegação com histórico (voltar) entre dossiês
 - [ ] Tabelas de Comunidade/Economia com virtualização
 - [ ] Revisão visual completa em 1366×768 das fichas
+
+## M3 — Combate (depois do M2)
+
+Pedido do criador: combate nas caças (PvE), no PvP e contra chefes.
+- [ ] Caça com criaturas reais (quantidade e reaparecimento por área), dano, morte e saque
+- [ ] PvP de verdade em emboscada e patrulha (hoje elas dão XP sem combate)
+- [ ] Morte com as regras da zona (perda parcial ou total) e propriedade dos itens
+- [ ] Chefe em grupo (depende de grupos, M6, ou de uma versão provisória)
 
 ## Marcos seguintes
 

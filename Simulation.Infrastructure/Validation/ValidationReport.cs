@@ -1,0 +1,250 @@
+using System.Globalization;
+using System.Text;
+using Simulation.Core.Behavior;
+using Simulation.Core.Content;
+using Simulation.Core.Time;
+
+namespace Simulation.Infrastructure.Validation;
+
+/// <summary>Situacao de uma meta considerando todas as seeds.</summary>
+public enum TargetStatus { Inside, Unstable, Below, Above, NoData }
+
+public sealed class TargetOutcome
+{
+    public TargetDefinition Target { get; init; } = new();
+    public double Mean { get; init; }
+    public double Min { get; init; }
+    public double Max { get; init; }
+    public TargetStatus Status { get; init; }
+    public string Notes { get; init; } = "";
+}
+
+/// <summary>Contexto da validacao (para o cabecalho do relatorio).</summary>
+public sealed class ValidationContext
+{
+    public string WorldFolder { get; init; } = "";
+    public string ContentHash { get; init; } = "";
+    public string TargetsFile { get; init; } = "";
+    public string TargetsHash { get; init; } = "";
+    public string SimulatorVersion { get; init; } = "";
+    public int Population { get; init; }
+    public int Days { get; init; }
+    public double WallSeconds { get; set; }
+}
+
+/// <summary>
+/// Relatorio de validacao: metas x medidas em varias seeds (plano 17.1), perfis,
+/// uso do tempo e atividades pouco usadas com diagnostico.
+/// </summary>
+public static class ValidationReport
+{
+    private static readonly CultureInfo Inv = CultureInfo.InvariantCulture;
+    private static readonly CultureInfo PtBr = CultureInfo.GetCultureInfo("pt-BR");
+
+    public static List<TargetOutcome> Outcomes(TargetsFile targets, IReadOnlyList<RunMetrics> runs)
+    {
+        var list = new List<TargetOutcome>();
+        foreach (var t in targets.Targets)
+        {
+            var values = runs.Select(r => r.Values.GetValueOrDefault(t.Id, double.NaN)).Where(v => !double.IsNaN(v)).ToList();
+            var notes = runs.Select(r => r.Notes.GetValueOrDefault(t.Id, "")).Where(n => n.Length > 0).Distinct().ToList();
+            if (values.Count == 0)
+            {
+                list.Add(new TargetOutcome { Target = t, Mean = double.NaN, Min = double.NaN, Max = double.NaN, Status = TargetStatus.NoData, Notes = string.Join("; ", notes) });
+                continue;
+            }
+            double mean = values.Average(), min = values.Min(), max = values.Max();
+            TargetStatus status =
+                mean < t.Min ? TargetStatus.Below :
+                mean > t.Max ? TargetStatus.Above :
+                min >= t.Min && max <= t.Max ? TargetStatus.Inside : TargetStatus.Unstable;
+            var reached = runs.Where(r => r.Reached.ContainsKey(t.Id)).Select(r => r.Reached[t.Id]).ToList();
+            if (reached.Count > 0)
+            {
+                double lo = reached.Min(), hi = reached.Max();
+                string range = Math.Round(lo) == Math.Round(hi) ? $"{lo:F0}%" : $"{lo:F0}–{hi:F0}%";
+                notes.Insert(0, $"{range} chegaram" + (lo < 50 ? " (mediana só de quem chegou: subestima o tempo real)" : ""));
+            }
+            if (values.Count < runs.Count) notes.Add($"sem amostra em {runs.Count - values.Count} seed(s)");
+            list.Add(new TargetOutcome { Target = t, Mean = mean, Min = min, Max = max, Status = status, Notes = string.Join("; ", notes) });
+        }
+        return list;
+    }
+
+    public static void Write(string outDir, ValidationContext ctx, TargetsFile targets, ContentDatabase content, IReadOnlyList<RunMetrics> runs)
+    {
+        Directory.CreateDirectory(outDir);
+        var outcomes = Outcomes(targets, runs);
+        File.WriteAllText(Path.Combine(outDir, "validation.md"), BuildMarkdown(ctx, targets, content, runs, outcomes), new UTF8Encoding(false));
+        File.WriteAllText(Path.Combine(outDir, "validation.csv"), BuildCsv(targets, runs), new UTF8Encoding(false));
+    }
+
+    public static string BuildCsv(TargetsFile targets, IReadOnlyList<RunMetrics> runs)
+    {
+        var sb = new StringBuilder("target_id,metric,profile,seed,value,min,max\n");
+        foreach (var t in targets.Targets)
+            foreach (var r in runs)
+                sb.Append(Inv, $"{t.Id},{t.Metric},{t.Profile},{r.Seed},{Num(r.Values.GetValueOrDefault(t.Id, double.NaN))},{t.Min.ToString(Inv)},{t.Max.ToString(Inv)}\n");
+        return sb.ToString();
+    }
+
+    public static string BuildMarkdown(ValidationContext ctx, TargetsFile targets, ContentDatabase content,
+        IReadOnlyList<RunMetrics> runs, List<TargetOutcome> outcomes)
+    {
+        var sb = new StringBuilder();
+        sb.Append("# Validação da simulação\n\n");
+        sb.Append("> Gerado pelo `Simulation.Runner` com várias seeds. As faixas vêm de `targets.json` e são **hipóteses de design ajustáveis**, não regras do mundo. ");
+        sb.Append("Uma meta só conta como \"dentro\" quando todas as seeds caem na faixa.\n\n");
+
+        sb.Append("| Campo | Valor |\n|---|---|\n");
+        sb.Append($"| Conteúdo | `{ctx.WorldFolder}` (`{Short(ctx.ContentHash)}`) |\n");
+        sb.Append($"| Metas | `{ctx.TargetsFile}` (`{Short(ctx.TargetsHash)}`) |\n");
+        sb.Append($"| Simulador | {ctx.SimulatorVersion} |\n");
+        sb.Append($"| Execuções | {runs.Count} seeds ({string.Join(", ", runs.Select(r => r.Seed))}) · {N(ctx.Population)} pessoas · {ctx.Days} dias |\n");
+        sb.Append($"| Janela das medidas semanais | a partir do dia {targets.WarmupDays} (exclui a semana de lançamento) |\n");
+        sb.Append($"| Tempo total | {ctx.WallSeconds.ToString("N1", PtBr)} s |\n\n");
+
+        int inside = outcomes.Count(o => o.Status == TargetStatus.Inside);
+        sb.Append($"## Metas\n\n**{inside} de {outcomes.Count} dentro da faixa.**\n\n");
+        sb.Append("| Situação | Meta | Faixa | Média | Mín–máx entre seeds | Observação |\n|---|---|---|---:|---|---|\n");
+        foreach (var o in outcomes)
+        {
+            var t = o.Target;
+            sb.Append($"| {StatusText(o.Status)} | {t.Name} | {Fmt(t.Min)}–{Fmt(t.Max)} {t.Unit} | {Fmt(o.Mean)} | {Fmt(o.Min)}–{Fmt(o.Max)} | {Esc(o.Notes)} |\n");
+        }
+        sb.Append("\nPor que cada faixa:\n\n");
+        foreach (var t in targets.Targets.Where(t => t.Rationale.Length > 0))
+            sb.Append($"- **{t.Name}:** {t.Rationale}\n");
+
+        // ---- Perfis ----
+        sb.Append("\n## Perfis (média das seeds)\n\n");
+        sb.Append("| Perfil | Pessoas | Sessões/semana | Horas/semana | Nível mediano no fim | Nível p90 | Sessões em dia útil iniciadas entre 18h e 23h |\n|---|---:|---:|---:|---:|---:|---:|\n");
+        foreach (var id in runs[0].Profiles.Select(p => p.Id))
+        {
+            var ps = runs.Select(r => r.Profiles.First(p => p.Id == id)).ToList();
+            sb.Append($"| {ps[0].Name} | {Fmt(ps.Average(p => p.Persons))} | {Fmt(Avg(ps.Select(p => p.SessionsPerWeek)))} | {Fmt(Avg(ps.Select(p => p.HoursPerWeek)))} | " +
+                      $"{Fmt(Avg(ps.Select(p => p.MedianLevel)))} | {Fmt(Avg(ps.Select(p => p.P90Level)))} | {Fmt(Avg(ps.Select(p => p.PrimeTimeStartPct)))}% |\n");
+        }
+
+        // ---- Uso do tempo ----
+        sb.Append("\n## Uso do tempo conectado (todas as seeds)\n\n");
+        var time = new SortedDictionary<string, long>(StringComparer.Ordinal);
+        foreach (var r in runs)
+            foreach (var kv in r.TimeByType) time[kv.Key] = time.GetValueOrDefault(kv.Key) + kv.Value;
+        long totalTime = Math.Max(1, time.Values.Sum());
+        var choicesByType = new Dictionary<string, long>(StringComparer.Ordinal);
+        long totalChoices = 0;
+        foreach (var r in runs)
+            foreach (var kv in r.Choices)
+            {
+                string type = ActivityOf(content, kv.Key)?.Type ?? "?";
+                choicesByType[type] = choicesByType.GetValueOrDefault(type) + kv.Value;
+                totalChoices += kv.Value;
+            }
+        sb.Append("| Tipo | Tempo | Escolhas |\n|---|---:|---:|\n");
+        foreach (var kv in time.OrderByDescending(k => k.Value).ThenBy(k => k.Key, StringComparer.Ordinal))
+        {
+            string ch = choicesByType.TryGetValue(kv.Key, out long c) ? Pct(c, Math.Max(1, totalChoices)) : "—";
+            sb.Append($"| {TypeName(kv.Key)} | {Pct(kv.Value, totalTime)} | {ch} |\n");
+        }
+
+        // ---- Atividades pouco usadas ----
+        var allLevels = runs.SelectMany(r => r.FinalLevels).ToList();
+        var choices = new SortedDictionary<string, long>(StringComparer.Ordinal);
+        foreach (var r in runs)
+            foreach (var kv in r.Choices) choices[kv.Key] = choices.GetValueOrDefault(kv.Key) + kv.Value;
+        long all = Math.Max(1, choices.Values.Sum());
+        var rare = choices.Where(kv => kv.Value * 1000 / all < targets.RareActivityPermille)
+            .OrderBy(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.Ordinal).ToList();
+        sb.Append($"\n## Atividades pouco usadas (menos de {(targets.RareActivityPermille / 10.0).ToString("0.#", PtBr)}% das escolhas)\n\n");
+        if (rare.Count == 0) sb.Append("Nenhuma.\n");
+        else
+        {
+            sb.Append("| Zona | Atividade | Tipo | Escolhas | Diagnóstico |\n|---|---|---|---:|---|\n");
+            foreach (var kv in rare)
+            {
+                var (region, act) = Split(content, kv.Key);
+                if (region == null || act == null) continue;
+                sb.Append($"| {region.Name} | {act.Name} | `{act.Type}` | {Pct(kv.Value, all)} | {Esc(Diagnose(region, act, allLevels))} |\n");
+            }
+        }
+
+        // ---- Execucoes ----
+        sb.Append("\n## Execuções\n\n| Seed | Hash final | Simulação |\n|---:|---|---:|\n");
+        foreach (var r in runs)
+            sb.Append($"| {r.Seed} | `{Short(r.FinalStateHash)}` | {r.SimulationSeconds.ToString("N1", PtBr)} s |\n");
+        sb.Append("\nMedições de tempo desta máquina, não benchmark.\n");
+        return sb.ToString();
+    }
+
+    /// <summary>Explica por que uma atividade quase nao e escolhida, a partir das regras atuais.</summary>
+    public static string Diagnose(RegionDefinition region, ActivityDefinition a, List<int> finalLevels)
+    {
+        var reasons = new List<string>();
+        if (a.MinGroupSize > 1) reasons.Add($"exige grupo de {a.MinGroupSize}; grupos chegam no M6, então hoje ninguém pode fazer");
+        if (a.Type == ActivityTypes.Recruit) reasons.Add("recrutamento depende do sistema de grupos (M6)");
+        if (a.RequiredItemIds.Count > 0) reasons.Add("exige item; inventário chega no M5");
+        if (a.ClassIds.Count > 0) reasons.Add($"só para {string.Join(", ", a.ClassIds)}");
+        int minLevel = Math.Max(a.MinLevel, 1);
+        if (minLevel > 1 && finalLevels.Count > 0)
+        {
+            double pct = finalLevels.Count(l => l >= minLevel) * 100.0 / finalLevels.Count;
+            if (pct < 50) reasons.Add($"nível mínimo {minLevel}: só {pct.ToString("0", PtBr)}% dos personagens chegaram até o fim");
+        }
+        if (BehaviorTuning.XpPerMinute(a.Type) == 0)
+            reasons.Add("não dá XP e ainda não existe economia nem desgaste, então a nota não tem termo de recompensa");
+        if (region.Pvp == PvpRules.Open) reasons.Add("zona PvP: o risco extra afasta quem tem aversão a risco");
+        if (reasons.Count == 0) reasons.Add("pouco atraente na fórmula atual (rever na conferência da fórmula)");
+        return string.Join("; ", reasons) + ".";
+    }
+
+    private static ActivityDefinition? ActivityOf(ContentDatabase content, string key) => Split(content, key).Activity;
+
+    private static (RegionDefinition? Region, ActivityDefinition? Activity) Split(ContentDatabase content, string key)
+    {
+        int i = key.IndexOf('/');
+        if (i < 0 || !content.Regions.TryGetValue(key[..i], out var r)) return (null, null);
+        return (r, r.FindActivity(key[(i + 1)..]));
+    }
+
+    private static string StatusText(TargetStatus s) => s switch
+    {
+        TargetStatus.Inside => "✅ dentro",
+        TargetStatus.Unstable => "⚠️ instável",
+        TargetStatus.Below => "❌ abaixo",
+        TargetStatus.Above => "❌ acima",
+        _ => "— sem dados",
+    };
+
+    private static string TypeName(string type) => type switch
+    {
+        TargetMetrics.Travel => "Deslocamento",
+        TargetMetrics.Idle => "Espera (sem opção viável)",
+        ActivityTypes.Hunt => "Caça",
+        ActivityTypes.Gather => "Coleta",
+        ActivityTypes.Quest => "Missão",
+        ActivityTypes.Explore => "Exploração",
+        ActivityTypes.Trade => "Comércio",
+        ActivityTypes.Repair => "Conserto",
+        ActivityTypes.Train => "Treino",
+        ActivityTypes.Socialize => "Socializar",
+        ActivityTypes.Recruit => "Recrutar",
+        ActivityTypes.Patrol => "Patrulha",
+        ActivityTypes.Ambush => "Emboscada",
+        ActivityTypes.Boss => "Chefe",
+        _ => type,
+    };
+
+    private static double Avg(IEnumerable<double> values)
+    {
+        var v = values.Where(x => !double.IsNaN(x)).ToList();
+        return v.Count == 0 ? double.NaN : v.Average();
+    }
+
+    private static string Fmt(double v) => double.IsNaN(v) ? "—" : v.ToString(Math.Abs(v) >= 100 ? "N0" : "N1", PtBr);
+    private static string Num(double v) => double.IsNaN(v) ? "" : v.ToString("0.###", Inv);
+    private static string N(long v) => v.ToString("N0", PtBr);
+    private static string Pct(long part, long total) => (part / (double)total).ToString("P1", PtBr);
+    private static string Short(string hash) => hash.Length > 16 ? hash[..16] : hash;
+    private static string Esc(string s) => s.Replace("|", "\\|");
+}
