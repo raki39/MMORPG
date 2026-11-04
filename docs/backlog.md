@@ -77,6 +77,8 @@ Base de conteúdo e progressão (próximo passo; D-025):
 - [x] Legibilidade do mapa (D-029): ilha por máscara, zonas maiores, estradas finas e curvas, rótulos enxutos
 - [x] Terreno que a simulação respeita (D-030): água do Core (rio natural configurável, poças), estradas por A* com pontes, viagem pelo comprimento da estrada
 - [x] Cidades por nível (D-030): muralha, calçamento, casas, prédios dentro; área urbana marcada e com hover; posição da cidade no tile configurável
+- [x] Desempenho do mapa (D-032): cache de desenho, hover sem redesenho, preenchimentos em lote; `tools/perf.ps1` com orçamento de 6,9 ms (p95)
+- [ ] Desempenho: emblemas e nomes em lote (pior caso de redesenho ~8,7 ms); shader do terreno com saída rápida no mar; medir com 10.000 pessoas e simulação pesada
 - [ ] Recalibrar a curva depois do passo 3: escolha do criador entre (a) ~200 h com desaceleração suave no fim ou (b) desaceleração forte com 220–250 h
 - [x] Quests por área de quest (D-031): quadros nas praças, 36 quests (principais em cadeia, secundárias e diárias com limite), etapas reais (etapas de caça e coleta marcadas como provisórias), recompensas de XP, ouro e itens (estes dois não implementados); aceitar e entregar pontuais; estatísticas por quest; ficha da quest estilo FM
 - [ ] Editor de quests e quadros (texto, etapas, condições, recompensas; quadros em outras áreas)

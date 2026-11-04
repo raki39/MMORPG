@@ -42,6 +42,8 @@ public partial class Main : Node
     private double _uiTimer, _modalTimer;
     private int _frames;
     private double _measureElapsed;
+    private readonly List<double> _frameMs = new();
+    private double _gpuMs, _renderCpuMs, _drawMs, _overlayMs, _mapProcessMs;
     private int _measureFrames;
     private bool _serverOpenShown;
     private ModalFrame? _modal;
@@ -156,7 +158,14 @@ public partial class Main : Node
         }
         if (_args.TryGetValue("focus", out var fz) && _ctx.Content.Regions.ContainsKey(fz)) _map.FocusRegion(fz);
         // Capturas: ignoram o mouse real; --mouse=X,Y simula o mouse na tela (hover).
-        if (_args.ContainsKey("screenshot")) _map.IgnoreRealInput = true;
+        if (_args.ContainsKey("screenshot") || _args.ContainsKey("measure-seconds")) _map.IgnoreRealInput = true;
+        if (_args.ContainsKey("measure-redraw")) _map.ForceRedrawEveryFrame = true;
+        if (_args.ContainsKey("measure-seconds"))
+        {
+            // Medicao: sem limite do vsync, com tempo de renderizacao (CPU e GPU) por quadro.
+            DisplayServer.WindowSetVsyncMode(DisplayServer.VSyncMode.Disabled);
+            RenderingServer.ViewportSetMeasureRenderTime(GetViewport().GetViewportRid(), true);
+        }
         if (_args.TryGetValue("mouse", out var ms) && ms.Split(',', 'x') is { Length: 2 } mp
             && float.TryParse(mp[0], NumberStyles.Float, CultureInfo.InvariantCulture, out var mx)
             && float.TryParse(mp[1], NumberStyles.Float, CultureInfo.InvariantCulture, out var my))
@@ -702,10 +711,25 @@ public partial class Main : Node
         }
         if (_args.TryGetValue("measure-seconds", out var secs))
         {
-            if (_frames > 30) { _measureElapsed += delta; _measureFrames++; }
+            if (_frames > 60)
+            {
+                _measureElapsed += delta;
+                _measureFrames++;
+                var rid = GetViewport().GetViewportRid();
+                _frameMs.Add(delta * 1000);
+                _gpuMs += RenderingServer.ViewportGetMeasuredRenderTimeGpu(rid);
+                _renderCpuMs += RenderingServer.ViewportGetMeasuredRenderTimeCpu(rid);
+                _drawMs += _map.LastDrawMs;
+                _overlayMs += _map.LastOverlayMs;
+                _mapProcessMs += _map.LastProcessMs;
+            }
             if (_measureElapsed >= double.Parse(secs, CultureInfo.InvariantCulture))
             {
-                GD.Print($"FPS_MEDIO {_measureFrames / _measureElapsed:F1} quadros={_measureFrames} segundos={_measureElapsed:F2} populacao={_host?.Persons.Count ?? 0}");
+                int n = Math.Max(1, _measureFrames);
+                _frameMs.Sort();
+                double p95 = _frameMs.Count == 0 ? 0 : _frameMs[Math.Min(_frameMs.Count - 1, (int)(_frameMs.Count * 0.95))];
+                GD.Print(string.Create(CultureInfo.InvariantCulture,
+                    $"FPS_MEDIO {_measureFrames / _measureElapsed:F1} quadro_ms={_measureElapsed * 1000 / n:F2} p95_ms={p95:F2} gpu_ms={_gpuMs / n:F2} render_cpu_ms={_renderCpuMs / n:F2} mapa_draw_ms={_drawMs / n:F2} rotulos_ms={_overlayMs / n:F2} mapa_process_ms={_mapProcessMs / n:F2} populacao={_host?.Persons.Count ?? 0}"));
                 Quit();
             }
         }

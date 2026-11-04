@@ -27,7 +27,8 @@ Jogo de gestão single-player e offline: o jogador cria e administra um MMORPG e
 - Interface consistente com os tokens e fluxos da seção 12 do plano. Textos ao jogador em pt-BR acentuado; comentários de código em pt-BR sem acentos.
 - Arquivos em UTF-8 **sem BOM**: o Godot rejeita BOM, e o PowerShell 5.1 grava BOM com `-Encoding utf8`.
 - O criador não usa o editor do Godot: cenas, temas e recursos são escritos como texto e validados por linha de comando.
-- Não alegar testes, desempenho ou revisão visual não executados. Dados de demonstração sempre identificados.
+- Não alegar testes, desempenho ou revisão visual não executados.
+- Desempenho desde já (D-032): nada de redesenhar o mapa inteiro a cada quadro; desenho estático em cache, preenchimentos em lote; rodar `tools/perf.ps1` após mudanças no cliente. Dados de demonstração sempre identificados.
 
 ## Ambiente
 
@@ -43,6 +44,7 @@ dotnet run --project Simulation.Runner -- --world Content/presets/inicial --days
 dotnet run --project Simulation.Runner -- --days 1 --no-skip   # verificação tick a tick
 dotnet run --project Simulation.Runner -- --days 90 --population 1000 --seeds 1-5 --out reports/validacao   # metas (docs/validacao.md)
 dotnet run --project Simulation.Runner -- --progression   # prévia nominal da curva de XP (progression.json)
+tools/perf.ps1   # desempenho do cliente: falha se o p95 do quadro passar de 6,9 ms (144 Hz), D-032
 ```
 
 ## Marco atual

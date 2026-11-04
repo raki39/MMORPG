@@ -147,9 +147,18 @@ public partial class WorldMapView : Node2D
         BuildCities();
         BuildWaterTexture(layout);
 
+        _under = new MapOverlay { Painter = c => { _c = c; DrawCityLights(); } };
+        AddChild(_under);
+        _static = new MapOverlay { Painter = c => { _c = c; _sw.Restart(); DrawMap(); LastDrawMs += _sw.Elapsed.TotalMilliseconds; } };
+        AddChild(_static);
+        _over = new MapOverlay { Painter = c => { _c = c; DrawAnimated(); DrawHighlights(); } };
+        AddChild(_over);
+
         _population = new PopulationLayer();
         _population.Init(persons.Count);
         AddChild(_population);
+        _staticOverlay = new MapOverlay { Painter = PaintStaticOverlay };
+        AddChild(_staticOverlay);
         _overlay = new MapOverlay { Painter = PaintOverlay };
         AddChild(_overlay);
         _personScreen = new Vector2[persons.Count + 1];
@@ -281,6 +290,13 @@ public partial class WorldMapView : Node2D
     public override void _Process(double delta)
     {
         if (_zones.Length == 0) return;
+        var t0 = System.Diagnostics.Stopwatch.GetTimestamp();
+        ProcessMap(delta);
+        LastProcessMs = System.Diagnostics.Stopwatch.GetElapsedTime(t0).TotalMilliseconds;
+    }
+
+    private void ProcessMap(double delta)
+    {
         float dt = (float)delta;
         _time += dt;
         if (FollowPersonId > 0 && MapPositionOf(FollowPersonId) is { } fp)
@@ -292,8 +308,68 @@ public partial class WorldMapView : Node2D
         UpdatePopulation();
         UpdateHover();
         UpdateTerrainUniforms();
-        QueueRedraw();
+        LastDrawMs = 0;
+        LastOverlayMs = 0;
+        _under.QueueRedraw();
+        _over.QueueRedraw();
         _overlay.QueueRedraw();
+        UpdateStaticCache(dt);
+    }
+
+    /// <summary>Forca o redesenho das camadas em cache (conteudo ou camada do mapa mudou).</summary>
+    public void InvalidateMapCache() => _cacheKey = "";
+
+    /// <summary>
+    /// Desenho em cache: estradas, cidades, areas, emblemas e nomes so sao redesenhados quando
+    /// muda o hover, a selecao, a faixa de detalhe, a luz do dia, a camada ou quando o zoom se
+    /// afasta muito do zoom do ultimo desenho. Entre redesenhos, a camada so e movida e
+    /// escalada pela camera (sem reenviar comandos de desenho). Emblemas e nomes tambem se
+    /// atualizam 4 vezes por segundo (contagem de jogadores).
+    /// </summary>
+    /// <summary>Medicao do pior caso: redesenha o cache a cada quadro.</summary>
+    public bool ForceRedrawEveryFrame { get; set; }
+
+    private void UpdateStaticCache(float dt)
+    {
+        if (ForceRedrawEveryFrame) _cacheKey = "";
+        string key = string.Concat(SelectedRegionId, "|", SelectedAreaKey, "|",
+            Detail >= 0.75f ? "a" : "b", Detail >= 1.25f ? "a" : "b", Detail >= 1.6f ? "a" : "b", Detail >= 2.4f ? "a" : "b", "|",
+            ((int)(_daylight * 20)).ToString(), "|", Layer.ToString());
+        bool settled = Mathf.Abs(_zoom - _targetZoom) <= _targetZoom * 0.002f;
+        float ratio = _cacheZoom > 0 ? _zoom / _cacheZoom : 0;
+        bool zoomFar = ratio < 0.88f || ratio > 1.14f;
+        bool settleRedraw = settled && Mathf.Abs(ratio - 1f) > 0.0015f;
+        if (key != _cacheKey || zoomFar || settleRedraw)
+        {
+            _cacheKey = key;
+            _cacheZoom = _zoom;
+            _cachePan = _pan;
+            _static.QueueRedraw();
+            _overlayZoom = _zoom;
+            _overlayPan = _pan;
+            _staticOverlay.QueueRedraw();
+            _countsTimer = 0;
+        }
+        else
+        {
+            _countsTimer += dt;
+            if (_countsTimer >= 0.25f)
+            {
+                _countsTimer = 0;
+                _overlayZoom = _zoom;
+                _overlayPan = _pan;
+                _staticOverlay.QueueRedraw();
+            }
+        }
+        Place(_static, _cacheZoom, _cachePan);
+        Place(_staticOverlay, _overlayZoom, _overlayPan);
+    }
+
+    private void Place(Node2D layer, float drawnZoom, Vector2 drawnPan)
+    {
+        float s = drawnZoom > 0 ? _zoom / drawnZoom : 1f;
+        layer.Scale = new Vector2(s, s);
+        layer.Position = _pan - drawnPan * s;
     }
 
     private void UpdateTerrainUniforms()
@@ -582,69 +658,198 @@ public partial class WorldMapView : Node2D
 
     // ---------------- Desenho: estradas, trilhas e areas ----------------
 
-    public override void _Draw()
+    /// <summary>Medicao: custo do ultimo _Draw, da sobreposicao e do _Process (ms).</summary>
+    public double LastDrawMs { get; private set; }
+    public double LastOverlayMs { get; private set; }
+    public double LastProcessMs { get; private set; }
+    private readonly System.Diagnostics.Stopwatch _sw = new();
+
+    /// <summary>Canvas alvo do desenho em andamento (a camada que esta pintando).</summary>
+    private CanvasItem _c = null!;
+
+    // Camadas: luzes (anima) -> mapa estatico (cache) -> animacoes -> populacao -> emblemas e
+    // nomes (cache) -> sobreposicao dinamica (bolhas, marcador, tooltip, bussola).
+    private MapOverlay _under = null!, _static = null!, _over = null!, _staticOverlay = null!;
+    private float _cacheZoom = -1f, _overlayZoom = -1f;
+    private Vector2 _cachePan, _overlayPan;
+    private string _cacheKey = "";
+    private float _countsTimer;
+
+    /// <summary>
+    /// Lote de triangulos com cor por vertice: todos os preenchimentos de uma etapa vao ao
+    /// renderizador numa chamada so (em vez de um poligono ou circulo por objeto).
+    /// </summary>
+    private sealed class TriBatch
     {
-        if (_zones.Length == 0) return;
+        private readonly List<Vector2> _p = new();
+        private readonly List<Color> _c = new();
+        private readonly List<int> _i = new();
+
+        /// <summary>Leque a partir de um centro (poligonos estrelados em torno do centro, como as manchas).</summary>
+        public void FanCenter(Vector2 center, Vector2[] ring, Color col)
+        {
+            int b = _p.Count;
+            _p.Add(center); _c.Add(col);
+            foreach (var q in ring) { _p.Add(q); _c.Add(col); }
+            int n = ring.Length;
+            for (int k = 0; k < n; k++) { _i.Add(b); _i.Add(b + 1 + k); _i.Add(b + 1 + (k + 1) % n); }
+        }
+
+        /// <summary>Leque a partir do primeiro vertice (poligonos convexos).</summary>
+        public void Convex(Vector2[] pts, Color col)
+        {
+            int b = _p.Count;
+            foreach (var q in pts) { _p.Add(q); _c.Add(col); }
+            for (int k = 1; k + 1 < pts.Length; k++) { _i.Add(b); _i.Add(b + k); _i.Add(b + k + 1); }
+        }
+
+        public void Quad(Vector2 a, Vector2 b2, Vector2 c, Vector2 d, Color col)
+        {
+            int b = _p.Count;
+            _p.Add(a); _p.Add(b2); _p.Add(c); _p.Add(d);
+            _c.Add(col); _c.Add(col); _c.Add(col); _c.Add(col);
+            _i.Add(b); _i.Add(b + 1); _i.Add(b + 2); _i.Add(b); _i.Add(b + 2); _i.Add(b + 3);
+        }
+
+        public void Tri(Vector2 a, Vector2 b2, Vector2 c, Color col)
+        {
+            int b = _p.Count;
+            _p.Add(a); _p.Add(b2); _p.Add(c);
+            _c.Add(col); _c.Add(col); _c.Add(col);
+            _i.Add(b); _i.Add(b + 1); _i.Add(b + 2);
+        }
+
+        public void Dot(Vector2 center, float r, Color col)
+        {
+            int seg = r < 3f ? 6 : r < 8f ? 10 : 16;
+            int b = _p.Count;
+            _p.Add(center); _c.Add(col);
+            for (int k = 0; k < seg; k++)
+            {
+                float ang = k * Mathf.Tau / seg;
+                _p.Add(center + new Vector2(Mathf.Cos(ang), Mathf.Sin(ang)) * r); _c.Add(col);
+            }
+            for (int k = 0; k < seg; k++) { _i.Add(b); _i.Add(b + 1 + k); _i.Add(b + 1 + (k + 1) % seg); }
+        }
+
+        public void Flush(CanvasItem target)
+        {
+            if (_i.Count == 0) return;
+            RenderingServer.CanvasItemAddTriangleArray(target.GetCanvasItem(), _i.ToArray(), _p.ToArray(), _c.ToArray());
+            _p.Clear(); _c.Clear(); _i.Clear();
+        }
+    }
+
+    private readonly TriBatch _tb = new();
+
+    private void DrawMap()
+    {
         float w = Mathf.Clamp(_zoom * 1.1f, 0.8f, 2.2f);
-        DrawCityLights();
-
-        // Trilhas ate as areas (fora da estrada): finas e tracejadas; somem com o mapa afastado.
+        // Trilhas ate as areas: tracejado fino numa chamada so; somem com o mapa afastado.
         if (Detail >= 0.75f)
-            foreach (var road in _layout.Roads.Where(r => r.IsTrail))
-                Trail(Screen(road.Points), w);
+        {
+            var trail = new List<Vector2>(2048);
+            foreach (var road in _layout.Roads)
+            {
+                if (!road.IsTrail) continue;
+                for (int i = 0; i + 1 < road.Points.Count; i += 2) { trail.Add(ToScreen(road.Points[i])); trail.Add(ToScreen(road.Points[i + 1])); }
+            }
+            if (trail.Count > 0) _c.DrawMultiline(trail.ToArray(), new Color(RoadLight, 0.45f), Mathf.Max(1f, 0.9f * w), true);
+        }
 
-        // Estradas: caminhos do Core (contornam agua e areas); pontes onde cruzam rio.
-        foreach (var road in _layout.Roads.Where(r => !r.IsTrail))
-            Road(Screen(road.Points), w);
+        // Estradas (caminhos do Core) e travessias entre zonas: borda e leito em duas chamadas.
+        var segs = new List<Vector2>(4096);
+        foreach (var road in _layout.Roads)
+        {
+            if (road.IsTrail) continue;
+            var prev = ToScreen(road.Points[0]);
+            for (int i = 1; i < road.Points.Count; i++) { var cur = ToScreen(road.Points[i]); segs.Add(prev); segs.Add(cur); prev = cur; }
+        }
         var drawnCross = new HashSet<string>(StringComparer.Ordinal);
         foreach (var z in _zones)
             foreach (var c in z.Connections)
             {
                 string key = string.CompareOrdinal(z.Id, c.To) < 0 ? z.Id + "|" + c.To : c.To + "|" + z.Id;
-                if (drawnCross.Add(key)) Road(new[] { ToScreen(_layout.Gate(z.Id, c.To)), ToScreen(_layout.Gate(c.To, z.Id)) }, w);
+                if (drawnCross.Add(key)) { segs.Add(ToScreen(_layout.Gate(z.Id, c.To))); segs.Add(ToScreen(_layout.Gate(c.To, z.Id))); }
             }
+        var roadArr = segs.ToArray();
+        _c.DrawMultiline(roadArr, new Color(RoadEdge, 0.85f), 3.0f * w, true);
+        _c.DrawMultiline(roadArr, RoadFill, 1.8f * w, true);
         foreach (var road in _layout.Roads)
             for (int i = 0; i < road.Water.Count; i++)
                 if (road.Water[i]) Bridge(ToScreen(road.Points[i]), ToScreen(road.Points[i + 1]), w);
-
+        // Areas de caca e coleta: preenchimentos num lote, contornos depois.
         foreach (var (z, a, shape) in _areas)
-            if (!z.IsCity) DrawAreaGround(z, a, shape);
+        {
+            if (z.IsCity) continue;
+            var c = ToScreen(_layout.AreaCenter(z.Id, a.Id));
+            float r = _layout.AreaRadius(z.Id, a.Id) * _zoom;
+            var col = AreaPalette.Color(a.Kind);
+            var pts = new Vector2[shape.Length];
+            var inner = new Vector2[shape.Length];
+            for (int i = 0; i < shape.Length; i++) { pts[i] = c + shape[i] * r; inner[i] = c + shape[i] * (r * 0.62f); }
+            _tb.FanCenter(c, pts, new Color(col, 0.11f));
+            _tb.FanCenter(c, inner, new Color(col, 0.07f));
+        }
+        _tb.Flush(_c);
+        foreach (var (z, a, shape) in _areas)
+        {
+            if (z.IsCity) continue;
+            var c = ToScreen(_layout.AreaCenter(z.Id, a.Id));
+            float r = _layout.AreaRadius(z.Id, a.Id) * _zoom;
+            var col = AreaPalette.Color(a.Kind);
+            if (AreaKinds.IsPortal(a.Kind))
+            {
+                var outline = new Vector2[shape.Length + 1];
+                for (int i = 0; i < shape.Length; i++) outline[i] = c + shape[i] * r;
+                outline[^1] = outline[0];
+                _c.DrawPolyline(outline, new Color(col, 0.85f), 2f, true);
+            }
+            else
+            {
+                var seg = new Vector2[shape.Length / 2 * 2];
+                for (int i = 0; i + 1 < seg.Length; i += 2) { seg[i] = c + shape[i] * r; seg[i + 1] = c + shape[(i + 1) % shape.Length] * r; }
+                _c.DrawMultiline(seg, new Color(col, 0.35f), 1.1f, true);
+            }
+        }
         foreach (var city in _cities) DrawCity(city, w);
 
+        // Portoes (marcos), encruzilhadas e castelos: um lote.
         foreach (var z in _zones)
         {
             foreach (var c in z.Connections) DrawGate(ToScreen(_layout.Gate(z.Id, c.To)), ToScreen(_layout.Center(c.To)), w);
             var hub = ToScreen(_layout.Hub(z.Id));
             if (z.IsCity) IconCastle(hub, 7f * w);
-            else { DrawCircle(hub, 2.6f * w, new Color(RoadEdge, 0.8f)); DrawCircle(hub, 1.6f * w, RoadFill); }
+            else { _tb.Dot(hub, 2.6f * w, new Color(RoadEdge, 0.8f)); _tb.Dot(hub, 1.6f * w, RoadFill); }
         }
+        _tb.Flush(_c);
     }
 
     /// <summary>Chao da area: mancha organica tingida pelo tipo, contorno tracejado e brilho de portal.</summary>
-    private void DrawAreaGround(RegionDefinition z, AreaDefinition a, Vector2[] shape)
+    private void DrawAreaGround(RegionDefinition z, AreaDefinition a, Vector2[] shape, bool hot = false)
     {
         var c = ToScreen(_layout.AreaCenter(z.Id, a.Id));
         float r = _layout.AreaRadius(z.Id, a.Id) * _zoom;
         var col = AreaPalette.Color(a.Kind);
-        string key = z.Id + "#" + a.Id;
-        bool hot = key == _hoveredArea || key == SelectedAreaKey;
-        var pts = shape.Select(p => c + p * r).ToArray();
-        DrawColoredPolygon(pts, new Color(col, hot ? 0.22f : 0.11f));
-        var inner = shape.Select(p => c + p * r * 0.62f).ToArray();
-        DrawColoredPolygon(inner, new Color(col, hot ? 0.12f : 0.07f));
-        var outline = new Vector2[pts.Length + 1];
-        Array.Copy(pts, outline, pts.Length);
-        outline[^1] = pts[0];
+        var pts = new Vector2[shape.Length];
+        var inner = new Vector2[shape.Length];
+        for (int i = 0; i < shape.Length; i++) { pts[i] = c + shape[i] * r; inner[i] = c + shape[i] * (r * 0.62f); }
+        // Destaque (hover/selecao) e desenhado por cima da versao normal, na camada dinamica.
+        _c.DrawColoredPolygon(pts, new Color(col, hot ? 0.11f : 0.11f));
+        _c.DrawColoredPolygon(inner, new Color(col, hot ? 0.05f : 0.07f));
         if (AreaKinds.IsPortal(a.Kind))
         {
-            float pulse = 0.5f + 0.5f * Mathf.Sin(_time * 2.4f + c.X * 0.01f);
-            for (int i = 3; i >= 1; i--) DrawCircle(c, r * (0.5f + i * 0.18f), new Color(col, 0.05f + 0.04f * pulse));
-            DrawPolyline(outline, new Color(col, 0.85f), 2f, true);
+            var outline = new Vector2[pts.Length + 1];
+            Array.Copy(pts, outline, pts.Length);
+            outline[^1] = pts[0];
+            _c.DrawPolyline(outline, new Color(col, 0.85f), 2f, true);
         }
         else
         {
-            for (int i = 0; i < pts.Length; i += 2)
-                DrawLine(pts[i], pts[(i + 1) % pts.Length], new Color(col, hot ? 0.85f : 0.35f), hot ? 1.8f : 1.1f, true);
+            // Tracejado numa chamada so (pares de pontos).
+            var seg = new Vector2[pts.Length];
+            for (int i = 0; i < pts.Length; i += 2) { seg[i] = pts[i]; seg[i + 1 < pts.Length ? i + 1 : i] = pts[(i + 1) % pts.Length]; }
+            _c.DrawMultiline(seg, new Color(col, hot ? 0.85f : 0.35f), hot ? 1.8f : 1.1f, true);
         }
     }
 
@@ -653,14 +858,17 @@ public partial class WorldMapView : Node2D
 
     private void Road(Vector2[] pts, float w)
     {
-        DrawPolyline(pts, new Color(RoadEdge, 0.85f), 3.0f * w, true);
-        DrawPolyline(pts, RoadFill, 1.8f * w, true);
+        _c.DrawPolyline(pts, new Color(RoadEdge, 0.85f), 3.0f * w, true);
+        _c.DrawPolyline(pts, RoadFill, 1.8f * w, true);
     }
 
     private void Trail(Vector2[] pts, float w)
     {
-        var col = new Color(RoadLight, 0.45f);
-        for (int i = 0; i + 1 < pts.Length; i += 2) DrawLine(pts[i], pts[i + 1], col, Mathf.Max(1f, 0.9f * w), true);
+        int n = pts.Length / 2 * 2;
+        if (n < 2) return;
+        var seg = new Vector2[n];
+        Array.Copy(pts, seg, n);
+        _c.DrawMultiline(seg, new Color(RoadLight, 0.45f), Mathf.Max(1f, 0.9f * w), true);
     }
 
     /// <summary>Ponte de madeira: tabuleiro largo com guarda-corpos.</summary>
@@ -669,23 +877,23 @@ public partial class WorldMapView : Node2D
         var dir = (b - a).Normalized();
         var side = new Vector2(-dir.Y, dir.X);
         var ext = dir * 1.5f * w;
-        DrawLine(a - ext, b + ext, new Color(0, 0, 0, 0.55f), 5.2f * w, true);
-        DrawLine(a - ext, b + ext, new Color("#6E5A44"), 3.8f * w, true);
+        _c.DrawLine(a - ext, b + ext, new Color(0, 0, 0, 0.55f), 5.2f * w, true);
+        _c.DrawLine(a - ext, b + ext, new Color("#6E5A44"), 3.8f * w, true);
         foreach (float k in new[] { -1f, 1f })
-            DrawLine(a - ext + side * 2.1f * w * k, b + ext + side * 2.1f * w * k, new Color("#3A2E22"), Mathf.Max(1f, 0.7f * w), true);
+            _c.DrawLine(a - ext + side * 2.1f * w * k, b + ext + side * 2.1f * w * k, new Color("#3A2E22"), Mathf.Max(1f, 0.7f * w), true);
     }
 
     private void DrawGate(Vector2 gate, Vector2 towards, float w)
     {
-        // Passagem: dois marcos de pedra de cada lado da estrada (discreto).
+        // Passagem: dois marcos de pedra de cada lado da estrada (discreto), no lote.
         var dir = (towards - gate).Normalized();
         var side = new Vector2(-dir.Y, dir.X);
         float s = 3.2f * w;
-        foreach (float k in new[] { -1f, 1f })
+        for (int k = -1; k <= 1; k += 2)
         {
             var post = gate + side * s * k;
-            DrawCircle(post, 1.7f * w + 0.8f, new Color(RoadEdge, 0.85f));
-            DrawCircle(post, 1.7f * w, RoadLight);
+            _tb.Dot(post, 1.7f * w + 0.8f, new Color(RoadEdge, 0.85f));
+            _tb.Dot(post, 1.7f * w, RoadLight);
         }
     }
 
@@ -785,51 +993,66 @@ public partial class WorldMapView : Node2D
         float wallW = Mathf.Clamp((stone ? 2.6f : 1.8f) * _zoom, 1.4f, stone ? 7f : 5f);
         var wallDark = stone ? new Color("#2B2824") : new Color("#2A2018");
         var wallFill = stone ? new Color("#9C9585") : new Color("#7A5B3C");
-
-        // Area urbana: ocupa todo o espaco da muralha, com a mesma tinta semiopaca das areas de
-        // caca e coleta (e o lugar onde regras proprias da cidade vao valer, D-030).
-        // Mesmo desenho das areas de caca: mancha semiopaca, nucleo mais denso e contorno
-        // tracejado; acende ao passar o mouse (na cidade ou num predio dela) ou ao selecionar.
-        string id = city.Zone.Id;
-        bool hotCity = _hoveredUrban == id || (_hoveredArea?.StartsWith(id + "#", StringComparison.Ordinal) ?? false)
-                       || SelectedRegionId == id;
         var cityTint = new Color("#E0B45A");
-        Vector2[] Scaled(float k) => city.Ring.Take(city.Ring.Length - 1).Select(p => ToScreen(city.Center + (p - city.Center) * k)).ToArray();
-        var ground = Scaled((city.Wall + 4f) / city.Wall);
-        DrawColoredPolygon(ground, new Color(cityTint, hotCity ? 0.30f : 0.14f));
-        DrawColoredPolygon(Scaled(0.62f), new Color(cityTint, hotCity ? 0.14f : 0.07f));
-        var edge = ground.Append(ground[0]).ToArray();
-        for (int i = 0; i + 1 < edge.Length; i++)
-        {
-            var a = edge[i];
-            var b = edge[i + 1];
-            for (float t = 0; t < 1f; t += 0.34f)
-                DrawLine(a.Lerp(b, t), a.Lerp(b, Mathf.Min(1f, t + 0.2f)), new Color(cityTint, hotCity ? 0.95f : 0.45f), hotCity ? 2.0f : 1.2f, true);
-        }
 
-        // Casas (so com o mapa perto o bastante).
-        if (Detail >= 0.75f)
+        // Chao da area urbana (como as areas de caca), casas e predios: um lote de preenchimentos.
+        int n = city.Ring.Length - 1;
+        var ground = new Vector2[n];
+        var core = new Vector2[n];
+        float k = (city.Wall + 4f) / city.Wall;
+        for (int i = 0; i < n; i++)
+        {
+            var d = city.Ring[i] - city.Center;
+            ground[i] = ToScreen(city.Center + d * k);
+            core[i] = ToScreen(city.Center + d * 0.62f);
+        }
+        var cc = ToScreen(city.Center);
+        _tb.FanCenter(cc, ground, new Color(cityTint, 0.14f));
+        _tb.FanCenter(cc, core, new Color(cityTint, 0.07f));
+
+        bool houses = Detail >= 0.75f;
+        var ridges = new List<Vector2>();
+        var ridgeColors = new List<Color>();
+        if (houses)
+        {
+            var shadowOffset = new Vector2(1.2f, 1.6f);
+            var shadowColor = new Color(0, 0, 0, 0.45f);
             foreach (var (c, half, ang, roof) in city.Houses)
             {
                 var x = new Vector2(Mathf.Cos(ang), Mathf.Sin(ang)) * half.X;
                 var y = new Vector2(-Mathf.Sin(ang), Mathf.Cos(ang)) * half.Y;
-                var pts = new[] { c - x - y, c + x - y, c + x + y, c - x + y }.Select(ToScreen).ToArray();
-                DrawColoredPolygon(pts.Select(q => q + new Vector2(1.2f, 1.6f)).ToArray(), new Color(0, 0, 0, 0.45f));
-                DrawColoredPolygon(pts, roof);
-                DrawLine((pts[0] + pts[3]) / 2f, (pts[1] + pts[2]) / 2f, roof.Darkened(0.35f), Mathf.Max(1f, 0.5f * _zoom), true);
+                var p0 = ToScreen(c - x - y); var p1 = ToScreen(c + x - y); var p2 = ToScreen(c + x + y); var p3 = ToScreen(c - x + y);
+                _tb.Quad(p0 + shadowOffset, p1 + shadowOffset, p2 + shadowOffset, p3 + shadowOffset, shadowColor);
+                _tb.Quad(p0, p1, p2, p3, roof);
+                ridges.Add((p0 + p3) / 2f); ridges.Add((p1 + p2) / 2f); ridgeColors.Add(roof.Darkened(0.35f));
             }
+        }
+        foreach (var a in city.Zone.Areas) BuildingFill(city.Zone, a, ridges, ridgeColors);
+        _tb.Flush(_c);
 
-        // Predios das areas da cidade (lojas, forja, taverna...): telhado no lugar da mancha.
-        foreach (var a in city.Zone.Areas) DrawCityBuilding(city.Zone, a);
+        // Linhas: contorno tracejado da area urbana, cumeeiras e muralha.
+        var dash = new List<Vector2>(n * 6);
+        for (int i = 0; i < n; i++)
+        {
+            var a = ground[i];
+            var b = ground[(i + 1) % n];
+            for (float t = 0; t < 1f; t += 0.34f) { dash.Add(a.Lerp(b, t)); dash.Add(a.Lerp(b, Mathf.Min(1f, t + 0.2f))); }
+        }
+        _c.DrawMultiline(dash.ToArray(), new Color(cityTint, 0.45f), 1.2f, true);
+        if (ridges.Count > 0) _c.DrawMultilineColors(ridges.ToArray(), ridgeColors.ToArray(), Mathf.Max(1f, 0.6f * _zoom), true);
+        foreach (var a in city.Zone.Areas) BuildingLines(city.Zone, a);
 
-        // Muralha com aberturas nas ruas; torres na pedra; luz das janelas a noite.
+        var wall = new List<Vector2>(city.Ring.Length * 2);
         for (int i = 0; i + 1 < city.Ring.Length; i++)
         {
             if (city.Open[i]) continue;
-            var a = ToScreen(city.Ring[i]);
-            var b = ToScreen(city.Ring[i + 1]);
-            DrawLine(a, b, wallDark, wallW + 1.6f, true);
-            DrawLine(a, b, wallFill, wallW, true);
+            wall.Add(ToScreen(city.Ring[i])); wall.Add(ToScreen(city.Ring[i + 1]));
+        }
+        if (wall.Count > 0)
+        {
+            var wa = wall.ToArray();
+            _c.DrawMultiline(wa, wallDark, wallW + 1.6f, true);
+            _c.DrawMultiline(wa, wallFill, wallW, true);
         }
         for (int i = 0; i + 1 < city.Ring.Length; i++)
         {
@@ -838,59 +1061,125 @@ public partial class WorldMapView : Node2D
             if (!stone && city.Level < 2) continue;
             var t = ToScreen(city.Ring[i]);
             float tr = wallW * (gateSide ? 1.25f : 0.95f);
-            DrawCircle(t + new Vector2(1, 1.5f), tr + 1, new Color(0, 0, 0, 0.45f));
-            DrawCircle(t, tr + 0.8f, wallDark);
-            DrawCircle(t, tr, wallFill.Lightened(0.08f));
+            _tb.Dot(t + new Vector2(1, 1.5f), tr + 1, new Color(0, 0, 0, 0.45f));
+            _tb.Dot(t, tr + 0.8f, wallDark);
+            _tb.Dot(t, tr, wallFill.Lightened(0.08f));
+        }
+        _tb.Flush(_c);
+    }
+
+    /// <summary>
+    /// Area urbana: ocupa todo o espaco da muralha, com o mesmo desenho das areas de caca
+    /// (mancha semiopaca, nucleo e contorno tracejado). O destaque e desenhado por cima.
+    /// </summary>
+    private void DrawUrbanGround(CityDeco city, bool hot)
+    {
+        var cityTint = new Color("#E0B45A");
+        int n = city.Ring.Length - 1;
+        var ground = new Vector2[n];
+        var core = new Vector2[n];
+        float k = (city.Wall + 4f) / city.Wall;
+        for (int i = 0; i < n; i++)
+        {
+            var d = city.Ring[i] - city.Center;
+            ground[i] = ToScreen(city.Center + d * k);
+            core[i] = ToScreen(city.Center + d * 0.62f);
+        }
+        _c.DrawColoredPolygon(ground, new Color(cityTint, hot ? 0.16f : 0.14f));
+        _c.DrawColoredPolygon(core, new Color(cityTint, hot ? 0.07f : 0.07f));
+        var seg = new List<Vector2>(n * 6);
+        for (int i = 0; i < n; i++)
+        {
+            var a = ground[i];
+            var b = ground[(i + 1) % n];
+            for (float t = 0; t < 1f; t += 0.34f) { seg.Add(a.Lerp(b, t)); seg.Add(a.Lerp(b, Mathf.Min(1f, t + 0.2f))); }
+        }
+        _c.DrawMultiline(seg.ToArray(), new Color(cityTint, hot ? 0.95f : 0.45f), hot ? 2.0f : 1.2f, true);
+    }
+
+    /// <summary>
+    /// Destaques a cada quadro (fora do cache): area, cidade ou predio sob o mouse ou
+    /// selecionado. Assim passar o mouse nao redesenha o mapa inteiro.
+    /// </summary>
+    private void DrawHighlights()
+    {
+        foreach (var (z, a, shape) in _areas)
+        {
+            string key = z.Id + "#" + a.Id;
+            if (key != _hoveredArea && key != SelectedAreaKey) continue;
+            if (z.IsCity)
+            {
+                var cm = _layout.AreaCenter(z.Id, a.Id);
+                _c.DrawArc(ToScreen(cm), _layout.AreaRadius(z.Id, a.Id) * _zoom, 0, Mathf.Tau, 32, new Color(UiTokens.AccentSoft, 0.9f), 2f, true);
+            }
+            else DrawAreaGround(z, a, shape, hot: true);
+        }
+        foreach (var city in _cities)
+        {
+            string id = city.Zone.Id;
+            if (_hoveredUrban == id || (_hoveredArea?.StartsWith(id + "#", StringComparison.Ordinal) ?? false) || SelectedRegionId == id)
+                DrawUrbanGround(city, true);
         }
     }
 
-    private void DrawCityBuilding(RegionDefinition z, AreaDefinition a)
+    private static Color RoofOf(string kind) => kind switch
+    {
+        AreaKinds.Forge => new Color("#4B4A4F"),
+        AreaKinds.Tavern => new Color("#8A4F2E"),
+        AreaKinds.Shop => new Color("#6F5B8E"),
+        _ => new Color("#7A6A58"),
+    };
+
+    /// <summary>Preenchimentos do predio de uma area da cidade (praca, campo de treino, lojas...).</summary>
+    private void BuildingFill(RegionDefinition z, AreaDefinition a, List<Vector2> ridges, List<Color> ridgeColors)
     {
         var cm = _layout.AreaCenter(z.Id, a.Id);
         float r = _layout.AreaRadius(z.Id, a.Id);
         var c = new Vector2(cm.X, cm.Y);
-        string key = z.Id + "#" + a.Id;
-        bool hot = key == _hoveredArea || key == SelectedAreaKey;
+        var cs = ToScreen(c);
         switch (a.Kind)
         {
             case AreaKinds.TownSquare:
-            {
-                // Praca: calcamento mais claro com fonte no meio.
-                DrawCircle(ToScreen(c), r * 0.85f * _zoom, new Color("#B7AE9C"));
-                DrawArc(ToScreen(c), r * 0.85f * _zoom, 0, Mathf.Tau, 32, new Color("#5E574C"), Mathf.Max(1f, 0.6f * _zoom), true);
-                DrawCircle(ToScreen(c), r * 0.22f * _zoom, new Color("#4A7C99"));
+                _tb.Dot(cs, r * 0.85f * _zoom, new Color("#B7AE9C"));
+                _tb.Dot(cs, r * 0.22f * _zoom, new Color("#4A7C99"));
                 break;
-            }
             case AreaKinds.TrainingGround:
             {
-                // Campo de treino: terreiro de areia cercado.
-                var pts = Enumerable.Range(0, 20).Select(i => ToScreen(c + new Vector2(Mathf.Cos(i * Mathf.Tau / 20) * r * 0.95f, Mathf.Sin(i * Mathf.Tau / 20) * r * 0.7f))).ToArray();
-                DrawColoredPolygon(pts, new Color("#C2A774"));
-                DrawPolyline(pts.Append(pts[0]).ToArray(), new Color("#5A4632"), Mathf.Max(1f, 0.7f * _zoom), true);
+                var pts = new Vector2[20];
+                for (int i = 0; i < 20; i++) pts[i] = ToScreen(c + new Vector2(Mathf.Cos(i * Mathf.Tau / 20) * r * 0.95f, Mathf.Sin(i * Mathf.Tau / 20) * r * 0.7f));
+                _tb.Convex(pts, new Color("#C2A774"));
                 break;
             }
             default:
             {
-                // Loja, forja, taverna: predio com telhado de duas aguas.
-                var roof = a.Kind switch
-                {
-                    AreaKinds.Forge => new Color("#4B4A4F"),
-                    AreaKinds.Tavern => new Color("#8A4F2E"),
-                    AreaKinds.Shop => new Color("#6F5B8E"),
-                    _ => new Color("#7A6A58"),
-                };
+                var roof = RoofOf(a.Kind);
                 float hw = r * 0.85f, hh = r * 0.62f;
-                var pts = new[] { c + new Vector2(-hw, -hh), c + new Vector2(hw, -hh), c + new Vector2(hw, hh), c + new Vector2(-hw, hh) }.Select(ToScreen).ToArray();
-                DrawColoredPolygon(pts.Select(q => q + new Vector2(2f, 2.5f)).ToArray(), new Color(0, 0, 0, 0.5f));
-                DrawColoredPolygon(pts, roof);
-                DrawColoredPolygon(new[] { pts[0], pts[1], (pts[1] + pts[2]) / 2f, (pts[0] + pts[3]) / 2f }, roof.Lightened(0.12f));
-                DrawLine((pts[0] + pts[3]) / 2f, (pts[1] + pts[2]) / 2f, roof.Darkened(0.4f), Mathf.Max(1f, 0.8f * _zoom), true);
-                if (a.Kind == AreaKinds.Forge)
-                    DrawCircle(ToScreen(c + new Vector2(hw * 0.6f, -hh * 0.4f)), Mathf.Max(1.5f, 1.2f * _zoom), new Color(1f, 0.55f, 0.15f, 0.7f + 0.3f * Mathf.Sin(_time * 6f)));
+                var p0 = ToScreen(c + new Vector2(-hw, -hh)); var p1 = ToScreen(c + new Vector2(hw, -hh));
+                var p2 = ToScreen(c + new Vector2(hw, hh)); var p3 = ToScreen(c + new Vector2(-hw, hh));
+                var sh = new Vector2(2f, 2.5f);
+                _tb.Quad(p0 + sh, p1 + sh, p2 + sh, p3 + sh, new Color(0, 0, 0, 0.5f));
+                _tb.Quad(p0, p1, p2, p3, roof);
+                _tb.Quad(p0, p1, (p1 + p2) / 2f, (p0 + p3) / 2f, roof.Lightened(0.12f));
+                ridges.Add((p0 + p3) / 2f); ridges.Add((p1 + p2) / 2f); ridgeColors.Add(roof.Darkened(0.4f));
                 break;
             }
         }
-        if (hot) DrawArc(ToScreen(c), r * _zoom, 0, Mathf.Tau, 32, new Color(UiTokens.AccentSoft, 0.9f), 2f, true);
+    }
+
+    /// <summary>Linhas do predio (borda da praca, cerca do campo de treino).</summary>
+    private void BuildingLines(RegionDefinition z, AreaDefinition a)
+    {
+        var cm = _layout.AreaCenter(z.Id, a.Id);
+        float r = _layout.AreaRadius(z.Id, a.Id);
+        var c = new Vector2(cm.X, cm.Y);
+        if (a.Kind == AreaKinds.TownSquare)
+            _c.DrawArc(ToScreen(c), r * 0.85f * _zoom, 0, Mathf.Tau, 32, new Color("#5E574C"), Mathf.Max(1f, 0.6f * _zoom), true);
+        else if (a.Kind == AreaKinds.TrainingGround)
+        {
+            var pts = new Vector2[21];
+            for (int i = 0; i <= 20; i++) pts[i] = ToScreen(c + new Vector2(Mathf.Cos(i * Mathf.Tau / 20) * r * 0.95f, Mathf.Sin(i * Mathf.Tau / 20) * r * 0.7f));
+            _c.DrawPolyline(pts, new Color("#5A4632"), Mathf.Max(1f, 0.7f * _zoom), true);
+        }
     }
 
     private void DrawCityLights()
@@ -902,20 +1191,22 @@ public partial class WorldMapView : Node2D
             var p = ToScreen(_layout.Hub(z.Id));
             float rad = _layout.CityWallRadius(z.Id) * 0.8f * _zoom;
             float flicker = 0.92f + 0.08f * Mathf.Sin(_time * 3.1f);
-            for (int i = 6; i >= 1; i--) DrawCircle(p, rad * (1f + i * 0.25f), new Color(1f, 0.72f, 0.38f, 0.03f * night * flicker));
+            for (int i = 6; i >= 1; i--) _c.DrawCircle(p, rad * (1f + i * 0.25f), new Color(1f, 0.72f, 0.38f, 0.03f * night * flicker));
         }
     }
 
     private void IconCastle(Vector2 c, float s)
     {
         var wall = new Color("#EFE6D2");
+        var shadow = new Color(0, 0, 0, 0.45f);
+        var off = new Vector2(1.5f, 2f);
         void R(float x, float y, float w2, float h, Color col)
         {
-            var pts = new[] { c + new Vector2(x, y), c + new Vector2(x + w2, y), c + new Vector2(x + w2, y + h), c + new Vector2(x, y + h) };
-            DrawColoredPolygon(pts.Select(p => p + new Vector2(1.5f, 2f)).ToArray(), new Color(0, 0, 0, 0.45f));
-            DrawColoredPolygon(pts, col);
+            var a = c + new Vector2(x, y); var b = c + new Vector2(x + w2, y); var d = c + new Vector2(x + w2, y + h); var e = c + new Vector2(x, y + h);
+            _tb.Quad(a + off, b + off, d + off, e + off, shadow);
+            _tb.Quad(a, b, d, e, col);
         }
-        void T(Vector2 a, Vector2 b, Vector2 d) => DrawColoredPolygon(new[] { c + a, c + b, c + d }, UiTokens.Accent);
+        void T(Vector2 a, Vector2 b, Vector2 d) => _tb.Tri(c + a, c + b, c + d, UiTokens.Accent);
         R(-s * 0.85f, -s * 0.05f, s * 1.7f, s * 0.75f, wall);
         R(-s * 0.95f, -s * 0.55f, s * 0.42f, s * 1.25f, wall);
         R(s * 0.53f, -s * 0.55f, s * 0.42f, s * 1.25f, wall);
@@ -923,7 +1214,31 @@ public partial class WorldMapView : Node2D
         T(new Vector2(-s, -s * 0.55f), new Vector2(-s * 0.74f, -s * 0.95f), new Vector2(-s * 0.48f, -s * 0.55f));
         T(new Vector2(s * 0.48f, -s * 0.55f), new Vector2(s * 0.74f, -s * 0.95f), new Vector2(s, -s * 0.55f));
         T(new Vector2(-s * 0.3f, -s * 0.85f), new Vector2(0, -s * 1.3f), new Vector2(s * 0.3f, -s * 0.85f));
-        R(-s * 0.06f, -s * 0.5f, s * 0.12f, s * 0.18f, new Color(1f, 0.8f, 0.45f, 0.25f + 0.75f * (1f - _daylight)));
+        var lit = new Color(1f, 0.8f, 0.45f, 0.25f + 0.75f * (1f - _daylight));
+        _tb.Quad(c + new Vector2(-s * 0.06f, -s * 0.5f), c + new Vector2(s * 0.06f, -s * 0.5f), c + new Vector2(s * 0.06f, -s * 0.32f), c + new Vector2(-s * 0.06f, -s * 0.32f), lit);
+    }
+
+    /// <summary>Animacoes leves desenhadas a cada quadro: pulso dos portais e brilho das forjas.</summary>
+    private void DrawAnimated()
+    {
+        foreach (var (z, a, _) in _areas)
+        {
+            if (AreaKinds.IsPortal(a.Kind) && !z.IsCity)
+            {
+                var c = ToScreen(_layout.AreaCenter(z.Id, a.Id));
+                float r = _layout.AreaRadius(z.Id, a.Id) * _zoom;
+                var col = AreaPalette.Color(a.Kind);
+                float pulse = 0.5f + 0.5f * Mathf.Sin(_time * 2.4f + c.X * 0.01f);
+                for (int i = 3; i >= 1; i--) _c.DrawCircle(c, r * (0.5f + i * 0.18f), new Color(col, 0.05f + 0.04f * pulse));
+            }
+            else if (z.IsCity && a.Kind == AreaKinds.Forge)
+            {
+                var cm = _layout.AreaCenter(z.Id, a.Id);
+                float r = _layout.AreaRadius(z.Id, a.Id);
+                var pos = ToScreen(new Vector2(cm.X + r * 0.85f * 0.6f, cm.Y - r * 0.62f * 0.4f));
+                _c.DrawCircle(pos, Mathf.Max(1.5f, 1.2f * _zoom), new Color(1f, 0.55f, 0.15f, 0.7f + 0.3f * Mathf.Sin(_time * 6f)));
+            }
+        }
     }
 
     // ---------------- Sobreposicao ----------------
@@ -931,23 +1246,46 @@ public partial class WorldMapView : Node2D
     private void PaintOverlay(MapOverlay o)
     {
         if (_zones.Length == 0) return;
+        var t0 = System.Diagnostics.Stopwatch.GetTimestamp();
+        PaintOverlayInner(o);
+        LastOverlayMs += System.Diagnostics.Stopwatch.GetElapsedTime(t0).TotalMilliseconds;
+    }
+
+    private void PaintStaticOverlay(MapOverlay o)
+    {
+        if (_zones.Length == 0) return;
+        var t0 = System.Diagnostics.Stopwatch.GetTimestamp();
         foreach (var (z, a, _) in _areas) AreaEmblem(o, z, a);
-        foreach (var z in _zones) ZoneLabel(o, z);
+        foreach (var z in _zones) if (z.IsCity) ZoneLabel(o, z);
+        LastOverlayMs += System.Diagnostics.Stopwatch.GetElapsedTime(t0).TotalMilliseconds;
+    }
+
+    private void PaintOverlayInner(MapOverlay o)
+    {
+        // Itens em foco (hover/selecao) por cima do cache, a cada quadro.
+        foreach (var (z, a, _) in _areas)
+        {
+            string key = z.Id + "#" + a.Id;
+            if (key == _hoveredArea || key == SelectedAreaKey) AreaEmblem(o, z, a, focus: true);
+        }
+        foreach (var id in new[] { HoveredRegionId, SelectedRegionId }.Distinct())
+            if (id != null && _content.Regions.TryGetValue(id, out var fz))
+                ZoneLabel(o, fz, focused: true);
         for (int i = 0; i < _clusters.Count; i++) ClusterBubble(o, _clusters[i], i == _hoveredCluster);
         SelectedPersonMarker(o);
         DrawCompass(o);
         if (!_dragging) Tooltip(o);
     }
 
-    private void AreaEmblem(MapOverlay o, RegionDefinition z, AreaDefinition a)
+    private void AreaEmblem(MapOverlay o, RegionDefinition z, AreaDefinition a, bool focus = false)
     {
         string key = z.Id + "#" + a.Id;
         var c = ToScreen(_layout.AreaCenter(z.Id, a.Id));
-        float r = EmblemRadius() * (key == _hoveredArea ? 1.12f : 1f);
+        float r = EmblemRadius() * (focus ? 1.12f : 1f);
         var col = AreaPalette.Color(a.Kind);
 
         // Afastado (mundo todo e lotes livres): o emblema vira um ponto discreto.
-        if (Detail < 0.75f && key != _hoveredArea && key != SelectedAreaKey)
+        if (Detail < 0.75f && !focus)
         {
             float dot = Mathf.Clamp(_layout.AreaRadius(z.Id, a.Id) * _zoom * 0.5f, 2.5f, 6f);
             o.DrawCircle(c, dot + 1.2f, new Color(0, 0, 0, 0.55f));
@@ -969,7 +1307,7 @@ public partial class WorldMapView : Node2D
                 start += span;
             }
         }
-        o.DrawArc(c, r, 0, Mathf.Tau, 32, col, key == SelectedAreaKey ? 3f : 2f, true);
+        o.DrawArc(c, r, 0, Mathf.Tau, 32, col, focus ? 3f : 2f, true);
         AreaPalette.DrawGlyph(o, a.Kind, c, r * 0.55f, col);
 
         if (people.Count > 0)
@@ -985,7 +1323,7 @@ public partial class WorldMapView : Node2D
         }
 
         // Nome da area ao aproximar (ou em foco); portais sempre mostram o destino.
-        if (Detail >= 2.4f || key == _hoveredArea || key == SelectedAreaKey)
+        if (Detail >= 2.4f || focus || focus)
         {
             var f = UiFonts.SemiBold;
             int size = Detail >= 2.6f ? 12 : 11;
@@ -1005,10 +1343,9 @@ public partial class WorldMapView : Node2D
         }
     }
 
-    private void ZoneLabel(MapOverlay o, RegionDefinition z)
+    private void ZoneLabel(MapOverlay o, RegionDefinition z, bool focused = false)
     {
         var c = _layout.Center(z.Id);
-        bool focused = z.Id == HoveredRegionId || z.Id == SelectedRegionId;
         var outline = new Color(0.02f, 0.03f, 0.04f, 0.85f);
         // So a cidade tem nome sempre (logo abaixo da muralha); as outras zonas mostram nome e
         // regras ao passar o mouse ou quando selecionadas.

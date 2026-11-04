@@ -548,3 +548,41 @@ Proposta do criador, analisada com o Claude.
 - peso de quest alto (oferta 180, entrega 320, etapa 260): 34% do XP de quests e 40% do tempo andando;
 - peso baixo: quase ninguém faz quest e se anda 23%.
 - O ciclo "quadro → etapa → quadro" anda por natureza. Quem deve reduzir isso é o plano da sessão e a continuidade (D-026), sem compensação artificial.
+
+## D-032 — Desempenho do mapa: cache de desenho, lotes e orçamento por quadro
+**Data:** 04/11/2026 · **Estado:** aceita (pedido do criador)
+
+**Problema:**
+- O jogo rodava a 144 fps fixos.
+- Depois do mapa ampliado, das cidades e das estradas, caiu para cerca de 60 fps de perto e cerca de 100 fps de longe, antes de qualquer simulação pesada.
+
+**Medição primeiro** (`--measure-seconds`, sem vsync, CPU e GPU separados):
+- **Era CPU, não GPU.**
+  - O mapa redesenhava tudo a cada quadro: 8–9,5 ms em estradas, muralhas, casas, prédios, áreas e portões, mais 2,7–3,5 ms de emblemas e nomes.
+  - O shader do terreno gastava 4–5 ms.
+
+**Mudanças:**
+- **Cache de desenho.**
+  - O mapa estático (estradas, cidades, áreas) e os emblemas e nomes ficam em camadas desenhadas uma vez.
+  - Entre redesenhos, a câmera só move e escala essas camadas, sem reenviar comandos.
+  - Redesenha quando muda a faixa de detalhe, a seleção, a luz do dia (em 20 degraus), a camada do mapa ou quando o zoom se afasta mais de 12–14% do último desenho.
+  - Emblemas e nomes se atualizam 4 vezes por segundo, para os contadores de jogadores.
+- **Hover sem redesenho:** os destaques (área, cidade, prédio, emblema e nome em foco) ficam numa camada dinâmica que desenha só o item focado.
+- **Animações a cada quadro, mas leves:** pulso dos portais, brilho das forjas e luzes da cidade à noite.
+- **Lotes:**
+  - todos os preenchimentos de uma etapa (áreas, chão urbano, casas, prédios, torres, marcos, castelos) vão ao renderizador num único lote de triângulos (`CanvasItemAddTriangleArray`);
+  - estradas, trilhas, tracejados, muralhas e cumeeiras usam `DrawMultiline`, uma chamada por estilo.
+
+**Medido** (máquina do criador, 1920×1080, sem vsync):
+
+| Vista | Antes | Depois |
+|---|---|---|
+| Mapa inteiro | 51 fps (19,6 ms) | ~350 fps (2,9 ms) |
+| Perto | 42 fps (24 ms) | ~300–340 fps (3,0–3,3 ms) |
+| Longe | 54 fps | ~450 fps |
+| Com 2.000 pessoas | — | ~300 fps |
+| Pior caso (redesenho em todo quadro) | 48 fps | ~115 fps |
+
+**Regra de desempenho:**
+- `tools/perf.ps1` mede as vistas fixas e falha se o p95 do quadro passar de 6,9 ms (144 Hz).
+- Rodar depois de mudanças no cliente. Os números são desta máquina.
