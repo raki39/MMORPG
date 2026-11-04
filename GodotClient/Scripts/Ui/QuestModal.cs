@@ -312,7 +312,7 @@ public partial class QuestModal : ModalFrame
         return Row(12, Card("Requisitos", req, UiTokens.Info), Card("Recompensas", rew, UiTokens.Success));
     }
 
-    private static string Coins(long copper)
+    public static string Coins(long copper)
     {
         long gold = copper / 10000, silver = copper / 100 % 100, cu = copper % 100;
         var parts = new List<string>();

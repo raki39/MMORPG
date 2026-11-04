@@ -24,7 +24,7 @@ Jogo de gestão single-player e offline: o jogador cria e administra um MMORPG e
 - Toda regra nova de simulação tem teste em `Simulation.Tests`. Estado novo entra no `StateHasher`.
 - Eventos relevantes registram causas (`EventCause`).
 - Abrir ou fechar a visão 3D não muda o resultado autoritativo.
-- Interface: kit visual v3 (D-034, `docs/ui-kit.md`), estilo dossiê de jogo de gestão (FM): escuro, denso, Inter (11 a 28 px, rótulos claros), cards na grade de 12 colunas com bordas alinhadas entre linhas, ícones Lucide, gráficos analíticos, tooltips explicando. Só o mapa passa o tempo; páginas pausam. Nada de visual de MMORPG mobile nem card vazio na visão geral. Cinzel só nos nomes de zona do mapa.
+- Interface: kit visual v3 (D-034, `docs/ui-kit.md`), estilo dossiê de jogo de gestão (FM): escuro, denso, Inter (11 a 28 px, rótulos claros), cards na grade de 12 colunas com bordas alinhadas entre linhas, ícones Lucide, gráficos analíticos, tooltips explicando. Só o mapa passa o tempo; páginas pausam. Navegação pelo menu lateral (D-035). Nada de visual de MMORPG mobile nem card vazio na visão geral. Cinzel só nos nomes de zona do mapa.
 - Arquivos em UTF-8 **sem BOM**: o Godot rejeita BOM, e o PowerShell 5.1 grava BOM com `-Encoding utf8`.
 - O criador não usa o editor do Godot: cenas, temas e recursos são escritos como texto e validados por linha de comando.
 - Não alegar testes, desempenho ou revisão visual não executados.

@@ -34,10 +34,14 @@ public partial class ModalFrame : Control
     /// <summary>Destaque a direita da faixa de dados (ex.: medidor central).</summary>
     public HBoxContainer Highlight { get; }
 
+    /// <summary>Largura atual do menu lateral (as paginas comecam depois dele).</summary>
+    public static int ContentLeft { get; set; } = NavSidebar.ExpandedWidth;
+
     public ModalFrame(Color accent)
     {
         SetAnchorsPreset(LayoutPreset.FullRect);
         OffsetTop = UiTokens.TopBarHeight;
+        OffsetLeft = ContentLeft;
         MouseFilter = MouseFilterEnum.Stop;
         AddChild(new PageBackdrop());
 

@@ -65,7 +65,7 @@ public static class UiTokens
     public const int PanelRadius = 2;
 
     public const int TopBarHeight = 56;
-    public const int SidePanelWidth = 430;
+    public const int SidePanelWidth = 340;
     public const int InspectorWidth = 380;
 
     public static Color ProfileColor(string profileId) => profileId switch

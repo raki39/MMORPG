@@ -122,6 +122,10 @@ Falta para fechar o M2:
 - [ ] Kit v3 na página de área, nas abas secundárias (Missões, Histórico, Rotina, Jogadores e Regras da zona) e no painel lateral do mapa
 - [ ] Escala da interface nas Configurações (telas menores que 1600×900)
 - [x] Barra superior de altura fixa com submenus, indicadores sem gráfico, painel lateral recolhível e painéis do mapa no kit (D-034)
+- [x] Menu principal lateral recolhível, barra mais limpa, painel do mapa de 340 px fechado ao iniciar (D-035)
+- [x] Ficha do jogador: personalidade no cabeçalho, Inventário · M5, Progresso e objetivos, Horários de jogo, aba Estatísticas (D-035)
+- [ ] Objetivos pessoais na simulação (D-026) e exibição no card "Progresso e objetivos"
+- [ ] Relatório de moderadores (inspeção de jogadores, M9)
 - [ ] Abas de Inventário e Banco (M5) e últimos abates (M3) com dados reais
 - [ ] Ícones de áreas mais detalhados no mapa
 - [x] Navegação com histórico (voltar e avançar) entre dossiês (D-033)

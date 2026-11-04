@@ -96,7 +96,6 @@ public partial class Main : Node
     private Control? _layerPanel, _mapControls;
     private Control _speedSeg = null!;
     private Button _backButton = null!, _forwardButton = null!, _returnButton = null!;
-    private readonly List<(string Kind, Button Button)> _menu = new();
     private int _speedBeforePage = 1;
     private bool _pausedByPage;
     private bool OnMap => _modal == null || !IsInstanceValid(_modal);
@@ -174,6 +173,7 @@ public partial class Main : Node
         _map.AreaSelected += PeekArea;
         _map.ClusterSelected += OpenCluster;
 
+        BuildNav(content);
         BuildTopBar(content);
         BuildLayerPanel();
         BuildSidePanel();
@@ -250,7 +250,7 @@ public partial class Main : Node
             if (id > 0) PeekPerson(id, center);
         }
         if (_args.TryGetValue("side", out var sd) && sd == "off" && _sideOpen) ToggleSidePanel();
-        if (_args.TryGetValue("open-menu", out var om) && _menu.FirstOrDefault(m => m.Kind == om).Button is { } mb) OpenDropdown(mb);
+        if (_args.TryGetValue("nav", out var nv) && nv == "off") _nav?.SetExpanded(false);
         if (_args.TryGetValue("peek-zone", out var pz) && _ctx.Content.Regions.ContainsKey(pz)) PeekZone(pz, center);
         if (_args.ContainsKey("open-cluster"))
         {
@@ -333,7 +333,6 @@ public partial class Main : Node
         _terrain.Visible = visible;
         if (_side != null) _side.Visible = visible && _sideOpen;
         if (_sideToggle != null) _sideToggle.Visible = visible;
-        if (!visible) CloseDropdown();
         if (_layerPanel != null) _layerPanel.Visible = visible;
         if (_mapControls != null) _mapControls.Visible = visible;
         if (_emptyBanner != null && !visible) _emptyBanner.Visible = false;
@@ -350,7 +349,8 @@ public partial class Main : Node
         _forwardButton.Disabled = _navAt < 0 || _navAt >= _navHistory.Count - 1;
         string current = _navAt >= 0 ? _navHistory[_navAt].Kind : "map";
         string section = current switch { "person" => "players", "zone" or "area" => "zones", "quest" => "quests", _ => current };
-        foreach (var (kind, b) in _menu) b.SetPressedNoSignal(kind == section);
+        if (_nav != null) _nav.Active = section;
+        SetScreenTitle(section);
     }
 
     private Vector2 MouseOr(Vector2? at) => at ?? _fakeMouse ?? GetViewport().GetMousePosition();
@@ -499,7 +499,6 @@ public partial class Main : Node
         _map.SetHour(now.Hour + now.Minute / 60.0 + now.Second / 3600.0);
 
         _uiTimer += delta;
-        UpdateDropdown(delta);
         if (_uiTimer >= 0.2 || _frames < 3)
         {
             _uiTimer = 0;
@@ -582,6 +581,7 @@ public partial class Main : Node
     public override void _UnhandledKeyInput(InputEvent e)
     {
         if (e is not InputEventKey k || !k.Pressed || k.Echo) return;
+        if (k.Keycode == Key.N && !k.CtrlPressed && GetViewport().GuiGetFocusOwner() is not LineEdit) { _nav?.Toggle(); GetViewport().SetInputAsHandled(); return; }
         if (k.Keycode == Key.F11 || (k.AltPressed && k.Keycode is Key.Enter or Key.KpEnter)) { ClientSettings.ToggleFullscreen(); GetViewport().SetInputAsHandled(); return; }
         if (k.AltPressed && k.Keycode is Key.Left or Key.Right) { Navigate(k.Keycode == Key.Left ? -1 : +1); GetViewport().SetInputAsHandled(); return; }
         if (k.Keycode is Key.M or Key.J or Key.Z or Key.Q && !k.CtrlPressed && GetViewport().GuiGetFocusOwner() is not LineEdit)

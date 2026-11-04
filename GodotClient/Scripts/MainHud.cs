@@ -14,31 +14,32 @@ namespace GodotClient;
 /// </summary>
 public partial class Main
 {
-    private bool _sideOpen = true;
+    private bool _sideOpen;
     private Button? _sideToggle;
     private Icon? _sideToggleIcon;
     private Control? _kpiRow;
-    private MenuDropdown? _dropdown;
-    private Button? _dropdownOwner;
-    private double _dropdownHover;
-    private Button? _hoverMenu;
-    private double _hoverMenuTime;
+    private NavSidebar? _nav;
+    private PanelContainer? _topBar;
+    private Label? _screenTitle;
+    private Icon? _screenIcon;
 
     private int SideWidth => _sideOpen ? UiTokens.SidePanelWidth : 0;
+    private int NavWidth => _nav?.Width ?? NavSidebar.ExpandedWidth;
 
     // ---------- Area util do mapa ----------
 
     private Rect2 MapArea()
     {
         var size = GetViewport().GetVisibleRect().Size;
-        return new Rect2(UiTokens.S16, UiTokens.TopBarHeight + UiTokens.S8, size.X - SideWidth - UiTokens.S16 * 2, size.Y - UiTokens.TopBarHeight - UiTokens.S16 - 40);
+        float left = NavWidth + UiTokens.S16;
+        return new Rect2(left, UiTokens.TopBarHeight + UiTokens.S8, size.X - left - SideWidth - UiTokens.S16, size.Y - UiTokens.TopBarHeight - UiTokens.S16 - 40);
     }
 
     private void FitMap(bool instant)
     {
         var size = GetViewport().GetVisibleRect().Size;
-        if (_kpiRow != null) _kpiRow.Visible = size.X >= 1500;
-        _serverChip.Visible = size.X >= 1760;
+        if (_kpiRow != null) _kpiRow.Visible = size.X >= 1400;
+        _serverChip.Visible = size.X >= 1680;
         _map.FitTo(MapArea(), instant);
         PlaceMapHud();
     }
@@ -46,7 +47,75 @@ public partial class Main
     private Rect2 QuickBounds()
     {
         var vp = GetViewport().GetVisibleRect().Size;
-        return new Rect2(12, UiTokens.TopBarHeight + 12, vp.X - SideWidth - 24, vp.Y - UiTokens.TopBarHeight - 24);
+        return new Rect2(NavWidth + 12, UiTokens.TopBarHeight + 12, vp.X - NavWidth - SideWidth - 24, vp.Y - UiTokens.TopBarHeight - 24);
+    }
+
+    // ---------- Menu principal lateral (D-035) ----------
+
+    private void BuildNav(ContentDatabase content)
+    {
+        NavSidebar.Entry E(string kind, string icon, string label, string tip, Action? go = null, Func<List<(string, string, Action)>>? subs = null, string milestone = "") =>
+            new() { Kind = kind, Icon = icon, Label = label, Tip = tip, Go = go, Subs = subs, Milestone = milestone };
+        var sections = new List<(string, List<NavSidebar.Entry>)>
+        {
+            ("Mundo", new List<NavSidebar.Entry>
+            {
+                E("map", "map", "Mapa", "Mapa do mundo ao vivo (M)\n~Única tela em que o tempo passa.", () => ShowMap(), () => new()
+                {
+                    ("Camada de lotação", "users", () => { ShowMap(); SetLayer(MapLayer.Crowding); }),
+                    ("Camada de perigo", "skull", () => { ShowMap(); SetLayer(MapLayer.Danger); }),
+                    ("Camada de nível", "trending-up", () => { ShowMap(); SetLayer(MapLayer.Level); }),
+                    ("Enquadrar o mundo", "maximize", () => { ShowMap(); SetLayer(MapLayer.Normal); FitMap(false); }),
+                }),
+                E("zones", "castle", "Zonas", "Zonas e áreas do mundo (Z)\n~O tempo pausa fora do mapa.", () => OpenSection("zones"), () =>
+                    _ctx.Content.Regions.Values.Where(z => z.IsCity).OrderBy(z => z.Name, StringComparer.Ordinal)
+                        .Select(z => { string id = z.Id; return (z.Name, "landmark", (Action)(() => OpenZone(id))); }).ToList()),
+                E("quests", "scroll-text", "Missões", "Catálogo de missões (Q)\n~O tempo pausa fora do mapa.", () => OpenSection("quests"), () => new()
+                {
+                    ("Principais", "crown", () => OpenSection("quests", 1)),
+                    ("Secundárias", "scroll-text", () => OpenSection("quests", 2)),
+                    ("Diárias", "sun", () => OpenSection("quests", 3)),
+                }),
+            }),
+            ("Comunidade", new List<NavSidebar.Entry>
+            {
+                E("players", "users", "Jogadores", "Todos os personagens (J)\n~O tempo pausa fora do mapa.", () => OpenSection("players"), () => new()
+                {
+                    ("Conectados agora", "activity", () => OpenSection("players", 1)),
+                    ("Favoritos", "star", () => OpenSection("players", 2)),
+                }),
+                E("guilds", "shield", "Guildas", "Guildas, grupos e relações", milestone: "M6"),
+            }),
+            ("Economia e empresa", new List<NavSidebar.Entry>
+            {
+                E("market", "store", "Mercado", "Anúncios, compras e preços", milestone: "M5"),
+                E("finance", "coins", "Finanças", "Receita e despesas da empresa", milestone: "M7"),
+                E("staff", "user", "Equipe", "Contratações e funções", milestone: "M7"),
+                E("patches", "package", "Atualizações", "Preparar e publicar mudanças", milestone: "M7"),
+            }),
+            ("Relatórios", new List<NavSidebar.Entry>
+            {
+                E("reports", "chart-no-axes-column", "Relatórios", "Ciclo completo e relatórios", milestone: "M8"),
+                E("incidents", "circle-alert", "Incidentes", "Trapaças, denúncias e investigação", milestone: "M9"),
+            }),
+        };
+        var settings = E("settings", "settings", "Configurações", "Vídeo e gráficos, tela cheia, jogo e atalhos", () => OpenSection("settings"));
+        _nav = new NavSidebar(sections, settings, content.World.Name);
+        _nav.Toggled += OnNavToggled;
+        _ui.AddChild(_nav);
+    }
+
+    private void OnNavToggled()
+    {
+        var size = GetViewport().GetVisibleRect().Size;
+        float oldLeft = _nav!.Expanded ? NavSidebar.CollapsedWidth : NavSidebar.ExpandedWidth;
+        var newArea = MapArea();
+        var oldArea = new Rect2(oldLeft + UiTokens.S16, newArea.Position.Y, size.X - oldLeft - UiTokens.S16 - SideWidth - UiTokens.S16, newArea.Size.Y);
+        _map.ShiftViewArea(oldArea, newArea);
+        if (_topBar != null) _topBar.OffsetLeft = NavWidth;
+        ModalFrame.ContentLeft = NavWidth;
+        if (_modal != null && IsInstanceValid(_modal)) _modal.OffsetLeft = NavWidth;
+        PlaceMapHud();
     }
 
     // ---------- Barra superior ----------
@@ -58,11 +127,13 @@ public partial class Main
         {
             BgColor = new Color("#0A0C10"), BorderColor = UiTokens.Divider, BorderWidthBottom = 1,
             ShadowColor = new Color(0, 0, 0, 0.4f), ShadowSize = 10,
-            ContentMarginLeft = 12, ContentMarginRight = 12, ContentMarginTop = 0, ContentMarginBottom = 0,
+            ContentMarginLeft = 14, ContentMarginRight = 14, ContentMarginTop = 0, ContentMarginBottom = 0,
         });
         bar.SetAnchorsPreset(Control.LayoutPreset.TopWide);
+        bar.OffsetLeft = NavWidth;
         bar.OffsetBottom = UiTokens.TopBarHeight;
         _ui.AddChild(bar);
+        _topBar = bar;
 
         var row = new HBoxContainer();
         row.AddThemeConstantOverride("separation", 0);
@@ -75,37 +146,16 @@ public partial class Main
         nav.AddChild(_backButton);
         nav.AddChild(_forwardButton);
         row.AddChild(nav);
-        row.AddChild(Gap(18));
+        row.AddChild(Gap(16));
 
-        var brand = new HBoxContainer { TooltipText = content.World.Name, MouseFilter = Control.MouseFilterEnum.Pass, SizeFlagsVertical = Control.SizeFlags.ShrinkCenter };
-        brand.AddThemeConstantOverride("separation", 8);
-        brand.AddChild(ThemeFactory.Text("◆", 14, UiTokens.Accent));
-        brand.AddChild(ThemeFactory.Text("MMORPG TYCOON", 14, UiTokens.AccentSoft, UiFonts.Display));
-        row.AddChild(brand);
-        row.AddChild(Gap(22));
-        row.AddChild(new ColorRect { Color = UiTokens.Divider, CustomMinimumSize = new Vector2(1, 26), SizeFlagsVertical = Control.SizeFlags.ShrinkCenter });
-        row.AddChild(Gap(10));
-
-        // Menu principal com submenus (passe o mouse); o mapa e a unica tela em que o tempo passa.
-        var menu = new HBoxContainer();
-        menu.AddThemeConstantOverride("separation", 4);
-        foreach (var (kind, name, tip, ico) in new[]
-        {
-            ("map", "Mapa", "Mapa do mundo ao vivo (M)\n~Única tela em que o tempo passa.", "map"),
-            ("players", "Jogadores", "Todos os personagens (J)\n~O tempo pausa fora do mapa.", "users"),
-            ("zones", "Zonas", "Zonas e áreas do mundo (Z)\n~O tempo pausa fora do mapa.", "castle"),
-            ("quests", "Missões", "Catálogo de missões (Q)\n~O tempo pausa fora do mapa.", "scroll-text"),
-        })
-        {
-            var b = MenuButton(name, tip, ico);
-            string k = kind;
-            b.Pressed += () => { CloseDropdown(); OpenSection(k); };
-            b.MouseEntered += () => { _hoverMenu = b; _hoverMenuTime = 0; };
-            b.MouseExited += () => { if (_hoverMenu == b) _hoverMenu = null; };
-            _menu.Add((kind, b));
-            menu.AddChild(b);
-        }
-        row.AddChild(menu);
+        // Nome da tela atual.
+        var title = new HBoxContainer { SizeFlagsVertical = Control.SizeFlags.ShrinkCenter };
+        title.AddThemeConstantOverride("separation", 10);
+        _screenIcon = new Icon("map", 18, UiTokens.Accent);
+        title.AddChild(_screenIcon);
+        _screenTitle = ThemeFactory.Text("Mapa do mundo", 16, UiTokens.TextPrimary, UiFonts.SemiBold);
+        title.AddChild(_screenTitle);
+        row.AddChild(title);
         row.AddChild(new Control { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill });
 
         _serverChip = ThemeFactory.Chip("Servidor fechado", UiTokens.TextSecondary, dot: true);
@@ -179,7 +229,22 @@ public partial class Main
         _fpsLabel.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
         _fpsLabel.Visible = ClientSettings.ShowFps;
         row.AddChild(_fpsLabel);
-        row.AddChild(IconNav("settings", "Configurações\n~Vídeo e gráficos, tela cheia, jogo e atalhos.", () => OpenSection("settings")));
+    }
+
+    /// <summary>Titulo da barra conforme a tela atual.</summary>
+    private void SetScreenTitle(string section)
+    {
+        if (_screenTitle == null || _screenIcon == null) return;
+        var (icon, text) = section switch
+        {
+            "players" => ("users", "Jogadores"),
+            "zones" => ("castle", "Zonas"),
+            "quests" => ("scroll-text", "Missões"),
+            "settings" => ("settings", "Configurações"),
+            _ => ("map", "Mapa do mundo"),
+        };
+        _screenTitle.Text = text;
+        _screenIcon.Texture = Icons.Get(icon, 18);
     }
 
     private static Control Gap(int w) => new Control { CustomMinimumSize = new Vector2(w, 0), MouseFilter = Control.MouseFilterEnum.Ignore };
@@ -195,110 +260,6 @@ public partial class Main
             case "settings": OpenSettingsPage(); break;
         }
         if (tab > 0 && _modal != null && IsInstanceValid(_modal) && tab < _modal.TabCount) _modal.SelectTab(tab);
-    }
-
-    /// <summary>Itens do submenu de cada secao (atalhos para abas e lugares especificos).</summary>
-    private List<MenuDropdown.Item> SubItems(string kind)
-    {
-        var items = new List<MenuDropdown.Item>();
-        switch (kind)
-        {
-            case "map":
-                items.Add(new("map", "Mapa ao vivo", "Terreno e jogadores", () => { ShowMap(); SetLayer(MapLayer.Normal); }));
-                items.Add(new("users", "Camada de lotação", "Jogadores em relação à capacidade", () => { ShowMap(); SetLayer(MapLayer.Crowding); }));
-                items.Add(new("skull", "Camada de perigo", "Risco, PvP e regra de morte", () => { ShowMap(); SetLayer(MapLayer.Danger); }));
-                items.Add(new("trending-up", "Camada de nível", "Faixa de nível do conteúdo", () => { ShowMap(); SetLayer(MapLayer.Level); }));
-                items.Add(new("maximize", "Enquadrar o mundo", "Tecla Home", () => { ShowMap(); FitMap(false); }));
-                break;
-            case "players":
-                items.Add(new("users", "Todos os jogadores", "Lista completa com busca", () => OpenSection("players", 0)));
-                items.Add(new("activity", "Conectados agora", "Quem está jogando", () => OpenSection("players", 1)));
-                items.Add(new("star", "Favoritos", "Jogadores que você acompanha", () => OpenSection("players", 2)));
-                break;
-            case "zones":
-                items.Add(new("castle", "Todas as zonas", "Lotação, perigo e regras", () => OpenSection("zones", 0)));
-                foreach (var z in _ctx.Content.Regions.Values.Where(z => z.IsCity).OrderBy(z => z.Name, StringComparer.Ordinal))
-                {
-                    string id = z.Id;
-                    items.Add(new("landmark", z.Name, $"Cidade nível {z.CityLevel}", () => OpenZone(id)));
-                }
-                break;
-            case "quests":
-                items.Add(new("scroll-text", "Todas as missões", "Catálogo completo", () => OpenSection("quests", 0)));
-                items.Add(new("crown", "Principais", "Uma vez por personagem", () => OpenSection("quests", 1)));
-                items.Add(new("scroll-text", "Secundárias", "Repetíveis ou únicas", () => OpenSection("quests", 2)));
-                items.Add(new("sun", "Diárias", "Renovam todo dia", () => OpenSection("quests", 3)));
-                break;
-        }
-        return items;
-    }
-
-    private void OpenDropdown(Button owner)
-    {
-        if (_dropdownOwner == owner && _dropdown != null && IsInstanceValid(_dropdown)) return;
-        CloseDropdown();
-        string kind = _menu.First(m => m.Button == owner).Kind;
-        _dropdown = new MenuDropdown(SubItems(kind), () => CloseDropdown());
-        _dropdownOwner = owner;
-        _ui.AddChild(_dropdown);
-        var r = owner.GetGlobalRect();
-        _dropdown.Position = new Vector2(Mathf.Round(r.Position.X), UiTokens.TopBarHeight - 1);
-        _dropdownHover = 0;
-    }
-
-    private void CloseDropdown()
-    {
-        if (_dropdown != null && IsInstanceValid(_dropdown)) _dropdown.QueueFree();
-        _dropdown = null;
-        _dropdownOwner = null;
-    }
-
-    /// <summary>Abre o submenu apos um instante sobre o item; fecha ao sair do item e do submenu.</summary>
-    private void UpdateDropdown(double delta)
-    {
-        var mouse = GetViewport().GetMousePosition();
-        if (_hoverMenu != null)
-        {
-            _hoverMenuTime += delta;
-            if (_hoverMenuTime > 0.12) OpenDropdown(_hoverMenu);
-        }
-        if (_dropdown == null || !IsInstanceValid(_dropdown) || _dropdownOwner == null || _map.IgnoreRealInput) return;
-        bool inside = _dropdown.GetGlobalRect().Grow(4).HasPoint(mouse) || _dropdownOwner.GetGlobalRect().HasPoint(mouse);
-        _dropdownHover = inside ? 0 : _dropdownHover + delta;
-        if (_dropdownHover > 0.22) CloseDropdown();
-    }
-
-    private Button MenuButton(string text, string tip, string icon)
-    {
-        var b = new TipButton { Text = text, TooltipText = tip, ToggleMode = true, FocusMode = Control.FocusModeEnum.None, CustomMinimumSize = new Vector2(0, UiTokens.TopBarHeight - 1), Icon = Icons.Get(icon, 16) };
-        b.AddThemeConstantOverride("h_separation", 9);
-        b.AddThemeColorOverride("icon_normal_color", UiTokens.TextSecondary);
-        b.AddThemeColorOverride("icon_hover_color", UiTokens.TextPrimary);
-        b.AddThemeColorOverride("icon_pressed_color", UiTokens.Accent);
-        b.AddThemeColorOverride("icon_hover_pressed_color", UiTokens.Accent);
-        b.AddThemeFontOverride("font", UiFonts.Medium);
-        b.AddThemeFontSizeOverride("font_size", 14);
-        StyleBoxFlat S(bool on, bool hover) => new()
-        {
-            BgColor = on ? new Color(UiTokens.Accent, 0.07f) : hover ? new Color(1, 1, 1, 0.035f) : new Color(0, 0, 0, 0),
-            BorderColor = on ? UiTokens.Accent : hover ? UiTokens.BorderStrong : new Color(0, 0, 0, 0), BorderWidthBottom = 2,
-            ContentMarginLeft = 18, ContentMarginRight = 34,
-        };
-        b.AddThemeStyleboxOverride("normal", S(false, false));
-        b.AddThemeStyleboxOverride("hover", S(false, true));
-        b.AddThemeStyleboxOverride("pressed", S(true, false));
-        b.AddThemeStyleboxOverride("hover_pressed", S(true, true));
-        b.AddThemeColorOverride("font_color", UiTokens.TextLabel);
-        b.AddThemeColorOverride("font_hover_color", UiTokens.TextPrimary);
-        b.AddThemeColorOverride("font_pressed_color", UiTokens.TextPrimary);
-        b.AddThemeColorOverride("font_hover_pressed_color", UiTokens.TextPrimary);
-        // Seta do submenu a direita do texto.
-        var chevron = new Icon("chevron-down", 14, UiTokens.TextDisabled);
-        chevron.SetAnchorsPreset(Control.LayoutPreset.RightWide);
-        chevron.OffsetLeft = -28;
-        chevron.OffsetRight = -12;
-        b.AddChild(chevron);
-        return b;
     }
 
     private static Button IconNav(string icon, string tip, Action press)
@@ -399,7 +360,7 @@ public partial class Main
 
     private void BuildSidePanel()
     {
-        _sideOpen = ClientSettings.SidePanelOpen;
+        _sideOpen = false;   // painel do mapa sempre comeca fechado (D-035)
         _side = new SidePanel(_ctx, _map, _metrics, () => _feed);
         _side.SetAnchorsPreset(Control.LayoutPreset.RightWide);
         _side.OffsetLeft = _sideOpen ? -UiTokens.SidePanelWidth : 0;
@@ -426,8 +387,6 @@ public partial class Main
         if (_side == null) return;
         var oldArea = MapArea();
         _sideOpen = !_sideOpen;
-        ClientSettings.SidePanelOpen = _sideOpen;
-        if (!_args.ContainsKey("screenshot") && !_args.ContainsKey("measure-seconds")) ClientSettings.Save();
         _sideToggleIcon?.QueueFree();
         _sideToggleIcon = new Icon(_sideOpen ? "panel-right-close" : "panel-right-open", 18, UiTokens.TextLabel);
         _sideToggleIcon.SetAnchorsPreset(Control.LayoutPreset.FullRect);
@@ -446,10 +405,11 @@ public partial class Main
     private void PlaceMapHud()
     {
         if (_mapControls != null) _mapControls.OffsetRight = -(SideWidth + 12);
+        if (_layerPanel != null) _layerPanel.Position = new Vector2(NavWidth + UiTokens.S16, UiTokens.TopBarHeight + 12);
         if (_emptyBanner != null)
         {
-            _emptyBanner.OffsetLeft = -(SideWidth / 2);
-            _emptyBanner.OffsetRight = -(SideWidth / 2);
+            _emptyBanner.OffsetLeft = (NavWidth - SideWidth) / 2;
+            _emptyBanner.OffsetRight = (NavWidth - SideWidth) / 2;
         }
     }
 

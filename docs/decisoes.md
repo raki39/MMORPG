@@ -689,3 +689,37 @@ Proposta do criador, analisada com o Claude.
 **Desempenho:**
 - `tools/perf.ps1`: todas as vistas do mapa com p95 entre 2,8 e 4,8 ms, dentro do orçamento.
 - Página do jogador: cerca de 1.100 FPS, p95 de 1,1 ms.
+
+## D-035 — Menu principal lateral e ficha do jogador sem o "relatório"
+**Data:** 04/11/2026 · **Estado:** aceita
+
+**Contexto:**
+- O menu no topo não comportaria as seções futuras (mercado, finanças, equipe, atualizações, relatórios, incidentes).
+- O criador pediu um menu lateral.
+- Pediu também para tirar da ficha do jogador o que era só inspiração visual da referência ("Forma", "Relatório do analista").
+
+**Decisões:**
+- **Menu principal à esquerda:**
+  - aberto ao iniciar, com 224 px; recolhido vira uma faixa de ícones de 60 px, não some;
+  - recolhe pelo botão no rodapé ou pela tecla N;
+  - seções Mundo (Mapa, Zonas, Missões), Comunidade (Jogadores, Guildas · M6), Economia e empresa (Mercado · M5, Finanças, Equipe e Atualizações · M7) e Relatórios (Relatórios · M8, Incidentes · M9);
+  - os itens futuros aparecem apagados com o marco;
+  - subitens em sanfona: camadas do mapa, cidades, categorias de missão, conectados, favoritos;
+  - Configurações no rodapé;
+  - aparece em todas as telas.
+- **Barra superior mais limpa:** voltar/avançar, nome da tela, indicadores, relógio, velocidade ou "Voltar ao mapa". A marca e a engrenagem foram para o menu lateral.
+- **Painel do mapa à direita:** 340 px (era 430), sempre fechado ao abrir o jogo; abre com P ou pelo botão nos controles do mapa.
+- **Ficha do jogador:**
+  - **Cabeçalho:** ganha a personalidade principal (o traço que mais se afasta do meio, alto ou baixo).
+  - **Visão geral:**
+    - Inventário · M5 no lugar do relatório: espaços de equipamento pelas categorias de item do conteúdo (arma, armadura), mais o ouro e os itens que as missões entregues teriam dado, ainda não aplicados;
+    - Progresso e objetivos no lugar da "forma": nível e XP com previsão do próximo nível, personalidade e perfil, objetivos atuais (próximo nível e missões em andamento);
+    - Horários de jogo: minutos por hora do dia contra a janela da rotina. Para quem opera o MMORPG isso indica carga do servidor e o horário de eventos e manutenção.
+  - **Aba Estatísticas** (a comparação com o servidor deixou de ser "relatório do analista"): comparação com a mediana do servidor, sessões dos últimos 14 dias, classificação, XP por fonte e distribuição de níveis do servidor.
+  - Relatório de moderadores fica para quando houver moderação (inspeção de jogadores, M9).
+- **Objetivos pessoais:** ainda não existem na simulação; são o próximo passo do roteiro (D-026). O card mostra só metas que já existem e avisa isso.
+- **Textura dos cards:** reduzida; a hachura mais forte incomodava a vista.
+
+**Desempenho:**
+- `tools/perf.ps1`: p95 entre 2,4 e 4,2 ms em todas as vistas.
+- 112 testes aprovados.

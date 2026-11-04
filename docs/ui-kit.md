@@ -10,14 +10,14 @@ Referência para qualquer tela nova. Estilo de dossiê de jogo de gestão: escur
 - **Páginas** (`ModalFrame`): ocupam tudo abaixo da barra superior.
   - O tempo pausa (opção nas Configurações) e volta na mesma velocidade.
   - Esc ou "Voltar ao mapa" retorna ao mapa.
-- **Barra superior:** altura fixa de 56 px, com o conteúdo cortado; nada nela pode ser mais alto que a barra. Contém:
-  - voltar/avançar;
-  - menu com submenus ao passar o mouse (Mapa, Jogadores, Zonas, Missões);
-  - indicadores sem gráfico;
-  - relógio;
-  - velocidade ou "Voltar ao mapa";
-  - a engrenagem das Configurações.
-- **Painel lateral do mapa:** recolhível (P ou botão nos controles do mapa). Os painéis do mapa se reposicionam pela largura atual do painel.
+- **Menu principal à esquerda** (`NavSidebar`, D-035):
+  - 224 px aberto (sempre ao iniciar); recolhido vira uma faixa de ícones de 60 px (tecla N);
+  - seções com itens de ícone e nome; subitens em sanfona;
+  - itens futuros apagados com o marco;
+  - Configurações e o botão de recolher no rodapé.
+- **Barra superior:** altura fixa de 56 px, com o conteúdo cortado. Contém voltar/avançar, nome da tela, indicadores sem gráfico, relógio, e velocidade ou "Voltar ao mapa".
+- **Painel do mapa à direita:** 340 px, sempre fechado ao iniciar (tecla P ou botão nos controles do mapa).
+- **Painéis do mapa e páginas:** se posicionam pela largura atual do menu e do painel.
 - **Histórico:** voltar/avançar cobre mapa e páginas.
   - Atalhos: Alt+←/→ e os botões laterais do mouse.
   - Teclas M, J, Z e Q abrem as seções.

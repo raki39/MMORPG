@@ -523,9 +523,9 @@ public static class CardTexture
                 h = (h ^ (h >> 13)) * 1274126177u;
                 h ^= h >> 16;
                 float grain = (h & 1023) / 1023f;
-                float a = grain * 0.038f;
-                if ((x + y) % 7 == 0) a += 0.024f;          // hachura diagonal
-                if ((x - y + n * 4) % 23 == 0) a += 0.012f; // contra-hachura bem leve
+                float a = grain * 0.022f;
+                if ((x + y) % 7 == 0) a += 0.009f;          // hachura diagonal
+                if ((x - y + n * 4) % 23 == 0) a += 0.0f; // contra-hachura bem leve
                 img.SetPixel(x, y, new Color(1, 1, 1, a));
             }
         _tex = ImageTexture.CreateFromImage(img);
