@@ -43,11 +43,7 @@ public static class BehaviorTuning
     public const int QuestDeliverPerExtra = 90;
     /// <summary>Atividade ou ponto de missao que avanca a etapa atual de uma quest ativa.</summary>
     public const int QuestStepWeight = 250;
-    // ---- Atributos na decisao (D-036) ----
-    /// <summary>Lealdade: preferencia por continuar na zona onde estava (com lealdade 1000).</summary>
-    public const int WeightFamiliar = 60;
-    /// <summary>Agressividade: gosto por desafio, por nivel acima do proprio (ate 3 niveis).</summary>
-    public const int WeightChallengePerLevel = 40;
+    // Atributos do jogador na decisao (D-036): parametros em population.json ("dynamics").
     /// <summary>Aleatoriedade pequena e reproduzivel (+-); escala com o conhecimento do jogo.</summary>
     public const int Noise = 50;
 

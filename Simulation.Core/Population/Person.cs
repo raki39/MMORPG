@@ -361,6 +361,10 @@ public sealed class Character
     public long XpFromQuests { get; internal set; }
     public long XpFromActivities { get; internal set; }
 
+    /// <summary>Minutos em atividade por zona (familiaridade, D-036a).</summary>
+    internal SortedDictionary<string, int> ZoneMinutes { get; } = new(StringComparer.Ordinal);
+    public IReadOnlyDictionary<string, int> ZoneMinutesSpent => ZoneMinutes;
+
     // ---- Objetivos pessoais (D-036) ----
     internal List<PersonalGoal> GoalList { get; } = new();
     public IReadOnlyList<PersonalGoal> Goals => GoalList;

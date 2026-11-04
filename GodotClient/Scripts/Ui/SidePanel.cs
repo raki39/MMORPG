@@ -297,9 +297,9 @@ public partial class SidePanel : PanelContainer
             case "quest_accepted": return ($"{who} aceitou {QuestName(e.Detail)}", UiTokens.Accent.Darkened(0.1f));
             case "quest_step_completed": return ($"{who} cumpriu etapa de {QuestName((e.Detail ?? "").Split('#')[0])}", UiTokens.Info.Darkened(0.2f));
             case "quest_completed": return ($"{who} entregou {QuestName(e.Detail)}", UiTokens.Success);
-            case "goal_set": return ($"{who} adotou um objetivo", UiTokens.Accent.Darkened(0.1f));
-            case "goal_completed": return ($"{who} concluiu um objetivo pessoal", UiTokens.Success);
-            case "goal_abandoned": return ($"{who} desistiu de um objetivo", UiTokens.TextSecondary);
+            case "goal_set": return ($"{who} adotou uma meta", UiTokens.Accent.Darkened(0.1f));
+            case "goal_completed": return ($"{who} concluiu uma meta", UiTokens.Success);
+            case "goal_abandoned": return ($"{who} desistiu de uma meta", UiTokens.TextSecondary);
             case "trait_changed":
             {
                 var parts = (e.Detail ?? "").Split(':');

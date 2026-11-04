@@ -6,49 +6,6 @@ using Simulation.Core.World;
 namespace Simulation.Core.Behavior;
 
 /// <summary>
-/// Hipoteses dos atributos vivos (D-036). Pontos de partida para calibrar, nao regras do mundo.
-/// Unidades: permille de traco, minutos simulados de pratica, dias.
-/// </summary>
-public static class TraitTuning
-{
-    /// <summary>Quanto cada traco pode cair abaixo da base (permille).</summary>
-    public const int RangeSkill = 250, RangePlaystyle = 200, RangePersonality = 100;
-    /// <summary>Potencial das capacidades acima da base: 50 + talento * 350 / 1000 (noob ~ +85, genio ~ +380).</summary>
-    public const int SkillHeadroomBase = 50, SkillHeadroomPerTalent = 350;
-
-    // ---- Pratica (minutos por ponto, antes do talento e da desaceleracao) ----
-    // Ritmo lento, como os atributos de um jogo de gestao esportiva: um jogador ativo ganha
-    // cerca de 1 ponto da escala 1–20 por temporada de 2 a 3 meses.
-    public const int MechanicalPerCombatMinutes = 150;
-    public const int KnowledgePerPlayMinutes = 400;
-    public const int KnowledgePerExploreMinutes = 90;
-    public const int KnowledgeNewActivityType = 3;
-    public const int KnowledgePerDiscovery = 2;
-    public const int KnowledgePerQuest = 1;
-    public const int CoordinationPerGroupMinutes = 240;
-    public const int SociabilityPerSocialMinutes = 600;
-    /// <summary>Atividade com bom encaixe de nivel reforca o gosto pelo tipo.</summary>
-    public const int AffinityPerEnjoyedMinutes = 360;
-    public const int EnjoyedMinFitPermille = 600;
-    /// <summary>Repetir sem paciencia cansa o gosto pelo tipo.</summary>
-    public const int AffinityFatiguePerMinutes = 300;
-    public const int FatigueRepeatCount = 4, FatiguePatienceBelow = 400;
-    /// <summary>Encarar risco sem perder (sem mortes ate o M3) reduz a aversao a risco.</summary>
-    public const int RiskConfidencePerMinutes = 600;
-    public const int RiskConfidenceMinRisk = 300;
-    public const int ExplorationPerDiscoveries = 4;
-
-    // ---- Inatividade (queda lenta: cerca de 1 ponto da escala a cada 50 dias parado) ----
-    /// <summary>Mais de 7 dias sem jogar: a mecanica enferruja (pontos por dia).</summary>
-    public const int MechanicalDecayAfterDays = 7, MechanicalDecayPerDay = 1;
-    /// <summary>Mais de 14 dias sem jogar: o conhecimento do jogo envelhece (atualizacoes no M7).</summary>
-    public const int KnowledgeDecayAfterDays = 14, KnowledgeDecayPerDay = 1;
-
-    // ---- Objetivo concluido reforca o motivo ----
-    public const int GoalMotiveReinforce = 1;
-}
-
-/// <summary>
 /// Atributos vivos (D-036): os tracos da pessoa sobem com a pratica e com o que ela vive no
 /// jogo e caem com a inatividade, sempre dentro de uma faixa em torno da base de nascenca.
 /// Mudanca visivel na escala 1–20 gera evento com a causa.
@@ -59,36 +16,41 @@ public sealed class TraitDynamics
 
     public TraitDynamics(WorldState world) => _w = world;
 
+    private TraitDynamicsDefinition D => _w.Content.Dynamics;
+
     public static bool IsSkill(string key) => key is "mechanicalSkill" or "gameKnowledge" or "coordination";
 
-    public static int Range(string key) => key switch
+    public static int Range(TraitDynamicsDefinition d, string key) => key switch
     {
-        "mechanicalSkill" or "gameKnowledge" or "coordination" => TraitTuning.RangeSkill,
-        "pve" or "pvp" or "trade" or "exploration" or "socializing" => TraitTuning.RangePlaystyle,
-        _ => TraitTuning.RangePersonality,
+        "mechanicalSkill" or "gameKnowledge" or "coordination" => d.RangeSkill,
+        "pve" or "pvp" or "trade" or "exploration" or "socializing" => d.RangePlaystyle,
+        _ => d.RangePersonality,
     };
 
     /// <summary>Piso do traco: a base menos a faixa de queda.</summary>
-    public static int Floor(Person p, string key) => FloorOf(p.BaseTraits, key);
-    public static int FloorOf(PersonTraits baseTraits, string key) => Math.Max(0, baseTraits.Get(key) - Range(key));
+    public static int FloorOf(TraitDynamicsDefinition d, PersonTraits baseTraits, string key) => Math.Max(0, baseTraits.Get(key) - Range(d, key));
 
     /// <summary>
-    /// Teto (potencial) do traco. Capacidades: base + folga pelo talento da pessoa como jogador
-    /// (noob quase nao passa de onde comecou; genio pode subir muito). Gostos e personalidade:
-    /// base + faixa (mudam pela experiencia, nao por talento).
+    /// Teto do traco. Capacidades: potencial ABSOLUTO pelo talento (escolha consciente, D-036a):
+    /// quem comeca baixo mas tem talento pode chegar alto; o inicio so garante uma folga minima.
+    /// Gostos e personalidade: base + faixa (mudam pela experiencia, nao por talento).
     /// </summary>
-    public static int Ceiling(Person p, string key) => CeilingOf(p.BaseTraits, p.Traits.Talent, key);
-    public static int CeilingOf(PersonTraits baseTraits, int talent, string key) => IsSkill(key)
-        ? Math.Min(1000, baseTraits.Get(key) + TraitTuning.SkillHeadroomBase + talent * TraitTuning.SkillHeadroomPerTalent / 1000)
-        : Math.Min(1000, baseTraits.Get(key) + Range(key));
+    public static int CeilingOf(TraitDynamicsDefinition d, PersonTraits baseTraits, int talent, string key) => IsSkill(key)
+        ? Math.Min(1000, Math.Max(baseTraits.Get(key) + d.PotentialMinHeadroom, d.PotentialBase + talent * d.PotentialPerTalent / 1000))
+        : Math.Min(1000, baseTraits.Get(key) + Range(d, key));
 
-    /// <summary>Velocidade de aprendizado das capacidades pelo talento (permille do custo: 600 genio – 1400 noob).</summary>
-    public static int LearnCostPermille(Person p, string key) => IsSkill(key) ? 1400 - p.Traits.Talent * 8 / 10 : 1000;
+    public int Floor(Person p, string key) => FloorOf(D, p.BaseTraits, key);
+    public int Ceiling(Person p, string key) => CeilingOf(D, p.BaseTraits, p.Traits.Talent, key);
+
+    /// <summary>Velocidade de aprendizado das capacidades pelo talento (permille do custo).</summary>
+    public int LearnCostPermille(Person p, string key) => IsSkill(key)
+        ? D.LearnCostAtZeroTalent + (D.LearnCostAtMaxTalent - D.LearnCostAtZeroTalent) * p.Traits.Talent / 1000
+        : 1000;
 
     /// <summary>Escala 1–20 da interface (mesma conta do cliente).</summary>
     public static int Scale20(int permille) => Math.Clamp((permille * 19 + 500) / 1000 + 1, 1, 20);
 
-    /// <summary>Traco de estilo de jogo reforcado (ou cansado) por um tipo de atividade.</summary>
+    /// <summary>Gosto (estilo de jogo) reforcado por um tipo de atividade.</summary>
     public static string? AffinityTrait(string activityType) => activityType switch
     {
         ActivityTypes.Hunt or ActivityTypes.Boss => "pve",
@@ -122,7 +84,7 @@ public sealed class TraitDynamics
             // Subir: talento acelera (capacidades) e fica mais lento perto do potencial (ate 3x).
             int cur = p.Traits.Get(trait), b = p.BaseTraits.Get(trait), cap = Ceiling(p, trait);
             int closeness = cur <= b || cap <= b ? 0 : Math.Min(1000, (cur - b) * 1000 / (cap - b));
-            costPerPoint = Math.Max(1, costPerPoint * LearnCostPermille(p, trait) / 1000 * (1000 + closeness * 2) / 1000);
+            costPerPoint = Math.Max(1, costPerPoint * LearnCostPermille(p, trait) / 1000 * (1000 + closeness * D.NearCeilingSlowdown / 1000) / 1000);
         }
         // Acumulador por direcao, traco e fonte (cada fonte tem o seu custo por ponto).
         string key = (sign > 0 ? "+" : "-") + trait + "/" + cause;
@@ -134,44 +96,44 @@ public sealed class TraitDynamics
         if (units > 0) Adjust(p, trait, sign * units, cause);
     }
 
-    /// <summary>Fim de uma atividade: pratica, gosto (ou cansaco) e confianca diante do risco.</summary>
+    /// <summary>
+    /// Fim de uma atividade: pratica das capacidades, experiencia positiva persistente (reforca o
+    /// gosto) e confianca diante do risco. Repetir nao reduz o gosto: gera tedio na decisao
+    /// (fator de repeticao), nao uma mudanca de preferencia. Coordenacao so evolui em atividades
+    /// cooperativas (grupos, M6).
+    /// </summary>
     internal void OnActivity(Person p, Character ch, ActivityDefinition a, int minutes, int levelFit, int risk, bool firstTimeType)
     {
         if (minutes <= 0) return;
+        var d = D;
         bool combat = a.Type is ActivityTypes.Hunt or ActivityTypes.Boss or ActivityTypes.Patrol or ActivityTypes.Ambush;
-        if (combat) Practice(p, "mechanicalSkill", minutes, TraitTuning.MechanicalPerCombatMinutes, +1, "practice_combat");
-        if (a.Type == ActivityTypes.Explore) Practice(p, "gameKnowledge", minutes, TraitTuning.KnowledgePerExploreMinutes, +1, "exploration");
-        else Practice(p, "gameKnowledge", minutes, TraitTuning.KnowledgePerPlayMinutes, +1, "practice_play");
-        if (firstTimeType) Adjust(p, "gameKnowledge", TraitTuning.KnowledgeNewActivityType, "new_activity_type");
-        if (a.Type is ActivityTypes.Socialize or ActivityTypes.Recruit)
-        {
-            Practice(p, "coordination", minutes, TraitTuning.CoordinationPerGroupMinutes, +1, "practice_group");
-            Practice(p, "sociability", minutes, TraitTuning.SociabilityPerSocialMinutes, +1, "practice_social");
-        }
-        if (AffinityTrait(a.Type) is { } aff)
-        {
-            if (levelFit >= TraitTuning.EnjoyedMinFitPermille)
-                Practice(p, aff, minutes, TraitTuning.AffinityPerEnjoyedMinutes, +1, "enjoyed_activity");
-            if (ch.RepeatCount >= TraitTuning.FatigueRepeatCount && p.Traits.Patience < TraitTuning.FatiguePatienceBelow)
-                Practice(p, aff, minutes, TraitTuning.AffinityFatiguePerMinutes, -1, "repetition_fatigue");
-        }
-        if (risk >= TraitTuning.RiskConfidenceMinRisk)
-            Practice(p, "riskAversion", minutes, TraitTuning.RiskConfidencePerMinutes, -1, "faced_risk");
+        if (combat) Practice(p, "mechanicalSkill", minutes, d.MechanicalCombatMinutes, +1, "practice_combat");
+        if (a.Type == ActivityTypes.Explore) Practice(p, "gameKnowledge", minutes, d.KnowledgeExploreMinutes, +1, "exploration");
+        else Practice(p, "gameKnowledge", minutes, d.KnowledgePlayMinutes, +1, "practice_play");
+        if (firstTimeType) Adjust(p, "gameKnowledge", d.KnowledgeNewActivityType, "new_activity_type");
+        if (a.Type == ActivityTypes.Socialize) Practice(p, "sociability", minutes, d.SociabilitySocialMinutes, +1, "practice_social");
+        if (AffinityTrait(a.Type) is { } aff && levelFit >= d.EnjoyedMinFitPermille)
+            Practice(p, aff, minutes, d.AffinityEnjoyedMinutes, +1, "enjoyed_activity");
+        if (risk >= d.RiskConfidenceMinRisk)
+            Practice(p, "riskAversion", minutes, d.RiskConfidenceMinutes, -1, "faced_risk");
     }
 
     internal void OnRegionDiscovered(Person p)
     {
-        Adjust(p, "gameKnowledge", TraitTuning.KnowledgePerDiscovery, "discovery");
-        Practice(p, "exploration", 1, TraitTuning.ExplorationPerDiscoveries, +1, "discovery");
+        Adjust(p, "gameKnowledge", D.KnowledgePerDiscovery, "discovery");
+        Practice(p, "exploration", 1, D.ExplorationPerDiscoveries, +1, "discovery");
     }
 
-    internal void OnQuestCompleted(Person p) => Adjust(p, "gameKnowledge", TraitTuning.KnowledgePerQuest, "quest_completed");
+    internal void OnQuestCompleted(Person p) => Adjust(p, "gameKnowledge", D.KnowledgePerQuest, "quest_completed");
 
-    /// <summary>Gancho do combate (M3): abater outro jogador reforca o gosto por PvP e a agressividade.</summary>
+    /// <summary>
+    /// Gancho do combate (M3): abater outro jogador e uma experiencia positiva de PvP (reforca o
+    /// gosto) e pratica de combate (mecanica). Gostar de PvP nao melhora a execucao por si.
+    /// </summary>
     public void OnPvpKill(Person killer)
     {
-        Adjust(killer, "pvp", 3, "pvp_kill");
-        Practice(killer, "aggressiveness", 1, 3, +1, "pvp_kill");
+        Adjust(killer, "pvp", D.PvpKillPreference, "pvp_kill");
+        Practice(killer, "mechanicalSkill", D.PvpKillCombatMinutes, D.MechanicalCombatMinutes, +1, "practice_combat");
     }
 
     /// <summary>Meia-noite: inatividade enferruja a mecanica e envelhece o conhecimento.</summary>
@@ -179,7 +141,7 @@ public sealed class TraitDynamics
     {
         if (p.CharacterId == 0 || p.LastPlayedDay < 0 || p.IsOnline) return;
         long off = day - p.LastPlayedDay;
-        if (off > TraitTuning.MechanicalDecayAfterDays) Adjust(p, "mechanicalSkill", -TraitTuning.MechanicalDecayPerDay, "inactivity_week");
-        if (off > TraitTuning.KnowledgeDecayAfterDays) Adjust(p, "gameKnowledge", -TraitTuning.KnowledgeDecayPerDay, "inactivity_long");
+        if (off > D.MechanicalDecayAfterDays) Adjust(p, "mechanicalSkill", -D.MechanicalDecayPerDay, "inactivity_week");
+        if (off > D.KnowledgeDecayAfterDays) Adjust(p, "gameKnowledge", -D.KnowledgeDecayPerDay, "inactivity_long");
     }
 }

@@ -90,5 +90,21 @@
       "dor", "wen", "gar", "iel", "ax", "ion", "ara", "uk", "ith", "on", "is", "vyr", "eth", "orn", "a",
       "im", "ius", "ra", "gon", "lis", "mir", "nar", "oth", "ryn", "sha", "thas", "us", "ven", "zel", "yx"
     ]
+  },
+  "dynamics": {
+    "rangeSkill": 250, "rangePlaystyle": 200, "rangePersonality": 100,
+    "potentialBase": 250, "potentialPerTalent": 700, "potentialMinHeadroom": 50,
+    "learnCostAtZeroTalent": 1400, "learnCostAtMaxTalent": 600, "nearCeilingSlowdown": 2000,
+    "mechanicalCombatMinutes": 150, "knowledgePlayMinutes": 400, "knowledgeExploreMinutes": 90,
+    "knowledgeNewActivityType": 3, "knowledgePerDiscovery": 2, "knowledgePerQuest": 1,
+    "sociabilitySocialMinutes": 600, "affinityEnjoyedMinutes": 360, "enjoyedMinFitPermille": 600,
+    "riskConfidenceMinutes": 600, "riskConfidenceMinRisk": 300, "explorationPerDiscoveries": 4,
+    "pvpKillPreference": 3, "pvpKillCombatMinutes": 30,
+    "mechanicalDecayAfterDays": 7, "mechanicalDecayPerDay": 1, "knowledgeDecayAfterDays": 14, "knowledgeDecayPerDay": 1,
+    "familiarityWeight": 80, "familiarityFullMinutes": 600, "challengeWeightPerLevel": 40, "travelEstimateErrorAtZero": 300
+  },
+  "goals": {
+    "weight": 200, "maxStackPermille": 1500, "maxActive": 2, "adoptChance": 450,
+    "staleBaseHours": 3, "staleExtraHoursAtMaxPatience": 9, "impatientDropChance": 40, "impatientBelow": 300, "motiveReinforce": 1
   }
 }

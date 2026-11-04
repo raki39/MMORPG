@@ -7,25 +7,8 @@ using Simulation.Core.World;
 
 namespace Simulation.Core.Behavior;
 
-/// <summary>Hipoteses dos objetivos pessoais (D-036). Pontos de partida para calibrar.</summary>
-public static class GoalTuning
-{
-    /// <summary>Peso maximo de um objetivo na nota de uma opcao (com comprometimento 1000).</summary>
-    public const int WeightGoal = 200;
-    /// <summary>Teto da soma dos objetivos numa opcao (permille de WeightGoal).</summary>
-    public const int MaxStackPermille = 1500;
-    /// <summary>Chance de adotar um objetivo ao conectar, quando ha vaga: base + paciencia * 3/10.</summary>
-    public const int AdoptBaseChance = 350;
-    /// <summary>Pacientes (>= 450) sustentam dois objetivos ao mesmo tempo.</summary>
-    public const int TwoGoalsPatience = 450;
-    /// <summary>Abandono por falta de progresso: horas de jogo sem avancar = base + paciencia * 9 / 1000.</summary>
-    public const int StaleBaseHours = 3, StaleExtraHoursAtMaxPatience = 9;
-    /// <summary>Impacientes (< 300) desistem as vezes ao conectar (permille).</summary>
-    public const int ImpatientDropChance = 40, ImpatientBelow = 300;
-}
-
 /// <summary>
-/// Objetivos pessoais (D-026/D-036). Ao conectar, a pessoa pode adotar um objetivo escolhido
+/// Metas de curto prazo (D-026/D-036; ambicoes de longo prazo ficam para uma etapa futura). Ao conectar, a pessoa pode adotar um objetivo escolhido
 /// pelos tracos (que vem do perfil e mudam com a experiencia): chegar a um nivel, descobrir uma
 /// zona, concluir uma missao ou praticar a atividade preferida. O objetivo vira um fator a mais
 /// na decisao, com o peso do comprometimento; nao obriga. Sem progresso, ou por impaciencia,
@@ -45,10 +28,11 @@ public sealed class GoalSystem
     }
 
     private ContentDatabase C => _w.Content;
+    private GoalSettingsDefinition S => _w.Content.GoalSettings;
     private long Now => _w.Clock.Tick;
 
+    /// <summary>Apego a meta (persistencia): paciencia e lealdade.</summary>
     public static int CommitmentOf(PersonTraits t) => 400 + t.Patience * 3 / 10 + t.Loyalty * 3 / 10;
-    public static int MaxGoals(PersonTraits t) => t.Patience >= GoalTuning.TwoGoalsPatience ? 2 : 1;
 
     // ---------------- Ciclo ao conectar ----------------
 
@@ -57,14 +41,15 @@ public sealed class GoalSystem
     {
         var t = p.Traits;
         long played = ch.PlayedTicksAt(Now);
-        long staleTicks = (GoalTuning.StaleBaseHours * 1000L + GoalTuning.StaleExtraHoursAtMaxPatience * (long)t.Patience) * SimTime.TicksPerHour / 1000;
+        long staleTicks = (S.StaleBaseHours * 1000L + S.StaleExtraHoursAtMaxPatience * (long)t.Patience) * SimTime.TicksPerHour / 1000;
         foreach (var g in ch.GoalList.ToList())
         {
             if (played - g.LastProgressPlayedTicks > staleTicks) Abandon(ch, g, "no_progress");
-            else if (t.Patience < GoalTuning.ImpatientBelow && rng.ChancePermille(GoalTuning.ImpatientDropChance)) Abandon(ch, g, "impatience");
+            else if (t.Patience < S.ImpatientBelow && rng.ChancePermille(S.ImpatientDropChance)) Abandon(ch, g, "impatience");
         }
-        if (ch.GoalList.Count >= MaxGoals(t)) return;
-        if (!rng.ChancePermille(GoalTuning.AdoptBaseChance + t.Patience * 3 / 10)) return;
+        // Quantidade de metas e chance de adotar nao dependem da paciencia (ela so pesa na persistencia).
+        if (ch.GoalList.Count >= S.MaxActive) return;
+        if (!rng.ChancePermille(S.AdoptChance)) return;
         var options = Candidates(p, ch, rng);
         if (options.Count == 0) return;
         var pick = options[rng.PickWeighted(options.Select(o => o.Weight).ToList())];
@@ -183,9 +168,9 @@ public sealed class GoalSystem
                 GoalTypes.PracticeActivity => a.Type == g.Target ? 1000 : 0,
                 _ => 0,
             };
-            total += GoalTuning.WeightGoal * g.Commitment / 1000 * rel / 1000;
+            total += S.Weight * g.Commitment / 1000 * rel / 1000;
         }
-        return Math.Min(total, GoalTuning.WeightGoal * GoalTuning.MaxStackPermille / 1000);
+        return Math.Min(total, S.Weight * S.MaxStackPermille / 1000);
     }
 
     private int QuestRelevance(Character ch, string questId, RegionDefinition region, ActivityDefinition a)
@@ -257,7 +242,7 @@ public sealed class GoalSystem
         _w.Emit("goal_completed", EventImportance.Normal, new[] { new EntityRef("character", ch.Id) },
             new[] { new EventCause(g.MotiveKey, g.MotiveValue) }, $"{g.Type}|{g.Target}|{g.TargetValue}");
         // Conseguir o que queria reforca o gosto que motivou o objetivo.
-        _traits.Adjust(p, g.MotiveKey, TraitTuning.GoalMotiveReinforce, "goal_completed");
+        _traits.Adjust(p, g.MotiveKey, S.MotiveReinforce, "goal_completed");
     }
 
     private void Abandon(Character ch, PersonalGoal g, string reason)

@@ -126,6 +126,26 @@ public static class ValidationReport
                       $"{Fmt(Avg(ps.Select(p => p.MedianLevel)))} | {Fmt(Avg(ps.Select(p => p.P90Level)))} | {Fmt(Avg(ps.Select(p => p.PrimeTimeStartPct)))}% |\n");
         }
 
+        // ---- Atributos do jogador (D-036) ----
+        const double unitsPerPoint = 1000.0 / 19.0;
+        sb.Append("\n## Evolução dos atributos do jogador (média das seeds)\n\n");
+        sb.Append($"Variação média desde o início, em **pontos da escala 1–20** (1 ponto ≈ {unitsPerPoint.ToString("N1", PtBr)} unidades do Core), ao fim de {ctx.Days} dias. Valores de `population.json` (`dynamics`).\n\n");
+        sb.Append("| Perfil | Mecânica | Conhecimento | PvE | Exploração | Comércio | Aversão a risco | Metas concluídas | Metas abandonadas |\n|---|---:|---:|---:|---:|---:|---:|---:|---:|\n");
+        foreach (var id in runs[0].Profiles.Select(p => p.Id))
+        {
+            var ps = runs.Select(r => r.Profiles.First(p => p.Id == id)).ToList();
+            string D(string k) => (ps.Average(p => p.TraitDelta.TryGetValue(k, out var v) ? v : 0) / unitsPerPoint).ToString("+0.00;-0.00;0.00", PtBr);
+            sb.Append($"| {ps[0].Name} | {D("mechanicalSkill")} | {D("gameKnowledge")} | {D("pve")} | {D("exploration")} | {D("trade")} | {D("riskAversion")} | {Fmt(ps.Average(p => p.GoalsCompleted))} | {Fmt(ps.Average(p => p.GoalsAbandoned))} |\n");
+        }
+        var dyn = content.Dynamics;
+        sb.Append("\nInatividade (queda, sem modificadores):\n\n| Dias parado | Mecânica | Conhecimento |\n|---:|---:|---:|\n");
+        foreach (int days in new[] { 7, 14, 30, 60, 90 })
+        {
+            double mech = Math.Max(0, days - dyn.MechanicalDecayAfterDays) * dyn.MechanicalDecayPerDay / unitsPerPoint;
+            double know = Math.Max(0, days - dyn.KnowledgeDecayAfterDays) * dyn.KnowledgeDecayPerDay / unitsPerPoint;
+            sb.Append($"| {days} | {(-mech).ToString("0.00;-0.00;0.00", PtBr)} | {(-know).ToString("0.00;-0.00;0.00", PtBr)} |\n");
+        }
+
         // ---- Uso do tempo ----
         sb.Append("\n## Uso do tempo conectado (todas as seeds)\n\n");
         var time = new SortedDictionary<string, long>(StringComparer.Ordinal);

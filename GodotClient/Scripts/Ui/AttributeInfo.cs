@@ -13,55 +13,66 @@ public static class AttributeInfo
 
     public static readonly IReadOnlyDictionary<string, Entry> ByKey = new Dictionary<string, Entry>(StringComparer.Ordinal)
     {
-        ["pve"] = new("PvE", "Vontade de caçar e enfrentar chefes; entra também no gosto por missões e em objetivos de nível.",
-            "Sobe devagar ao caçar com bom encaixe de nível; cansa se repetir muito sem paciência.", false),
-        ["pvp"] = new("PvP", "Vontade de patrulhar e emboscar outros jogadores. No combate (M3) também fará o jogador se sair melhor em PvP.",
-            "Sobe ao patrulhar ou emboscar com gosto e ao abater jogadores (M3).", false),
-        ["trade"] = new("Comércio", "Vontade de coletar, comprar e vender; escolhe objetivos de praticar coleta ou comércio.",
-            "Sobe ao coletar ou negociar com bom encaixe; cansa com repetição sem paciência.", false),
-        ["exploration"] = new("Exploração", "Vontade de explorar e de fazer missões; puxa objetivos de descobrir zonas.",
-            "Sobe ao explorar e a cada 4 zonas descobertas.", false),
+        // Gostos (estilo de jogo): decidem a vontade de fazer, nunca a qualidade da execucao.
+        ["pve"] = new("PvE", "Vontade de caçar e enfrentar chefes; entra no gosto por missões e em metas de nível. Não melhora a execução.",
+            "Sobe devagar com experiências boas e persistentes de caça. Repetir demais gera tédio na hora de decidir, mas não muda o gosto.", false),
+        ["pvp"] = new("PvP", "Vontade de patrulhar, emboscar e entrar em PvP. Não melhora a execução: no combate (M3), quem decide é Mecânica, Conhecimento e Coordenação.",
+            "Sobe com experiências boas de PvP e ao abater jogadores (M3).", false),
+        ["trade"] = new("Comércio", "Vontade de coletar, comprar e vender; puxa metas de praticar coleta ou comércio.",
+            "Sobe com experiências boas de coleta ou comércio.", false),
+        ["exploration"] = new("Exploração", "Vontade de explorar, de fazer missões e de variar: quem gosta de variedade sente menos atração pelas zonas familiares. Puxa metas de descobrir zonas.",
+            "Sobe com experiências boas de exploração e a cada 4 zonas descobertas.", false),
         ["socializing"] = new("Socializar", "Vontade de ir à taverna e de jogar onde há gente.",
-            "Sobe ao socializar com gosto.", false),
+            "Sobe com experiências boas na taverna.", false),
+        // Personalidade.
         ["sociability"] = new("Sociabilidade", "Quanto valoriza companhia na taverna; pesa na escolha de classe de suporte.",
-            "Sobe bem devagar com tempo em grupo ou na taverna.", false),
-        ["aggressiveness"] = new("Agressividade", "Gosto por desafio acima do próprio nível e por emboscadas; puxa objetivos de nível; pesa na classe tanque.",
-            "Sobe com abates de jogadores (M3).", false),
-        ["patience"] = new("Paciência", "Tolera repetir a mesma atividade; aumenta o apego aos objetivos e permite manter dois ao mesmo tempo; pesa na coleta.",
+            "Sobe bem devagar com tempo na taverna.", false),
+        ["aggressiveness"] = new("Agressividade", "Competitividade. Junto com a confiança (Mecânica) e a pouca aversão a risco, forma o gosto por desafio acima do nível; pesa em emboscadas, metas de nível e na classe tanque.",
             "Traço de personalidade: estável por enquanto.", false),
-        ["loyalty"] = new("Lealdade", "Prefere continuar na zona onde estava jogando; aumenta o apego aos objetivos; pesa na patrulha e na classe tanque. Guildas no M6.",
+        ["patience"] = new("Paciência", "Tolera repetir a mesma atividade e persiste nas metas por mais tempo antes de desistir; pesa na coleta. Não muda quantas metas a pessoa tem.",
             "Traço de personalidade: estável por enquanto.", false),
-        ["riskAversion"] = new("Aversão a risco", "Pesa contra atividades arriscadas, PvP aberto e conteúdo acima do nível.",
+        ["loyalty"] = new("Lealdade", "Apego às metas assumidas; pesa na patrulha e na classe tanque. Fidelidade a grupos e guildas no M6.",
+            "Traço de personalidade: estável por enquanto.", false),
+        ["riskAversion"] = new("Aversão a risco", "Pesa contra atividades arriscadas e PvP aberto e reduz o gosto por desafio acima do nível.",
             "Cai devagar ao enfrentar risco sem perder; mortes (M3) a farão subir.", false),
-        ["mechanicalSkill"] = new("Mecânica", "Rendimento em combate (XP de caça de ×0,88 a ×1,12) e menos medo de risco. No combate (M3) será a habilidade de execução do jogador.",
-            "Sobe com tempo em combate: mais rápido com talento, mais devagar perto do potencial. Cai depois de 7 dias sem jogar.", true),
-        ["gameKnowledge"] = new("Conhecimento", "Rendimento geral (×0,95 a ×1,05), deslocamentos mais curtos e decisões mais consistentes.",
+        // Capacidades: a execucao. Evoluem com pratica, talento e potencial.
+        ["mechanicalSkill"] = new("Mecânica", "Execução: rendimento em combate (XP de caça de ×0,88 a ×1,12), menos medo de risco e confiança para desafios acima do nível. No combate (M3), a execução em PvE e PvP.",
+            "Sobe com tempo em combate: cerca de 130 h por ponto com talento moderado, mais rápido com talento alto e mais devagar perto do potencial. Cai depois de 7 dias sem jogar.", true),
+        ["gameKnowledge"] = new("Conhecimento", "Rendimento geral (×0,95 a ×1,05), estimativa mais precisa do tempo de viagem (o tempo real é o mesmo para todos) e decisões mais consistentes.",
             "Sobe jogando, explorando, descobrindo zonas e concluindo missões. Cai depois de 14 dias sem jogar (atualizações no M7).", true),
-        ["coordination"] = new("Coordenação", "Convive melhor com lugares cheios na caça e na coleta; pesa em chefes e na classe tanque. Grupos no M6.",
-            "Sobe com tempo em grupo ou na taverna: mais rápido com talento.", true),
+        ["coordination"] = new("Coordenação", "Convive melhor com lugares cheios na caça e na coleta; pesa em chefes e na classe tanque. Execução em grupo no M6.",
+            "Evolui só em atividades cooperativas (grupos e raides, M6): por enquanto estável.", true),
         ["cheatPropensity"] = new("Trapaça", "Sem efeito até os incidentes (M9).", "Estável.", false),
         ["opportunism"] = new("Oportunismo", "Foge mais de lugares disputados; pesa na emboscada. Incidentes no M9.", "Estável por enquanto.", false),
     };
 
-    /// <summary>Faixa de talento do jogador (a pessoa): potencial e velocidade de aprender.</summary>
+    /// <summary>
+    /// Faixa de talento do jogador (a pessoa): potencial e velocidade de aprender as capacidades.
+    /// Talento nao e experiencia: a experiencia vem da pratica (ExperienceTier).
+    /// </summary>
     public static string TalentTier(int talent) => talent switch
     {
-        < 150 => "Noob",
-        < 350 => "Inexperiente",
-        < 600 => "Padrão",
-        < 800 => "Experiente",
-        < 930 => "Prodígio",
-        _ => "Gênio",
+        < 300 => "Baixo",
+        < 600 => "Moderado",
+        < 800 => "Alto",
+        _ => "Excepcional",
     };
 
     public static string TalentHint(int talent) => talent switch
     {
-        < 150 => "Aprende devagar e quase não passa de onde começou.",
-        < 350 => "Evolui pouco além do nível de entrada.",
-        < 600 => "Evolução normal com a prática.",
-        < 800 => "Aprende rápido e tem margem para crescer.",
-        < 930 => "Aprende muito rápido; alto potencial.",
-        _ => "Potencial excepcional: pode chegar ao topo das capacidades.",
+        < 300 => "Aprende devagar e tem potencial limitado nas capacidades.",
+        < 600 => "Aprende no ritmo normal; potencial mediano.",
+        < 800 => "Aprende rápido e pode ir longe nas capacidades.",
+        _ => "Aprende muito rápido; pode chegar ao topo das capacidades.",
+    };
+
+    /// <summary>Experiencia: pratica neste jogo (horas jogadas), separada do talento.</summary>
+    public static string ExperienceTier(double hours) => hours switch
+    {
+        < 10 => "Novato",
+        < 50 => "Iniciante",
+        < 200 => "Experiente",
+        _ => "Veterano",
     };
 
     /// <summary>Causa de mudanca de atributo, em portugues.</summary>
@@ -76,12 +87,11 @@ public static class AttributeInfo
         "practice_group" => "tempo em grupo",
         "practice_social" => "tempo na taverna",
         "enjoyed_activity" => "gostou da atividade",
-        "repetition_fatigue" => "cansou de repetir",
         "faced_risk" => "enfrentou risco",
         "pvp_kill" => "abateu um jogador",
         "inactivity_week" => "mais de 7 dias sem jogar",
         "inactivity_long" => "mais de 14 dias sem jogar",
-        "goal_completed" => "objetivo concluído",
+        "goal_completed" => "meta concluída",
         _ => cause,
     };
 

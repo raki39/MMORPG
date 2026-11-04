@@ -9,7 +9,7 @@ using Simulation.Core.World;
 
 namespace Simulation.Tests;
 
-/// <summary>Atributos vivos e objetivos pessoais (D-036).</summary>
+/// <summary>Atributos vivos e metas de curto prazo (D-036, revisao D-036a).</summary>
 public class TraitGoalTests
 {
     private static SimulationEngine Opened(ulong seed = 42, int population = 100)
@@ -37,16 +37,17 @@ public class TraitGoalTests
         var (w, p, _) = Someone();
         var traits = w.Behavior.Traits;
         int mech = p.Traits.MechanicalSkill, know = p.Traits.GameKnowledge;
-        int mechLo = TraitDynamics.Floor(p, "mechanicalSkill");
-        int knowLo = TraitDynamics.Floor(p, "gameKnowledge");
+        var d = w.Content.Dynamics;
+        int mechLo = traits.Floor(p, "mechanicalSkill");
+        int knowLo = traits.Floor(p, "gameKnowledge");
 
         traits.OnDaily(p, p.LastPlayedDay + 7);   // uma semana exata: nada muda
         Assert.Equal(mech, p.Traits.MechanicalSkill);
         traits.OnDaily(p, p.LastPlayedDay + 8);
-        Assert.Equal(Math.Max(mechLo, mech - TraitTuning.MechanicalDecayPerDay), p.Traits.MechanicalSkill);
+        Assert.Equal(Math.Max(mechLo, mech - d.MechanicalDecayPerDay), p.Traits.MechanicalSkill);
         Assert.Equal(know, p.Traits.GameKnowledge);  // conhecimento so cai depois de duas semanas
         traits.OnDaily(p, p.LastPlayedDay + 15);
-        Assert.Equal(Math.Max(knowLo, know - TraitTuning.KnowledgeDecayPerDay), p.Traits.GameKnowledge);
+        Assert.Equal(Math.Max(knowLo, know - d.KnowledgeDecayPerDay), p.Traits.GameKnowledge);
     }
 
     [Fact]
@@ -57,8 +58,8 @@ public class TraitGoalTests
         p.Practice.Clear();
         p.Traits.MechanicalSkill = p.BaseTraits.MechanicalSkill;
         int before = p.Traits.MechanicalSkill;
-        int hi = TraitDynamics.Ceiling(p, "mechanicalSkill");
-        w.Behavior.Traits.OnActivity(p, ch, hunt, 10 * TraitTuning.MechanicalPerCombatMinutes, 0, 0, false);
+        int hi = w.Behavior.Traits.Ceiling(p, "mechanicalSkill");
+        w.Behavior.Traits.OnActivity(p, ch, hunt, 10 * w.Content.Dynamics.MechanicalCombatMinutes, 0, 0, false);
         Assert.InRange(p.Traits.MechanicalSkill - before, 1, 17);   // ~10 pontos, conforme o talento
         w.Behavior.Traits.OnActivity(p, ch, hunt, 10_000_000, 0, 0, false);
         Assert.Equal(hi, p.Traits.MechanicalSkill);   // nunca passa do potencial
@@ -72,19 +73,24 @@ public class TraitGoalTests
         p.Traits.GameKnowledge = p.BaseTraits.GameKnowledge;
         int know = p.Traits.GameKnowledge;
         w.Behavior.Traits.OnRegionDiscovered(p);
-        Assert.Equal(know + TraitTuning.KnowledgePerDiscovery, p.Traits.GameKnowledge);
+        Assert.Equal(know + w.Content.Dynamics.KnowledgePerDiscovery, p.Traits.GameKnowledge);
         int k2 = p.Traits.GameKnowledge;
-        w.Behavior.Traits.OnActivity(p, ch, FirstOfType(w.Content, ActivityTypes.Explore), 6 * TraitTuning.KnowledgePerExploreMinutes, 0, 0, false);
+        w.Behavior.Traits.OnActivity(p, ch, FirstOfType(w.Content, ActivityTypes.Explore), 6 * w.Content.Dynamics.KnowledgeExploreMinutes, 0, 0, false);
         Assert.True(p.Traits.GameKnowledge > k2);
     }
 
     [Fact]
-    public void AbaterJogador_AumentaPvp()
+    public void AbaterJogador_ReforcaGostoPorPvp_EPraticaMecanica_SemMudarAgressividade()
     {
         var (w, p, _) = Someone();
-        int pvp = p.Traits.Pvp;
+        var d = w.Content.Dynamics;
+        int pvp = p.Traits.Pvp, aggr = p.Traits.Aggressiveness;
+        p.Practice.Clear();
         w.Behavior.Traits.OnPvpKill(p);
-        Assert.Equal(Math.Min(TraitDynamics.Ceiling(p, "pvp"), pvp + 3), p.Traits.Pvp);
+        Assert.Equal(Math.Min(w.Behavior.Traits.Ceiling(p, "pvp"), pvp + d.PvpKillPreference), p.Traits.Pvp);
+        Assert.Equal(aggr, p.Traits.Aggressiveness);
+        // A execucao vem da pratica de combate (mecanica), nao do gosto.
+        Assert.Contains(p.PracticeProgress, kv => kv.Key.StartsWith("+mechanicalSkill/", StringComparison.Ordinal) && kv.Value > 0);
     }
 
     [Fact]
@@ -97,20 +103,34 @@ public class TraitGoalTests
             p.Traits.Talent = talent;
             p.Practice.Clear();
             p.Traits.MechanicalSkill = p.BaseTraits.MechanicalSkill;
-            w.Behavior.Traits.OnActivity(p, ch, hunt, 40 * TraitTuning.MechanicalPerCombatMinutes, 0, 0, false);
+            w.Behavior.Traits.OnActivity(p, ch, hunt, 40 * w.Content.Dynamics.MechanicalCombatMinutes, 0, 0, false);
             return p.Traits.MechanicalSkill - p.BaseTraits.MechanicalSkill;
         }
         int genius = Gain(950), noob = Gain(80);
         Assert.True(genius > noob, $"genio {genius} vs noob {noob}");
         p.Traits.Talent = 950;
-        int capGenius = TraitDynamics.Ceiling(p, "mechanicalSkill");
+        int capGenius = w.Behavior.Traits.Ceiling(p, "mechanicalSkill");
         p.Traits.Talent = 80;
-        int capNoob = TraitDynamics.Ceiling(p, "mechanicalSkill");
-        Assert.True(capGenius > capNoob + 200 || capGenius == 1000);
+        int capNoob = w.Behavior.Traits.Ceiling(p, "mechanicalSkill");
+        Assert.True(capGenius > capNoob);
         // Gostos e personalidade nao dependem do talento.
-        int pveNoob = TraitDynamics.Ceiling(p, "pve");
+        int pveNoob = w.Behavior.Traits.Ceiling(p, "pve");
         p.Traits.Talent = 950;
-        Assert.Equal(pveNoob, TraitDynamics.Ceiling(p, "pve"));
+        Assert.Equal(pveNoob, w.Behavior.Traits.Ceiling(p, "pve"));
+    }
+
+    [Fact]
+    public void Potencial_EAbsolutoPeloTalento_ComFolgaMinimaAcimaDoInicio()
+    {
+        var d = TestSupport.Preset.Dynamics;
+        var low = new PersonTraits { MechanicalSkill = 150 };
+        var mid = new PersonTraits { MechanicalSkill = 400 };
+        // Mesmo talento, inicios diferentes: o mesmo potencial (escolha consciente, D-036a).
+        Assert.Equal(TraitDynamics.CeilingOf(d, low, 800, "mechanicalSkill"), TraitDynamics.CeilingOf(d, mid, 800, "mechanicalSkill"));
+        Assert.Equal(d.PotentialBase + 800 * d.PotentialPerTalent / 1000, TraitDynamics.CeilingOf(d, low, 800, "mechanicalSkill"));
+        // Quem ja comeca acima do potencial ainda tem uma folga minima.
+        var high = new PersonTraits { MechanicalSkill = 900 };
+        Assert.Equal(900 + d.PotentialMinHeadroom, TraitDynamics.CeilingOf(d, high, 100, "mechanicalSkill"));
     }
 
     [Fact]
@@ -173,12 +193,12 @@ public class TraitGoalTests
         var hunt = FirstOfType(w.Content, ActivityTypes.Hunt);
         var goals = w.Behavior.Goals;
         int bonus = goals.Bonus(ch, region, gather, true, 800);
-        Assert.Equal(GoalTuning.WeightGoal, bonus);
+        Assert.Equal(w.Content.GoalSettings.Weight, bonus);
         Assert.Equal(0, goals.Bonus(ch, region, hunt, true, 800));
         // Comprometimento menor, influencia menor.
         ch.GoalList.Clear();
         ch.GoalList.Add(new PersonalGoal(GoalTypes.PracticeActivity, ActivityTypes.Gather, 300, 0, 500, "trade", 600, w.Clock.Tick, 0));
-        Assert.Equal(GoalTuning.WeightGoal / 2, goals.Bonus(ch, region, gather, true, 800));
+        Assert.Equal(w.Content.GoalSettings.Weight / 2, goals.Bonus(ch, region, gather, true, 800));
     }
 
     [Fact]
@@ -195,7 +215,7 @@ public class TraitGoalTests
         Assert.DoesNotContain(g, ch.Goals);
         Assert.Equal(completed + 1, ch.GoalsCompleted);
         Assert.Contains(w.Events.Drain(), x => x.Type == "goal_completed");
-        Assert.Equal(Math.Min(TraitDynamics.Ceiling(p, "pve"), pve + TraitTuning.GoalMotiveReinforce), p.Traits.Pve);
+        Assert.Equal(Math.Min(w.Behavior.Traits.Ceiling(p, "pve"), pve + w.Content.GoalSettings.MotiveReinforce), p.Traits.Pve);
     }
 
     [Fact]
@@ -224,5 +244,97 @@ public class TraitGoalTests
             return StateHasher.Compute(e.World);
         }
         Assert.Equal(Run(), Run());
+    }
+
+    [Fact]
+    public void Repetir_NaoReduzOGosto_SoExperienciaBoaReforca()
+    {
+        var (w, p, ch) = Someone();
+        var hunt = FirstOfType(w.Content, ActivityTypes.Hunt);
+        p.Practice.Clear();
+        p.Traits.Patience = 0;
+        int pve = p.Traits.Pve;
+        // Muita repeticao com experiencia ruim (encaixe baixo): o gosto nao cai.
+        for (int i = 0; i < 50; i++) w.Behavior.Traits.OnActivity(p, ch, hunt, 120, 200, 0, false);
+        Assert.Equal(pve, p.Traits.Pve);
+        // Experiencias boas e persistentes reforcam o gosto.
+        w.Behavior.Traits.OnActivity(p, ch, hunt, 20 * w.Content.Dynamics.AffinityEnjoyedMinutes, 900, 0, false);
+        Assert.True(p.Traits.Pve > pve || pve == w.Behavior.Traits.Ceiling(p, "pve"));
+    }
+
+    [Fact]
+    public void Coordenacao_NaoEvoluiNaTaverna()
+    {
+        var (w, p, ch) = Someone();
+        p.Practice.Clear();
+        int coord = p.Traits.Coordination;
+        w.Behavior.Traits.OnActivity(p, ch, FirstOfType(w.Content, ActivityTypes.Socialize), 100_000, 900, 0, false);
+        Assert.Equal(coord, p.Traits.Coordination);
+    }
+
+    [Fact]
+    public void Familiaridade_VemDoTempoNaZona_EEMenorParaQuemGostaDeVariedade()
+    {
+        var (w, _, ch) = Someone();
+        var d = w.Content.Dynamics;
+        var homebody = new PersonTraits { Exploration = 100, Loyalty = 500 };
+        var wanderer = new PersonTraits { Exploration = 900, Loyalty = 500 };
+        ch.ZoneMinutes.Clear();
+        Assert.Equal(0, ActivityScoring.FamiliarityPull(ch, "zona_x", homebody, d));
+        ch.ZoneMinutes["zona_x"] = d.FamiliarityFullMinutes / 2;
+        int half = ActivityScoring.FamiliarityPull(ch, "zona_x", homebody, d);
+        ch.ZoneMinutes["zona_x"] = d.FamiliarityFullMinutes * 5;
+        int full = ActivityScoring.FamiliarityPull(ch, "zona_x", homebody, d);
+        Assert.True(full > half && half > 0);
+        Assert.True(ActivityScoring.FamiliarityPull(ch, "zona_x", wanderer, d) < full);
+        // A lealdade nao entra na familiaridade.
+        Assert.Equal(full, ActivityScoring.FamiliarityPull(ch, "zona_x", new PersonTraits { Exploration = 100, Loyalty = 1000 }, d));
+    }
+
+    [Fact]
+    public void GostoPorDesafio_CombinaCompetitividadeConfiancaERisco()
+    {
+        var bold = new PersonTraits { Aggressiveness = 500, MechanicalSkill = 800, RiskAversion = 200 };
+        var timid = new PersonTraits { Aggressiveness = 500, MechanicalSkill = 200, RiskAversion = 800 };
+        Assert.True(ActivityScoring.ChallengeAppetite(bold) > ActivityScoring.ChallengeAppetite(timid));
+        var competitive = new PersonTraits { Aggressiveness = 900, MechanicalSkill = 500, RiskAversion = 500 };
+        var calm = new PersonTraits { Aggressiveness = 100, MechanicalSkill = 500, RiskAversion = 500 };
+        Assert.True(ActivityScoring.ChallengeAppetite(competitive) > ActivityScoring.ChallengeAppetite(calm));
+    }
+
+    [Fact]
+    public void Conhecimento_MelhoraAEstimativaDaViagem_SemReduzirOCusto()
+    {
+        var d = TestSupport.Preset.Dynamics;
+        Assert.Equal(d.TravelEstimateErrorAtZero, ActivityScoring.TravelErrorPermille(new PersonTraits { GameKnowledge = 0 }, d));
+        Assert.Equal(0, ActivityScoring.TravelErrorPermille(new PersonTraits { GameKnowledge = 1000 }, d));
+    }
+
+    [Fact]
+    public void QuantidadeDeMetas_NaoDependeDaPaciencia()
+    {
+        var (w, p, ch) = Someone();
+        p.Traits.Patience = 50;   // muito impaciente
+        ch.GoalList.Clear();
+        int max = 0;
+        for (int i = 0; i < 40; i++)
+        {
+            w.Behavior.Goals.Review(p, ch, new DeterministicRng((ulong)(1000 + i)));
+            max = Math.Max(max, ch.Goals.Count);
+        }
+        Assert.Equal(w.Content.GoalSettings.MaxActive, max);
+    }
+
+    [Fact]
+    public void ParametrosDosAtributos_VemDoConteudo_EInvalidosSaoErro()
+    {
+        var set = TestSupport.FreshPresetSet();
+        Assert.Equal(150, set.Population.Dynamics.MechanicalCombatMinutes);
+        Assert.Equal(2, set.Population.Goals.MaxActive);
+        set.Population.Dynamics.MechanicalCombatMinutes = 0;
+        set.Population.Goals.AdoptChance = 1500;
+        var errors = ContentValidator.Validate(set).Where(i => i.Severity == IssueSeverity.Error).ToList();
+        Assert.Contains(errors, e => e.Path == "dynamics.mechanicalCombatMinutes");
+        Assert.Contains(errors, e => e.Path == "goals.adoptChance");
     }
 }

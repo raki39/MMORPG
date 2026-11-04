@@ -597,6 +597,29 @@ public static class ContentValidator
     {
         var pop = set.Population;
         if (pop.Profiles.Count == 0) v.Error(PopulationFile, "profiles", "Defina ao menos um perfil de população.");
+        // Evolucao dos atributos e metas (D-036): valores positivos e faixas coerentes.
+        var dy = pop.Dynamics;
+        foreach (var (name, value) in new (string, int)[]
+        {
+            ("mechanicalCombatMinutes", dy.MechanicalCombatMinutes), ("knowledgePlayMinutes", dy.KnowledgePlayMinutes),
+            ("knowledgeExploreMinutes", dy.KnowledgeExploreMinutes), ("sociabilitySocialMinutes", dy.SociabilitySocialMinutes),
+            ("affinityEnjoyedMinutes", dy.AffinityEnjoyedMinutes), ("riskConfidenceMinutes", dy.RiskConfidenceMinutes),
+            ("explorationPerDiscoveries", dy.ExplorationPerDiscoveries), ("familiarityFullMinutes", dy.FamiliarityFullMinutes),
+            ("learnCostAtZeroTalent", dy.LearnCostAtZeroTalent), ("learnCostAtMaxTalent", dy.LearnCostAtMaxTalent),
+        })
+            if (value <= 0) v.Error(PopulationFile, "dynamics." + name, "Use um valor maior que zero.");
+        foreach (var (name, value) in new (string, int)[]
+        {
+            ("rangeSkill", dy.RangeSkill), ("rangePlaystyle", dy.RangePlaystyle), ("rangePersonality", dy.RangePersonality),
+            ("potentialBase", dy.PotentialBase), ("potentialPerTalent", dy.PotentialPerTalent), ("potentialMinHeadroom", dy.PotentialMinHeadroom),
+            ("enjoyedMinFitPermille", dy.EnjoyedMinFitPermille), ("riskConfidenceMinRisk", dy.RiskConfidenceMinRisk),
+            ("travelEstimateErrorAtZero", dy.TravelEstimateErrorAtZero),
+        })
+            if (value < 0 || value > 1000) v.Error(PopulationFile, "dynamics." + name, "Use um valor de 0 a 1000.");
+        var gs = pop.Goals;
+        if (gs.MaxActive < 0 || gs.MaxActive > 5) v.Error(PopulationFile, "goals.maxActive", "Use de 0 a 5 metas ao mesmo tempo.");
+        if (gs.AdoptChance < 0 || gs.AdoptChance > 1000) v.Error(PopulationFile, "goals.adoptChance", "Use um valor de 0 a 1000.");
+        if (gs.Weight < 0) v.Error(PopulationFile, "goals.weight", "O peso não pode ser negativo.");
         if (pop.Names.FirstNames.Count == 0) v.Error(PopulationFile, "names.firstNames", "Lista de nomes vazia.");
         if (pop.Names.LastNames.Count == 0) v.Error(PopulationFile, "names.lastNames", "Lista de sobrenomes vazia.");
         if (pop.Names.NickPrefixes.Count == 0) v.Error(PopulationFile, "names.nickPrefixes", "Lista de prefixos de apelido vazia.");

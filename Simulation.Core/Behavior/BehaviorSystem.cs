@@ -386,6 +386,7 @@ public sealed class BehaviorSystem
             int fit = ProgressionRules.MilliXpPerMinute(_w.Content, a, levelBefore) > 0 ? ProgressionRules.Efficiency(_w.Content.Progression, levelBefore, challenge) : 0;
             _traits.OnActivity(p, ch, a, minutes, fit, ActivityScoring.RiskOf(region, a, challenge, levelBefore), firstTimeType);
             _goals.OnActivity(p, ch, a, minutes);
+            ch.ZoneMinutes[region.Id] = (ch.ZoneMinutes.TryGetValue(region.Id, out int zm) ? zm : 0) + minutes;
             // Explorar revela mais longe: as zonas ligadas as vizinhas.
             if (a.Type == ActivityTypes.Explore)
                 foreach (var c in region.Connections)

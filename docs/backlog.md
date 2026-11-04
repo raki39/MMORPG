@@ -125,8 +125,11 @@ Falta para fechar o M2:
 - [x] Menu principal lateral recolhível, barra mais limpa, painel do mapa de 340 px fechado ao iniciar (D-035)
 - [x] Ficha do jogador: personalidade no cabeçalho, Inventário · M5, Progresso e objetivos, Horários de jogo, aba Estatísticas (D-035)
 - [x] Ajustes de UX: dica vazia, menu lateral, rolagem, tabelas (vão, ordenação), filtros nas listas, personalidade e perfil, quem concluiu cada missão (D-035)
-- [x] Objetivos pessoais na simulação e no card "Progresso e objetivos" (D-036)
+- [x] Metas de curto prazo na simulação e no card "Progresso e metas" (D-036, D-036a)
 - [x] Atributos do jogador vivos (sobem e caem devagar), talento e potencial; dica do que cada um faz (D-036, docs/atributos.md)
+- [x] Revisão D-036a: talento × experiência, potencial absoluto, gosto × execução, relações claras (zona familiar, desafio, estimativa de viagem), parâmetros em `population.json`, evolução medida no relatório
+- [ ] Ambições de longo prazo em etapas (ficar muito forte, liderar guilda), separadas das metas de curto prazo
+- [ ] Coordenação evoluindo em atividades cooperativas (grupos e raides, M6); experiências ruins persistentes (mortes, perdas) mudando gostos e aversão a risco (M3)
 - [ ] Classes e itens iniciais (próximo passo combinado com o criador)
 - [ ] Aba "Personagem" na página do jogador: classe, nível, itens, status e combate do personagem (separado dos atributos do jogador)
 - [ ] Combate (M3) usa os atributos do jogador junto com os do personagem (Mecânica, PvP, Coordenação); chamar OnPvpKill nos abates

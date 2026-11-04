@@ -92,8 +92,7 @@ public partial class PlayerModal : ModalFrame
             string stage = (ProgressionRules.StageRate(prog, v.Level) / 1000.0).ToString("0.##", CultureInfo.GetCultureInfo("pt-BR"));
             Fact("Nível", v.Level.ToString(), UiTokens.Accent, v.Level >= prog.LevelCap
                 ? $"Nível {v.Level}\n~Nível máximo atual ({prog.LevelCap})."
-                : $"Nível {v.Level}\nXP|{PtBr.Int(v.Experience)} / {PtBr.Int(need)}\nTaxa da faixa|×{stage}\n~Faixas de nível mais altas rendem menos XP.", "award");
-            Fact("Para o próximo", v.Level >= prog.LevelCap ? "máx." : $"{v.Experience * 100 / Math.Max(1, need)}%", UiTokens.Success, "", "trending-up");
+                : $"Nível {v.Level}\nXP|{PtBr.Int(v.Experience)} / {PtBr.Int(need)}\nPara o próximo|{v.Experience * 100 / Math.Max(1, need)}%\nTaxa da faixa|×{stage}\n~Faixas de nível mais altas rendem menos XP.", "award");
             Fact("Status", online ? "Conectado" : "Desconectado", online ? UiTokens.Success : UiTokens.TextSecondary, "", "activity");
             Fact("Zona", _ctx.ZoneName(v.RegionId), UiTokens.TextSecondary, "", "map-pin");
             Fact("Conhece", $"{v.KnownRegions}/{_ctx.Content.Regions.Count}", UiTokens.TextSecondary, "Zonas conhecidas\n~Só zonas conhecidas entram nas decisões. Viajar e explorar revelam mais.", "compass");
@@ -102,7 +101,11 @@ public partial class PlayerModal : ModalFrame
             Fact("Personalidade", plabel, UiTokens.AccentSoft, $"{plabel}\n~{ptext}", picon);
             int talent = _person.Traits.Talent;
             Fact("Talento", AttributeInfo.TalentTier(talent), UiTokens.Accent,
-                $"Talento: {AttributeInfo.TalentTier(talent)}\nValor|{UiTokens.To20(talent)} / 20\n~{AttributeInfo.TalentHint(talent)}\n~Talento é do jogador (a pessoa): define o potencial e a velocidade com que Mecânica, Conhecimento e Coordenação evoluem. Não muda.", "sparkles");
+                $"Talento: {AttributeInfo.TalentTier(talent)}\nValor|{UiTokens.To20(talent)} / 20\n~{AttributeInfo.TalentHint(talent)}\n~Talento é do jogador (a pessoa): define o potencial e a velocidade com que Mecânica, Conhecimento e Coordenação evoluem. Não muda e não é experiência.", "sparkles");
+            double hours = v.PlayedTicks / (double)Simulation.Core.Time.SimTime.TicksPerHour;
+            string exp = AttributeInfo.ExperienceTier(hours);
+            Fact("Experiência", exp, UiTokens.TextSecondary,
+                $"Experiência: {exp}\nHoras jogadas|{PtBr.Decimal(hours)} h\nConhecimento|{UiTokens.To20(_person.Traits.GameKnowledge)} / 20\n~Vem da prática neste jogo: Novato (< 10 h), Iniciante (< 50 h), Experiente (< 200 h), Veterano. O Conhecimento cresce com ela; quem já jogava o gênero chega com mais conhecimento.", "clock");
 
             var e = Engagement();
             var gauge = new SemiGauge
@@ -262,7 +265,7 @@ public partial class PlayerModal : ModalFrame
             (Card("Uso do tempo", TimeUseBody(detail), info: "Divisão do tempo conectado\n~Por tipo de atividade desde o cadastro; o resto é deslocamento."), 3));
         var row3 = Grid(12,
             (Card("Zonas frequentadas", ZonesBody(), info: "Onde escolhe jogar\n~Escolhas de atividade por zona registradas desde que o jogo foi aberto. Clique para abrir a zona."), 3),
-            (Card("Progresso e objetivos", GoalsBody(v, st), info: "Nível, personalidade e o que a pessoa está buscando\n~Objetivos pessoais próprios chegam com o D-026; hoje as metas são o próximo nível e as missões em andamento."), 3),
+            (Card("Progresso e metas", GoalsBody(v, st), info: "Nível, personalidade e metas de curto prazo\n~Metas de curto prazo (chegar a um nível, descobrir uma zona, concluir uma missão, praticar uma atividade) influenciam as escolhas sem obrigar. Ambições de longo prazo (ex.: liderar guilda) virão em etapas."), 3),
             (Card("Atividades recentes", RecentBody(), info: "Últimos acontecimentos\n~Clique numa linha para abrir a área, a zona ou a missão. Histórico completo na aba Histórico."), 6));
         return Column(12, row1, row2, row3);
     }
@@ -297,7 +300,7 @@ public partial class PlayerModal : ModalFrame
             (UiTokens.To20(t.Sociability), "users", "Sociável", "Cria vínculos com facilidade e gosta de companhia.", "user", "Reservado", "Prefere jogar sozinho e em lugares vazios."),
             (UiTokens.To20(t.Aggressiveness), "flame", "Agressivo", "Tende a confrontar e a disputar espaço.", "heart-handshake", "Pacífico", "Evita confronto e disputa."),
             (UiTokens.To20(t.Patience), "hourglass", "Paciente", "Repete a mesma atividade sem cansar tão cedo.", "zap", "Inquieto", "Cansa de repetir e troca de atividade logo."),
-            (UiTokens.To20(t.Loyalty), "shield", "Leal", "Fica com os mesmos grupos e lugares.", "compass", "Independente", "Muda de grupo e de lugar com facilidade."),
+            (UiTokens.To20(t.Loyalty), "shield", "Leal", "Mantém as metas assumidas; no M6, fiel a grupos e guildas.", "compass", "Independente", "Larga metas com mais facilidade; no M6, muda de grupo sem apego."),
             (UiTokens.To20(t.RiskAversion), "shield", "Cauteloso", "Evita perigo, PvP e conteúdo acima do nível.", "flame", "Destemido", "Aceita risco e encara zonas perigosas."),
         };
         var best = options.OrderByDescending(o => Math.Abs(o.V - 10.5f)).First();
@@ -305,7 +308,7 @@ public partial class PlayerModal : ModalFrame
         return best.V >= 11 ? (best.HiIcon, best.Hi, best.HiText) : (best.LoIcon, best.Lo, best.LoText);
     }
 
-    // ----- Progresso e objetivos -----
+    // ----- Progresso e metas de curto prazo -----
 
     private Control GoalsBody(CharacterView v, ServerStats st)
     {
@@ -337,9 +340,9 @@ public partial class PlayerModal : ModalFrame
         col.AddChild(p);
         col.AddChild(Wrap($"Perfil {ProfileName}: {ProfileHint(_person.ProfileId)}", UiTokens.FontSmall, UiTokens.TextSecondary));
 
-        col.AddChild(Section("Objetivos", ThemeFactory.Text($"{v.GoalsCompleted} concluídos · {v.GoalsAbandoned} abandonados", UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Numbers)));
+        col.AddChild(Section("Metas", ThemeFactory.Text($"{v.GoalsCompleted} concluídas · {v.GoalsAbandoned} abandonadas", UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Numbers)));
         if (v.Goals.Count == 0)
-            col.AddChild(Wrap("Sem objetivo pessoal agora. Nem todo jogador tem um o tempo todo; ao conectar, pode adotar um conforme o perfil e a personalidade.", UiTokens.FontSmall, UiTokens.TextSecondary));
+            col.AddChild(Wrap("Sem meta agora. Nem todo jogador tem uma o tempo todo; ao conectar, pode adotar uma conforme o perfil e a personalidade.", UiTokens.FontSmall, UiTokens.TextSecondary));
         foreach (var g in v.Goals)
         {
             var (icon, text, progress) = GoalText(v, g);
@@ -347,7 +350,7 @@ public partial class PlayerModal : ModalFrame
             var motive = AttributeInfo.Name(g.MotiveKey);
             var tip = new TipPanel
             {
-                TooltipText = $"{text}\nMotivo|{motive} {UiTokens.To20(g.MotiveValue)}\nComprometimento|{g.Commitment / 10}%\nDesde|{PtBr.ShortDate(_ctx.Calendar.ToDateTime(g.SetTick))}\n~Influencia as escolhas sem obrigar: vira um fator a mais na decisão, com o peso do comprometimento (paciência e lealdade). Sem progresso por muitas horas de jogo, é abandonado.",
+                TooltipText = $"{text}\nMotivo|{motive} {UiTokens.To20(g.MotiveValue)}\nComprometimento|{g.Commitment / 10}%\nDesde|{PtBr.ShortDate(_ctx.Calendar.ToDateTime(g.SetTick))}\n~Meta de curto prazo: influencia as escolhas sem obrigar; vira um fator a mais na decisão, com o peso do comprometimento (paciência e lealdade). Sem progresso por muitas horas de jogo, é abandonada (os pacientes insistem mais).",
                 MouseFilter = MouseFilterEnum.Stop,
             };
             tip.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
@@ -357,7 +360,7 @@ public partial class PlayerModal : ModalFrame
         return col;
     }
 
-    /// <summary>Icone, texto e progresso (0–1) de um objetivo pessoal.</summary>
+    /// <summary>Icone, texto e progresso (0–1) de uma meta de curto prazo.</summary>
     private (string Icon, string Text, float Progress) GoalText(CharacterView v, GoalView g)
     {
         switch (g.Type)
@@ -867,7 +870,7 @@ public partial class PlayerModal : ModalFrame
                 var info = AttributeInfo.ByKey[key];
                 int value = t.Get(key), baseValue = b0.Get(key);
                 int v20 = UiTokens.To20(value), base20 = UiTokens.To20(baseValue);
-                int cap = Simulation.Core.Behavior.TraitDynamics.CeilingOf(b0, t.Talent, key);
+                int cap = Simulation.Core.Behavior.TraitDynamics.CeilingOf(_ctx.Content.Dynamics, b0, t.Talent, key);
                 int cap20 = UiTokens.To20(cap);
                 string change = value == baseValue ? "igual à base" : $"{(value > baseValue ? "+" : "")}{value - baseValue} desde o início";
                 string tip = $"{info.Name}\nAtual|{v20} / 20\nNo início|{base20} / 20 ({change})"
@@ -1091,8 +1094,8 @@ public partial class PlayerModal : ModalFrame
         "quest_offer" => "Missão para aceitar",
         "quest_deliver" => "Missão para entregar",
         "quest_step" => "Avança uma missão",
-        "goal" => "Objetivo pessoal",
-        "familiarity" => "Zona onde já estava",
+        "goal" => "Meta pessoal",
+        "familiarity" => "Zona familiar",
         "challenge" => "Gosto por desafio",
         _ => key,
     };
@@ -1110,9 +1113,9 @@ public partial class PlayerModal : ModalFrame
         "quest_offer" => "O quadro tem missão que a pessoa pode aceitar.",
         "quest_deliver" => "Há missões prontas para entregar no quadro (mais prontas, mais vontade de voltar).",
         "quest_step" => "Fazer isto avança a etapa atual de uma missão em andamento.",
-        "goal" => "Ajuda um objetivo pessoal; o peso cresce com o comprometimento (paciência e lealdade).",
-        "familiarity" => "Lealdade: prefere continuar na zona onde estava jogando.",
-        "challenge" => "Agressividade: gosta de conteúdo acima do próprio nível.",
+        "goal" => "Ajuda uma meta de curto prazo; o peso cresce com o comprometimento (paciência e lealdade).",
+        "familiarity" => "Zona onde já passou bastante tempo; quem gosta de variedade (exploração) sente menos essa atração.",
+        "challenge" => "Conteúdo acima do nível: competitividade (agressividade), confiança (mecânica) e pouca aversão a risco.",
         _ => "Pequena aleatoriedade reproduzível.",
     };
 
@@ -1239,9 +1242,9 @@ public partial class PlayerModal : ModalFrame
             case "quest_accepted": return ($"Aceitou a missão {QuestName(e.Detail)}", UiTokens.Accent);
             case "quest_step_completed": return ($"Cumpriu uma etapa de {QuestName((e.Detail ?? "").Split('#')[0])}", UiTokens.Info);
             case "quest_completed": return ($"Entregou a missão {QuestName(e.Detail)}", UiTokens.Success);
-            case "goal_set": return ($"Novo objetivo: {GoalDetail(e.Detail)}", UiTokens.Accent);
-            case "goal_completed": return ($"Concluiu o objetivo: {GoalDetail(e.Detail)}", UiTokens.Success);
-            case "goal_abandoned": return ($"Desistiu do objetivo: {GoalDetail(e.Detail)}{(e.Causes.Count > 0 && e.Causes[0].Factor == "impatience" ? " (impaciência)" : " (sem progresso)")}", UiTokens.TextSecondary);
+            case "goal_set": return ($"Nova meta: {GoalDetail(e.Detail)}", UiTokens.Accent);
+            case "goal_completed": return ($"Concluiu a meta: {GoalDetail(e.Detail)}", UiTokens.Success);
+            case "goal_abandoned": return ($"Desistiu da meta: {GoalDetail(e.Detail)}{(e.Causes.Count > 0 && e.Causes[0].Factor == "impatience" ? " (impaciência)" : " (sem progresso)")}", UiTokens.TextSecondary);
             case "trait_changed":
             {
                 var parts = (e.Detail ?? "").Split(':');

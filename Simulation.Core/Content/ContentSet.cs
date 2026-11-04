@@ -56,6 +56,10 @@ public sealed class ContentDatabase
     public WorldDefinition World => Set.World;
     public string SourceHash => Set.SourceHash;
     public NamePoolDefinition Names => Set.Population.Names;
+    /// <summary>Evolucao dos atributos do jogador (D-036).</summary>
+    public TraitDynamicsDefinition Dynamics => Set.Population.Dynamics;
+    /// <summary>Metas de curto prazo (D-036).</summary>
+    public GoalSettingsDefinition GoalSettings => Set.Population.Goals;
     public ProgressionDefinition Progression => Set.Progression;
 
     public IReadOnlyDictionary<string, RegionDefinition> Regions { get; }

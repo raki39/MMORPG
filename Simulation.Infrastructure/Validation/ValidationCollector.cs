@@ -35,6 +35,10 @@ public sealed class ProfileStats
     public double HoursPerWeek { get; init; }
     public double MedianLevel { get; init; }
     public double P90Level { get; init; }
+    /// <summary>Variacao media dos atributos do jogador desde o inicio (unidades do Core), D-036.</summary>
+    public Dictionary<string, double> TraitDelta { get; init; } = new(StringComparer.Ordinal);
+    public double GoalsCompleted { get; init; }
+    public double GoalsAbandoned { get; init; }
     /// <summary>% das sessoes em dia util que comecam no horario nobre (18h-23h).</summary>
     public double PrimeTimeStartPct { get; init; }
 }
@@ -157,6 +161,10 @@ public sealed class ValidationCollector
                 MedianLevel = Percentile(levels, 0.5),
                 P90Level = Percentile(levels, 0.9),
                 PrimeTimeStartPct = total > 0 ? prime * 100.0 / total : double.NaN,
+                TraitDelta = new[] { "mechanicalSkill", "gameKnowledge", "pve", "exploration", "trade", "riskAversion" }
+                    .ToDictionary(k => k, k => group.Count == 0 ? 0 : group.Average(c => (double)(w.GetPerson(c.PersonId).Traits.Get(k) - w.GetPerson(c.PersonId).BaseTraits.Get(k))), StringComparer.Ordinal),
+                GoalsCompleted = group.Count == 0 ? 0 : group.Average(c => (double)c.GoalsCompleted),
+                GoalsAbandoned = group.Count == 0 ? 0 : group.Average(c => (double)c.GoalsAbandoned),
             });
         }
 

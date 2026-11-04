@@ -805,3 +805,52 @@ Proposta do criador, analisada com o Claude.
   - agora a página só se atualiza quando a simulação avança (fora do mapa o tempo está pausado) ou quando chega o detalhe do jogador, e nunca com o mouse parado;
   - o painel do mapa também não se refaz enquanto o mouse está parado sobre ele.
 - **Engajamento** de conta nova: janela mínima de 2 dias, para não estourar (antes passava de 500%).
+
+## D-036a — Revisão dos atributos: talento × experiência, relações claras e parâmetros no conteúdo
+**Data:** 04/11/2026 · **Estado:** aceita (calibração a revisar)
+
+**Pedido do criador** (revisão do D-036 antes de consolidar): cada atributo deve representar uma coisa clara, para a simulação não produzir diferenças por relações que não fazem sentido.
+
+**Decisões** (detalhe em `docs/atributos.md`):
+1. **Talento × experiência:**
+   - As faixas de talento agora são Baixo, Moderado, Alto e Excepcional.
+   - "Noob" e "Experiente" descreviam experiência. A **experiência** passa a vir da prática (horas jogadas: Novato, Iniciante, Experiente, Veterano) e aparece na ficha.
+   - **Potencial absoluto (escolha consciente):** `max(início + 50, 250 + talento × 0,7)`. Não depende de onde a pessoa começou. Hardcore e competitivos começam perto do potencial; casuais talentosos têm espaço para crescer.
+2. **Gosto × execução:**
+   - Gostos decidem a vontade; Mecânica, Conhecimento e Coordenação decidem a execução.
+   - Abater um jogador (M3) reforça o gosto por PvP e conta como prática de combate (Mecânica). Não muda mais a Agressividade.
+3. **Relações forçadas corrigidas:**
+   - **Zona familiar:** antes era a Lealdade preferindo a zona anterior. Agora vem dos minutos que a pessoa já passou na zona (novo `ZoneMinutes` no personagem, no hash). É menor para quem gosta de variedade (Exploração). A Lealdade fica no apego às metas, na patrulha, na classe e nas guildas (M6).
+   - **Coordenação:** não evolui mais na taverna; só em atividades cooperativas (grupos e raides, M6).
+   - **Desafio acima do nível:** combina competitividade (Agressividade, 40%), confiança (Mecânica, 30%) e pouca aversão a risco (30%).
+   - **Conhecimento e viagem:** o custo da viagem é o tempo real para todos. O Conhecimento só torna a **estimativa** mais precisa (erro de até ±30% com conhecimento zero, sorteado de forma determinística).
+4. **Unidades e ritmo:**
+   - 1 ponto visível ≈ 52,6 unidades do Core.
+   - Mecânica ≈ 130 h de combate por ponto com talento moderado, longe do potencial.
+   - **Repetição não reduz mais o gosto:** gera tédio na decisão (fator de repetição). Só experiências persistentes mudam uma preferência. A causa `repetition_fatigue` saiu.
+   - O relatório de validação ganhou a seção "Evolução dos atributos do jogador": variação medida por perfil, metas concluídas e abandonadas, e tabela de inatividade.
+5. **Metas de curto prazo:**
+   - Os objetivos atuais passam a se chamar metas de curto prazo (sessão ou secundárias). Ambições de longo prazo virão em etapas, separadas.
+   - Até 2 metas para todos, com chance fixa de 45% ao conectar. A paciência só pesa na persistência (tempo até desistir), não na quantidade.
+6. **Parâmetros no conteúdo:**
+   - `TraitTuning` e `GoalTuning` saíram do código. Os números estão em `population.json` (`dynamics` e `goals`), com faixas no validador.
+   - Os pesos de zona familiar e desafio também foram para lá.
+
+**Determinismo e testes:**
+- `StateHasher` v6 (tempo por zona).
+- 8 testes novos (132 no total): potencial absoluto, repetição sem queda de gosto, coordenação fora da taverna, familiaridade, apetite por desafio, estimativa de viagem, quantidade de metas e parâmetros no conteúdo.
+
+**Validação** (90 dias × 1.000 pessoas × 5 seeds): 15 de 21 metas dentro da faixa, como no D-036.
+- Combate: 35,3%, na borda da faixa (instável).
+- Horas até o nível 30: 174, dentro.
+- Evolução medida em 90 dias:
+  - Mecânica: +0,05 nos perfis que quase não combatem; +0,6 nos competitivos e +0,9 nos hardcore.
+  - Conhecimento: ≈ +1 em todos os perfis.
+  - Gostos: até +0,6.
+
+**Interface:**
+- talento com as faixas novas;
+- fato "Experiência" no cabeçalho;
+- dicas dos atributos reescritas;
+- "Progresso e metas";
+- fatores "Zona familiar" e "Gosto por desafio" com a explicação nova.

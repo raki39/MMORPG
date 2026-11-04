@@ -11,7 +11,7 @@ namespace Simulation.Core.World;
 /// </summary>
 public static class StateHasher
 {
-    public const int FormatVersion = 5;
+    public const int FormatVersion = 6;
 
     public static string Compute(WorldState w)
     {
@@ -77,6 +77,8 @@ public static class StateHasher
                 h.Str(g.MotiveKey); h.Int(g.MotiveValue); h.Long(g.SetTick); h.Int(g.Progress); h.Long(g.LastProgressPlayedTicks);
             }
             h.Int(c.GoalsSet); h.Int(c.GoalsCompleted); h.Int(c.GoalsAbandoned);
+            h.Int(c.ZoneMinutesSpent.Count);
+            foreach (var kv in c.ZoneMinutesSpent) { h.Str(kv.Key); h.Int(kv.Value); }
         }
         h.Int(w.QuestStats.Count);
         foreach (var kv in w.QuestStats)

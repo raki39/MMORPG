@@ -98,9 +98,12 @@ public static class ActivityScoring
                 if (yieldsXp)
                 {
                     f.Add(new DecisionFactor("level_fit", (fit - 500) * BehaviorTuning.WeightReward / 1000));
-                    // Agressividade (D-036): gosto por desafio acima do proprio nivel.
+                    // Gosto por desafio acima do nivel (D-036a): competitividade (agressividade),
+                    // confianca (mecanica) e pouca aversao a risco.
                     if (challenge > ch.Level)
-                        f.Add(new DecisionFactor("challenge", t.Aggressiveness * Math.Min(3, challenge - ch.Level) * BehaviorTuning.WeightChallengePerLevel / 1000));
+                    {
+                        f.Add(new DecisionFactor("challenge", ChallengeAppetite(t) * Math.Min(3, challenge - ch.Level) * content.Dynamics.ChallengeWeightPerLevel / 1000));
+                    }
                 }
 
                 int count = occupancy(region.Id, a.Id);
@@ -123,8 +126,11 @@ public static class ActivityScoring
 
                 if (travel > 0)
                 {
-                    // Conhecimento do jogo: rotas e deslocamentos pesam menos para quem conhece (D-036).
-                    int travelCost = Math.Min(1000, travel * 1000 / Math.Max(30, remaining)) * (1100 - t.GameKnowledge / 5) / 1000;
+                    // Conhecimento (D-036a): estimativa do tempo de viagem mais precisa; o custo real
+                    // do tempo e o mesmo para todos (quem conhece pouco erra para mais ou para menos).
+                    int errMax = TravelErrorPermille(t, content.Dynamics);
+                    int estimate = travel * (1000 + rng.NextIntInclusive(-errMax, errMax)) / 1000;
+                    int travelCost = Math.Min(1000, estimate * 1000 / Math.Max(30, remaining));
                     f.Add(new DecisionFactor("travel", -travelCost * BehaviorTuning.WeightTravel / 1000));
                 }
                 if (travel + a.TypicalMinutes > remaining + BehaviorTuning.LogoutToleranceMinutes)
@@ -136,9 +142,10 @@ public static class ActivityScoring
 
                 if (questTerm is { } qt) f.Add(new DecisionFactor(qt.Key, qt.Value));
 
-                // Lealdade: prefere continuar na zona onde estava jogando (D-036).
-                if (ch.LastActivityKey.Length > 0 && ch.LastActivityKey.StartsWith(region.Id + "/", StringComparison.Ordinal))
-                    f.Add(new DecisionFactor("familiarity", t.Loyalty * BehaviorTuning.WeightFamiliar / 1000));
+                // Familiaridade (D-036a): zona onde ja passou tempo atrai; quem gosta de variedade
+                // (exploracao alta) sente menos essa atracao.
+                if (FamiliarityPull(ch, region.Id, t, content.Dynamics) is > 0 and var pull)
+                    f.Add(new DecisionFactor("familiarity", pull * content.Dynamics.FamiliarityWeight / 1000));
 
                 // Objetivos pessoais: influenciam com o peso do comprometimento, sem obrigar (D-036).
                 bool delivers = questTerm is { Key: "quest_deliver" };
@@ -164,6 +171,28 @@ public static class ActivityScoring
         });
         return options;
     }
+
+    /// <summary>
+    /// Gosto por desafio acima do nivel (permille, D-036a): competitividade (agressividade 40%),
+    /// confianca na propria mecanica (30%) e pouca aversao a risco (30%).
+    /// </summary>
+    public static int ChallengeAppetite(PersonTraits t) =>
+        (t.Aggressiveness * 4 + t.MechanicalSkill * 3 + (1000 - t.RiskAversion) * 3) / 10;
+
+    /// <summary>
+    /// Atracao pela zona onde ja passou tempo (permille, D-036a): cresce com os minutos ali ate
+    /// a familiaridade total e e menor para quem gosta de variedade (exploracao).
+    /// </summary>
+    public static int FamiliarityPull(Character ch, string regionId, PersonTraits t, TraitDynamicsDefinition d)
+    {
+        if (!ch.ZoneMinutesSpent.TryGetValue(regionId, out int minutes) || minutes <= 0) return 0;
+        int fam = Math.Min(1000, minutes * 1000 / Math.Max(1, d.FamiliarityFullMinutes));
+        return fam * (1000 - t.Exploration / 2) / 1000;
+    }
+
+    /// <summary>Erro maximo (+-, permille) da estimativa do tempo de viagem: some com conhecimento alto.</summary>
+    public static int TravelErrorPermille(PersonTraits t, TraitDynamicsDefinition d) =>
+        d.TravelEstimateErrorAtZero * (1000 - t.GameKnowledge) / 1000;
 
     /// <summary>Risco bruto da atividade (permille): base, PvP aberto e desafio acima do nivel.</summary>
     public static int RiskOf(RegionDefinition region, ActivityDefinition a, int challenge, int level) =>
