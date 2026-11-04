@@ -34,6 +34,12 @@ public partial class WorldMapView : Node2D
     private PopulationLayer _population = null!;
     private MapOverlay _overlay = null!;
     private RegionDefinition[] _zones = Array.Empty<RegionDefinition>();
+    private MapGrid _grid = null!;
+    /// <summary>Lote livre sob o mouse (indice linear; -1 = nenhum).</summary>
+    public int HoveredFreeSlot { get; private set; } = -1;
+    private MapSlot? _hoveredSlot;
+    private float _minZoom = 0.1f;
+    private const int MaxZones = 64, MaxGates = 128;
     private readonly Dictionary<string, int> _zoneIndex = new(StringComparer.Ordinal);
     private readonly List<(RegionDefinition Zone, AreaDefinition Area, Vector2[] Shape)> _areas = new();
 
@@ -71,7 +77,8 @@ public partial class WorldMapView : Node2D
         _content = content;
         _layout = layout;
         _persons = persons;
-        _zones = content.Regions.Values.Take(16).ToArray();
+        _zones = content.Regions.Values.Take(MaxZones).ToArray();
+        _grid = new MapGrid(content);
         for (int i = 0; i < _zones.Length; i++) _zoneIndex[_zones[i].Id] = i;
 
         // Contorno organico (estavel) de cada area.
@@ -92,18 +99,48 @@ public partial class WorldMapView : Node2D
 
         _terrain = new ShaderMaterial { Shader = GD.Load<Shader>("res://Shaders/terrain.gdshader") };
         terrainRect.Material = _terrain;
-        var data = new Vector4[16];
-        var rules = new Vector4[16];
+        // Terreno por zona (forma do relevo, altitude, aspereza, semente) e regras.
+        var terrainData = new Vector4[MaxZones];
+        var info = new Vector4[MaxZones];
         for (int i = 0; i < _zones.Length; i++)
         {
             var z = _zones[i];
-            data[i] = new Vector4(z.MapPosition.X, z.MapPosition.Y, layout.ZoneRadius, UiTokens.BiomeIndex(z.Biome));
-            rules[i] = new Vector4(z.Pvp == PvpRules.Open ? 2 : z.Pvp == PvpRules.Consensual ? 1 : 0,
-                z.DeathRule == DeathRules.FullLoot ? 2 : z.DeathRule == DeathRules.Partial ? 1 : 0, 0, 0);
+            var t = z.Terrain;
+            terrainData[i] = new Vector4(Array.IndexOf(Reliefs.All, t.Relief), t.ElevationPermille / 1000f, t.RoughnessPermille / 1000f, t.Seed % 997);
+            info[i] = new Vector4(UiTokens.BiomeIndex(z.Biome),
+                z.Pvp == PvpRules.Open ? 2 : z.Pvp == PvpRules.Consensual ? 1 : 0,
+                z.DeathRule == DeathRules.FullLoot ? 2 : z.DeathRule == DeathRules.Partial ? 1 : 0,
+                z.IsCity ? 1 : 0);
         }
-        _terrain.SetShaderParameter("zones", data);
-        _terrain.SetShaderParameter("zone_rules", rules);
-        _terrain.SetShaderParameter("zone_count", _zones.Length);
+        _terrain.SetShaderParameter("zone_terrain", terrainData);
+        _terrain.SetShaderParameter("zone_info", info);
+
+        // Grade de lotes: textura colunas x linhas com o indice da zona + 1 (0 = lote livre).
+        var g = _grid.Definition;
+        var img = Image.CreateEmpty(Math.Max(1, g.Columns), Math.Max(1, g.Rows), false, Image.Format.R8);
+        foreach (var slot in _grid.AllSlots())
+        {
+            string? zid = _grid.ZoneAt(slot);
+            int v = zid != null && _zoneIndex.TryGetValue(zid, out int zi) ? zi + 1 : 0;
+            img.SetPixel(slot.Column, slot.Row, new Color(v / 255f, 0, 0));
+        }
+        _terrain.SetShaderParameter("slot_zone", ImageTexture.CreateFromImage(img));
+        _terrain.SetShaderParameter("grid", new Vector4(g.OriginX, g.OriginY, g.SpacingX, g.SpacingY));
+        _terrain.SetShaderParameter("grid_dims", new Vector2I(g.Columns, g.Rows));
+        _terrain.SetShaderParameter("zone_radius", (float)layout.ZoneRadius);
+
+        // Portoes: a deformacao das fronteiras e desligada perto deles.
+        var gates = new List<Vector2>();
+        foreach (var z in _zones)
+            foreach (var c in z.Connections)
+            {
+                var p = layout.Gate(z.Id, c.To);
+                if (gates.Count < MaxGates) gates.Add(new Vector2(p.X, p.Y));
+            }
+        var gateArr = new Vector2[MaxGates];
+        gates.CopyTo(gateArr);
+        _terrain.SetShaderParameter("gates", gateArr);
+        _terrain.SetShaderParameter("gate_count", gates.Count);
 
         _population = new PopulationLayer();
         _population.Init(persons.Count);
@@ -135,6 +172,16 @@ public partial class WorldMapView : Node2D
         var max = new Vector2(_zones.Max(z => z.MapPosition.X) + r, _zones.Max(z => z.MapPosition.Y) + r);
         var size = (max - min) * 1.06f;
         _fitZoom = Mathf.Min(viewArea.Size.X / size.X, viewArea.Size.Y / size.Y);
+        // Afastar ate ver a grade inteira (lotes livres para expansao) com um pouco de mar.
+        if (_grid.IsValid)
+        {
+            var g = _grid.Definition;
+            var gmin = new Vector2(g.OriginX - r * 1.6f, g.OriginY - r * 1.6f);
+            var gmax = new Vector2(g.OriginX + (g.Columns - 0.5f) * g.SpacingX + r * 1.6f, g.OriginY + (g.Rows - 1) * g.SpacingY + r * 1.6f);
+            var gsize = gmax - gmin;
+            _minZoom = Mathf.Min(_fitZoom * 0.9f, Mathf.Min(viewArea.Size.X / gsize.X, viewArea.Size.Y / gsize.Y) * 0.85f);
+        }
+        else _minZoom = _fitZoom * 0.6f;
         _targetZoom = _fitZoom;
         _targetPan = viewArea.GetCenter() - (min + max) / 2f * _targetZoom;
         FollowPersonId = 0;
@@ -158,7 +205,7 @@ public partial class WorldMapView : Node2D
 
     private void FocusMap(Vector2 at, float zoomFactor)
     {
-        _targetZoom = Mathf.Clamp(_fitZoom * zoomFactor, _fitZoom * 0.6f, _fitZoom * 7f);
+        _targetZoom = Mathf.Clamp(_fitZoom * zoomFactor, _minZoom, _fitZoom * 7f);
         _targetPan = _viewArea.GetCenter() - at * _targetZoom;
         FollowPersonId = 0;
     }
@@ -174,7 +221,7 @@ public partial class WorldMapView : Node2D
     private void ZoomAround(Vector2 screen, float factor)
     {
         var anchor = (screen - _targetPan) / _targetZoom;
-        _targetZoom = Mathf.Clamp(_targetZoom * factor, _fitZoom * 0.6f, _fitZoom * 7f);
+        _targetZoom = Mathf.Clamp(_targetZoom * factor, _minZoom, _fitZoom * 7f);
         _targetPan = screen - anchor * _targetZoom;
     }
 
@@ -222,7 +269,8 @@ public partial class WorldMapView : Node2D
         _terrain.SetShaderParameter("anim_time", _time);
         _terrain.SetShaderParameter("selected_zone", SelectedRegionId != null && _zoneIndex.TryGetValue(SelectedRegionId, out var si) ? si : -1);
         _terrain.SetShaderParameter("hovered_zone", HoveredRegionId != null && _zoneIndex.TryGetValue(HoveredRegionId, out var hi) ? hi : -1);
-        var tints = new Vector4[16];
+        _terrain.SetShaderParameter("hovered_slot", HoveredFreeSlot);
+        var tints = new Vector4[MaxZones];
         for (int i = 0; i < _zones.Length; i++)
         {
             var (c, a) = LayerTint(_zones[i]);
@@ -235,7 +283,7 @@ public partial class WorldMapView : Node2D
     {
         MapLayer.Crowding => (Ramp(Mathf.Clamp(PeopleInZone(z.Id) / (float)Math.Max(1, z.Capacity) * 4f, 0, 1)), 0.62f),
         MapLayer.Danger => (Ramp(DangerOf(z)), 0.62f),
-        MapLayer.Level => (new Color("#3E6FB0").Lerp(new Color("#9B4FC6"), Mathf.Clamp((z.LevelMin - 1) / 15f, 0, 1)), 0.62f),
+        MapLayer.Level => (new Color("#3E6FB0").Lerp(new Color("#9B4FC6"), Mathf.Clamp((z.LevelMin - 1) / (float)Math.Max(1, _content.Progression.LevelCap - 1), 0, 1)), 0.62f),
         _ => (Colors.Black, 0f),
     };
 
@@ -354,6 +402,8 @@ public partial class WorldMapView : Node2D
         HoveredRegionId = null;
         _hoveredArea = null;
         _hoveredCluster = -1;
+        HoveredFreeSlot = -1;
+        _hoveredSlot = null;
         if (_dragging || !_viewArea.HasPoint(_mouse)) return;
 
         for (int i = 0; i < _clusters.Count; i++)
@@ -375,6 +425,17 @@ public partial class WorldMapView : Node2D
             if (c.DistanceTo(_mouse) <= r) { _hoveredArea = z.Id + "#" + a.Id; HoveredRegionId = z.Id; return; }
         }
         HoveredRegionId = ZoneAt(_mouse);
+        if (HoveredRegionId == null && _grid.IsValid)
+        {
+            // Lote livre: espaco do tamanho de uma zona, reservado para expansao.
+            var m = ToMap(_mouse);
+            if (_grid.NearestSlot(m.X, m.Y) is { } s && _grid.ZoneAt(s) == null
+                && m.DistanceTo(new Vector2(s.X, s.Y)) <= _layout.ZoneRadius * 1.05f)
+            {
+                _hoveredSlot = s;
+                HoveredFreeSlot = s.Index(_grid.Columns);
+            }
+        }
     }
 
     private string? ZoneAt(Vector2 screen)
@@ -593,6 +654,15 @@ public partial class WorldMapView : Node2D
         var c = ToScreen(_layout.AreaCenter(z.Id, a.Id));
         float r = EmblemRadius() * (key == _hoveredArea ? 1.12f : 1f);
         var col = AreaPalette.Color(a.Kind);
+
+        // Afastado (mundo todo e lotes livres): o emblema vira um ponto discreto.
+        if (Detail < 0.75f && key != _hoveredArea && key != SelectedAreaKey)
+        {
+            float dot = Mathf.Clamp(_layout.AreaRadius(z.Id, a.Id) * _zoom * 0.5f, 2.5f, 6f);
+            o.DrawCircle(c, dot + 1.2f, new Color(0, 0, 0, 0.55f));
+            o.DrawCircle(c, dot, col);
+            return;
+        }
         var people = PeopleInArea(z.Id, a.Id);
 
         o.DrawCircle(c + new Vector2(1.5f, 3f), r + 2.5f, new Color(0, 0, 0, 0.5f));
@@ -653,11 +723,19 @@ public partial class WorldMapView : Node2D
         var ts = font.GetStringSize(z.Name, HorizontalAlignment.Left, -1, size);
         var nameColor = z.Id == SelectedRegionId ? UiTokens.AccentSoft : UiTokens.TextPrimary;
 
+        // O rotulo inteiro (contagem + nome) precisa caber na largura da zona; encolhe ate 10 px
+        // e, afastado demais, so aparece em foco (hover ou selecao).
+        float room = _layout.ZoneRadius * 2f * _zoom * 0.94f;
+        while (size > 10 && font.GetStringSize(z.Name, HorizontalAlignment.Left, -1, size).X + 52 > room) size--;
+        ts = font.GetStringSize(z.Name, HorizontalAlignment.Left, -1, size);
+        bool focused = z.Id == HoveredRegionId || z.Id == SelectedRegionId;
+        if (ts.X + 52 > room && !focused) return;
+
         // Contagem de jogadores em destaque, a esquerda do nome.
         int people = PeopleInZone(z.Id);
         var nf = UiFonts.Numbers;
         string count = people.ToString(System.Globalization.CultureInfo.InvariantCulture);
-        int csize = (int)Mathf.Clamp(size * 0.9f, 14, 20);
+        int csize = (int)Mathf.Clamp(size * 0.9f, 10, 20);
         var cts = nf.GetStringSize(count, HorizontalAlignment.Left, -1, csize);
         float pillW = cts.X + 30, pillH = nf.GetHeight(csize) + 6;
         float totalW = pillW + 8 + ts.X;
@@ -686,6 +764,7 @@ public partial class WorldMapView : Node2D
         var tf = UiFonts.Bold;
         const int tsz = 10;
         float total = tags.Sum(t => tf.GetStringSize(t.Text, HorizontalAlignment.Left, -1, tsz).X + 14) + (tags.Count - 1) * 4;
+        if (total > room && !focused) return;   // selos so cabem com a zona grande o bastante
         float x = at.X - total / 2f, y = at.Y + 9;
         foreach (var (text, color, solid) in tags)
         {
@@ -773,6 +852,13 @@ public partial class WorldMapView : Node2D
             lines.Add((z.Name, UiFonts.SemiBold, 14, UiTokens.TextPrimary));
             lines.Add(($"{PeopleInZone(z.Id)} jogadores · {z.Areas.Count} áreas · {z.Connections.Count} saídas", UiFonts.Regular, 12, UiTokens.TextSecondary));
             lines.Add(("Clique para a ficha da zona · duplo clique para aproximar", UiFonts.Regular, 12, UiTokens.AccentSoft));
+        }
+        else if (_hoveredSlot is { } slot)
+        {
+            lines.Add(("Lote livre", UiFonts.SemiBold, 14, UiTokens.TextPrimary));
+            lines.Add(($"Coluna {slot.Column + 1} · linha {slot.Row + 1} · {_grid.FreeSlots} lotes livres no mundo", UiFonts.Regular, 12, UiTokens.TextSecondary));
+            lines.Add(("Espaço do tamanho de uma zona, reservado para expandir o mundo", UiFonts.Regular, 12, UiTokens.TextSecondary));
+            lines.Add(("Ocupar lotes será feito no editor de mapa (em breve)", UiFonts.Regular, 12, UiTokens.AccentSoft));
         }
         if (lines.Count == 0) return;
         float w = 0, h = 0;

@@ -56,6 +56,14 @@
         "date": "2027-03-26",
         "name": "Sexta-feira Santa"
       }
-    ]
+    ],
+    "map": {
+      "originX": 70,
+      "originY": -200,
+      "spacingX": 230,
+      "spacingY": 200,
+      "columns": 10,
+      "rows": 7
+    }
   }
 }

@@ -252,6 +252,405 @@
           "max": 2
         }
       ]
+    },
+    {
+      "id": "javali_selvagem",
+      "version": 1,
+      "name": "Javali Selvagem",
+      "kind": "melee",
+      "level": 2,
+      "health": 140,
+      "damage": 9,
+      "armor": 4,
+      "attackIntervalMs": 2000,
+      "rangeMeters": 2,
+      "respawnSeconds": 72,
+      "recommendedGroupSize": 1,
+      "experience": 36,
+      "goldMinCopper": 2,
+      "goldMaxCopper": 6,
+      "regionIds": [
+        "floresta_sussurrante"
+      ],
+      "loot": []
+    },
+    {
+      "id": "urso_pardo",
+      "version": 1,
+      "name": "Urso Pardo",
+      "kind": "melee",
+      "level": 6,
+      "health": 300,
+      "damage": 17,
+      "armor": 12,
+      "attackIntervalMs": 2000,
+      "rangeMeters": 2,
+      "respawnSeconds": 96,
+      "recommendedGroupSize": 1,
+      "experience": 108,
+      "goldMinCopper": 6,
+      "goldMaxCopper": 18,
+      "regionIds": [
+        "colinas_do_vale"
+      ],
+      "loot": []
+    },
+    {
+      "id": "morcego_gigante",
+      "version": 1,
+      "name": "Morcego Gigante",
+      "kind": "melee",
+      "level": 7,
+      "health": 340,
+      "damage": 19,
+      "armor": 14,
+      "attackIntervalMs": 2000,
+      "rangeMeters": 2,
+      "respawnSeconds": 102,
+      "recommendedGroupSize": 1,
+      "experience": 126,
+      "goldMinCopper": 7,
+      "goldMaxCopper": 21,
+      "regionIds": [
+        "mina_velha"
+      ],
+      "loot": []
+    },
+    {
+      "id": "harpia",
+      "version": 1,
+      "name": "Harpia",
+      "kind": "ranged",
+      "level": 8,
+      "health": 380,
+      "damage": 21,
+      "armor": 16,
+      "attackIntervalMs": 2500,
+      "rangeMeters": 20,
+      "respawnSeconds": 108,
+      "recommendedGroupSize": 1,
+      "experience": 144,
+      "goldMinCopper": 8,
+      "goldMaxCopper": 24,
+      "regionIds": [
+        "colinas_do_vale"
+      ],
+      "loot": []
+    },
+    {
+      "id": "sapo_gigante",
+      "version": 1,
+      "name": "Sapo Gigante",
+      "kind": "melee",
+      "level": 11,
+      "health": 500,
+      "damage": 27,
+      "armor": 22,
+      "attackIntervalMs": 2000,
+      "rangeMeters": 2,
+      "respawnSeconds": 126,
+      "recommendedGroupSize": 1,
+      "experience": 198,
+      "goldMinCopper": 11,
+      "goldMaxCopper": 33,
+      "regionIds": [
+        "brejo_das_brumas"
+      ],
+      "loot": []
+    },
+    {
+      "id": "serpente_do_brejo",
+      "version": 1,
+      "name": "Serpente do Brejo",
+      "kind": "melee",
+      "level": 13,
+      "health": 580,
+      "damage": 31,
+      "armor": 26,
+      "attackIntervalMs": 2000,
+      "rangeMeters": 2,
+      "respawnSeconds": 138,
+      "recommendedGroupSize": 1,
+      "experience": 234,
+      "goldMinCopper": 13,
+      "goldMaxCopper": 39,
+      "regionIds": [
+        "brejo_das_brumas"
+      ],
+      "loot": []
+    },
+    {
+      "id": "troll_da_mata",
+      "version": 1,
+      "name": "Troll da Mata",
+      "kind": "melee",
+      "level": 15,
+      "health": 660,
+      "damage": 35,
+      "armor": 30,
+      "attackIntervalMs": 2000,
+      "rangeMeters": 2,
+      "respawnSeconds": 150,
+      "recommendedGroupSize": 2,
+      "experience": 270,
+      "goldMinCopper": 15,
+      "goldMaxCopper": 45,
+      "regionIds": [
+        "mata_dos_espinhos"
+      ],
+      "loot": []
+    },
+    {
+      "id": "aranha_gigante",
+      "version": 1,
+      "name": "Aranha Gigante",
+      "kind": "ranged",
+      "level": 17,
+      "health": 740,
+      "damage": 39,
+      "armor": 34,
+      "attackIntervalMs": 2500,
+      "rangeMeters": 20,
+      "respawnSeconds": 162,
+      "recommendedGroupSize": 2,
+      "experience": 306,
+      "goldMinCopper": 17,
+      "goldMaxCopper": 51,
+      "regionIds": [
+        "mata_dos_espinhos"
+      ],
+      "loot": []
+    },
+    {
+      "id": "orc_saqueador",
+      "version": 1,
+      "name": "Orc Saqueador",
+      "kind": "melee",
+      "level": 18,
+      "health": 780,
+      "damage": 41,
+      "armor": 36,
+      "attackIntervalMs": 2000,
+      "rangeMeters": 2,
+      "respawnSeconds": 168,
+      "recommendedGroupSize": 2,
+      "experience": 324,
+      "goldMinCopper": 18,
+      "goldMaxCopper": 54,
+      "regionIds": [
+        "planalto_dos_ventos"
+      ],
+      "loot": []
+    },
+    {
+      "id": "grifo",
+      "version": 1,
+      "name": "Grifo",
+      "kind": "ranged",
+      "level": 20,
+      "health": 860,
+      "damage": 45,
+      "armor": 40,
+      "attackIntervalMs": 2500,
+      "rangeMeters": 20,
+      "respawnSeconds": 180,
+      "recommendedGroupSize": 2,
+      "experience": 360,
+      "goldMinCopper": 20,
+      "goldMaxCopper": 60,
+      "regionIds": [
+        "planalto_dos_ventos"
+      ],
+      "loot": []
+    },
+    {
+      "id": "lobo_do_gelo",
+      "version": 1,
+      "name": "Lobo do Gelo",
+      "kind": "melee",
+      "level": 21,
+      "health": 900,
+      "damage": 47,
+      "armor": 42,
+      "attackIntervalMs": 2000,
+      "rangeMeters": 2,
+      "respawnSeconds": 186,
+      "recommendedGroupSize": 2,
+      "experience": 378,
+      "goldMinCopper": 21,
+      "goldMaxCopper": 63,
+      "regionIds": [
+        "picos_gelados"
+      ],
+      "loot": []
+    },
+    {
+      "id": "golem_de_gelo",
+      "version": 1,
+      "name": "Golem de Gelo",
+      "kind": "melee",
+      "level": 23,
+      "health": 980,
+      "damage": 51,
+      "armor": 46,
+      "attackIntervalMs": 2000,
+      "rangeMeters": 2,
+      "respawnSeconds": 198,
+      "recommendedGroupSize": 2,
+      "experience": 414,
+      "goldMinCopper": 23,
+      "goldMaxCopper": 69,
+      "regionIds": [
+        "picos_gelados"
+      ],
+      "loot": []
+    },
+    {
+      "id": "yeti",
+      "version": 1,
+      "name": "Yeti",
+      "kind": "melee",
+      "level": 25,
+      "health": 1060,
+      "damage": 55,
+      "armor": 50,
+      "attackIntervalMs": 2000,
+      "rangeMeters": 2,
+      "respawnSeconds": 210,
+      "recommendedGroupSize": 2,
+      "experience": 450,
+      "goldMinCopper": 25,
+      "goldMaxCopper": 75,
+      "regionIds": [
+        "picos_gelados"
+      ],
+      "loot": []
+    },
+    {
+      "id": "salamandra",
+      "version": 1,
+      "name": "Salamandra de Fogo",
+      "kind": "ranged",
+      "level": 24,
+      "health": 1020,
+      "damage": 53,
+      "armor": 48,
+      "attackIntervalMs": 2500,
+      "rangeMeters": 20,
+      "respawnSeconds": 204,
+      "recommendedGroupSize": 2,
+      "experience": 432,
+      "goldMinCopper": 24,
+      "goldMaxCopper": 72,
+      "regionIds": [
+        "terras_queimadas"
+      ],
+      "loot": []
+    },
+    {
+      "id": "golem_de_magma",
+      "version": 1,
+      "name": "Golem de Magma",
+      "kind": "melee",
+      "level": 27,
+      "health": 1140,
+      "damage": 59,
+      "armor": 54,
+      "attackIntervalMs": 2000,
+      "rangeMeters": 2,
+      "respawnSeconds": 222,
+      "recommendedGroupSize": 3,
+      "experience": 486,
+      "goldMinCopper": 27,
+      "goldMaxCopper": 81,
+      "regionIds": [
+        "terras_queimadas"
+      ],
+      "loot": []
+    },
+    {
+      "id": "cavaleiro_sombrio",
+      "version": 1,
+      "name": "Cavaleiro Sombrio",
+      "kind": "melee",
+      "level": 27,
+      "health": 1140,
+      "damage": 59,
+      "armor": 54,
+      "attackIntervalMs": 2000,
+      "rangeMeters": 2,
+      "respawnSeconds": 222,
+      "recommendedGroupSize": 2,
+      "experience": 486,
+      "goldMinCopper": 27,
+      "goldMaxCopper": 81,
+      "regionIds": [
+        "fortaleza_sombria"
+      ],
+      "loot": []
+    },
+    {
+      "id": "gargula",
+      "version": 1,
+      "name": "Gárgula",
+      "kind": "melee",
+      "level": 28,
+      "health": 1180,
+      "damage": 61,
+      "armor": 56,
+      "attackIntervalMs": 2000,
+      "rangeMeters": 2,
+      "respawnSeconds": 228,
+      "recommendedGroupSize": 2,
+      "experience": 504,
+      "goldMinCopper": 28,
+      "goldMaxCopper": 84,
+      "regionIds": [
+        "fortaleza_sombria"
+      ],
+      "loot": []
+    },
+    {
+      "id": "acolito_sombrio",
+      "version": 1,
+      "name": "Acólito Sombrio",
+      "kind": "support",
+      "level": 29,
+      "health": 1220,
+      "damage": 63,
+      "armor": 58,
+      "attackIntervalMs": 2500,
+      "rangeMeters": 20,
+      "respawnSeconds": 234,
+      "recommendedGroupSize": 3,
+      "experience": 522,
+      "goldMinCopper": 29,
+      "goldMaxCopper": 87,
+      "regionIds": [
+        "fortaleza_sombria"
+      ],
+      "loot": []
+    },
+    {
+      "id": "senhor_das_cinzas",
+      "version": 1,
+      "name": "Senhor das Cinzas",
+      "kind": "boss",
+      "level": 30,
+      "health": 31500,
+      "damage": 195,
+      "armor": 80,
+      "attackIntervalMs": 2000,
+      "rangeMeters": 2,
+      "respawnSeconds": 21600,
+      "recommendedGroupSize": 10,
+      "experience": 10800,
+      "goldMinCopper": 1200,
+      "goldMaxCopper": 3600,
+      "regionIds": [
+        "fortaleza_sombria"
+      ],
+      "loot": []
     }
   ]
 }

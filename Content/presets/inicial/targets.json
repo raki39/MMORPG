@@ -20,6 +20,16 @@
       "rationale": "Ritmo A (D-027): prévia nominal de cerca de 31 h. O conteúdo atual termina perto do 15–18 até a redistribuição das áreas."
     },
     {
+      "id": "horas_nivel_20", "name": "Horas conectadas até o nível 20 (mediana)", "metric": "hours_to_level", "level": 20,
+      "min": 80, "max": 110, "unit": "h",
+      "rationale": "Referência do criador: cerca de 95 h até o 20. Recalibrar depois das quests estruturadas (passo 3 do D-025)."
+    },
+    {
+      "id": "horas_nivel_30", "name": "Horas conectadas até o nível 30 (mediana)", "metric": "hours_to_level", "level": 30,
+      "min": 170, "max": 230, "unit": "h",
+      "rationale": "Referência do criador: cerca de 200 h até o teto. Recalibrar depois das quests estruturadas (passo 3 do D-025)."
+    },
+    {
       "id": "casual_nivel_10", "name": "Casuais no nível 10 ou mais ao fim", "metric": "reached_level", "level": 10, "profile": "casual",
       "min": 60, "max": 95, "unit": "%",
       "rationale": "Em 90 dias um casual joga cerca de 50 h; a maioria deve passar do 10, sem ser regra para todos."

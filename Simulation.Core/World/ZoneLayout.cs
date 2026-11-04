@@ -78,25 +78,50 @@ public sealed class ZoneLayout
                 candidates.Add(ang);
             }
             if (candidates.Count == 0) candidates.Add(Math.PI / 2);
-            foreach (var area in r.Areas)
+
+            // Areas com posicao do conteudo primeiro; as automaticas procuram, a partir de um
+            // angulo preferido (distribuicao uniforme), a primeira posicao livre no anel externo
+            // e depois no interno, sem sobrepor areas ja colocadas.
+            var placed = new List<(MapPos P, int R)>();
+            foreach (var area in r.Areas.Where(a => a.Position != null))
             {
-                MapPos p;
-                if (area.Position != null)
-                    p = new MapPos(c.X + area.Position.X, c.Y + area.Position.Y);
-                else
+                var p = new MapPos(c.X + area.Position!.X, c.Y + area.Position.Y);
+                Register(r.Id, area, p);
+                placed.Add((p, area.Radius));
+            }
+            int zr = content.World.ZoneRadius;
+            foreach (var area in auto)
+            {
+                int idx = auto.IndexOf(area);
+                int pick = Math.Min((int)((idx + 0.5) * candidates.Count / Math.Max(1, auto.Count)), candidates.Count - 1);
+                double outer = Math.Min(zr * 0.60, zr * 0.9 - area.Radius);
+                double inner = Math.Max(area.Radius + 8, zr * 0.30);
+                MapPos? chosen = null;
+                foreach (double ring in new[] { outer, inner })
                 {
-                    int idx = auto.IndexOf(area);
-                    int pick = (int)((idx + 0.5) * candidates.Count / Math.Max(1, auto.Count));
-                    double angle = candidates[Math.Min(pick, candidates.Count - 1)];
-                    double radius = Math.Min(content.World.ZoneRadius * 0.58, content.World.ZoneRadius * 0.9 - area.Radius);
-                    p = new MapPos(c.X + (int)Math.Round(Math.Cos(angle) * radius), c.Y + (int)Math.Round(Math.Sin(angle) * radius));
+                    for (int step = 0; step < candidates.Count && chosen == null; step++)
+                    {
+                        int k = pick + (step % 2 == 0 ? step / 2 : -(step + 1) / 2);
+                        k = ((k % candidates.Count) + candidates.Count) % candidates.Count;
+                        double angle = candidates[k];
+                        var p = new MapPos(c.X + (int)Math.Round(Math.Cos(angle) * ring), c.Y + (int)Math.Round(Math.Sin(angle) * ring));
+                        if (placed.All(q => p.DistanceTo(q.P) >= area.Radius + q.R + 4)) chosen = p;
+                    }
+                    if (chosen != null) break;
                 }
-                _areas[AreaKey(r.Id, area.Id)] = p;
-                _areaRadius[AreaKey(r.Id, area.Id)] = area.Radius;
-                foreach (var a in area.Activities) _spots[SpotKey(r.Id, a.Id)] = p;
+                var at = chosen ?? new MapPos(c.X + (int)Math.Round(Math.Cos(candidates[pick]) * outer), c.Y + (int)Math.Round(Math.Sin(candidates[pick]) * outer));
+                Register(r.Id, area, at);
+                placed.Add((at, area.Radius));
             }
             foreach (var a in r.Activities) _spots[SpotKey(r.Id, a.Id)] = c;
         }
+    }
+
+    private void Register(string regionId, AreaDefinition area, MapPos p)
+    {
+        _areas[AreaKey(regionId, area.Id)] = p;
+        _areaRadius[AreaKey(regionId, area.Id)] = area.Radius;
+        foreach (var a in area.Activities) _spots[SpotKey(regionId, a.Id)] = p;
     }
 
     private static double AngleDiff(double a, double b)

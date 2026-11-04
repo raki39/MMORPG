@@ -17,8 +17,9 @@ public class ContentTests
         var db = r.Database!;
         Assert.Equal(3, db.Classes.Count);
         Assert.Equal(12, db.Abilities.Count);
-        Assert.Equal(7, db.Creatures.Count);
-        Assert.Single(db.Creatures.Values, c => c.Kind == CreatureKinds.Boss);
+        Assert.Equal(26, db.Creatures.Count);
+        Assert.Equal(2, db.Creatures.Values.Count(c => c.Kind == CreatureKinds.Boss));
+        Assert.Equal(3, db.Regions.Values.Count(z => z.IsCity));
         Assert.All(db.Regions.Values, r => Assert.NotEmpty(r.AllActivities()));
         Assert.Contains(db.Regions.Values.SelectMany(r => r.Areas), a => a.Kind == AreaKinds.Dungeon);
         Assert.Contains(db.Regions.Values.SelectMany(r => r.Areas), a => a.Kind == AreaKinds.Hideout);

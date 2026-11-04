@@ -138,12 +138,22 @@ public class BehaviorTests
         var routes = new RouteFinder(TestSupport.Preset, layout);
         Assert.Equal(new[] { "colinas_do_vale", "mina_velha", "covil_do_rei_goblin" }, routes.ZonePath("vila_aurora", "covil_do_rei_goblin"));
         Assert.Equal(new[] { "vila_aurora", "ravina_escarlate", "ruinas_sombrias" }, routes.ZonePath("floresta_sussurrante", "ruinas_sombrias"));
-        // Colinas e Ravina sao vizinhas no mapa, mas sem passagem: o caminho passa pela cidade.
+        // Zonas encostadas sem passagem: o caminho contorna por uma cidade.
         var c = TestSupport.Preset.Regions;
-        int dx = c["colinas_do_vale"].MapPosition.X - c["ravina_escarlate"].MapPosition.X;
-        int dy = c["colinas_do_vale"].MapPosition.Y - c["ravina_escarlate"].MapPosition.Y;
-        Assert.True(Math.Sqrt(dx * dx + dy * dy) < 2.1 * TestSupport.Preset.World.ZoneRadius, "deveriam ser vizinhas");
-        Assert.Equal(new[] { "vila_aurora", "ravina_escarlate" }, routes.ZonePath("colinas_do_vale", "ravina_escarlate"));
+        bool Touching(string a, string b)
+        {
+            int dx = c[a].MapPosition.X - c[b].MapPosition.X, dy = c[a].MapPosition.Y - c[b].MapPosition.Y;
+            return Math.Sqrt(dx * dx + dy * dy) < 2.1 * TestSupport.Preset.World.ZoneRadius;
+        }
+        Assert.True(Touching("colinas_do_vale", "ravina_escarlate"), "deveriam ser vizinhas");
+        var viaCity = routes.ZonePath("colinas_do_vale", "ravina_escarlate")!;
+        Assert.Equal(2, viaCity.Count);
+        Assert.True(c[viaCity[0]].IsCity, viaCity[0]);
+        // O brejo encosta na Cidadela sem passagem: chega-se pela Mata ou pelo Planalto.
+        Assert.True(Touching("brejo_das_brumas", "cidadela_de_cinzaforte"));
+        var toCitadel = routes.ZonePath("brejo_das_brumas", "cidadela_de_cinzaforte")!;
+        Assert.Equal(2, toCitadel.Count);
+        Assert.Contains(toCitadel[0], new[] { "mata_dos_espinhos", "planalto_dos_ventos" });
     }
 
     [Fact]

@@ -368,3 +368,47 @@ Proposta do criador, analisada com o Claude.
   - a redistribuição das áreas até o 30 (passo 2);
   - as quests estruturadas (passo 3).
 - **Desvio do plano:** a seção 4.4 não fala em taxa por faixa. Ela entrou a pedido do criador e é configurável.
+
+## D-028 — Mapa ampliado em grade de lotes, terreno por parâmetros e conteúdo até o 30
+**Data:** 04/11/2026 · **Estado:** aceita (passo 2 do D-025; mapa aprovado pelo criador)
+
+**Grade de lotes** (`world.json`, bloco `map`).
+- O mundo é uma grade hexagonal de lotes do tamanho de uma zona: 10 colunas × 7 linhas, passo de 230 × 200 unidades, linhas ímpares deslocadas meio passo.
+- Cada zona ocupa o centro de exatamente um lote. O validador recusa zona fora do lote e dois lotes na mesma posição.
+- Os **55 lotes livres** aparecem no mapa como terra não desenvolvida, com névoa e borda tracejada. Ao passar o mouse, aparece o tooltip "Lote livre".
+- **Futuro:** o jogador (desenvolvedor do MMORPG) poderá comprar ou ocupar lotes e criar zonas, áreas, monstros e quests numa tela de edição própria. A grade e todos os parâmetros já são conteúdo validado, sem constantes no cliente.
+
+**Terreno por zona** (`terrain` em cada zona: forma do relevo, altitude, aspereza e semente).
+- **Formas:** planície, colinas, montanhas, vale com rio, planalto, brejo com poças e terras vulcânicas com fendas de lava.
+- **Biomas novos:** pântano, neve, vulcânico e sombrio.
+- **Correção do mapa** (pedido do criador):
+  - antes, o relevo era uma cúpula no centro de cada zona (a "montanhinha") e todas as células tinham o mesmo formato;
+  - agora as fronteiras são orgânicas, por deformação de ruído desligada perto dos portões para as estradas cruzarem no lugar certo;
+  - o relevo vem só dos parâmetros, com mistura nas fronteiras.
+- É só apresentação: não muda a simulação.
+
+**Câmera.**
+- O zoom afasta até a grade inteira, com mar em volta.
+- Afastado, os rótulos encolhem para caber na zona (ou só aparecem em foco) e os emblemas de área viram pontos.
+
+**Conteúdo** (proposta aprovada):
+- **3 cidades:** Vila Aurora (1–12), **Forte do Vau** (10–20) e **Cidadela de Cinzaforte** (18–30). Todas têm mercado, forja, taverna, praça e treino.
+- **12 zonas**, 6 delas novas: Brejo das Brumas, Mata dos Espinhos, Planalto dos Ventos, Picos Gelados, Terras Queimadas (PvP, perda parcial) e Fortaleza Sombria.
+- **54 áreas**, cada uma com faixa recomendada (orientação).
+- **26 criaturas** (19 novas, entre elas o chefe Senhor das Cinzas, nível 30, grupo de 10) e 5 materiais de coleta novos.
+- **Passagens explícitas.** As zonas encostadas sem passagem (ex.: Brejo–Cidadela, Colinas–Ravina) não permitem travessia.
+- **Garantias testadas:**
+  - todo nível de 1 a 29 tem ao menos 2 caças com rendimento pleno, uma delas sem PvP;
+  - toda zona fica a no máximo 2 passagens de uma cidade;
+  - o desafio de cada área fica a até 2 níveis da faixa dela.
+- **As criaturas novas ainda não têm saque** (`loot` vazio). O combate e o saque chegam no M3.
+
+**Posicionamento automático de áreas.** Procura, a partir de um ângulo preferido, a primeira posição livre no anel externo e depois no interno. Evita o setor do nome, as estradas e as outras áreas. Era necessário para zonas com 4 ou 5 áreas.
+
+**Medido** (5 seeds × 1.000 pessoas × 90 dias): ver [validacao.md](validacao.md).
+- O tempo em combate entrou na meta (38%).
+- O quadro de missões caiu para menos de 1% das escolhas por cidade.
+- Nível 20 em 73 h (referência 95 h) e nível 30 em 190 h. Só 12–15% chegam ao 30, então essa mediana subestima o tempo real.
+- **A recalibração da curva fica para depois das quests** (passo 3), com a escolha do criador entre:
+  - (a) total perto de 200 h, com desaceleração suave no fim;
+  - (b) desaceleração forte no fim, com 220–250 h.

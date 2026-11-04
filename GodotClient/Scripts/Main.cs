@@ -24,6 +24,8 @@ namespace GodotClient;
 /// </summary>
 public partial class Main : Node
 {
+    private void ApplyStartZoom(float factor) => _map.ZoomBy(factor);
+
     private readonly Dictionary<string, string> _args = new(StringComparer.Ordinal);
     private SimulationHost? _host;
     private ClientContext _ctx = null!;
@@ -151,6 +153,9 @@ public partial class Main : Node
             if (id > 0) OpenPerson(id);
         }
         if (_args.TryGetValue("focus", out var fz) && _ctx.Content.Regions.ContainsKey(fz)) _map.FocusRegion(fz);
+        // Capturas: --zoom=F aproxima (F > 1) ou afasta (F < 1) a partir do enquadramento inicial.
+        if (_args.TryGetValue("zoom", out var zf) && float.TryParse(zf, NumberStyles.Float, CultureInfo.InvariantCulture, out var zoomFactor) && zoomFactor > 0)
+            CallDeferred(nameof(ApplyStartZoom), zoomFactor);
         if (_args.TryGetValue("open-zone", out var z) && _ctx.Content.Regions.ContainsKey(z)) OpenZone(z);
         if (_args.TryGetValue("open-area", out var ar) && ar.Split('#') is { Length: 2 } ap) OpenArea(ap[0], ap[1]);
         if (_args.ContainsKey("open-cluster"))
@@ -520,7 +525,7 @@ public partial class Main : Node
         {
             case MapLayer.Crowding: _layerLegend.AddChild(GradientLegend(WorldMapView.Ramp(0), WorldMapView.Ramp(0.5f), WorldMapView.Ramp(1), "vazia", "25%+ da capacidade")); break;
             case MapLayer.Danger: _layerLegend.AddChild(GradientLegend(WorldMapView.Ramp(0), WorldMapView.Ramp(0.5f), WorldMapView.Ramp(1), "segura", "PvP e alto risco")); break;
-            case MapLayer.Level: _layerLegend.AddChild(GradientLegend(new Color("#3E6FB0"), new Color("#6C5FBB"), new Color("#9B4FC6"), "nível 1", "nível 16+")); break;
+            case MapLayer.Level: _layerLegend.AddChild(GradientLegend(new Color("#3E6FB0"), new Color("#6C5FBB"), new Color("#9B4FC6"), "nível 1", $"nível {_host?.Content.Progression.LevelCap ?? 30}")); break;
             default:
                 _layerLegend.AddChild(ThemeFactory.Text("Estradas ligam as saídas ao centro de cada zona.\nTrilhas tracejadas levam às atividades.", UiTokens.FontCaption, UiTokens.TextSecondary));
                 break;

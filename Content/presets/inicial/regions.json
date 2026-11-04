@@ -7,8 +7,14 @@
       "name": "Vila Aurora",
       "function": "city",
       "biome": "planicie",
+      "terrain": {
+        "relief": "plains",
+        "elevationPermille": 250,
+        "roughnessPermille": 300,
+        "seed": 11
+      },
       "levelMin": 1,
-      "levelMax": 60,
+      "levelMax": 12,
       "pvp": "none",
       "deathRule": "none",
       "control": "neutral",
@@ -126,8 +132,14 @@
       "name": "Floresta Sussurrante",
       "function": "hunting",
       "biome": "floresta",
+      "terrain": {
+        "relief": "hills",
+        "elevationPermille": 350,
+        "roughnessPermille": 450,
+        "seed": 23
+      },
       "levelMin": 1,
-      "levelMax": 8,
+      "levelMax": 6,
       "pvp": "none",
       "deathRule": "none",
       "control": "neutral",
@@ -157,11 +169,36 @@
       ],
       "areas": [
         {
+          "id": "clareira_dos_javalis",
+          "name": "Clareira dos Javalis",
+          "kind": "hunting_ground",
+          "radius": 22,
+          "description": "Javalis fuçando entre as raízes: o primeiro desafio de quem chega.",
+          "levelMin": 1,
+          "levelMax": 3,
+          "activities": [
+            {
+              "id": "cacar_javalis",
+              "type": "hunt",
+              "name": "Caçar javalis",
+              "creatureIds": [
+                "javali_selvagem"
+              ],
+              "minLevel": 1,
+              "typicalMinutes": 20,
+              "maxGroupSize": 3,
+              "baseRiskPermille": 50
+            }
+          ]
+        },
+        {
           "id": "clareira_dos_lobos",
           "name": "Clareira dos Lobos",
           "kind": "hunting_ground",
           "radius": 26,
           "description": "Matilhas de lobos cinzentos e moitas de ervas.",
+          "levelMin": 2,
+          "levelMax": 5,
           "activities": [
             {
               "id": "cacar_lobos",
@@ -194,6 +231,8 @@
           "kind": "hunting_ground",
           "radius": 22,
           "description": "Teias entre as árvores antigas; aranhas venenosas.",
+          "levelMin": 4,
+          "levelMax": 7,
           "activities": [
             {
               "id": "cacar_aranhas",
@@ -215,6 +254,8 @@
           "kind": "landmark",
           "radius": 12,
           "description": "O lenhador sempre precisa de ajuda com entregas.",
+          "levelMin": 2,
+          "levelMax": 5,
           "activities": [
             {
               "id": "entrega_lenhador",
@@ -235,6 +276,12 @@
       "name": "Colinas do Vale",
       "function": "hunting",
       "biome": "planicie",
+      "terrain": {
+        "relief": "hills",
+        "elevationPermille": 600,
+        "roughnessPermille": 600,
+        "seed": 37
+      },
       "levelMin": 3,
       "levelMax": 9,
       "pvp": "none",
@@ -251,6 +298,9 @@
         },
         {
           "to": "mina_velha"
+        },
+        {
+          "to": "forte_do_vau"
         }
       ],
       "resourceItemIds": [
@@ -274,6 +324,8 @@
           "kind": "hunting_ground",
           "radius": 24,
           "description": "Lobos que descem das colinas ao entardecer.",
+          "levelMin": 3,
+          "levelMax": 5,
           "activities": [
             {
               "id": "cacar_lobos",
@@ -295,10 +347,12 @@
           "kind": "herb_patch",
           "radius": 20,
           "description": "Encostas floridas com ervas curativas.",
+          "levelMin": 3,
+          "levelMax": 6,
           "activities": [
             {
               "id": "coletar_ervas",
-              "challengeLevel": 5,
+              "challengeLevel": 4,
               "type": "gather",
               "name": "Colher ervas das encostas",
               "itemIds": [
@@ -307,6 +361,52 @@
               "typicalMinutes": 15,
               "maxGroupSize": 2,
               "baseRiskPermille": 40
+            }
+          ]
+        },
+        {
+          "id": "toca_dos_ursos",
+          "name": "Toca dos Ursos",
+          "kind": "hunting_ground",
+          "radius": 24,
+          "description": "Cavernas rasas onde os ursos pardos hibernam e defendem o território.",
+          "levelMin": 5,
+          "levelMax": 8,
+          "activities": [
+            {
+              "id": "cacar_ursos",
+              "type": "hunt",
+              "name": "Caçar ursos pardos",
+              "creatureIds": [
+                "urso_pardo"
+              ],
+              "minLevel": 3,
+              "typicalMinutes": 25,
+              "maxGroupSize": 3,
+              "baseRiskPermille": 110
+            }
+          ]
+        },
+        {
+          "id": "rochedo_das_harpias",
+          "name": "Rochedo das Harpias",
+          "kind": "hunting_ground",
+          "radius": 22,
+          "description": "Pedras altas onde harpias fazem ninho e atacam do alto.",
+          "levelMin": 7,
+          "levelMax": 10,
+          "activities": [
+            {
+              "id": "cacar_harpias",
+              "type": "hunt",
+              "name": "Caçar harpias",
+              "creatureIds": [
+                "harpia"
+              ],
+              "minLevel": 5,
+              "typicalMinutes": 25,
+              "maxGroupSize": 3,
+              "baseRiskPermille": 130
             }
           ]
         }
@@ -318,6 +418,12 @@
       "name": "Mina Velha",
       "function": "hunting",
       "biome": "caverna",
+      "terrain": {
+        "relief": "mountains",
+        "elevationPermille": 750,
+        "roughnessPermille": 650,
+        "seed": 41
+      },
       "levelMin": 6,
       "levelMax": 12,
       "pvp": "none",
@@ -334,6 +440,9 @@
         },
         {
           "to": "covil_do_rei_goblin"
+        },
+        {
+          "to": "forte_do_vau"
         }
       ],
       "resourceItemIds": [
@@ -343,11 +452,36 @@
       "activities": [],
       "areas": [
         {
+          "id": "poco_dos_morcegos",
+          "name": "Poço dos Morcegos",
+          "kind": "hunting_ground",
+          "radius": 20,
+          "description": "Um poço antigo tomado por morcegos gigantes.",
+          "levelMin": 6,
+          "levelMax": 9,
+          "activities": [
+            {
+              "id": "cacar_morcegos",
+              "type": "hunt",
+              "name": "Caçar morcegos gigantes",
+              "creatureIds": [
+                "morcego_gigante"
+              ],
+              "minLevel": 4,
+              "typicalMinutes": 25,
+              "maxGroupSize": 3,
+              "baseRiskPermille": 110
+            }
+          ]
+        },
+        {
           "id": "veio_de_ferro",
           "name": "Veio de Ferro",
           "kind": "ore_vein",
           "radius": 18,
           "description": "Paredes ricas em ferro e prata.",
+          "levelMin": 7,
+          "levelMax": 10,
           "activities": [
             {
               "id": "coletar_minerio",
@@ -371,6 +505,8 @@
           "kind": "hunting_ground",
           "radius": 24,
           "description": "Goblins mineiros e seus xamãs.",
+          "levelMin": 8,
+          "levelMax": 11,
           "activities": [
             {
               "id": "cacar_goblins",
@@ -394,6 +530,8 @@
           "radius": 14,
           "description": "Descida para as galerias profundas da mina.",
           "leadsTo": "Galerias Profundas",
+          "levelMin": 9,
+          "levelMax": 12,
           "activities": [
             {
               "id": "explorar_galerias",
@@ -415,6 +553,12 @@
       "name": "Covil do Rei Goblin",
       "function": "hunting",
       "biome": "caverna",
+      "terrain": {
+        "relief": "mountains",
+        "elevationPermille": 780,
+        "roughnessPermille": 700,
+        "seed": 53
+      },
       "levelMin": 15,
       "levelMax": 18,
       "pvp": "none",
@@ -439,6 +583,8 @@
           "kind": "boss_lair",
           "radius": 24,
           "description": "Onde o Rei Goblin recebe os desafiantes.",
+          "levelMin": 15,
+          "levelMax": 18,
           "activities": [
             {
               "id": "enfrentar_rei",
@@ -463,7 +609,13 @@
       "name": "Ravina Escarlate",
       "function": "hunting",
       "biome": "ruinas",
-      "levelMin": 8,
+      "terrain": {
+        "relief": "valley",
+        "elevationPermille": 700,
+        "roughnessPermille": 750,
+        "seed": 61
+      },
+      "levelMin": 10,
       "levelMax": 14,
       "pvp": "open",
       "deathRule": "partial",
@@ -479,6 +631,9 @@
         },
         {
           "to": "ruinas_sombrias"
+        },
+        {
+          "to": "forte_do_vau"
         }
       ],
       "resourceItemIds": [],
@@ -490,6 +645,8 @@
           "kind": "chokepoint",
           "radius": 18,
           "description": "Passagem apertada entre paredões: perfeita para emboscadas.",
+          "levelMin": 10,
+          "levelMax": 13,
           "activities": [
             {
               "id": "emboscar_viajantes",
@@ -519,6 +676,8 @@
           "kind": "hunting_ground",
           "radius": 22,
           "description": "Restos de uma antiga batalha que não descansam.",
+          "levelMin": 11,
+          "levelMax": 14,
           "activities": [
             {
               "id": "cacar_esqueletos",
@@ -542,7 +701,13 @@
       "name": "Ruínas Sombrias",
       "function": "hunting",
       "biome": "ruinas",
-      "levelMin": 10,
+      "terrain": {
+        "relief": "plateau",
+        "elevationPermille": 450,
+        "roughnessPermille": 600,
+        "seed": 71
+      },
+      "levelMin": 11,
       "levelMax": 16,
       "pvp": "open",
       "deathRule": "full_loot",
@@ -555,6 +720,12 @@
       "connections": [
         {
           "to": "ravina_escarlate"
+        },
+        {
+          "to": "forte_do_vau"
+        },
+        {
+          "to": "planalto_dos_ventos"
         }
       ],
       "resourceItemIds": [
@@ -568,6 +739,8 @@
           "kind": "hunting_ground",
           "radius": 26,
           "description": "Mortos-vivos vagam entre colunas quebradas.",
+          "levelMin": 12,
+          "levelMax": 15,
           "activities": [
             {
               "id": "cacar_mortos_vivos",
@@ -600,6 +773,8 @@
           "kind": "crystal_node",
           "radius": 16,
           "description": "Cristais sombrios brotam das pedras.",
+          "levelMin": 11,
+          "levelMax": 14,
           "activities": [
             {
               "id": "coletar_cristais",
@@ -624,6 +799,1060 @@
           "description": "Local para uma guilda erguer seu esconderijo.",
           "leadsTo": "Esconderijo de guilda",
           "activities": []
+        }
+      ]
+    },
+    {
+      "id": "forte_do_vau",
+      "version": 1,
+      "name": "Forte do Vau",
+      "function": "city",
+      "biome": "planicie",
+      "terrain": {
+        "relief": "valley",
+        "elevationPermille": 300,
+        "roughnessPermille": 350,
+        "seed": 83
+      },
+      "levelMin": 10,
+      "levelMax": 20,
+      "pvp": "none",
+      "deathRule": "none",
+      "control": "neutral",
+      "capacity": 300,
+      "mapPosition": {
+        "x": 1105,
+        "y": 400
+      },
+      "connections": [
+        {
+          "to": "colinas_do_vale"
+        },
+        {
+          "to": "mina_velha"
+        },
+        {
+          "to": "ravina_escarlate"
+        },
+        {
+          "to": "ruinas_sombrias"
+        },
+        {
+          "to": "brejo_das_brumas"
+        }
+      ],
+      "resourceItemIds": [],
+      "activities": [],
+      "areas": [
+        {
+          "id": "mercado",
+          "name": "Mercado do Vau",
+          "kind": "shop",
+          "radius": 15,
+          "description": "Barcaças descarregam no cais: mercadoria de todo o vale.",
+          "activities": [
+            {
+              "id": "mercado",
+              "type": "trade",
+              "name": "Comprar e vender no mercado",
+              "typicalMinutes": 15,
+              "maxGroupSize": 1
+            }
+          ]
+        },
+        {
+          "id": "forja",
+          "name": "Forja da Muralha",
+          "kind": "forge",
+          "radius": 12,
+          "description": "Ferreiros do forte reforçam armas para a fronteira.",
+          "activities": [
+            {
+              "id": "ferreiro",
+              "type": "repair",
+              "name": "Consertar equipamento",
+              "typicalMinutes": 5,
+              "maxGroupSize": 1
+            }
+          ]
+        },
+        {
+          "id": "taverna",
+          "name": "Taverna da Ponte Velha",
+          "kind": "tavern",
+          "radius": 15,
+          "description": "Mercenários e caçadores trocam notícias da fronteira.",
+          "activities": [
+            {
+              "id": "taverna",
+              "type": "socialize",
+              "name": "Socializar na taverna",
+              "typicalMinutes": 30,
+              "maxGroupSize": 10
+            },
+            {
+              "id": "recrutamento",
+              "type": "recruit",
+              "name": "Recrutar para grupo",
+              "typicalMinutes": 10,
+              "maxGroupSize": 5
+            }
+          ]
+        },
+        {
+          "id": "praca",
+          "name": "Praça das Bandeiras",
+          "kind": "town_square",
+          "radius": 15,
+          "description": "Ordens do comandante e pedidos dos moradores.",
+          "activities": [
+            {
+              "id": "quadro_de_missoes",
+              "type": "quest",
+              "name": "Pegar missões no quadro",
+              "typicalMinutes": 10,
+              "maxGroupSize": 1
+            }
+          ]
+        },
+        {
+          "id": "campo_de_treino",
+          "name": "Pátio de Armas",
+          "kind": "training_ground",
+          "radius": 14,
+          "description": "Veteranos do forte treinam os recém-chegados.",
+          "activities": [
+            {
+              "id": "treinador",
+              "type": "train",
+              "name": "Treinar com o mestre de armas",
+              "typicalMinutes": 10,
+              "maxGroupSize": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "brejo_das_brumas",
+      "version": 1,
+      "name": "Brejo das Brumas",
+      "function": "hunting",
+      "biome": "pantano",
+      "terrain": {
+        "relief": "marsh",
+        "elevationPermille": 150,
+        "roughnessPermille": 400,
+        "seed": 97
+      },
+      "levelMin": 10,
+      "levelMax": 15,
+      "pvp": "none",
+      "deathRule": "none",
+      "control": "neutral",
+      "capacity": 120,
+      "mapPosition": {
+        "x": 1335,
+        "y": 400
+      },
+      "connections": [
+        {
+          "to": "forte_do_vau"
+        },
+        {
+          "to": "mata_dos_espinhos"
+        },
+        {
+          "to": "planalto_dos_ventos"
+        }
+      ],
+      "resourceItemIds": [
+        "junco_do_brejo"
+      ],
+      "activities": [
+        {
+          "id": "explorar_brejo",
+          "challengeLevel": 12,
+          "type": "explore",
+          "name": "Explorar o brejo",
+          "minLevel": 9,
+          "typicalMinutes": 30,
+          "maxGroupSize": 5,
+          "baseRiskPermille": 90
+        }
+      ],
+      "areas": [
+        {
+          "id": "charco_dos_sapos",
+          "name": "Charco dos Sapos",
+          "kind": "hunting_ground",
+          "radius": 26,
+          "description": "Águas rasas onde sapos do tamanho de um homem esperam a presa.",
+          "levelMin": 10,
+          "levelMax": 13,
+          "activities": [
+            {
+              "id": "cacar_sapos",
+              "type": "hunt",
+              "name": "Caçar sapos gigantes",
+              "creatureIds": [
+                "sapo_gigante"
+              ],
+              "minLevel": 8,
+              "typicalMinutes": 25,
+              "maxGroupSize": 3,
+              "baseRiskPermille": 120
+            }
+          ]
+        },
+        {
+          "id": "toca_das_serpentes",
+          "name": "Toca das Serpentes",
+          "kind": "hunting_ground",
+          "radius": 22,
+          "description": "Raízes alagadas onde as serpentes do brejo se enroscam.",
+          "levelMin": 12,
+          "levelMax": 15,
+          "activities": [
+            {
+              "id": "cacar_serpentes",
+              "type": "hunt",
+              "name": "Caçar serpentes do brejo",
+              "creatureIds": [
+                "serpente_do_brejo"
+              ],
+              "minLevel": 10,
+              "typicalMinutes": 30,
+              "maxGroupSize": 3,
+              "baseRiskPermille": 150
+            }
+          ]
+        },
+        {
+          "id": "juncal",
+          "name": "Juncal",
+          "kind": "herb_patch",
+          "radius": 20,
+          "description": "Juncos altos, bons para cestaria e cordas.",
+          "levelMin": 10,
+          "levelMax": 13,
+          "activities": [
+            {
+              "id": "colher_juncos",
+              "challengeLevel": 11,
+              "type": "gather",
+              "name": "Colher juncos",
+              "minLevel": 8,
+              "typicalMinutes": 20,
+              "maxGroupSize": 3,
+              "baseRiskPermille": 60,
+              "itemIds": [
+                "junco_do_brejo"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mata_dos_espinhos",
+      "version": 1,
+      "name": "Mata dos Espinhos",
+      "function": "hunting",
+      "biome": "floresta",
+      "terrain": {
+        "relief": "hills",
+        "elevationPermille": 500,
+        "roughnessPermille": 700,
+        "seed": 101
+      },
+      "levelMin": 14,
+      "levelMax": 18,
+      "pvp": "none",
+      "deathRule": "none",
+      "control": "neutral",
+      "capacity": 120,
+      "mapPosition": {
+        "x": 1450,
+        "y": 200
+      },
+      "connections": [
+        {
+          "to": "brejo_das_brumas"
+        },
+        {
+          "to": "cidadela_de_cinzaforte"
+        }
+      ],
+      "resourceItemIds": [
+        "espinheiro_rubro"
+      ],
+      "activities": [
+        {
+          "id": "explorar_mata",
+          "challengeLevel": 16,
+          "type": "explore",
+          "name": "Explorar a mata",
+          "minLevel": 13,
+          "typicalMinutes": 30,
+          "maxGroupSize": 5,
+          "baseRiskPermille": 120
+        }
+      ],
+      "areas": [
+        {
+          "id": "clareira_dos_trolls",
+          "name": "Clareira dos Trolls",
+          "kind": "hunting_ground",
+          "radius": 26,
+          "description": "Trolls arrancam árvores para marcar território.",
+          "levelMin": 14,
+          "levelMax": 17,
+          "activities": [
+            {
+              "id": "cacar_trolls",
+              "type": "hunt",
+              "name": "Caçar trolls da mata",
+              "creatureIds": [
+                "troll_da_mata"
+              ],
+              "minLevel": 12,
+              "typicalMinutes": 30,
+              "maxGroupSize": 3,
+              "baseRiskPermille": 170
+            }
+          ]
+        },
+        {
+          "id": "teias_antigas",
+          "name": "Teias Antigas",
+          "kind": "hunting_ground",
+          "radius": 24,
+          "description": "Teias do tamanho de velas de navio entre os troncos.",
+          "levelMin": 16,
+          "levelMax": 19,
+          "activities": [
+            {
+              "id": "cacar_aranhas_gigantes",
+              "type": "hunt",
+              "name": "Caçar aranhas gigantes",
+              "creatureIds": [
+                "aranha_gigante"
+              ],
+              "minLevel": 14,
+              "typicalMinutes": 30,
+              "maxGroupSize": 3,
+              "baseRiskPermille": 180
+            }
+          ]
+        },
+        {
+          "id": "espinheiral",
+          "name": "Espinheiral",
+          "kind": "herb_patch",
+          "radius": 20,
+          "description": "Arbustos de espinheiro-rubro, valiosos para alquimistas.",
+          "levelMin": 15,
+          "levelMax": 18,
+          "activities": [
+            {
+              "id": "colher_espinheiro",
+              "challengeLevel": 16,
+              "type": "gather",
+              "name": "Colher espinheiro-rubro",
+              "minLevel": 13,
+              "typicalMinutes": 20,
+              "maxGroupSize": 3,
+              "baseRiskPermille": 90,
+              "itemIds": [
+                "espinheiro_rubro"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "planalto_dos_ventos",
+      "version": 1,
+      "name": "Planalto dos Ventos",
+      "function": "hunting",
+      "biome": "planicie",
+      "terrain": {
+        "relief": "plateau",
+        "elevationPermille": 700,
+        "roughnessPermille": 500,
+        "seed": 109
+      },
+      "levelMin": 17,
+      "levelMax": 21,
+      "pvp": "none",
+      "deathRule": "none",
+      "control": "neutral",
+      "capacity": 120,
+      "mapPosition": {
+        "x": 1450,
+        "y": 600
+      },
+      "connections": [
+        {
+          "to": "brejo_das_brumas"
+        },
+        {
+          "to": "ruinas_sombrias"
+        },
+        {
+          "to": "cidadela_de_cinzaforte"
+        }
+      ],
+      "resourceItemIds": [
+        "erva_dos_ventos"
+      ],
+      "activities": [
+        {
+          "id": "explorar_planalto",
+          "challengeLevel": 19,
+          "type": "explore",
+          "name": "Explorar o planalto",
+          "minLevel": 16,
+          "typicalMinutes": 30,
+          "maxGroupSize": 5,
+          "baseRiskPermille": 120
+        }
+      ],
+      "areas": [
+        {
+          "id": "acampamento_orc",
+          "name": "Acampamento Orc",
+          "kind": "hunting_ground",
+          "radius": 26,
+          "description": "Saqueadores orcs montaram paliçadas no alto do planalto.",
+          "levelMin": 17,
+          "levelMax": 20,
+          "activities": [
+            {
+              "id": "cacar_orcs",
+              "type": "hunt",
+              "name": "Enfrentar orcs saqueadores",
+              "creatureIds": [
+                "orc_saqueador"
+              ],
+              "minLevel": 15,
+              "typicalMinutes": 30,
+              "maxGroupSize": 3,
+              "baseRiskPermille": 190
+            }
+          ]
+        },
+        {
+          "id": "ninhos_dos_grifos",
+          "name": "Ninhos dos Grifos",
+          "kind": "hunting_ground",
+          "radius": 24,
+          "description": "Penhascos varridos pelo vento onde os grifos criam os filhotes.",
+          "levelMin": 19,
+          "levelMax": 22,
+          "activities": [
+            {
+              "id": "cacar_grifos",
+              "type": "hunt",
+              "name": "Caçar grifos",
+              "creatureIds": [
+                "grifo"
+              ],
+              "minLevel": 17,
+              "typicalMinutes": 30,
+              "maxGroupSize": 3,
+              "baseRiskPermille": 200
+            }
+          ]
+        },
+        {
+          "id": "prado_da_ventania",
+          "name": "Prado da Ventania",
+          "kind": "herb_patch",
+          "radius": 22,
+          "description": "Capim prateado e a rara erva-dos-ventos.",
+          "levelMin": 18,
+          "levelMax": 21,
+          "activities": [
+            {
+              "id": "colher_erva_dos_ventos",
+              "challengeLevel": 19,
+              "type": "gather",
+              "name": "Colher erva-dos-ventos",
+              "minLevel": 16,
+              "typicalMinutes": 20,
+              "maxGroupSize": 3,
+              "baseRiskPermille": 90,
+              "itemIds": [
+                "erva_dos_ventos"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cidadela_de_cinzaforte",
+      "version": 1,
+      "name": "Cidadela de Cinzaforte",
+      "function": "city",
+      "biome": "caverna",
+      "terrain": {
+        "relief": "plateau",
+        "elevationPermille": 550,
+        "roughnessPermille": 350,
+        "seed": 113
+      },
+      "levelMin": 18,
+      "levelMax": 30,
+      "pvp": "none",
+      "deathRule": "none",
+      "control": "neutral",
+      "capacity": 300,
+      "mapPosition": {
+        "x": 1565,
+        "y": 400
+      },
+      "connections": [
+        {
+          "to": "mata_dos_espinhos"
+        },
+        {
+          "to": "planalto_dos_ventos"
+        },
+        {
+          "to": "picos_gelados"
+        },
+        {
+          "to": "terras_queimadas"
+        },
+        {
+          "to": "fortaleza_sombria"
+        }
+      ],
+      "resourceItemIds": [],
+      "activities": [],
+      "areas": [
+        {
+          "id": "mercado",
+          "name": "Bazar de Cinzaforte",
+          "kind": "shop",
+          "radius": 15,
+          "description": "Raridades das terras altas, a preços de montanha.",
+          "activities": [
+            {
+              "id": "mercado",
+              "type": "trade",
+              "name": "Comprar e vender no mercado",
+              "typicalMinutes": 15,
+              "maxGroupSize": 1
+            }
+          ]
+        },
+        {
+          "id": "forja",
+          "name": "Forja Rúnica",
+          "kind": "forge",
+          "radius": 12,
+          "description": "Runas gravadas a fogo em armas e armaduras.",
+          "activities": [
+            {
+              "id": "ferreiro",
+              "type": "repair",
+              "name": "Consertar equipamento",
+              "typicalMinutes": 5,
+              "maxGroupSize": 1
+            }
+          ]
+        },
+        {
+          "id": "taverna",
+          "name": "Taverna do Último Fogo",
+          "kind": "tavern",
+          "radius": 15,
+          "description": "O último lugar quente antes dos picos.",
+          "activities": [
+            {
+              "id": "taverna",
+              "type": "socialize",
+              "name": "Socializar na taverna",
+              "typicalMinutes": 30,
+              "maxGroupSize": 10
+            },
+            {
+              "id": "recrutamento",
+              "type": "recruit",
+              "name": "Recrutar para grupo",
+              "typicalMinutes": 10,
+              "maxGroupSize": 5
+            }
+          ]
+        },
+        {
+          "id": "praca",
+          "name": "Praça do Juramento",
+          "kind": "town_square",
+          "radius": 15,
+          "description": "Expedições se formam diante da estátua dos fundadores.",
+          "activities": [
+            {
+              "id": "quadro_de_missoes",
+              "type": "quest",
+              "name": "Pegar missões no quadro",
+              "typicalMinutes": 10,
+              "maxGroupSize": 1
+            }
+          ]
+        },
+        {
+          "id": "campo_de_treino",
+          "name": "Arena dos Veteranos",
+          "kind": "training_ground",
+          "radius": 14,
+          "description": "Duelos de treino entre os mais experientes.",
+          "activities": [
+            {
+              "id": "treinador",
+              "type": "train",
+              "name": "Treinar com o mestre de armas",
+              "typicalMinutes": 10,
+              "maxGroupSize": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "picos_gelados",
+      "version": 1,
+      "name": "Picos Gelados",
+      "function": "hunting",
+      "biome": "neve",
+      "terrain": {
+        "relief": "mountains",
+        "elevationPermille": 1000,
+        "roughnessPermille": 800,
+        "seed": 127
+      },
+      "levelMin": 20,
+      "levelMax": 26,
+      "pvp": "none",
+      "deathRule": "none",
+      "control": "neutral",
+      "capacity": 110,
+      "mapPosition": {
+        "x": 1680,
+        "y": 200
+      },
+      "connections": [
+        {
+          "to": "cidadela_de_cinzaforte"
+        },
+        {
+          "to": "fortaleza_sombria"
+        }
+      ],
+      "resourceItemIds": [
+        "cristal_de_gelo"
+      ],
+      "activities": [
+        {
+          "id": "explorar_picos",
+          "challengeLevel": 23,
+          "type": "explore",
+          "name": "Explorar os picos",
+          "minLevel": 20,
+          "typicalMinutes": 35,
+          "maxGroupSize": 5,
+          "baseRiskPermille": 170
+        }
+      ],
+      "areas": [
+        {
+          "id": "encosta_do_gelo",
+          "name": "Encosta do Gelo",
+          "kind": "hunting_ground",
+          "radius": 26,
+          "description": "Matilhas de lobos brancos caçam na neve funda.",
+          "levelMin": 20,
+          "levelMax": 23,
+          "activities": [
+            {
+              "id": "cacar_lobos_do_gelo",
+              "type": "hunt",
+              "name": "Caçar lobos do gelo",
+              "creatureIds": [
+                "lobo_do_gelo"
+              ],
+              "minLevel": 18,
+              "typicalMinutes": 30,
+              "maxGroupSize": 3,
+              "baseRiskPermille": 200
+            }
+          ]
+        },
+        {
+          "id": "caverna_cristalina",
+          "name": "Caverna Cristalina",
+          "kind": "hunting_ground",
+          "radius": 24,
+          "description": "Golens de gelo guardam paredes de cristal.",
+          "levelMin": 22,
+          "levelMax": 25,
+          "activities": [
+            {
+              "id": "cacar_golens_de_gelo",
+              "type": "hunt",
+              "name": "Enfrentar golens de gelo",
+              "creatureIds": [
+                "golem_de_gelo"
+              ],
+              "minLevel": 20,
+              "typicalMinutes": 30,
+              "maxGroupSize": 3,
+              "baseRiskPermille": 220
+            }
+          ]
+        },
+        {
+          "id": "veio_de_gelo",
+          "name": "Veio de Gelo",
+          "kind": "crystal_node",
+          "radius": 18,
+          "description": "Cristais de gelo que não derretem nem no fogo.",
+          "levelMin": 21,
+          "levelMax": 24,
+          "activities": [
+            {
+              "id": "coletar_cristal_de_gelo",
+              "challengeLevel": 22,
+              "type": "gather",
+              "name": "Coletar cristais de gelo",
+              "minLevel": 19,
+              "typicalMinutes": 25,
+              "maxGroupSize": 3,
+              "baseRiskPermille": 150,
+              "itemIds": [
+                "cristal_de_gelo"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "covil_do_yeti",
+          "name": "Covil do Yeti",
+          "kind": "hunting_ground",
+          "radius": 24,
+          "description": "Pegadas enormes levam a uma gruta no alto do pico.",
+          "levelMin": 24,
+          "levelMax": 27,
+          "activities": [
+            {
+              "id": "cacar_yetis",
+              "type": "hunt",
+              "name": "Caçar yetis",
+              "creatureIds": [
+                "yeti"
+              ],
+              "minLevel": 22,
+              "typicalMinutes": 35,
+              "maxGroupSize": 3,
+              "baseRiskPermille": 240
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "terras_queimadas",
+      "version": 1,
+      "name": "Terras Queimadas",
+      "function": "hunting",
+      "biome": "vulcanico",
+      "terrain": {
+        "relief": "badlands",
+        "elevationPermille": 650,
+        "roughnessPermille": 850,
+        "seed": 131
+      },
+      "levelMin": 23,
+      "levelMax": 28,
+      "pvp": "open",
+      "deathRule": "partial",
+      "control": "neutral",
+      "capacity": 110,
+      "mapPosition": {
+        "x": 1680,
+        "y": 600
+      },
+      "connections": [
+        {
+          "to": "cidadela_de_cinzaforte"
+        },
+        {
+          "to": "fortaleza_sombria"
+        }
+      ],
+      "resourceItemIds": [
+        "obsidiana"
+      ],
+      "activities": [
+        {
+          "id": "explorar_terras",
+          "challengeLevel": 25,
+          "type": "explore",
+          "name": "Explorar as terras queimadas",
+          "minLevel": 22,
+          "typicalMinutes": 30,
+          "maxGroupSize": 5,
+          "baseRiskPermille": 220
+        }
+      ],
+      "areas": [
+        {
+          "id": "campos_de_cinza",
+          "name": "Campos de Cinza",
+          "kind": "hunting_ground",
+          "radius": 26,
+          "description": "Salamandras nadam na cinza quente como peixes na água.",
+          "levelMin": 23,
+          "levelMax": 26,
+          "activities": [
+            {
+              "id": "cacar_salamandras",
+              "type": "hunt",
+              "name": "Caçar salamandras de fogo",
+              "creatureIds": [
+                "salamandra"
+              ],
+              "minLevel": 21,
+              "typicalMinutes": 30,
+              "maxGroupSize": 3,
+              "baseRiskPermille": 230
+            }
+          ]
+        },
+        {
+          "id": "forja_vulcanica",
+          "name": "Forja Vulcânica",
+          "kind": "hunting_ground",
+          "radius": 24,
+          "description": "Golens de magma nascem dos rios de lava.",
+          "levelMin": 26,
+          "levelMax": 29,
+          "activities": [
+            {
+              "id": "cacar_golens_de_magma",
+              "type": "hunt",
+              "name": "Enfrentar golens de magma",
+              "creatureIds": [
+                "golem_de_magma"
+              ],
+              "minLevel": 24,
+              "typicalMinutes": 35,
+              "maxGroupSize": 3,
+              "baseRiskPermille": 260
+            }
+          ]
+        },
+        {
+          "id": "veio_de_obsidiana",
+          "name": "Veio de Obsidiana",
+          "kind": "ore_vein",
+          "radius": 18,
+          "description": "Vidro vulcânico negro, cobiçado pelos ferreiros rúnicos.",
+          "levelMin": 25,
+          "levelMax": 28,
+          "activities": [
+            {
+              "id": "minerar_obsidiana",
+              "challengeLevel": 26,
+              "type": "gather",
+              "name": "Minerar obsidiana",
+              "minLevel": 23,
+              "typicalMinutes": 25,
+              "maxGroupSize": 3,
+              "baseRiskPermille": 180,
+              "itemIds": [
+                "obsidiana"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "passo_do_enxofre",
+          "name": "Passo do Enxofre",
+          "kind": "chokepoint",
+          "radius": 20,
+          "description": "Única passagem segura entre as fendas: perfeita para emboscadas.",
+          "levelMin": 24,
+          "levelMax": 27,
+          "activities": [
+            {
+              "id": "emboscar_no_passo",
+              "challengeLevel": 25,
+              "type": "ambush",
+              "name": "Emboscar no passo",
+              "minLevel": 22,
+              "typicalMinutes": 20,
+              "maxGroupSize": 3,
+              "baseRiskPermille": 280
+            },
+            {
+              "id": "patrulhar_o_passo",
+              "challengeLevel": 26,
+              "type": "patrol",
+              "name": "Patrulhar o passo",
+              "minLevel": 23,
+              "typicalMinutes": 30,
+              "maxGroupSize": 5,
+              "baseRiskPermille": 240
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fortaleza_sombria",
+      "version": 1,
+      "name": "Fortaleza Sombria",
+      "function": "hunting",
+      "biome": "sombrio",
+      "terrain": {
+        "relief": "plateau",
+        "elevationPermille": 600,
+        "roughnessPermille": 700,
+        "seed": 137
+      },
+      "levelMin": 26,
+      "levelMax": 30,
+      "pvp": "none",
+      "deathRule": "none",
+      "control": "neutral",
+      "capacity": 100,
+      "mapPosition": {
+        "x": 1795,
+        "y": 400
+      },
+      "connections": [
+        {
+          "to": "cidadela_de_cinzaforte"
+        },
+        {
+          "to": "picos_gelados"
+        },
+        {
+          "to": "terras_queimadas"
+        }
+      ],
+      "resourceItemIds": [],
+      "activities": [
+        {
+          "id": "explorar_fortaleza",
+          "challengeLevel": 28,
+          "type": "explore",
+          "name": "Explorar a fortaleza",
+          "minLevel": 25,
+          "typicalMinutes": 35,
+          "maxGroupSize": 5,
+          "baseRiskPermille": 250
+        }
+      ],
+      "areas": [
+        {
+          "id": "muralhas",
+          "name": "Muralhas",
+          "kind": "hunting_ground",
+          "radius": 26,
+          "description": "Cavaleiros sombrios ainda montam guarda nas muralhas partidas.",
+          "levelMin": 26,
+          "levelMax": 29,
+          "activities": [
+            {
+              "id": "enfrentar_cavaleiros",
+              "type": "hunt",
+              "name": "Enfrentar cavaleiros sombrios",
+              "creatureIds": [
+                "cavaleiro_sombrio"
+              ],
+              "minLevel": 24,
+              "typicalMinutes": 35,
+              "maxGroupSize": 3,
+              "baseRiskPermille": 250
+            }
+          ]
+        },
+        {
+          "id": "portoes",
+          "name": "Portões",
+          "kind": "hunting_ground",
+          "radius": 22,
+          "description": "Gárgulas despertam quando alguém se aproxima dos portões.",
+          "levelMin": 27,
+          "levelMax": 30,
+          "activities": [
+            {
+              "id": "enfrentar_gargulas",
+              "type": "hunt",
+              "name": "Enfrentar gárgulas",
+              "creatureIds": [
+                "gargula"
+              ],
+              "minLevel": 25,
+              "typicalMinutes": 35,
+              "maxGroupSize": 3,
+              "baseRiskPermille": 260
+            }
+          ]
+        },
+        {
+          "id": "cripta",
+          "name": "Cripta",
+          "kind": "dungeon",
+          "radius": 16,
+          "description": "Escadas descem até onde os acólitos mantêm o ritual.",
+          "levelMin": 28,
+          "levelMax": 30,
+          "activities": [
+            {
+              "id": "purgar_a_cripta",
+              "type": "hunt",
+              "name": "Purgar a cripta",
+              "creatureIds": [
+                "acolito_sombrio"
+              ],
+              "minLevel": 26,
+              "typicalMinutes": 40,
+              "maxGroupSize": 3,
+              "baseRiskPermille": 280
+            }
+          ]
+        },
+        {
+          "id": "trono_das_cinzas",
+          "name": "Trono das Cinzas",
+          "kind": "boss_lair",
+          "radius": 28,
+          "description": "O Senhor das Cinzas espera no trono, cercado de brasas.",
+          "levelMin": 28,
+          "levelMax": 30,
+          "activities": [
+            {
+              "id": "enfrentar_senhor_das_cinzas",
+              "type": "boss",
+              "name": "Enfrentar o Senhor das Cinzas",
+              "creatureIds": [
+                "senhor_das_cinzas"
+              ],
+              "minLevel": 28,
+              "minGroupSize": 10,
+              "maxGroupSize": 20,
+              "typicalMinutes": 60,
+              "baseRiskPermille": 400
+            }
+          ]
         }
       ]
     }

@@ -92,6 +92,19 @@ public static class ContentValidator
             v.Error(WorldFile, "zoneRadius", "Raio padrão das zonas deve estar entre 60 e 300 unidades (600 m a 3 km).");
         if (string.IsNullOrWhiteSpace(w.StartingRegionId))
             v.Error(WorldFile, "startingRegionId", "Região inicial obrigatória.");
+        var g = w.Map;
+        if (g.Columns < 1 || g.Columns > 64) v.Error(WorldFile, "map.columns", "A grade deve ter entre 1 e 64 colunas.");
+        if (g.Rows < 1 || g.Rows > 64) v.Error(WorldFile, "map.rows", "A grade deve ter entre 1 e 64 linhas.");
+        if (g.SpacingX <= 0) v.Error(WorldFile, "map.spacingX", "Espaçamento horizontal deve ser > 0.");
+        else if (g.SpacingX < w.ZoneRadius * 18 / 10 || g.SpacingX > w.ZoneRadius * 22 / 10)
+            v.Error(WorldFile, "map.spacingX", $"Espaçamento deve ficar entre 1,8 e 2,2 vezes o raio das zonas ({w.ZoneRadius}), para lotes vizinhos se encostarem.");
+        if (g.SpacingY <= 0) v.Error(WorldFile, "map.spacingY", "Espaçamento vertical deve ser > 0.");
+        else if (g.SpacingX > 0)
+        {
+            double diag = Math.Sqrt(g.SpacingX * g.SpacingX / 4.0 + (double)g.SpacingY * g.SpacingY);
+            if (Math.Abs(diag - g.SpacingX) > g.SpacingX * 0.08)
+                v.Warning(WorldFile, "map.spacingY", $"Vizinhos na diagonal ficam a {diag:0} unidades e na linha a {g.SpacingX}: lotes desiguais.");
+        }
         for (int i = 0; i < w.Holidays.Count; i++)
         {
             if (TryParseHoliday(w.Holidays[i].Date, out _, out _, out _) == false)
@@ -146,6 +159,12 @@ public static class ContentValidator
             v.OneOf(RegionsFile, p + ".pvp", r.Pvp, PvpRules.All);
             v.OneOf(RegionsFile, p + ".deathRule", r.DeathRule, DeathRules.All);
             v.OneOf(RegionsFile, p + ".control", r.Control, ControlRules.All);
+            v.OneOf(RegionsFile, p + ".biome", r.Biome, Biomes.All);
+            v.OneOf(RegionsFile, p + ".terrain.relief", r.Terrain.Relief, Reliefs.All);
+            if (r.Terrain.ElevationPermille is < 0 or > 1000)
+                v.Error(RegionsFile, p + ".terrain.elevationPermille", "Altitude deve estar entre 0 e 1000 permille.");
+            if (r.Terrain.RoughnessPermille is < 0 or > 1000)
+                v.Error(RegionsFile, p + ".terrain.roughnessPermille", "Aspereza deve estar entre 0 e 1000 permille.");
             if (r.IsCity && r.Pvp != PvpRules.None)
                 v.Error(RegionsFile, p + ".pvp", "Cidades são sempre zonas sem PvP.");
             if (r.IsCity && r.DeathRule != DeathRules.None)
@@ -181,6 +200,26 @@ public static class ContentValidator
             for (int k = 0; k < r.ResourceItemIds.Count; k++)
                 if (!itemIds.Contains(r.ResourceItemIds[k]))
                     v.Error(RegionsFile, $"{p}.resourceItemIds[{k}]", $"Item '{r.ResourceItemIds[k]}' não existe.");
+        }
+
+        // Grade de lotes (D-028): cada zona no centro de um lote, um lote por zona.
+        var grid = new World.MapGrid(set.World, Array.Empty<RegionDefinition>());
+        if (!grid.IsValid) return;
+        var taken = new Dictionary<int, string>();
+        for (int i = 0; i < set.Regions.Count; i++)
+        {
+            var r = set.Regions[i];
+            string p = $"regions[{i}].mapPosition";
+            if (!grid.TrySlotAt(r.MapPosition.X, r.MapPosition.Y, out var slot))
+            {
+                var near = grid.NearestSlot(r.MapPosition.X, r.MapPosition.Y);
+                v.Error(RegionsFile, p, near is { } n
+                    ? $"A zona precisa ficar no centro de um lote da grade; o mais próximo é ({n.X}, {n.Y})."
+                    : "A zona está fora da grade do mapa (world.json map).");
+            }
+            else if (taken.TryGetValue(slot.Index(grid.Columns), out var other))
+                v.Error(RegionsFile, p, $"O lote já é ocupado por '{other}'.");
+            else taken[slot.Index(grid.Columns)] = r.Id;
         }
     }
 
@@ -383,6 +422,19 @@ public static class ContentValidator
                 var (rmin, rmax) = AreaKinds.RadiusRange(area.Kind);
                 if (area.Radius < rmin || area.Radius > rmax)
                     v.Error(f, ap + ".radius", $"Raio deste tipo de área deve estar entre {rmin} e {rmax} unidades ({rmin * 10} a {rmax * 10} m)."); 
+                if (area.LevelMin != 0 || area.LevelMax != 0)
+                {
+                    if (r.IsCity) v.Error(f, ap + ".levelMin", "Áreas da cidade não têm faixa de nível.");
+                    else if (area.LevelMin < 1 || area.LevelMax < area.LevelMin || (set.Progression.LevelCap > 0 && area.LevelMax > set.Progression.LevelCap))
+                        v.Error(f, ap + ".levelMax", "Faixa da área inválida: 1 <= levelMin <= levelMax <= teto.");
+                    else
+                        foreach (var act in area.Activities)
+                        {
+                            int ch = act.ChallengeLevel > 0 ? act.ChallengeLevel : AverageCreatureLevel(set, act);
+                            if (ch > 0 && (ch < area.LevelMin - 2 || ch > area.LevelMax + 2))
+                                v.Warning(f, ap + ".levelMin", $"Desafio de '{act.Id}' ({ch}) longe da faixa da área ({area.LevelMin}–{area.LevelMax}).");
+                        }
+                }
                 if (area.Kind == AreaKinds.Hideout && r.Pvp != PvpRules.Open)
                     v.Warning(f, ap + ".kind", "Esconderijos de guilda costumam ficar em zonas com PvP aberto.");
                 if (area.Activities.Count == 0 && !AreaKinds.IsPortal(area.Kind) && area.Kind != AreaKinds.Landmark)
@@ -570,6 +622,13 @@ public static class ContentValidator
         bool derived = (act.Type == ActivityTypes.Hunt || act.Type == ActivityTypes.Boss) && act.CreatureIds.Count > 0;
         if (givesXp && act.ChallengeLevel == 0 && !derived)
             v.Error(f, p + ".challengeLevel", $"Atividade do tipo '{act.Type}' dá XP e precisa do nível do desafio.");
+    }
+
+    private static int AverageCreatureLevel(ContentSet set, ActivityDefinition a)
+    {
+        if (a.Type != ActivityTypes.Hunt && a.Type != ActivityTypes.Boss) return 0;
+        var levels = a.CreatureIds.Select(id => set.Creatures.FirstOrDefault(c => c.Id == id)).Where(c => c != null).Select(c => c!.Level).ToList();
+        return levels.Count == 0 ? 0 : levels.Sum() / levels.Count;
     }
 
     private static void ValidateProgression(ContentSet set, Collector v)

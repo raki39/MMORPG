@@ -120,10 +120,61 @@ As metas de progressão agora seguem o ritmo A escolhido pelo criador, medido em
 
 **Conclusão:** o ritmo de progressão está calibrado. O que falta é conteúdo para os níveis que os personagens alcançam e quests de verdade.
 
+## Resultado após o mapa ampliado (D-028, 04/11/2026)
+
+Mesma rodada: 5 seeds × 1.000 pessoas × 90 dias. **13 de 19 metas dentro da faixa.**
+
+**Metas de progressão usadas:**
+- Nível 5, 10 e 15: as metas do D-027 (começo mais rápido, pedido do criador).
+- Nível 20 e 30: a referência do criador (95 h e 200 h).
+- Até a recalibração depois do passo 3, as metas do 10 ao 15 continuam mais rápidas que a referência original de 27 h até o 10.
+
+| Medida | Meta | Resultado | Quem chegou |
+|---|---|---|---|
+| Horas até o nível 5 | 1–4 h | 2,7 h | 99–100% |
+| Horas até o nível 10 | 8–20 h | 14,5 h | 80–84% |
+| Horas até o nível 15 | 22–50 h | 36,6 h | 68–70% |
+| Horas até o nível 20 | 80–110 h | 73 h (abaixo) | 36–37% |
+| Horas até o nível 30 | 170–230 h | 190 h | 12–15% (subestima) |
+| Casuais no nível 10 ou mais | 60–95% | 99% (acima) | — |
+
+**Nível mediano no fim, por perfil:**
+
+| Perfil | Nível mediano |
+|---|---|
+| Hardcore | 30 |
+| Competitivo | 28 |
+| Explorador | 21 |
+| Casual | 16 |
+| Comerciante | 15 |
+| Social | 7 |
+
+O hardcore chega ao conteúdo final enquanto os casuais ainda ocupam as áreas do meio, como o criador esperava.
+
+**Divisão do tempo:**
+
+| Atividade | Tempo | Situação |
+|---|---|---|
+| Caça | 28% | Combate total em 38%, dentro da meta |
+| Exploração | 18% | Acima: falta o termo de novidade (objetivos, D-026) |
+| Taverna | 15% | — |
+| Deslocamento | 21% | Pouco acima |
+| Missões | 1,7% | Ainda não existem quests de verdade |
+| Coleta | 4,5% | O recurso não vale nada até a economia |
+
+**O quadro de missões caiu para menos de 1% das escolhas por cidade** (antes 23,5%).
+- Com caça adequada em todos os níveis, a nota neutra do quadro deixou de vencer. Isso confirma o diagnóstico: o quadro ganhava porque as caças erradas para o nível recebiam nota negativa.
+- A correção definitiva é o passo 3.
+
+**Atividades sem uso:**
+- **Por depender de grupos (M6):** os dois chefes e o recrutamento.
+- **Por nível:** coleta e exploração das zonas finais, porque poucos chegam lá.
+- **Na Cidadela, os serviços quase não são usados.** Quem está nas zonas finais caça. O sistema de objetivos e as necessidades devem mudar isso.
+
 ## Próximos passos
 
 Ordem do D-025:
-1. Redistribuir e ampliar as áreas até o nível 30.
+1. ~~Redistribuir e ampliar as áreas até o nível 30~~ (feito, D-028).
 2. Montar o catálogo de quests por cidade.
 3. Medir de novo.
 4. Integrar os objetivos pessoais (D-026).

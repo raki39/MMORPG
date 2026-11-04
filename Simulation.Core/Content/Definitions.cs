@@ -22,6 +22,49 @@ public sealed class WorldDefinition
     /// <summary>Raio padrao de todas as zonas (unidades de mapa; 1 unidade = 10 m). Escala unica (D-016).</summary>
     public int ZoneRadius { get; set; }
     public List<HolidayDefinition> Holidays { get; set; } = new();
+    /// <summary>Grade de lotes do mapa: cada zona ocupa um lote; lotes vazios ficam para expansao.</summary>
+    public MapGridDefinition Map { get; set; } = new();
+}
+
+/// <summary>
+/// Grade hexagonal de lotes (D-028). Linhas impares deslocadas meio passo. Cada lote tem o
+/// tamanho de uma zona; o jogador (desenvolvedor do MMORPG) podera ocupar lotes livres no
+/// editor de mapa futuro.
+/// </summary>
+public sealed class MapGridDefinition
+{
+    public int OriginX { get; set; }
+    public int OriginY { get; set; }
+    /// <summary>Distancia entre centros na mesma linha (unidades de mapa).</summary>
+    public int SpacingX { get; set; }
+    /// <summary>Distancia entre linhas (unidades de mapa).</summary>
+    public int SpacingY { get; set; }
+    public int Columns { get; set; }
+    public int Rows { get; set; }
+}
+
+/// <summary>Biomas conhecidos (cor e textura do terreno).</summary>
+public static class Biomes
+{
+    public static readonly string[] All = { "planicie", "floresta", "caverna", "ruinas", "pantano", "neve", "vulcanico", "sombrio" };
+}
+
+/// <summary>Formas de relevo do terreno da zona (apresentacao; nao afeta a simulacao).</summary>
+public static class Reliefs
+{
+    public static readonly string[] All = { "plains", "hills", "mountains", "valley", "plateau", "marsh", "badlands" };
+}
+
+/// <summary>
+/// Aparencia do terreno da zona: forma do relevo, altitude, aspereza e semente (variacao
+/// estavel). So apresentacao; editavel no futuro editor de zonas.
+/// </summary>
+public sealed class TerrainDefinition
+{
+    public string Relief { get; set; } = "hills";
+    public int ElevationPermille { get; set; } = 500;
+    public int RoughnessPermille { get; set; } = 500;
+    public int Seed { get; set; }
 }
 
 public sealed class HolidayDefinition
@@ -78,6 +121,8 @@ public sealed class RegionDefinition : IContentDefinition
     /// <summary>Funcao principal: city ou hunting.</summary>
     public string Function { get; set; } = "";
     public string Biome { get; set; } = "";
+    /// <summary>Aparencia do terreno (relevo, altitude, aspereza, semente).</summary>
+    public TerrainDefinition Terrain { get; set; } = new();
     public int LevelMin { get; set; }
     public int LevelMax { get; set; }
     /// <summary>Regra de combate: none, consensual ou open.</summary>
@@ -191,6 +236,9 @@ public sealed class AreaDefinition
     public MapPoint? Position { get; set; }
     /// <summary>Para masmorras e hideouts: nome do espaco ao qual a area leva (instancias futuras).</summary>
     public string LeadsTo { get; set; } = "";
+    /// <summary>Faixa de nivel recomendada da area (orientacao; 0 = sem faixa, ex.: cidade).</summary>
+    public int LevelMin { get; set; }
+    public int LevelMax { get; set; }
     public List<ActivityDefinition> Activities { get; set; } = new();
 }
 

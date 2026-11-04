@@ -86,7 +86,11 @@ public static class UiTokens
         "floresta" => 1,
         "caverna" => 2,
         "ruinas" => 3,
-        _ => 4,
+        "pantano" => 4,
+        "neve" => 5,
+        "vulcanico" => 6,
+        "sombrio" => 7,
+        _ => 0,
     };
 
     public static Color BiomeColor(string biome) => BiomeIndex(biome) switch
@@ -95,6 +99,10 @@ public static class UiTokens
         1 => new Color("#3E7A4E"),
         2 => new Color("#8A7A68"),
         3 => new Color("#6F6783"),
+        4 => new Color("#5E7A5A"),
+        5 => new Color("#C9D3DD"),
+        6 => new Color("#7A4A3A"),
+        7 => new Color("#5A4A6E"),
         _ => new Color("#7A7F78"),
     };
 }
