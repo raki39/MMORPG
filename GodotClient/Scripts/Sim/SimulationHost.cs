@@ -89,6 +89,11 @@ public sealed class SimulationHost : IDisposable
     private readonly Thread _thread;
     private volatile bool _running = true;
     private volatile int _speed = 1;
+    private volatile bool _skipToLogin;
+
+    /// <summary>Pede para avancar o tempo ate alguem conectar (no maximo 1 dia simulado).</summary>
+    public void SkipToNextLogin() => _skipToLogin = true;
+    public bool Skipping => _skipToLogin;
     private SimSnapshot _snapshot;
     private readonly MetricsHistory _metrics = new();
     private readonly object _metricsLock = new();
@@ -185,6 +190,17 @@ public sealed class SimulationHost : IDisposable
             var world = _engine.World;
             while (_commands.TryDequeue(out var cmd))
                 _engine.Submit(cmd);
+
+            if (_skipToLogin)
+            {
+                // Avanca minuto a minuto (com amostras) ate alguem entrar; nada e descartado.
+                long limit = world.Clock.Tick + SimTime.TicksPerDay;
+                var budget = Stopwatch.StartNew();
+                while (world.OnlineCount == 0 && world.Clock.Tick < limit && budget.Elapsed.TotalSeconds < 0.5)
+                    AdvanceSampled(world.Clock.Tick + SimTime.TicksPerMinute, null, 0);
+                if (world.OnlineCount > 0 || world.Clock.Tick >= limit) _skipToLogin = false;
+                pendingTicks = 0;
+            }
 
             int speed = _speed;
             if (speed > 0)

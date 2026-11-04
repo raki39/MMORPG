@@ -46,6 +46,10 @@ public partial class Main : Node
     private readonly Dictionary<int, List<SimEvent>> _history = new();
     private readonly Dictionary<int, int> _characterToPerson = new();
     private readonly MetricsHistory _metrics = new();
+    private string _startNote = "";
+    private PanelContainer? _emptyBanner;
+    private Label? _emptyText;
+    private Button? _skipButton;
     private readonly List<(SimEvent Event, int PersonId)> _feed = new();
     private SidePanel? _side;
     private readonly List<(string Key, Label Value, Label Delta, Sparkline Spark)> _kpis = new();
@@ -107,6 +111,7 @@ public partial class Main : Node
         BuildTopBar(content);
         BuildLayerPanel();
         BuildSidePanel();
+        BuildEmptyBanner();
         BuildMapControls();
 
         _host.Submit(new SetServerOpenCommand(true));
@@ -115,6 +120,13 @@ public partial class Main : Node
             preRoll = (long)(double.Parse(hour, CultureInfo.InvariantCulture) * Simulation.Core.Time.SimTime.TicksPerHour);
         if (_args.TryGetValue("sim-minutes", out var mins))
             preRoll = long.Parse(mins, CultureInfo.InvariantCulture) * Simulation.Core.Time.SimTime.TicksPerMinute;
+        // Por padrao abre com a campanha em andamento (6o dia, sabado 19h): os jogadores
+        // seguem a propria rotina e, no dia do lancamento a meia-noite, ainda nao ha ninguem.
+        if (preRoll == 0 && !_args.ContainsKey("from-launch"))
+        {
+            preRoll = (5L * 24 * 60 + 19 * 60) * Simulation.Core.Time.SimTime.TicksPerMinute;
+            _startNote = "Campanha em andamento: 6º dia após o lançamento. Os jogadores seguem a própria rotina (a maioria joga à noite).";
+        }
         if (preRoll > 0) _host.AdvanceBeforeStart(preRoll);
         _host.Speed = int.Parse(Arg("speed", "1"), CultureInfo.InvariantCulture);
         _host.Start();
@@ -246,6 +258,56 @@ public partial class Main : Node
             list.Insert(0, e);
             if (list.Count > 120) list.RemoveAt(list.Count - 1);
         }
+    }
+
+    /// <summary>Aviso no mapa quando ninguem esta conectado (e nota de inicio de campanha).</summary>
+    private void BuildEmptyBanner()
+    {
+        _emptyBanner = new PanelContainer { MouseFilter = Control.MouseFilterEnum.Stop };
+        var sb = ThemeFactory.Panel(12);
+        sb.BorderWidthLeft = 3;
+        sb.BorderColor = UiTokens.Info;
+        _emptyBanner.AddThemeStyleboxOverride("panel", sb);
+        _emptyBanner.SetAnchorsPreset(Control.LayoutPreset.CenterBottom);
+        _emptyBanner.GrowHorizontal = Control.GrowDirection.Both;
+        _emptyBanner.GrowVertical = Control.GrowDirection.Begin;
+        _emptyBanner.OffsetBottom = -UiTokens.S16;
+        _emptyBanner.OffsetLeft = -(UiTokens.SidePanelWidth / 2);
+        _emptyBanner.OffsetRight = -(UiTokens.SidePanelWidth / 2);
+        var row = new HBoxContainer();
+        row.AddThemeConstantOverride("separation", 12);
+        _emptyText = ThemeFactory.Text("", UiTokens.FontSmall, UiTokens.TextPrimary);
+        _emptyText.VerticalAlignment = VerticalAlignment.Center;
+        row.AddChild(_emptyText);
+        _skipButton = ModalFrame.Action("Avançar até o próximo login", "Avançar o tempo\n~Processa a simulação minuto a minuto até alguém conectar (no máximo 1 dia). Nada é pulado.", () => _host?.SkipToNextLogin(), primary: true);
+        row.AddChild(_skipButton);
+        var close = ModalFrame.Action("OK", "Fechar este aviso", () => { _startNote = ""; if (_emptyBanner != null) _emptyBanner.Visible = false; });
+        row.AddChild(close);
+        _emptyBanner.AddChild(row);
+        _ui.AddChild(_emptyBanner);
+    }
+
+    private void UpdateEmptyBanner(SimSnapshot snap)
+    {
+        if (_emptyBanner == null || _emptyText == null || _skipButton == null) return;
+        bool empty = snap.Online == 0 && snap.ServerOpen;
+        bool skipping = _host?.Skipping ?? false;
+        if (empty)
+        {
+            var now = _host!.Calendar.ToDateTime(snap.Tick);
+            _emptyText.Text = skipping
+                ? "Avançando o tempo até alguém conectar…"
+                : $"Ninguém conectado às {now.Hour:00}:{now.Minute:00}. Os jogadores entram pela rotina deles (a maioria entre 19h e 22h).";
+            _skipButton.Visible = !skipping;
+            _emptyBanner.Visible = true;
+        }
+        else if (_startNote.Length > 0)
+        {
+            _emptyText.Text = _startNote;
+            _skipButton.Visible = false;
+            _emptyBanner.Visible = true;
+        }
+        else _emptyBanner.Visible = false;
     }
 
     private void BuildSidePanel()
@@ -576,6 +638,7 @@ public partial class Main : Node
             _dateLabel.Text = $"{PtBr.Date(now)} · {PtBr.DayKind(_host.Calendar.KindOf(now.Date))}";
             _speedLabel.Text = snap.RequestedSpeed == 0 ? "pausado" : snap.EffectiveSpeed < 0 ? "medindo…" : $"efetiva {PtBr.Decimal(snap.EffectiveSpeed)}×";
             UpdateKpis(snap);
+            UpdateEmptyBanner(snap);
             _fpsLabel.Text = $"{Engine.GetFramesPerSecond():0} fps";
             UpdateServerChip(snap.ServerOpen);
         }
