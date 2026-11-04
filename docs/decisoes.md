@@ -194,3 +194,10 @@ Moldura comum (`ModalFrame`): banner com gradiente na cor do contexto, feixes e 
   - zona: tabela de áreas e gráfico de 24 h.
 - **Tooltips estruturados (`RichTip`):** título, pares rótulo/valor e nota.
 - **Métricas para gráficos:** amostradas na thread da simulação a cada 10 minutos simulados (inclusive no avanço inicial), sem perder amostras em velocidade alta. A tela recebe uma cópia.
+
+## D-023 — Cliente abre com a campanha em andamento
+**Data:** 04/11/2026 · **Estado:** aceita (o mapa abria vazio)
+
+- A campanha começa à meia-noite do dia do lançamento, e os jogadores simulados entram pela própria rotina, a maioria entre 19h e 22h. Na velocidade 1x o mapa ficava cerca de 19 minutos reais sem ninguém.
+- Por padrão, o cliente avança antes de abrir até o 6º dia, às 19h. Isso não muda o resultado autoritativo: é o mesmo avanço da simulação, com as métricas amostradas no caminho. A opção `--from-launch` começa do zero.
+- Quando ninguém está conectado, um aviso no mapa explica o motivo e oferece "Avançar até o próximo login". O tempo avança minuto a minuto até alguém entrar, no máximo 1 dia, sem pular acontecimentos.
