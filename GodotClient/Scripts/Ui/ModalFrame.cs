@@ -15,9 +15,9 @@ public partial class ModalFrame : Control
     private readonly PanelContainer _panel;
     private readonly List<(string Name, Func<Control> Build, bool Live)> _tabs = new();
     private readonly List<Button> _tabButtons = new();
-    private readonly HBoxContainer _tabBar;
+    private readonly HFlowContainer _tabBar;
     private readonly ScrollContainer _scroll;
-    private readonly HBoxContainer _facts;
+    private readonly HFlowContainer _facts;
     private readonly Label _crumb;
     private int _current = -1;
 
@@ -79,8 +79,9 @@ public partial class ModalFrame : Control
         Header = new VBoxContainer { SizeFlagsVertical = SizeFlags.ShrinkCenter, CustomMinimumSize = new Vector2(280, 0) };
         Header.AddThemeConstantOverride("separation", 2);
         top.AddChild(Header);
-        _facts = new HBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsVertical = SizeFlags.ShrinkCenter };
-        _facts.AddThemeConstantOverride("separation", 0);
+        _facts = new HFlowContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsVertical = SizeFlags.ShrinkCenter };
+        _facts.AddThemeConstantOverride("h_separation", 0);
+        _facts.AddThemeConstantOverride("v_separation", 8);
         top.AddChild(_facts);
         Highlight = new HBoxContainer { SizeFlagsVertical = SizeFlags.ShrinkCenter };
         top.AddChild(Highlight);
@@ -88,8 +89,9 @@ public partial class ModalFrame : Control
         var tabsRow = new HBoxContainer();
         tabsRow.AddThemeConstantOverride("separation", 12);
         headCol.AddChild(tabsRow);
-        _tabBar = new HBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
-        _tabBar.AddThemeConstantOverride("separation", 2);
+        _tabBar = new HFlowContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        _tabBar.AddThemeConstantOverride("h_separation", 2);
+        _tabBar.AddThemeConstantOverride("v_separation", 0);
         tabsRow.AddChild(_tabBar);
         Actions = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.End, SizeFlagsVertical = SizeFlags.ShrinkCenter };
         Actions.AddThemeConstantOverride("separation", 6);
@@ -143,7 +145,7 @@ public partial class ModalFrame : Control
         {
             BgColor = new Color(0, 0, 0, 0),
             BorderColor = active ? UiTokens.Accent : hover ? UiTokens.BorderStrong : new Color(0, 0, 0, 0), BorderWidthBottom = 2,
-            ContentMarginLeft = 14, ContentMarginRight = 14, ContentMarginTop = 8, ContentMarginBottom = 10,
+            ContentMarginLeft = 12, ContentMarginRight = 12, ContentMarginTop = 8, ContentMarginBottom = 10,
         };
         b.AddThemeStyleboxOverride("normal", Tab(false, false));
         b.AddThemeStyleboxOverride("hover", Tab(false, true));

@@ -30,10 +30,10 @@ public partial class PlayerModal : ModalFrame
         AddTab("Estatísticas", BuildStats, live: true);
         AddTab("Missões", BuildQuests, live: true);
         AddTab("Histórico", BuildHistory, live: true);
-        AddTab("Rotina e finanças", BuildRoutine);
-        AddTab("Combate · M3", () => FutureTab("Combate", "M3", "Abates, mortes, saque, rivais e desempenho em PvE e PvP aparecem aqui quando o combate existir na simulação. Nada é inventado antes disso."));
-        AddTab("Inventário · M5", () => FutureTab("Inventário", "M5", "Itens, equipamento e carga do personagem aparecem aqui quando existirem inventário e itens na simulação. As recompensas de missões já registram os itens previstos."));
-        AddTab("Banco · M5", () => FutureTab("Banco", "M5", "Ouro guardado, depósitos e movimentações aparecem aqui com a economia. Hoje o ouro de missões está definido, mas ainda não é aplicado."));
+        AddTab("Rotina", BuildRoutine);
+        AddTab("Combate", () => FutureTab("Combate", "M3", "Abates, mortes, saque, rivais e desempenho em PvE e PvP aparecem aqui quando o combate existir na simulação. Nada é inventado antes disso."));
+        AddTab("Inventário", () => FutureTab("Inventário", "M5", "Itens, equipamento e carga do personagem aparecem aqui quando existirem inventário e itens na simulação. As recompensas de missões já registram os itens previstos."));
+        AddTab("Banco", () => FutureTab("Banco", "M5", "Ouro guardado, depósitos e movimentações aparecem aqui com a economia. Hoje o ouro de missões está definido, mas ainda não é aplicado."));
     }
 
     private CharacterView? View => _ctx.Snapshot().ByPerson is { } a && _person.Id < a.Length ? a[_person.Id] : null;
@@ -79,10 +79,10 @@ public partial class PlayerModal : ModalFrame
         {
             sub.AddChild(new Icon(icon, 16, RoleColor(cls?.Role)));
             sub.AddChild(ThemeFactory.Text($"{cls?.Name} · {RolePt(cls?.Role)}", UiTokens.FontBody, UiTokens.TextLabel, UiFonts.Medium));
-            sub.AddChild(ThemeFactory.Text("·", UiTokens.FontBody, UiTokens.TextDisabled));
+            Header.AddChild(sub);
         }
-        sub.AddChild(ThemeFactory.Text($"{_person.Name} · Pessoa #{_person.Id}", UiTokens.FontBody, UiTokens.TextSecondary));
-        Header.AddChild(sub);
+        // Nome da pessoa por tras do personagem, numa linha propria.
+        Header.AddChild(ThemeFactory.Text(_person.Name, UiTokens.FontBody, UiTokens.TextSecondary));
 
         if (v != null)
         {

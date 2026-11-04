@@ -480,16 +480,53 @@ public partial class SpanRow : Container
 
     private IEnumerable<Control> Items => GetChildren().OfType<Control>().Where(c => c.Visible);
 
+    private bool _stacked;
+
+    /// <summary>
+    /// Largura minima = a do maior card (a linha nunca alarga a pagina alem da tela); se os
+    /// cards nao cabem lado a lado na largura atual, empilham (altura = soma).
+    /// </summary>
     public override Vector2 _GetMinimumSize()
     {
-        float h = 0, w = 0;
-        foreach (var c in Items) { var m = c.GetCombinedMinimumSize(); h = Mathf.Max(h, m.Y); w += m.X; }
+        float h = 0, w = 0, sum = 0;
+        foreach (var c in Items)
+        {
+            var m = c.GetCombinedMinimumSize();
+            w = Mathf.Max(w, m.X);
+            h = _stacked ? h + m.Y + (h > 0 ? Gap : 0) : Mathf.Max(h, m.Y);
+            sum += m.Y;
+        }
         return new Vector2(w, h);
+    }
+
+    /// <summary>Os cards cabem lado a lado se cada um recebe ao menos a sua largura minima.</summary>
+    private bool Fits(float width)
+    {
+        float col = (width - Gap * (Columns - 1)) / Columns;
+        foreach (var c in Items)
+        {
+            int span = _spans.TryGetValue(c, out var s) ? s : 1;
+            if (span * col + (span - 1) * Gap < c.GetCombinedMinimumSize().X - 0.5f) return false;
+        }
+        return true;
     }
 
     public override void _Notification(int what)
     {
         if (what != NotificationSortChildren) return;
+        bool stacked = !Fits(Size.X);
+        if (stacked != _stacked) { _stacked = stacked; CallDeferred(Control.MethodName.UpdateMinimumSize); }
+        if (_stacked)
+        {
+            float y = 0;
+            foreach (var c in Items)
+            {
+                float hh = c.GetCombinedMinimumSize().Y;
+                FitChildInRect(c, new Rect2(0, y, Size.X, hh));
+                y += hh + Gap;
+            }
+            return;
+        }
         float col = (Size.X - Gap * (Columns - 1)) / Columns;
         int at = 0;
         foreach (var c in Items)
