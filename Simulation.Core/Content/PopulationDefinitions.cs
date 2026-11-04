@@ -79,6 +79,8 @@ public sealed class PopulationDefinition
     public TraitDynamicsDefinition Dynamics { get; set; } = new();
     /// <summary>Metas de curto prazo do jogador (D-036).</summary>
     public GoalSettingsDefinition Goals { get; set; } = new();
+    /// <summary>Plano da sessao, continuidade e tedio (D-037).</summary>
+    public SessionSettingsDefinition Session { get; set; } = new();
 }
 
 /// <summary>
@@ -150,4 +152,36 @@ public sealed class GoalSettingsDefinition
     public int ImpatientDropChance { get; set; } = 40;
     public int ImpatientBelow { get; set; } = 300;
     public int MotiveReinforce { get; set; } = 1;
+}
+
+/// <summary>
+/// Plano da sessao e continuidade (D-026/D-037). Utilidades em pontos da nota (mesma escala
+/// dos fatores da decisao); tedio em permille; tempos em minutos simulados.
+/// </summary>
+public sealed class SessionSettingsDefinition
+{
+    /// <summary>Vantagem minima de outra opcao para trocar de plano.</summary>
+    public int SwitchMargin { get; set; } = 60;
+    /// <summary>Vantagem minima durante o compromisso inicial do plano.</summary>
+    public int CommitMargin { get; set; } = 150;
+    /// <summary>Compromisso minimo do plano: base + paciencia * extra / 1000 (minutos).</summary>
+    public int CommitBaseMinutes { get; set; } = 30;
+    public int CommitExtraMinutesAtMaxPatience { get; set; } = 60;
+    /// <summary>Tedio por hora no mesmo tipo de atividade (antes da preferencia por variedade).</summary>
+    public int BoredomPerHour { get; set; } = 300;
+    /// <summary>Alivio do tedio por hora fazendo outra coisa.</summary>
+    public int BoredomRecoveryPerHour { get; set; } = 400;
+    /// <summary>Quanto do tedio sobra para a proxima sessao (permille).</summary>
+    public int BoredomKeptBetweenSessions { get; set; } = 300;
+    /// <summary>Peso do tedio na nota (com tedio 1000 e paciencia 0).</summary>
+    public int BoredomWeight { get; set; } = 400;
+    /// <summary>Preferencia por variedade: base + exploracao * fator / 1000 (permille do acumulo).</summary>
+    public int VarietyBase { get; set; } = 600;
+    public int VarietyPerExploration { get; set; } = 800;
+    /// <summary>Quanto a paciencia alivia o peso do tedio (permille com paciencia 1000).</summary>
+    public int PatienceRelief { get; set; } = 500;
+    /// <summary>Gosto pelo tipo reduz o acumulo: gosto 1000 = -metade disto; gosto 0 = +metade (permille).</summary>
+    public int EnjoymentRelief { get; set; } = 500;
+    /// <summary>Explorar onde nao ha mais nada a descobrir: perde esta parte do gosto (permille).</summary>
+    public int ExploreKnownPenalty { get; set; } = 500;
 }

@@ -37,13 +37,19 @@ public sealed class BehaviorSystem
         _quests = new QuestSystem(world, GainExperience);
         _traits = new TraitDynamics(world);
         _goals = new GoalSystem(world, _quests, _traits);
-        _quests.StepCompleted = (ch, questId) => _goals.OnQuestStep(ch, questId);
+        _quests.StepCompleted = (ch, questId) =>
+        {
+            RequestPlanReview(ch, "quest_step");
+            _goals.OnQuestStep(ch, questId);
+        };
         _quests.Completed = (ch, questId) =>
         {
             var p = _w.GetPerson(ch.PersonId);
+            RequestPlanReview(ch, "quest_completed");
             _traits.OnQuestCompleted(p);
             _goals.OnQuestCompleted(p, ch, questId);
         };
+        _goals.Ended = (ch, g, completed, reason) => RequestPlanReview(ch, completed ? "goal_completed" : "goal_abandoned");
     }
 
     public RouteFinder Routes => _routes;
@@ -217,6 +223,10 @@ public sealed class BehaviorSystem
         ch.SessionStartTick = Now;
         ch.SessionEndTick = end;
         ch.LogoutPending = false;
+        // Plano novo a cada sessao; o tedio se dissipa em parte fora do jogo (D-037).
+        ch.Plan = null;
+        ch.PlanReviewReason = "";
+        SessionRules.FadeBoredomBetweenSessions(ch, _w.Content.Session);
         _w.Scheduler.Schedule(end, EvSessionEnd, p.Id);
         _w.Emit("session_started", EventImportance.Low, new[] { new EntityRef("person", p.Id) }, detail: $"{minutes} min");
         // Objetivos pessoais (D-036): revisa ao conectar, antes da primeira decisao.
@@ -262,6 +272,8 @@ public sealed class BehaviorSystem
         ch.ActivityId = "";
         ch.TargetRegionId = "";
         ch.LogoutPending = false;
+        ch.Plan = null;
+        ch.PlanReviewReason = "";
         p.State = LifecycleState.Offline;
         _w.OnlineCount--;
         _w.Emit("session_ended", EventImportance.Low, new[] { new EntityRef("person", p.Id) },
@@ -288,18 +300,40 @@ public sealed class BehaviorSystem
             return;
         }
 
-        var best = options[0];
+        // Plano da sessao (D-037): continua o foco salvo vantagem clara de outra opcao;
+        // acontecimentos relevantes liberam a revisao. Viagem ja feita nao conta (sem custo afundado).
+        var top = options[0];
+        var best = top;
+        var focus = ch.Plan == null ? null : options.FirstOrDefault(o => o.Key == ch.Plan.FocusKey);
+        bool continued = false;
+        int gap = 0;
+        var ss = _w.Content.Session;
+        if (focus != null && focus != top && ch.PlanReviewReason.Length == 0)
+        {
+            int margin = Now < ch.Plan!.CommitUntilTick ? ss.CommitMargin : ss.SwitchMargin;
+            gap = top.Utility - focus.Utility;
+            if (gap < margin) { best = focus; continued = true; }
+        }
+        if (ch.Plan == null) FormPlan(ch, p, best, null);
+        else if (best.Key != ch.Plan.FocusKey)
+            FormPlan(ch, p, best, ch.PlanReviewReason.Length > 0 ? ch.PlanReviewReason
+                : focus == null ? "focus_unavailable" : SessionRules.MainDifference(best, focus));
+        else ch.Plan.Cycles++;
+        ch.PlanReviewReason = "";
+
         ch.LastDecision = new DecisionRecord(Now, best.Region.Id, best.Activity.Id, best.Utility, options.Count,
-            best.Factors, options.Count > 1 ? options[1].Key : "");
+            best.Factors, continued ? top.Key : options.FirstOrDefault(o => o != best)?.Key ?? "")
+        { ContinuedPlan = continued, PlanGap = continued ? gap : 0 };
         if (best.Key == ch.LastActivityKey) ch.RepeatCount++;
         else { ch.RepeatCount = 0; ch.LastActivityKey = best.Key; }
         _w.Today.ActivitiesChosen++;
 
         var causes = best.Factors.Where(f => f.Key != "noise" && f.Contribution != 0)
             .OrderByDescending(f => Math.Abs(f.Contribution)).ThenBy(f => f.Key, StringComparer.Ordinal).Take(4)
-            .Select(f => new EventCause(f.Key, f.Contribution)).ToArray();
+            .Select(f => new EventCause(f.Key, f.Contribution)).ToList();
+        if (continued) causes.Insert(0, new EventCause("plan_continuity", gap));
         _w.Emit("activity_chosen", EventImportance.Low,
-            new[] { new EntityRef("character", ch.Id) }, causes, $"{best.Region.Id}/{best.Activity.Id}");
+            new[] { new EntityRef("character", ch.Id) }, causes.ToArray(), $"{best.Region.Id}/{best.Activity.Id}");
 
         ch.TargetRegionId = best.Region.Id;
         ch.ActivityId = best.Activity.Id;
@@ -312,6 +346,37 @@ public sealed class BehaviorSystem
             ch.Waypoints.RemoveAt(0);
         if (ch.Waypoints.Count == 0) StartActivity(ch);
         else NextLeg(ch);
+    }
+
+    /// <summary>
+    /// Forma (inicio da sessao, reason = null) ou troca o plano da sessao. O compromisso minimo
+    /// cresce com a paciencia. Eventos: session_plan e plan_changed, com o motivo como 1a causa.
+    /// </summary>
+    private void FormPlan(Character ch, Person p, ScoredOption option, string? reason)
+    {
+        var ss = _w.Content.Session;
+        string main = SessionRules.MainReason(option);
+        long commit = Now + (ss.CommitBaseMinutes + p.Traits.Patience * ss.CommitExtraMinutesAtMaxPatience / 1000) * SimTime.TicksPerMinute;
+        ch.Plan = new SessionPlan(option.Key, option.Activity.Type, reason ?? main, Now, commit);
+        if (reason == null)
+        {
+            ch.PlansFormed++;
+            _w.Emit("session_plan", EventImportance.Low, new[] { new EntityRef("character", ch.Id) },
+                new[] { new EventCause(main, 1000) }, option.Key);
+        }
+        else
+        {
+            ch.PlanChanges++;
+            _w.Emit("plan_changed", EventImportance.Low, new[] { new EntityRef("character", ch.Id) },
+                new[] { new EventCause(reason, 1000), new EventCause(main, 500) }, option.Key);
+        }
+    }
+
+    /// <summary>Acontecimento relevante: a proxima decisao revisa o plano sem margem (o primeiro motivo vale).</summary>
+    private void RequestPlanReview(Character ch, string reason)
+    {
+        if (ch.Status != CharacterStatus.Offline && ch.Plan != null && ch.PlanReviewReason.Length == 0)
+            ch.PlanReviewReason = reason;
     }
 
     /// <summary>Inicia o proximo trecho: distancia / velocidade, no minimo 1 tick.</summary>
@@ -387,6 +452,7 @@ public sealed class BehaviorSystem
             _traits.OnActivity(p, ch, a, minutes, fit, ActivityScoring.RiskOf(region, a, challenge, levelBefore), firstTimeType);
             _goals.OnActivity(p, ch, a, minutes);
             ch.ZoneMinutes[region.Id] = (ch.ZoneMinutes.TryGetValue(region.Id, out int zm) ? zm : 0) + minutes;
+            SessionRules.AccrueBoredom(ch, p.Traits, a.Type, minutes, _w.Content.Session);
             // Explorar revela mais longe: as zonas ligadas as vizinhas.
             if (a.Type == ActivityTypes.Explore)
                 foreach (var c in region.Connections)
@@ -411,6 +477,7 @@ public sealed class BehaviorSystem
     private void Discovered(Character ch, string zoneId)
     {
         var p = _w.GetPerson(ch.PersonId);
+        RequestPlanReview(ch, "zone_discovered");
         _traits.OnRegionDiscovered(p);
         _goals.OnDiscovered(p, ch, zoneId);
     }
@@ -452,6 +519,10 @@ public sealed class BehaviorSystem
             _w.Emit("level_up", EventImportance.Normal, new[] { new EntityRef("character", ch.Id) },
                 new[] { new EventCause(source, 1000) }, $"nível {ch.Level}");
         }
-        if (ch.Level > before) _goals.OnLevelUp(_w.GetPerson(ch.PersonId), ch);
+        if (ch.Level > before)
+        {
+            RequestPlanReview(ch, "level_up");
+            _goals.OnLevelUp(_w.GetPerson(ch.PersonId), ch);
+        }
     }
 }

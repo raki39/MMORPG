@@ -620,6 +620,20 @@ public static class ContentValidator
         if (gs.MaxActive < 0 || gs.MaxActive > 5) v.Error(PopulationFile, "goals.maxActive", "Use de 0 a 5 metas ao mesmo tempo.");
         if (gs.AdoptChance < 0 || gs.AdoptChance > 1000) v.Error(PopulationFile, "goals.adoptChance", "Use um valor de 0 a 1000.");
         if (gs.Weight < 0) v.Error(PopulationFile, "goals.weight", "O peso não pode ser negativo.");
+        var ss = pop.Session;
+        foreach (var (name, value) in new (string, int)[]
+        {
+            ("switchMargin", ss.SwitchMargin), ("commitMargin", ss.CommitMargin), ("commitBaseMinutes", ss.CommitBaseMinutes),
+            ("commitExtraMinutesAtMaxPatience", ss.CommitExtraMinutesAtMaxPatience), ("boredomPerHour", ss.BoredomPerHour),
+            ("boredomRecoveryPerHour", ss.BoredomRecoveryPerHour), ("boredomWeight", ss.BoredomWeight),
+            ("varietyBase", ss.VarietyBase), ("varietyPerExploration", ss.VarietyPerExploration),
+        })
+            if (value < 0) v.Error(PopulationFile, "session." + name, "O valor não pode ser negativo.");
+        if (ss.BoredomKeptBetweenSessions is < 0 or > 1000) v.Error(PopulationFile, "session.boredomKeptBetweenSessions", "Use um valor de 0 a 1000.");
+        if (ss.PatienceRelief is < 0 or > 1000) v.Error(PopulationFile, "session.patienceRelief", "Use um valor de 0 a 1000.");
+        if (ss.ExploreKnownPenalty is < 0 or > 1000) v.Error(PopulationFile, "session.exploreKnownPenalty", "Use um valor de 0 a 1000.");
+        if (ss.EnjoymentRelief is < 0 or > 1000) v.Error(PopulationFile, "session.enjoymentRelief", "Use um valor de 0 a 1000.");
+        if (ss.CommitMargin < ss.SwitchMargin) v.Warning(PopulationFile, "session.commitMargin", "A margem do compromisso costuma ser maior que a margem de troca.");
         if (pop.Names.FirstNames.Count == 0) v.Error(PopulationFile, "names.firstNames", "Lista de nomes vazia.");
         if (pop.Names.LastNames.Count == 0) v.Error(PopulationFile, "names.lastNames", "Lista de sobrenomes vazia.");
         if (pop.Names.NickPrefixes.Count == 0) v.Error(PopulationFile, "names.nickPrefixes", "Lista de prefixos de apelido vazia.");

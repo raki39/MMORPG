@@ -854,3 +854,42 @@ Proposta do criador, analisada com o Claude.
 - dicas dos atributos reescritas;
 - "Progresso e metas";
 - fatores "Zona familiar" e "Gosto por desafio" com a explicação nova.
+
+## D-037 — Plano da sessão, continuidade e tédio contextual (fechamento do M2, parte 1)
+**Data:** 04/11/2026 · **Estado:** aceita (calibração a revisar)
+
+**Pedido:** fechar o M2 antes da Etapa 1, a começar pelo plano da sessão das diretrizes do D-026.
+
+**Decisões** (parâmetros em `population.json`, seção `session`):
+- **Três camadas separadas:** meta pessoal (D-036) → plano da sessão → atividade executada.
+- **Plano da sessão:** formado na primeira decisão da sessão, com o fator que mais pesou como motivo (evento `session_plan`).
+- **Continuidade:**
+  - ao fim de cada ciclo, a pessoa continua no foco do plano, a menos que outra opção seja melhor por uma margem: 60 pontos, ou 150 durante o compromisso mínimo;
+  - o compromisso mínimo dura 30 min + até 60 min pela paciência;
+  - a viagem já feita não conta: não há custo afundado.
+- **Revisão por acontecimentos:** etapa ou missão concluída, nível novo, meta concluída ou abandonada e zona descoberta liberam a próxima decisão sem margem.
+- **Toda troca registra o motivo** (`plan_changed`, 1ª causa).
+- **Tédio contextual no lugar da penalidade universal de repetição:**
+  - cresce por tipo de atividade com os minutos;
+  - cresce mais rápido para quem gosta de variedade (Exploração) e mais devagar para quem gosta muito daquele tipo;
+  - alivia fazendo outra coisa e se dissipa entre sessões (sobram 30%);
+  - a paciência reduz o peso dele na decisão.
+- **Explorar sem nada novo ao alcance perde metade do gosto** (fator "nada novo"). Quem já conhece tudo ao redor ainda pode explorar pelo XP, mas sem a graça de descobrir.
+
+**Linha de base × resultado** (90 dias × 1.000 pessoas × 5 seeds):
+
+| Medida | Antes (D-036a) | Depois |
+|---|---:|---:|
+| Continuou na mesma atividade | 49,7% | 70,5% |
+| Trocas de atividade por hora | 0,7 | 0,5 |
+| Ciclos seguidos na mesma atividade | 1,6 | 2,3 |
+| Tempo andando ou esperando | 31,2% | 24,7% |
+| Tempo em combate | 35,3% (instável) | 40,4% |
+| Tempo explorando | 12,9% | 6,1% |
+| Horas até o nível 30 | 174 | 164 |
+| Metas dentro da faixa | 15/21 | 15/21 |
+
+- **Motivos das trocas:** acontecimentos (etapa e missão ≈ 48%, nível ≈ 11%), tédio ≈ 14%, falta de tempo ≈ 8% e foco indisponível ≈ 8%.
+- **Horas até o 30 abaixo da faixa:** com menos tempo andando, todos sobem mais rápido. A recalibração da curva (escolha a ou b do D-028) fica para depois do combate, porque o XP de caça vai mudar com abates reais.
+
+**Testes:** 8 novos (tédio, variedade, gosto, paciência, motivo da troca, margem e revisão por acontecimentos, explorar sem novidade, determinismo e hash, validação do conteúdo). `StateHasher` v7.

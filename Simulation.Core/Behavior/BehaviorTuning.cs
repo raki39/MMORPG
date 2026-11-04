@@ -30,8 +30,7 @@ public static class BehaviorTuning
     public const int WeightRisk = 350;
     public const int WeightTravel = 250;
     public const int WeightCrowding = 200;
-    /// <summary>Penalidade por repetir a mesma atividade em sequencia (escala com impaciencia).</summary>
-    public const int RepeatPenalty = 140;
+    // Repeticao: substituida pelo tedio contextual (D-037, population.json "session").
     /// <summary>Penalidade quando viagem + atividade nao cabem no tempo restante da sessao.</summary>
     public const int TimeBudgetPenalty = 400;
     // ---- Quests (D-031; recalibrado no D-036 com os atributos vivos) ----

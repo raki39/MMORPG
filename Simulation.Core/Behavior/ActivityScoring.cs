@@ -31,7 +31,7 @@ public sealed class ScoredOption
 /// que o personagem conhece e cujos requisitos ele cumpre. Termos dependem do estado do
 /// mundo: lotacao atual, viagem a partir de onde esta, tempo restante da sessao.
 ///
-/// U = afinidade + recompensa + social - risco - viagem - lotacao - repeticao - tempo + ruido
+/// U = afinidade + recompensa + social - risco - viagem - lotacao - tedio - tempo + ruido
 /// (cada termo normalizado em permille e multiplicado pelo peso de BehaviorTuning).
 /// </summary>
 public static class ActivityScoring
@@ -90,6 +90,10 @@ public static class ActivityScoring
                 var f = new List<DecisionFactor>();
                 int affinity = Affinity(a.Type, t);
                 f.Add(new DecisionFactor("affinity", affinity * BehaviorTuning.WeightAffinity / 1000));
+                // Explorar sem nada novo ao alcance perde parte da graca (D-037): o gosto de explorar
+                // e descobrir; terreno ja conhecido so rende XP.
+                if (a.Type == ActivityTypes.Explore && !ExploreRevealsSomething(ch, region, content))
+                    f.Add(new DecisionFactor("nothing_new", -affinity * BehaviorTuning.WeightAffinity / 1000 * content.Session.ExploreKnownPenalty / 1000));
 
                 // Adequacao ao nivel pelo desafio da propria atividade (D-027), nao pela faixa da zona.
                 int challenge = ProgressionRules.ChallengeLevel(content, a);
@@ -136,9 +140,9 @@ public static class ActivityScoring
                 if (travel + a.TypicalMinutes > remaining + BehaviorTuning.LogoutToleranceMinutes)
                     f.Add(new DecisionFactor("time_budget", -BehaviorTuning.TimeBudgetPenalty));
 
-                string key = region.Id + "/" + a.Id;
-                if (key == ch.LastActivityKey && ch.RepeatCount > 0)
-                    f.Add(new DecisionFactor("repetition", -BehaviorTuning.RepeatPenalty * ch.RepeatCount * (1000 - t.Patience / 2) / 1000));
+                // Tedio contextual (D-037): cansaco do tipo de atividade, aliviado pela paciencia.
+                if (BoredomPenalty(ch, t, a.Type, content.Session) is > 0 and var bored)
+                    f.Add(new DecisionFactor("boredom", -bored));
 
                 if (questTerm is { } qt) f.Add(new DecisionFactor(qt.Key, qt.Value));
 
@@ -188,6 +192,17 @@ public static class ActivityScoring
         if (!ch.ZoneMinutesSpent.TryGetValue(regionId, out int minutes) || minutes <= 0) return 0;
         int fam = Math.Min(1000, minutes * 1000 / Math.Max(1, d.FamiliarityFullMinutes));
         return fam * (1000 - t.Exploration / 2) / 1000;
+    }
+
+    /// <summary>Explorar a zona ainda revelaria alguma zona desconhecida (vizinhas das vizinhas)?</summary>
+    public static bool ExploreRevealsSomething(Character ch, RegionDefinition region, ContentDatabase content) =>
+        region.Connections.Any(c => content.Regions[c.To].Connections.Any(c2 => !ch.KnownRegions.Contains(c2.To)));
+
+    /// <summary>Peso do tedio do tipo na nota (positivo = penalidade), D-037.</summary>
+    public static int BoredomPenalty(Character ch, PersonTraits t, string type, SessionSettingsDefinition s)
+    {
+        if (!ch.BoredomByType.TryGetValue(type, out int bored) || bored <= 0) return 0;
+        return bored * s.BoredomWeight / 1000 * (1000 - t.Patience * s.PatienceRelief / 1000) / 1000;
     }
 
     /// <summary>Erro maximo (+-, permille) da estimativa do tempo de viagem: some com conhecimento alto.</summary>

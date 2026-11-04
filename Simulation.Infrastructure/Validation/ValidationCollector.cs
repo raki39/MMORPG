@@ -24,6 +24,10 @@ public sealed class RunMetrics
     public List<ProfileStats> Profiles { get; } = new();
     /// <summary>Nivel de cada personagem no fim (para diagnosticar atividades com nivel minimo).</summary>
     public List<int> FinalLevels { get; } = new();
+    /// <summary>Continuidade das sessoes (D-026/D-037): trocas, permanencia e motivos.</summary>
+    public SortedDictionary<string, double> Continuity { get; } = new(StringComparer.Ordinal);
+    /// <summary>Motivos das trocas de plano (fator principal), contagem.</summary>
+    public SortedDictionary<string, long> SwitchReasons { get; } = new(StringComparer.Ordinal);
 }
 
 public sealed class ProfileStats
@@ -57,6 +61,11 @@ public sealed class ValidationCollector
     private readonly Dictionary<long, (int Prime, int Total)> _weekdayStarts = new();
     public const int PrimeTimeFromMinute = 18 * 60, PrimeTimeToMinute = 23 * 60;
     private readonly SortedDictionary<string, long> _choices = new(StringComparer.Ordinal);
+    // Continuidade (D-026): ultima escolha da sessao por personagem e tamanho da sequencia atual.
+    private readonly Dictionary<long, (string Key, int Run)> _lastChoice = new();
+    private long _sessionsWithChoice, _continued, _switched, _zoneSwitched;
+    private readonly List<int> _runs = new();
+    private readonly SortedDictionary<string, long> _switchReasons = new(StringComparer.Ordinal);
 
     public ValidationCollector(ContentDatabase content, int warmupDays)
     {
@@ -84,6 +93,8 @@ public sealed class ValidationCollector
                 {
                     long pid = e.Entities[0].Id;
                     _openSession[pid] = e.Tick;
+                    long cid = w.GetPerson((int)pid).CharacterId;
+                    if (_lastChoice.Remove(cid, out var prev) && prev.Run > 0 && e.Tick >= _windowStart) _runs.Add(prev.Run);
                     if (e.Tick < _windowStart) break;
                     _sessionsInWindow[pid] = _sessionsInWindow.GetValueOrDefault(pid) + 1;
                     if (cal.KindOfTick(e.Tick) == DayKind.Weekday)
@@ -104,11 +115,39 @@ public sealed class ValidationCollector
                     break;
                 }
                 case "activity_chosen":
-                    if (e.Detail != null) _choices[e.Detail] = _choices.GetValueOrDefault(e.Detail) + 1;
+                {
+                    if (e.Detail == null) break;
+                    _choices[e.Detail] = _choices.GetValueOrDefault(e.Detail) + 1;
+                    if (e.Tick < _windowStart) break;
+                    long cid = e.Entities[0].Id;
+                    if (!_lastChoice.TryGetValue(cid, out var last) || last.Key.Length == 0)
+                    {
+                        _sessionsWithChoice++;
+                        _lastChoice[cid] = (e.Detail, 1);
+                    }
+                    else if (last.Key == e.Detail)
+                    {
+                        _continued++;
+                        _lastChoice[cid] = (e.Detail, last.Run + 1);
+                    }
+                    else
+                    {
+                        _switched++;
+                        if (!string.Equals(Zone(last.Key), Zone(e.Detail), StringComparison.Ordinal)) _zoneSwitched++;
+                        _runs.Add(last.Run);
+                        _lastChoice[cid] = (e.Detail, 1);
+                    }
+                    break;
+                }
+                case "plan_changed":
+                    if (e.Tick >= _windowStart && e.Causes.Count > 0)
+                        _switchReasons[e.Causes[0].Factor] = _switchReasons.GetValueOrDefault(e.Causes[0].Factor) + 1;
                     break;
             }
         }
     }
+
+    private static string Zone(string key) => key.Split('/')[0];
 
     private void AddPlayed(long pid, long start, long end)
     {
@@ -124,6 +163,16 @@ public sealed class ValidationCollector
 
         var m = new RunMetrics { Seed = seed, Population = w.Persons.Count, Days = days };
         foreach (var kv in _choices) m.Choices[kv.Key] = kv.Value;
+        foreach (var kv in _lastChoice) if (kv.Value.Run > 0) _runs.Add(kv.Value.Run);
+        _lastChoice.Clear();
+        double playedHours = _playedInWindow.Values.Sum() / (double)SimTime.TicksPerHour;
+        long decisions = _continued + _switched;
+        m.Continuity["switches_per_hour"] = playedHours > 0 ? _switched / playedHours : double.NaN;
+        m.Continuity["continue_pct"] = decisions > 0 ? _continued * 100.0 / decisions : double.NaN;
+        m.Continuity["zone_switches_per_session"] = _sessionsWithChoice > 0 ? _zoneSwitched / (double)_sessionsWithChoice : double.NaN;
+        m.Continuity["choices_per_session"] = _sessionsWithChoice > 0 ? (decisions + _sessionsWithChoice) / (double)_sessionsWithChoice : double.NaN;
+        m.Continuity["run_cycles"] = _runs.Count > 0 ? _runs.Average() : double.NaN;
+        foreach (var kv in _switchReasons) m.SwitchReasons[kv.Key] = kv.Value;
 
         double weeks = Math.Max(0, days - _warmupDays) / 7.0;
         var chars = w.Characters.ToList();

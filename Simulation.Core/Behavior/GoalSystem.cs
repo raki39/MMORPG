@@ -235,10 +235,14 @@ public sealed class GoalSystem
             if (g.Type == GoalTypes.CompleteQuest && g.Target == questId) Complete(p, ch, g);
     }
 
+    /// <summary>Meta encerrada: (personagem, meta, concluida?, motivo).</summary>
+    internal Action<Character, PersonalGoal, bool, string>? Ended;
+
     private void Complete(Person p, Character ch, PersonalGoal g)
     {
         ch.GoalList.Remove(g);
         ch.GoalsCompleted++;
+        Ended?.Invoke(ch, g, true, "goal_completed");
         _w.Emit("goal_completed", EventImportance.Normal, new[] { new EntityRef("character", ch.Id) },
             new[] { new EventCause(g.MotiveKey, g.MotiveValue) }, $"{g.Type}|{g.Target}|{g.TargetValue}");
         // Conseguir o que queria reforca o gosto que motivou o objetivo.
@@ -249,6 +253,7 @@ public sealed class GoalSystem
     {
         ch.GoalList.Remove(g);
         ch.GoalsAbandoned++;
+        Ended?.Invoke(ch, g, false, reason);
         _w.Emit("goal_abandoned", EventImportance.Low, new[] { new EntityRef("character", ch.Id) },
             new[] { new EventCause(reason, 1000) }, $"{g.Type}|{g.Target}|{g.TargetValue}");
     }

@@ -207,6 +207,10 @@ public sealed class DecisionRecord
     public string RegionId { get; }
     public string ActivityId { get; }
     public int Utility { get; }
+    /// <summary>Seguiu o plano da sessao embora outra opcao tivesse nota maior (D-037).</summary>
+    public bool ContinuedPlan { get; init; }
+    /// <summary>Vantagem da melhor opcao sobre a escolhida quando seguiu o plano.</summary>
+    public int PlanGap { get; init; }
     public int OptionsConsidered { get; }
     public IReadOnlyList<DecisionFactor> Factors { get; }
     /// <summary>Segunda melhor opcao ("regiao/atividade"), vazio se nao houve.</summary>
@@ -231,6 +235,34 @@ public sealed class ActiveQuest
     public int StepIndex { get; internal set; }
     /// <summary>Minutos ja cumpridos na etapa atual.</summary>
     public int StepMinutes { get; internal set; }
+}
+
+/// <summary>
+/// Plano da sessao (D-037): a intencao da sessao entre a meta pessoal e a atividade executada.
+/// Formado na primeira decisao; revisto por vantagem clara de outra opcao (com margem e
+/// compromisso minimo) ou por acontecimentos relevantes.
+/// </summary>
+public sealed class SessionPlan
+{
+    public SessionPlan(string focusKey, string focusType, string reason, long formedTick, long commitUntilTick)
+    {
+        FocusKey = focusKey;
+        FocusType = focusType;
+        Reason = reason;
+        FormedTick = formedTick;
+        CommitUntilTick = commitUntilTick;
+    }
+
+    /// <summary>"zona/atividade" em foco.</summary>
+    public string FocusKey { get; }
+    public string FocusType { get; }
+    /// <summary>Fator que mais pesou ao formar ou trocar o plano (ex.: goal, quest_step, affinity).</summary>
+    public string Reason { get; }
+    public long FormedTick { get; }
+    /// <summary>Ate quando a troca exige a margem maior (compromisso minimo).</summary>
+    public long CommitUntilTick { get; }
+    /// <summary>Ciclos seguidos no foco desde que o plano foi formado.</summary>
+    public int Cycles { get; internal set; }
 }
 
 /// <summary>Tipos de objetivo pessoal (D-036).</summary>
@@ -364,6 +396,16 @@ public sealed class Character
     /// <summary>Minutos em atividade por zona (familiaridade, D-036a).</summary>
     internal SortedDictionary<string, int> ZoneMinutes { get; } = new(StringComparer.Ordinal);
     public IReadOnlyDictionary<string, int> ZoneMinutesSpent => ZoneMinutes;
+
+    // ---- Plano da sessao e tedio (D-037) ----
+    public SessionPlan? Plan { get; internal set; }
+    /// <summary>Acontecimento que pede revisao livre do plano na proxima decisao ("" = nenhum).</summary>
+    public string PlanReviewReason { get; internal set; } = "";
+    /// <summary>Tedio por tipo de atividade (permille).</summary>
+    internal SortedDictionary<string, int> Boredom { get; } = new(StringComparer.Ordinal);
+    public IReadOnlyDictionary<string, int> BoredomByType => Boredom;
+    public int PlansFormed { get; internal set; }
+    public int PlanChanges { get; internal set; }
 
     // ---- Objetivos pessoais (D-036) ----
     internal List<PersonalGoal> GoalList { get; } = new();

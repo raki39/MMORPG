@@ -11,7 +11,7 @@ namespace Simulation.Core.World;
 /// </summary>
 public static class StateHasher
 {
-    public const int FormatVersion = 6;
+    public const int FormatVersion = 7;
 
     public static string Compute(WorldState w)
     {
@@ -55,6 +55,7 @@ public static class StateHasher
             {
                 h.Long(c.LastDecision.Tick); h.Str(c.LastDecision.RegionId); h.Str(c.LastDecision.ActivityId);
                 h.Int(c.LastDecision.Utility); h.Int(c.LastDecision.OptionsConsidered);
+                h.Bool(c.LastDecision.ContinuedPlan); h.Int(c.LastDecision.PlanGap); h.Str(c.LastDecision.RunnerUpActivityKey);
                 foreach (var f in c.LastDecision.Factors) { h.Str(f.Key); h.Int(f.Contribution); }
             }
             h.Long(c.PlayedTicks);
@@ -79,6 +80,12 @@ public static class StateHasher
             h.Int(c.GoalsSet); h.Int(c.GoalsCompleted); h.Int(c.GoalsAbandoned);
             h.Int(c.ZoneMinutesSpent.Count);
             foreach (var kv in c.ZoneMinutesSpent) { h.Str(kv.Key); h.Int(kv.Value); }
+            // Plano da sessao e tedio (D-037).
+            h.Bool(c.Plan != null);
+            if (c.Plan != null) { h.Str(c.Plan.FocusKey); h.Str(c.Plan.FocusType); h.Str(c.Plan.Reason); h.Long(c.Plan.FormedTick); h.Long(c.Plan.CommitUntilTick); h.Int(c.Plan.Cycles); }
+            h.Str(c.PlanReviewReason); h.Int(c.PlansFormed); h.Int(c.PlanChanges);
+            h.Int(c.BoredomByType.Count);
+            foreach (var kv in c.BoredomByType) { h.Str(kv.Key); h.Int(kv.Value); }
         }
         h.Int(w.QuestStats.Count);
         foreach (var kv in w.QuestStats)

@@ -60,6 +60,8 @@ public sealed class ContentDatabase
     public TraitDynamicsDefinition Dynamics => Set.Population.Dynamics;
     /// <summary>Metas de curto prazo (D-036).</summary>
     public GoalSettingsDefinition GoalSettings => Set.Population.Goals;
+    /// <summary>Plano da sessao e tedio (D-037).</summary>
+    public SessionSettingsDefinition Session => Set.Population.Session;
     public ProgressionDefinition Progression => Set.Progression;
 
     public IReadOnlyDictionary<string, RegionDefinition> Regions { get; }

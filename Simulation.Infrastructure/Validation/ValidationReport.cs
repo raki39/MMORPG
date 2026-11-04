@@ -168,6 +168,25 @@ public static class ValidationReport
             sb.Append($"| {TypeName(kv.Key)} | {Pct(kv.Value, totalTime)} | {ch} |\n");
         }
 
+        // ---- Continuidade (D-026/D-037) ----
+        sb.Append("\n## Continuidade das sessões (média das seeds)\n\n");
+        sb.Append("| Medida | Valor |\n|---|---:|\n");
+        double C(string k) => runs.Average(r => r.Continuity.TryGetValue(k, out var v) ? v : double.NaN);
+        sb.Append($"| Escolhas por sessão | {Fmt(C("choices_per_session"))} |\n");
+        sb.Append($"| Continuou na mesma atividade (% das escolhas após a primeira) | {Fmt(C("continue_pct"))}% |\n");
+        sb.Append($"| Trocas de atividade por hora conectada | {Fmt(C("switches_per_hour"))} |\n");
+        sb.Append($"| Trocas de zona por sessão | {Fmt(C("zone_switches_per_session"))} |\n");
+        sb.Append($"| Ciclos seguidos na mesma atividade (média) | {Fmt(C("run_cycles"))} |\n");
+        var reasons = new SortedDictionary<string, long>(StringComparer.Ordinal);
+        foreach (var r in runs) foreach (var kv in r.SwitchReasons) reasons[kv.Key] = reasons.GetValueOrDefault(kv.Key) + kv.Value;
+        if (reasons.Count > 0)
+        {
+            long allR = Math.Max(1, reasons.Values.Sum());
+            sb.Append("\nMotivos das trocas de plano (fator principal):\n\n| Motivo | Trocas |\n|---|---:|\n");
+            foreach (var kv in reasons.OrderByDescending(k => k.Value).ThenBy(k => k.Key, StringComparer.Ordinal))
+                sb.Append($"| {kv.Key} | {Pct(kv.Value, allR)} |\n");
+        }
+
         // ---- Atividades pouco usadas ----
         var allLevels = runs.SelectMany(r => r.FinalLevels).ToList();
         var choices = new SortedDictionary<string, long>(StringComparer.Ordinal);
