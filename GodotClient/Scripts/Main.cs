@@ -99,7 +99,7 @@ public partial class Main : Node
     private int _speedBeforePage = 1;
     private Vector2 _lastMouse;
     private long _lastRefreshTick = -1;
-    private bool _watchedSeen;
+    private int _watchedSeenId;
     private bool _pausedByPage;
     private bool OnMap => _modal == null || !IsInstanceValid(_modal);
     private readonly Dictionary<int, List<SimEvent>> _history = new();
@@ -211,6 +211,13 @@ public partial class Main : Node
         CallDeferred(nameof(OpenFromArgs));
     }
 
+    /// <summary>Nome do foco de um plano ("Atividade · Lugar"), como a ficha mostra.</summary>
+    private string PlanName(string focusKey)
+    {
+        var p = focusKey.Split('/');
+        return p.Length == 2 ? $"{_ctx.ActivityName(p[0], p[1])} · {_ctx.PlaceName(p[0], p[1])}" : focusKey;
+    }
+
     private void OpenFromArgs()
     {
         _map.SetSnapshot(_host!.Snapshot);
@@ -221,8 +228,17 @@ public partial class Main : Node
                 ? Enumerable.Range(1, _host.Snapshot.ByPerson.Length - 1).FirstOrDefault(i => _host.Snapshot.ByPerson[i] is { Status: Simulation.Core.Population.CharacterStatus.Doing } v && v.LastDecision != null)
                 : p == "goal"   // capturas: primeiro jogador com objetivo pessoal ativo
                     ? Enumerable.Range(1, _host.Snapshot.ByPerson.Length - 1).FirstOrDefault(i => _host.Snapshot.ByPerson[i] is { } v && v.Goals.Count > 0)
-                    : int.TryParse(p, out var n) ? n : 0;
+                    : p == "longplan"   // capturas: plano da sessao com o nome mais longo (cards nao podem empilhar)
+                        ? Enumerable.Range(1, _host.Snapshot.ByPerson.Length - 1).Where(i => _host.Snapshot.ByPerson[i]?.Plan != null)
+                            .OrderByDescending(i => PlanName(_host.Snapshot.ByPerson[i]!.Plan!.FocusKey).Length).FirstOrDefault()
+                        : int.TryParse(p, out var n) ? n : 0;
             if (id > 0) OpenPerson(id);
+            // Capturas: abre outra ficha e volta pelo historico (a evolucao deve carregar).
+            if (id > 0 && _args.ContainsKey("back-test"))
+            {
+                int other = Enumerable.Range(1, _host.Snapshot.ByPerson.Length - 1).FirstOrDefault(i => i != id && _host.Snapshot.ByPerson[i] != null);
+                if (other > 0) { OpenPerson(other); Navigate(-1); }
+            }
         }
         if (_args.TryGetValue("focus", out var fz) && _ctx.Content.Regions.ContainsKey(fz)) _map.FocusRegion(fz);
         // Capturas: ignoram o mouse real; --mouse=X,Y simula o mouse na tela (hover).
@@ -536,13 +552,19 @@ public partial class Main : Node
             bool reading = mouse == _lastMouse;   // mouse parado: pode estar lendo uma dica
             _lastMouse = mouse;
             var snapNow = _host.Snapshot;
-            bool watchedArrived = snapNow.Watched != null && !_watchedSeen;
-            _watchedSeen = snapNow.Watched != null;
+            // Detalhe da pessoa observada (evolucao, humor, memorias): chega um pouco depois de a
+            // ficha abrir. Com o tempo pausado e o mouse parado (ex.: logo apos clicar em voltar),
+            // a chegada do detalhe precisa atualizar a ficha mesmo assim, e so conta como vista
+            // depois de atualizar.
+            int watchedId = snapNow.Watched?.PersonId ?? 0;
+            if (watchedId == 0) _watchedSeenId = 0;
+            bool detailArrived = watchedId != 0 && watchedId != _watchedSeenId;
             if (_modal != null && IsInstanceValid(_modal))
             {
-                if ((snapNow.Tick != _lastRefreshTick || watchedArrived) && !reading)
+                if (detailArrived || (snapNow.Tick != _lastRefreshTick && !reading))
                 {
                     _lastRefreshTick = snapNow.Tick;
+                    _watchedSeenId = watchedId;
                     _modal.RefreshLive();
                 }
             }

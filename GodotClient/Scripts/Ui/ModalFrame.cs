@@ -330,14 +330,22 @@ public partial class ModalFrame : Control
         return tile;
     }
 
-    /// <summary>Linha de dado: rotulo a esquerda, valor a direita.</summary>
+    /// <summary>
+    /// Linha de dado: rotulo a esquerda, valor a direita. O valor corta com reticencias quando
+    /// nao cabe: um texto longo (ex.: nome de atividade) nunca alarga o card e nunca obriga a
+    /// grade a empilhar os cards da linha.
+    /// </summary>
     public static Control KeyValue(string key, string value, Color? color = null)
     {
         var row = new HBoxContainer();
+        row.AddThemeConstantOverride("separation", 12);
         var k = ThemeFactory.Text(key, UiTokens.FontSmall, UiTokens.TextSecondary);
-        k.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         row.AddChild(k);
-        row.AddChild(ThemeFactory.Text(value, UiTokens.FontBody, color ?? UiTokens.TextPrimary, UiFonts.Numbers));
+        var v = ThemeFactory.Text(value, UiTokens.FontBody, color ?? UiTokens.TextPrimary, UiFonts.Numbers);
+        v.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        v.HorizontalAlignment = HorizontalAlignment.Right;
+        v.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+        row.AddChild(v);
         return row;
     }
 

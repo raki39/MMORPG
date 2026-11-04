@@ -442,7 +442,14 @@ public partial class PlayerModal : ModalFrame
                 string name = $"{_ctx.ActivityName(p[0], p[1])} · {_ctx.PlaceName(p[0], p[1])}";
                 var t = new TipPanel { TooltipText = $"{name}\nImpressão|{(value > 0 ? "+" : "")}{value / 10}%\n~Pesa nas próximas escolhas: boa atrai, ruim afasta.", MouseFilter = MouseFilterEnum.Stop };
                 t.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
-                t.AddChild(KeyValue(name, $"{(value > 0 ? "+" : "")}{value / 10}%", value > 0 ? UiTokens.Success : UiTokens.Danger));
+                var r = new HBoxContainer();
+                r.AddThemeConstantOverride("separation", 12);
+                var nl = ThemeFactory.Text(name, UiTokens.FontSmall, UiTokens.TextLabel);
+                nl.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+                nl.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;   // nome longo nao alarga o card
+                r.AddChild(nl);
+                r.AddChild(ThemeFactory.Text($"{(value > 0 ? "+" : "")}{value / 10}%", UiTokens.FontBody, value > 0 ? UiTokens.Success : UiTokens.Danger, UiFonts.Numbers));
+                t.AddChild(r);
                 col.AddChild(t);
             }
         }
