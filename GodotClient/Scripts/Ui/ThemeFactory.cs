@@ -130,14 +130,16 @@ public static class ThemeFactory
     public static PanelContainer Chip(string text, Color color, bool dot = false)
     {
         var chip = new PanelContainer { SizeFlagsVertical = Control.SizeFlags.ShrinkCenter };
+        // Etiqueta de dado (estilo jogo de gestao): retangulo escuro, borda fina, texto na cor.
         var sb = new StyleBoxFlat
         {
-            BgColor = new Color(color, 0.13f), BorderColor = color, BorderWidthLeft = 2,
-            ContentMarginLeft = 6, ContentMarginRight = 6, ContentMarginTop = 1, ContentMarginBottom = 1,
+            BgColor = new Color(color, 0.07f), BorderColor = new Color(color, 0.35f),
+            ContentMarginLeft = 6, ContentMarginRight = 6, ContentMarginTop = 0, ContentMarginBottom = 0,
         };
+        sb.SetBorderWidthAll(1);
         sb.SetCornerRadiusAll(2);
         chip.AddThemeStyleboxOverride("panel", sb);
-        var label = Text(text.ToUpperInvariant(), UiTokens.FontCaption, color.Lightened(0.15f), UiFonts.CondensedSemiBold);
+        var label = Text(text.ToUpperInvariant(), 10, color.Lightened(0.1f), UiFonts.CondensedSemiBold);
         label.VerticalAlignment = VerticalAlignment.Center;
         chip.AddChild(label);
         return chip;

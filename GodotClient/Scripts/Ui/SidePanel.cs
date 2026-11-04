@@ -130,12 +130,12 @@ public partial class SidePanel : PanelContainer
         var grid = new GridContainer { Columns = 3 };
         grid.AddThemeConstantOverride("h_separation", 6);
         grid.AddThemeConstantOverride("v_separation", 6);
-        grid.AddChild(ModalFrame.Stat(snap.Online.ToString(), "Conectados", UiTokens.Info, $"Conectados agora\nTotal|{snap.Online}\nPico 24 h|{(_metrics.Online.Count == 0 ? 0 : _metrics.Online.Max()):0}\n~Pessoas com sessão aberta."));
-        grid.AddChild(ModalFrame.Stat(snap.Registered.ToString(), "Cadastrados", UiTokens.Success, $"Contas criadas\nCadastrados|{snap.Registered}\nInteressados|{snap.PersonsTotal}\n~Registro progressivo do lançamento."));
-        grid.AddChild(ModalFrame.Stat((snap.PersonsTotal - snap.Registered).ToString(), "Sem conta", UiTokens.Warning, "Interessados sem conta\n~Ainda podem se registrar."));
-        grid.AddChild(ModalFrame.Stat(PtBr.Decimal(avgLevel, 1), "Nível médio", UiTokens.AccentSoft, "Nível médio dos personagens\n~Curva provisória até o combate (M3)."));
-        grid.AddChild(ModalFrame.Stat($"{zonesActive}/{_ctx.Content.Regions.Count}", "Zonas ativas", null, "Zonas com alguém agora"));
-        grid.AddChild(ModalFrame.Stat(online.Count(v => v.Status == CharacterStatus.Traveling).ToString(), "Na estrada", null, "Jogadores viajando entre zonas ou até uma área"));
+        grid.AddChild(ModalFrame.Stat(snap.Online.ToString(), "Conectados", UiTokens.Info, $"Conectados agora\nTotal|{snap.Online}\nPico 24 h|{(_metrics.Online.Count == 0 ? 0 : _metrics.Online.Max()):0}\n~Pessoas com sessão aberta.", fill: true));
+        grid.AddChild(ModalFrame.Stat(snap.Registered.ToString(), "Cadastrados", UiTokens.Success, $"Contas criadas\nCadastrados|{snap.Registered}\nInteressados|{snap.PersonsTotal}\n~Registro progressivo do lançamento.", fill: true));
+        grid.AddChild(ModalFrame.Stat((snap.PersonsTotal - snap.Registered).ToString(), "Sem conta", UiTokens.Warning, "Interessados sem conta\n~Ainda podem se registrar.", fill: true));
+        grid.AddChild(ModalFrame.Stat(PtBr.Decimal(avgLevel, 1), "Nível médio", UiTokens.AccentSoft, "Nível médio dos personagens\n~Curva provisória até o combate (M3).", fill: true));
+        grid.AddChild(ModalFrame.Stat($"{zonesActive}/{_ctx.Content.Regions.Count}", "Zonas ativas", null, "Zonas com alguém agora", fill: true));
+        grid.AddChild(ModalFrame.Stat(online.Count(v => v.Status == CharacterStatus.Traveling).ToString(), "Na estrada", null, "Jogadores viajando entre zonas ou até uma área", fill: true));
         foreach (var c in grid.GetChildren().OfType<Control>()) c.SizeFlagsHorizontal = SizeFlags.ExpandFill;
 
         var labels = _metrics.Ticks.Select(t => _ctx.Clock(t)).ToList();
@@ -261,6 +261,8 @@ public partial class SidePanel : PanelContainer
         return ModalFrame.Column(8, filters, list);
     }
 
+    private string QuestName(string? id) => id != null && _ctx.Content.Quests.TryGetValue(id, out var q) ? q.Name : id ?? "";
+
     private (string, Color) Describe(SimEvent e, int pid)
     {
         var v = pid > 0 && pid < _ctx.Snapshot().ByPerson.Length ? _ctx.Snapshot().ByPerson[pid] : null;
@@ -275,6 +277,9 @@ public partial class SidePanel : PanelContainer
             case "activity_chosen":
                 var p = (e.Detail ?? "/").Split('/');
                 return ($"{who} → {_ctx.ActivityName(p[0], p[1])} · {_ctx.PlaceName(p[0], p[1])}", UiTokens.Info.Darkened(0.2f));
+            case "quest_accepted": return ($"{who} aceitou {QuestName(e.Detail)}", UiTokens.Accent.Darkened(0.1f));
+            case "quest_step_completed": return ($"{who} cumpriu etapa de {QuestName((e.Detail ?? "").Split('#')[0])}", UiTokens.Info.Darkened(0.2f));
+            case "quest_completed": return ($"{who} entregou {QuestName(e.Detail)}", UiTokens.Success);
             case "server_opened": return ("Servidor aberto ao público", UiTokens.Success);
             case "server_closed": return ("Servidor fechado", UiTokens.Danger);
             default: return ($"{who} {e.Type}", UiTokens.TextSecondary);

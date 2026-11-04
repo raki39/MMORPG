@@ -115,9 +115,11 @@ Falta para fechar o M2:
 - [x] Ficha de quest (estilo FM) e catálogo do quadro na ficha da área (D-031)
 - [x] HUD de gestão: indicadores com mini-gráfico, painel lateral (visão geral, zonas, jogadores, eventos), tabelas e tooltips estruturados (D-022)
 - [x] Dossiê do jogador estilo FM (atributos 1–20) e dossiê de zona com tabela e gráfico
-- [ ] Dossiê de área no mesmo padrão denso (faixa de dados e tabela de tarefas)
+- [x] Sistema visual v2 dos dossiês (D-033): tela cheia, voltar/avançar, Inter, cards, indicadores e gráficos analíticos; ficha do jogador com uso do tempo, ritmo de evolução e minutos por dia
+- [ ] Revisão do criador do sistema visual v2 e segunda passada nas fichas de zona, área e quest (mais gráficos e dados)
+- [ ] Abas de Inventário e Banco (M5) e últimos abates (M3) com dados reais
 - [ ] Ícones de áreas mais detalhados no mapa
-- [ ] Navegação com histórico (voltar) entre dossiês
+- [x] Navegação com histórico (voltar e avançar) entre dossiês (D-033)
 - [ ] Tabelas de Comunidade/Economia com virtualização
 - [ ] Revisão visual completa em 1366×768 das fichas
 

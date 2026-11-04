@@ -27,6 +27,7 @@ public partial class AreaModal : ModalFrame
         _zone = ctx.Content.Regions[zoneId];
         _area = _zone.Areas.First(a => a.Id == areaId);
         BuildHeader();
+        Breadcrumb = $"Mundo › {_zone.Name} › {_area.Name}";
         _board = ctx.Content.QuestBoards.Values.FirstOrDefault(b => b.RegionId == zoneId && b.AreaId == areaId);
         if (_board != null) AddTab($"Missões · {ctx.Content.QuestsByBoard[_board.Id].Count}", BuildQuests, live: true);
         AddTab(_area.Activities.Count > 0 ? $"Tarefas · {_area.Activities.Count}" : "Visão geral", BuildTasks, live: true);
@@ -73,10 +74,10 @@ public partial class AreaModal : ModalFrame
     {
         var row = new HBoxContainer();
         row.AddThemeConstantOverride("separation", 20);
-        row.AddChild(new KindEmblem(_area.Kind) { CustomMinimumSize = new Vector2(88, 88) });
+        row.AddChild(new KindEmblem(_area.Kind) { CustomMinimumSize = new Vector2(52, 52), SizeFlagsVertical = SizeFlags.ShrinkCenter });
         var col = new VBoxContainer { Alignment = BoxContainer.AlignmentMode.Center, SizeFlagsHorizontal = SizeFlags.ExpandFill };
         col.AddThemeConstantOverride("separation", 6);
-        col.AddChild(ThemeFactory.Text(_area.Name, 30, UiTokens.TextPrimary, UiFonts.Display));
+        col.AddChild(ThemeFactory.Text(_area.Name, 24, UiTokens.TextPrimary, UiFonts.Title));
         var desc = ThemeFactory.Text(_area.Description, UiTokens.FontBody, UiTokens.TextSecondary);
         desc.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         desc.CustomMinimumSize = new Vector2(520, 0);
@@ -96,6 +97,13 @@ public partial class AreaModal : ModalFrame
         row.AddChild(col);
         Header.AddChild(row);
 
+        int people = _map.PeopleInArea(_zone.Id, _area.Id).Count;
+        Fact("Zona", _zone.Name, UiTokens.TextPrimary, $"{_zone.Name}\n~Clique em \"Ficha da zona\" para ver a zona inteira.");
+        Fact("Tipo", AreaPalette.Name(_area.Kind), Accent);
+        if (_area.LevelMin > 0) Fact("Faixa", $"{_area.LevelMin}–{_area.LevelMax}", UiTokens.Info, "Faixa de nível recomendada\n~Orientação: o XP vem do nível do desafio de cada tarefa.");
+        Fact("Jogadores agora", people.ToString(), people > 0 ? UiTokens.Info : UiTokens.TextSecondary);
+        Fact("Tarefas", _area.Activities.Count.ToString(), UiTokens.AccentSoft);
+        Fact("Tamanho", $"{_area.Radius * 20} m", UiTokens.TextSecondary, "Diâmetro da área\n~Configurável no conteúdo (editor de áreas futuro).");
         Actions.AddChild(Action("Aproximar no mapa", "Centraliza a área", () => { _ctx.FocusArea(_zone.Id, _area.Id); Close(); }, primary: true));
         Actions.AddChild(Action("Ficha da zona", $"Abre {_zone.Name}", () => { Close(); _ctx.OpenZone(_zone.Id); }));
         if (AreaKinds.IsPortal(_area.Kind))
@@ -250,17 +258,13 @@ public partial class KindEmblem : Control
 
     public override void _Draw()
     {
-        var c = Size / 2f;
-        float r = Mathf.Min(Size.X, Size.Y) / 2f - 4;
+        // Icone plano e quadrado (jogo de gestao): fundo escuro, borda fina, simbolo na cor.
+        var rect = new Rect2(Vector2.One, Size - Vector2.One * 2);
         var col = AreaPalette.Color(_kind);
-        for (int i = 4; i >= 1; i--) DrawCircle(c, r + i * 3, new Color(col, 0.04f));
-        for (int i = 0; i <= 10; i++)
-        {
-            float t = i / 10f;
-            DrawCircle(c + new Vector2(-r * 0.25f, -r * 0.3f) * t, r * (1 - t * 0.8f), new Color("#0D131A").Lerp(col.Darkened(0.55f), t * t));
-        }
-        DrawArc(c, r, 0, Mathf.Tau, 48, col, 3f, true);
-        DrawArc(c, r - 5, Mathf.Pi * 1.1f, Mathf.Pi * 1.45f, 16, new Color(1, 1, 1, 0.25f), 2f, true);
-        AreaPalette.DrawGlyph(this, _kind, c, r * 0.48f, col.Lightened(0.15f));
+        DrawRect(rect, new Color("#0D1117"));
+        DrawRect(rect, new Color(col, 0.10f));
+        DrawRect(rect, new Color(col, 0.55f), false, 1f);
+        DrawRect(new Rect2(rect.Position, new Vector2(rect.Size.X, 2)), col);
+        AreaPalette.DrawGlyph(this, _kind, Size / 2f, Mathf.Min(Size.X, Size.Y) * 0.24f, col.Lightened(0.1f));
     }
 }

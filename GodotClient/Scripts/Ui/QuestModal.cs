@@ -25,6 +25,9 @@ public partial class QuestModal : ModalFrame
         _quest = ctx.Content.Quests[questId];
         ctx.Content.QuestBoards.TryGetValue(_quest.BoardId, out _board);
         BuildHeader();
+        Breadcrumb = _board != null
+            ? $"Mundo › {ctx.ZoneName(_board.RegionId)} › {_board.Name} › {_quest.Name}"
+            : $"Missões › {_quest.Name}";
         AddTab($"Objetivos · {_quest.Steps.Count + 1}", BuildSteps);
         AddTab("Requisitos e recompensas", BuildRewards);
         AddTab("Dados", BuildData, live: true);
@@ -58,7 +61,7 @@ public partial class QuestModal : ModalFrame
         var color = CategoryColor(_quest.Category);
         var col = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
         col.AddThemeConstantOverride("separation", 6);
-        col.AddChild(ThemeFactory.Text(_quest.Name, 30, UiTokens.TextPrimary, UiFonts.Display));
+        col.AddChild(ThemeFactory.Text(_quest.Name, 24, UiTokens.TextPrimary, UiFonts.Title));
         var desc = ThemeFactory.Text(_quest.Description, UiTokens.FontBody, UiTokens.TextSecondary);
         desc.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         desc.CustomMinimumSize = new Vector2(560, 0);

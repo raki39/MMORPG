@@ -31,6 +31,8 @@ public sealed class ClientContext
 
     public Action<string, string> OpenArea { get; init; } = (_, _) => { };
     public Action<string> OpenQuest { get; init; } = _ => { };
+    /// <summary>Pede ao simulador o detalhe da pessoa (ficha aberta).</summary>
+    public Action<int> WatchPerson { get; init; } = _ => { };
     public Action<string, string> FocusArea { get; init; } = (_, _) => { };
 
     public string ActivityName(string zone, string activity) =>

@@ -29,6 +29,7 @@ public partial class ZoneModal : ModalFrame
         _zone = ctx.Content.Regions[zoneId];
         _draft = ctx.Drafts.TryGetValue(zoneId, out var d) ? d : ZoneDraft.From(_zone);
         BuildHeader();
+        Breadcrumb = $"Mundo › {_zone.Name}";
         AddTab("Visão geral", BuildOverview, live: true);
         AddTab("Jogadores", BuildPlayers, live: true);
         AddTab("Regras", BuildRules);
@@ -42,11 +43,11 @@ public partial class ZoneModal : ModalFrame
     {
         var row = new HBoxContainer();
         row.AddThemeConstantOverride("separation", 18);
-        var emblem = new ZoneEmblem(_zone) { CustomMinimumSize = new Vector2(84, 84) };
+        var emblem = new ZoneEmblem(_zone) { CustomMinimumSize = new Vector2(52, 52), SizeFlagsVertical = SizeFlags.ShrinkCenter };
         row.AddChild(emblem);
         var col = new VBoxContainer { Alignment = BoxContainer.AlignmentMode.Center, SizeFlagsHorizontal = SizeFlags.ExpandFill };
         col.AddThemeConstantOverride("separation", 6);
-        col.AddChild(ThemeFactory.Text(_zone.Name, 30, UiTokens.TextPrimary, UiFonts.Display));
+        col.AddChild(ThemeFactory.Text(_zone.Name, 24, UiTokens.TextPrimary, UiFonts.Title));
         var chips = new HFlowContainer();
         chips.AddThemeConstantOverride("h_separation", 8);
         chips.AddThemeConstantOverride("v_separation", 6);
@@ -113,10 +114,13 @@ public partial class ZoneModal : ModalFrame
         foreach (var c in _zone.Connections)
         {
             var other = _ctx.Content.Regions[c.To];
-            int dist = _ctx.Layout.Hub(_zone.Id).DistanceTo(_ctx.Layout.Gate(_zone.Id, c.To)) + _ctx.Layout.Gate(_zone.Id, c.To).DistanceTo(_ctx.Layout.Gate(c.To, _zone.Id));
+            // Tempo real pela estrada (D-030): encruzilhada daqui -> saida -> travessia -> encruzilhada de la.
+            var L = _ctx.Layout;
+            int dist = L.LegLength(L.Hub(_zone.Id), L.Gate(_zone.Id, c.To)) + L.Gate(_zone.Id, c.To).DistanceTo(L.Gate(c.To, _zone.Id))
+                       + L.LegLength(L.Gate(c.To, _zone.Id), L.Hub(c.To));
             int minutes = (dist + Simulation.Core.Behavior.BehaviorTuning.WalkSpeed - 1) / Simulation.Core.Behavior.BehaviorTuning.WalkSpeed;
             var b = new TipButton { Text = $"→  {other.Name}", Alignment = HorizontalAlignment.Left, FocusMode = FocusModeEnum.None, CustomMinimumSize = new Vector2(0, 26),
-                TooltipText = $"Saída para {other.Name}\nDo centro à fronteira|~{minutes} min\nJogadores lá|{_map.PeopleInZone(c.To)}\nCombate|{PtBr.Pvp(other.Pvp)}\n~Clique para abrir o dossiê." };
+                TooltipText = $"Saída para {other.Name}\nCaminhada até o centro de lá|~{minutes} min\nDistância|{dist * 10} m pela estrada\nJogadores lá|{_map.PeopleInZone(c.To)}\nCombate|{PtBr.Pvp(other.Pvp)}\n~Clique para abrir o dossiê." };
             string target = c.To;
             b.Pressed += () => { Close(); _ctx.OpenZone(target); };
             exits.AddChild(Row(8, b, ThemeFactory.Text($"~{minutes} min", UiTokens.FontSmall, UiTokens.TextSecondary, UiFonts.Numbers)));
@@ -422,18 +426,15 @@ public partial class ZoneEmblem : Control
 
     public override void _Draw()
     {
-        var c = Size / 2f;
-        float r = Mathf.Min(Size.X, Size.Y) / 2f - 3;
+        // Icone plano: cor do bioma, faixa superior na cor da regra (cidade, PvP ou bioma).
+        var rect = new Rect2(Vector2.One, Size - Vector2.One * 2);
         var biome = UiTokens.BiomeColor(_zone.Biome);
-        for (int i = 0; i <= 10; i++)
-        {
-            float t = i / 10f;
-            DrawCircle(c + new Vector2(-r * 0.25f, -r * 0.3f) * t, r * (1 - t * 0.8f), biome.Darkened(0.6f).Lerp(biome.Lightened(0.1f), t * t));
-        }
-        var rim = _zone.IsCity ? UiTokens.Accent : _zone.Pvp == PvpRules.Open ? UiTokens.Danger : biome.Lightened(0.45f);
-        DrawArc(c, r, 0, Mathf.Tau, 48, rim, 3f, true);
+        var rim = _zone.IsCity ? UiTokens.Accent : _zone.Pvp == PvpRules.Open ? UiTokens.Danger : biome.Lightened(0.3f);
+        DrawRect(rect, biome.Darkened(0.72f));
+        DrawRect(rect, new Color(rim, 0.6f), false, 1f);
+        DrawRect(new Rect2(rect.Position, new Vector2(rect.Size.X, 2)), rim);
         var main = _zone.AllActivities().FirstOrDefault()?.Type ?? ActivityTypes.Explore;
         if (_zone.IsCity) main = ActivityTypes.Trade;
-        ActivityPalette.DrawGlyph(this, main, c, r * 0.42f, new Color(UiTokens.TextPrimary, 0.92f));
+        ActivityPalette.DrawGlyph(this, main, Size / 2f, Mathf.Min(Size.X, Size.Y) * 0.22f, new Color(UiTokens.TextPrimary, 0.9f));
     }
 }

@@ -586,3 +586,45 @@ Proposta do criador, analisada com o Claude.
 **Regra de desempenho:**
 - `tools/perf.ps1` mede as vistas fixas e falha se o p95 do quadro passar de 6,9 ms (144 Hz).
 - Rodar depois de mudanças no cliente. Os números são desta máquina.
+
+## D-033 — Sistema visual v2: dossiês de jogo de gestão (estilo FM)
+**Data:** 04/11/2026 · **Estado:** aceita (primeira passada; revisão do criador pendente)
+
+**Pedido do criador:**
+- tirar a cara de "MMORPG mobile" (personagens cabeçudinhos, medalhões, chips coloridos, gráficos de mobile);
+- uma interface de sistema de gestão no estilo do FM24: escura, elegante e densa;
+- tipografia agradável para análise, gráficos profissionais e tooltips explicando;
+- voltar e avançar entre fichas.
+
+**Mudanças:**
+- **Tipografia:**
+  - Inter (OFL, em `Assets/Fonts`) no corpo e nos números tabulares;
+  - Inter SemiBold nos títulos das fichas;
+  - Barlow Condensed nos cabeçalhos em caixa alta;
+  - Cinzel fica só nos nomes de zona no mapa.
+- **Paleta mais escura e neutra:** fundo #08090C, painéis #12161C, bordas #222831 e cantos de 2 px.
+- **Ficha = tela de dossiê:**
+  - ocupa toda a área abaixo da barra superior;
+  - barra de navegação com voltar e avançar (histórico de até 60 fichas, preservando a aba);
+  - trilha ("Mundo › Vila Aurora › Quadro… › Lobos na estrada");
+  - atalhos: Alt+←/→ e botões laterais do mouse.
+- **Blocos:**
+  - cards com cabeçalho limpo e marcador pequeno na cor do contexto;
+  - indicadores compactos (rótulo em caixa alta, valor grande), que no painel lateral ocupam a célula;
+  - barras finas com trilho;
+  - etiquetas retangulares discretas.
+- **Gráficos:** grade tracejada discreta, área em degradê, linha fina, valor do último ponto e leitura ao passar o mouse; divisões com rótulos redondos.
+- **Identidade visual:**
+  - ícones planos e quadrados (área, zona) no lugar dos medalhões;
+  - cartão com iniciais no lugar do rosto cartunesco.
+- **Ficha do jogador:**
+  - novos cards: uso do tempo conectado por atividade, ritmo de evolução (horas até cada nível), minutos jogados por dia (14 dias) e "Combate · últimos abates" (vazio honesto até o M3);
+  - abas reservadas "Inventário · M5" e "Banco · M5".
+- **Detalhe sob demanda:** a simulação copia o detalhe só da pessoa com a ficha aberta (`WatchPerson`), não de todos a cada publicação.
+- **Correções:**
+  - emblema e nome duplicados no hover (mesma geometria e anel de destaque);
+  - nome de zona em foco atrás da barra superior;
+  - termos internos traduzidos (quest_step etc.);
+  - tempo das saídas pela estrada real.
+
+**Desempenho** (`tools/perf.ps1`): todas as vistas com p95 entre 3,7 e 5,0 ms, dentro do orçamento de 6,9 ms.

@@ -51,6 +51,9 @@ public sealed class CharacterView
     }
 }
 
+/// <summary>Detalhe da pessoa com a ficha aberta (copiado so para ela, a cada publicacao).</summary>
+public sealed record CharacterDetailView(int PersonId, long PlayedTicks, IReadOnlyDictionary<string, long> ActivityTicks, IReadOnlyList<long> LevelTicks);
+
 /// <summary>Progresso de uma quest ativa (copia imutavel).</summary>
 public sealed record QuestProgressView(string QuestId, int StepIndex, int StepMinutes, long AcceptedTick);
 
@@ -71,6 +74,8 @@ public sealed class SimSnapshot
     public int Online { get; init; }
     /// <summary>Personagens por ID de pessoa (null = sem personagem).</summary>
     public CharacterView?[] ByPerson { get; init; } = Array.Empty<CharacterView?>();
+    /// <summary>Detalhe da pessoa observada pela ficha aberta (nulo se nenhuma).</summary>
+    public CharacterDetailView? Watched { get; init; }
     /// <summary>Estatisticas por quest (ID -> numeros).</summary>
     public IReadOnlyDictionary<string, QuestStatsView> QuestStats { get; init; } = new Dictionary<string, QuestStatsView>();
 }
@@ -110,6 +115,10 @@ public sealed class SimulationHost : IDisposable
     public void SkipToNextLogin() => _skipToLogin = true;
     public bool Skipping => _skipToLogin;
     private SimSnapshot _snapshot;
+    private volatile int _watchedPerson;
+
+    /// <summary>A ficha aberta pede o detalhe desta pessoa (0 = nenhuma).</summary>
+    public void WatchPerson(int personId) => _watchedPerson = personId;
     private readonly MetricsHistory _metrics = new();
     private readonly object _metricsLock = new();
 
@@ -287,9 +296,18 @@ public sealed class SimulationHost : IDisposable
                 XpFromActivities = c.XpFromActivities,
             };
         }
+        CharacterDetailView? watched = null;
+        int wp = _watchedPerson;
+        if (wp > 0 && wp <= w.Persons.Count && w.Persons[wp - 1].CharacterId > 0)
+        {
+            var c = w.GetCharacter(w.Persons[wp - 1].CharacterId);
+            watched = new CharacterDetailView(wp, c.PlayedTicksAt(w.Clock.Tick),
+                c.ActivityTicksByType.ToDictionary(kv => kv.Key, kv => kv.Value, StringComparer.Ordinal), c.PlayedTicksAtLevel.ToArray());
+        }
         return new SimSnapshot
         {
             Tick = w.Clock.Tick,
+            Watched = watched,
             RequestedSpeed = _speed,
             EffectiveSpeed = effective,
             ServerOpen = w.Server.IsOpen,

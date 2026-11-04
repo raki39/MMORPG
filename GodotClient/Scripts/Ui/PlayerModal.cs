@@ -22,11 +22,16 @@ public partial class PlayerModal : ModalFrame
     {
         _ctx = ctx;
         _person = ctx.Persons[personId - 1];
+        ctx.WatchPerson(personId);
+        Closed += () => ctx.WatchPerson(0);
         BuildHeader();
+        Breadcrumb = $"Jogadores › {View?.Name ?? _person.Name}";
         AddTab("Perfil", BuildProfile, live: true);
         AddTab("Missões", BuildQuests, live: true);
         AddTab("Histórico", BuildHistory, live: true);
         AddTab("Rotina e finanças", BuildRoutine);
+        AddTab("Inventário · M5", () => FutureTab("Inventário", "Itens, equipamento e carga do personagem aparecem aqui quando existirem inventário e itens na simulação (M5). As recompensas de missões já registram os itens previstos."));
+        AddTab("Banco · M5", () => FutureTab("Banco", "Ouro guardado, depósitos e movimentações aparecem aqui com a economia (M5). Hoje o ouro de missões está definido, mas ainda não é aplicado."));
     }
 
     private CharacterView? View => _ctx.Snapshot().ByPerson is { } a && _person.Id < a.Length ? a[_person.Id] : null;
@@ -38,10 +43,10 @@ public partial class PlayerModal : ModalFrame
         var color = UiTokens.ProfileColor(_person.ProfileId);
         var row = new HBoxContainer();
         row.AddThemeConstantOverride("separation", 14);
-        row.AddChild(new PortraitBadge(_person.AppearanceSeed, color) { CustomMinimumSize = new Vector2(62, 62) });
+        row.AddChild(new PortraitBadge(_person.AppearanceSeed, color, v?.Name ?? _person.Name) { CustomMinimumSize = new Vector2(52, 52), SizeFlagsVertical = SizeFlags.ShrinkCenter });
         var names = new VBoxContainer { Alignment = BoxContainer.AlignmentMode.Center, SizeFlagsHorizontal = SizeFlags.ExpandFill };
         names.AddThemeConstantOverride("separation", 0);
-        names.AddChild(ThemeFactory.Text(v?.Name ?? _person.Name, 24, UiTokens.TextPrimary, UiFonts.Display));
+        names.AddChild(ThemeFactory.Text(v?.Name ?? _person.Name, 24, UiTokens.TextPrimary, UiFonts.Title));
         var cls = v != null && _ctx.Content.Classes.TryGetValue(v.ClassId, out var c) ? c : null;
         string line = v == null ? $"{_person.Name} · ainda sem conta" : $"{_person.Name} · {cls?.Name} ({RolePt(cls?.Role)}) · Pessoa #{_person.Id}";
         names.AddChild(ThemeFactory.Text(line, UiTokens.FontBody, UiTokens.TextSecondary));
@@ -96,9 +101,93 @@ public partial class PlayerModal : ModalFrame
         var v = View;
         if (v == null)
             return Row(12, left, Column(10, Card("Situação", Wrap("Ainda não criou conta no MMORPG; pode se registrar nos próximos dias do lançamento."))));
-        var middle = Column(10, Card("Agora", NowBody(v), UiTokens.Info), Card("Progresso", ProgressBody(v)));
-        var right = Column(10, Card("Por que escolheu isso", DecisionBody(v), UiTokens.Success), Card("Recente", RecentBody()));
+        var detail = _ctx.Snapshot().Watched is { } d && d.PersonId == _person.Id ? d : null;
+        left.AddChild(Card("Uso do tempo conectado", TimeUseBody(detail), UiTokens.Info));
+        var middle = Column(10, Card("Agora", NowBody(v), UiTokens.Info), Card("Progresso", ProgressBody(v)), Card("Ritmo de evolução", LevelChart(detail), UiTokens.Success),
+            Card("Minutos jogados por dia", PlayChart(), UiTokens.Info));
+        var right = Column(10, Card("Por que escolheu isso", DecisionBody(v), UiTokens.Success), Card("Atividades recentes", RecentBody()),
+            Card("Combate · últimos abates", FutureNote("O combate chega no M3: abates, mortes, saque e rivais aparecem aqui. Nada é inventado antes disso."), UiTokens.Danger));
         return Row(12, left, middle, right);
+    }
+
+    private Control FutureNote(string text)
+    {
+        var l = ThemeFactory.Text(text, UiTokens.FontSmall, UiTokens.TextSecondary);
+        l.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        return l;
+    }
+
+    private Control FutureTab(string title, string text) =>
+        Column(12, Card($"{title} · disponível no M5", FutureNote(text), UiTokens.TextSecondary));
+
+    /// <summary>Minutos conectados por dia nos ultimos 14 dias (das sessoes registradas).</summary>
+    private Control PlayChart()
+    {
+        var events = _ctx.PersonHistory(_person.Id);
+        var now = _ctx.Snapshot().Tick;
+        long today = now / Simulation.Core.Time.SimTime.TicksPerDay;
+        var minutes = new float[14];
+        long? end = null;
+        foreach (var e in events)   // mais novos primeiro
+        {
+            if (e.Type == "session_ended") end = e.Tick;
+            else if (e.Type == "session_started")
+            {
+                long stop = end ?? now;
+                long day = e.Tick / Simulation.Core.Time.SimTime.TicksPerDay;
+                int idx = (int)(13 - (today - day));
+                if (idx >= 0 && idx < 14) minutes[idx] += (stop - e.Tick) / (float)Simulation.Core.Time.SimTime.TicksPerMinute;
+                end = null;
+            }
+        }
+        var labels = Enumerable.Range(0, 14).Select(i =>
+        {
+            if (today - 13 + i < 0) return "";
+            var d = _ctx.Calendar.ToDateTime((today - 13 + i) * Simulation.Core.Time.SimTime.TicksPerDay);
+            return $"{d.Day:00}/{d.Month:00}";
+        }).ToList();
+        return new LineChart
+        {
+            CustomMinimumSize = new Vector2(0, 140),
+            XLabels = labels,
+            Series = new[] { new ChartSeries { Name = "Minutos conectados", Color = UiTokens.Info, Values = minutes } },
+            EmptyText = "Sem sessões registradas ainda.",
+        };
+    }
+
+    /// <summary>Divisao do tempo conectado por tipo de atividade (o resto e deslocamento).</summary>
+    private Control TimeUseBody(CharacterDetailView? d)
+    {
+        if (d == null || d.PlayedTicks <= 0) return Wrap("Coletando dados…");
+        long sum = d.ActivityTicks.Values.Sum();
+        var items = d.ActivityTicks.Select(kv => (Type: kv.Key, Ticks: kv.Value)).ToList();
+        items.Add(("travel", Math.Max(0, d.PlayedTicks - sum)));
+        var bars = items.Where(i => i.Ticks > 0).OrderByDescending(i => i.Ticks)
+            .Select(i =>
+            {
+                float pct = i.Ticks * 100f / d.PlayedTicks;
+                string name = i.Type == "travel" ? "Deslocamento" : i.Type == "idle" ? "Esperando" : PtBr.ActivityType(i.Type);
+                double hours = i.Ticks / (double)Simulation.Core.Time.SimTime.TicksPerHour;
+                var col = i.Type == "travel" ? UiTokens.TextSecondary : ActivityPalette.Color(i.Type);
+                return (name, pct, col, $"{name}\nTempo|{PtBr.Decimal(hours)} h\nParcela|{PtBr.Decimal(pct)}%\n~Do tempo conectado desde o cadastro.");
+            }).Take(8);
+        var total = ThemeFactory.Text($"{PtBr.Decimal(d.PlayedTicks / (double)Simulation.Core.Time.SimTime.TicksPerHour)} h conectado no total", UiTokens.FontCaption, UiTokens.TextSecondary);
+        return Column(6, BarList.Build(bars, "%"), total);
+    }
+
+    /// <summary>Horas jogadas ate cada nivel (curva real do personagem).</summary>
+    private Control LevelChart(CharacterDetailView? d)
+    {
+        if (d == null || d.LevelTicks.Count == 0) return Wrap("Ainda não subiu de nível.");
+        var hours = d.LevelTicks.Select(t => (float)(t / (double)Simulation.Core.Time.SimTime.TicksPerHour)).ToList();
+        var chart = new LineChart
+        {
+            CustomMinimumSize = new Vector2(0, 150),
+            XLabels = Enumerable.Range(2, hours.Count).Select(l => $"Nv {l}").ToList(),
+            Series = new[] { new ChartSeries { Name = "Horas jogadas ao atingir o nível", Color = UiTokens.Success, Values = hours } },
+            TooltipText = "Cada ponto é o tempo conectado acumulado quando o personagem chegou ao nível.",
+        };
+        return chart;
     }
 
     private Control AttributeGrid()
@@ -225,6 +314,9 @@ public partial class PlayerModal : ModalFrame
         "time_budget" => "Tempo de sessão",
         "repetition" => "Cansaço de repetir",
         "noise" => "Variação do momento",
+        "quest_offer" => "Missão para aceitar",
+        "quest_deliver" => "Missão para entregar",
+        "quest_step" => "Avança uma missão",
         _ => key,
     };
 
@@ -238,6 +330,9 @@ public partial class PlayerModal : ModalFrame
         "travel" => "Tempo andando até lá em relação ao tempo de sessão.",
         "time_budget" => "Viagem + atividade não cabem no tempo restante.",
         "repetition" => "Repetir a mesma coisa cansa (menos para os pacientes).",
+        "quest_offer" => "O quadro tem missão que a pessoa pode aceitar.",
+        "quest_deliver" => "Há missões prontas para entregar no quadro (mais prontas, mais vontade de voltar).",
+        "quest_step" => "Fazer isto avança a etapa atual de uma missão em andamento.",
         _ => "Pequena aleatoriedade reproduzível.",
     };
 
@@ -332,6 +427,8 @@ public partial class PlayerModal : ModalFrame
         return row;
     }
 
+    private string QuestName(string? id) => id != null && _ctx.Content.Quests.TryGetValue(id, out var q) ? q.Name : id ?? "";
+
     private (string, Color) Describe(SimEvent e)
     {
         switch (e.Type)
@@ -345,6 +442,9 @@ public partial class PlayerModal : ModalFrame
                 var p = (e.Detail ?? "/").Split('/');
                 string why = e.Causes.Count > 0 ? " — " + string.Join(", ", e.Causes.Take(2).Select(c => FactorPt(c.Factor).ToLowerInvariant())) : "";
                 return ($"{_ctx.ActivityName(p[0], p[1])} · {_ctx.PlaceName(p[0], p[1])}{why}", UiTokens.Info);
+            case "quest_accepted": return ($"Aceitou a missão {QuestName(e.Detail)}", UiTokens.Accent);
+            case "quest_step_completed": return ($"Cumpriu uma etapa de {QuestName((e.Detail ?? "").Split('#')[0])}", UiTokens.Info);
+            case "quest_completed": return ($"Entregou a missão {QuestName(e.Detail)}", UiTokens.Success);
             default: return (e.Type, UiTokens.TextSecondary);
         }
     }

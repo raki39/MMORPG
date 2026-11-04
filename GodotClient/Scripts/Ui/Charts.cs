@@ -56,63 +56,80 @@ public partial class LineChart : Control
 
     public override void _Draw()
     {
+        // Grafico analitico: grade discreta, eixo com rotulos pequenos, area em degrade,
+        // linha fina, valor do ultimo ponto e leitura ao passar o mouse.
         var font = UiFonts.Numbers;
-        const int fs = 10;
-        float left = 30, bottom = 16, top = 18, right = 6;
+        const int fs = 9;
+        float left = 34, bottom = 18, top = 20, right = 44;
         var plot = new Rect2(left, top, Size.X - left - right, Size.Y - top - bottom);
-        DrawRect(plot, new Color(UiTokens.Background, 0.5f));
         int n = Series.Count == 0 ? 0 : Series.Max(s => s.Values.Count);
         float max = 1;
         foreach (var s in Series) if (s.Values.Count > 0) max = Mathf.Max(max, s.Values.Max());
         max = NiceMax(max);
-        for (int g = 0; g <= 4; g++)
+        // Divisoes que dao rotulos redondos (5 para maximos 5/10/50..., 4 para 2/4/20/40...).
+        int div = Mathf.IsEqualApprox(max / Mathf.Pow(10, Mathf.Floor(Mathf.Log(max) / Mathf.Log(10))), 5f) || Mathf.IsEqualApprox(max / Mathf.Pow(10, Mathf.Floor(Mathf.Log(max) / Mathf.Log(10))), 1f) ? 5 : 4;
+        var grid = new Color(UiTokens.Border, 0.9f);
+        for (int g = 0; g <= div; g++)
         {
-            float y = plot.End.Y - plot.Size.Y * g / 4f;
-            DrawLine(new Vector2(plot.Position.X, y), new Vector2(plot.End.X, y), new Color(UiTokens.Border, g == 0 ? 1f : 0.6f), 1);
-            string lbl = (max * g / 4f).ToString("0");
-            DrawString(font, new Vector2(2, y + 4), lbl, HorizontalAlignment.Right, left - 6, fs, UiTokens.TextDisabled);
+            float y = plot.End.Y - plot.Size.Y * g / div;
+            if (g == 0) DrawLine(new Vector2(plot.Position.X, y), new Vector2(plot.End.X, y), UiTokens.BorderStrong, 1);
+            else DrawDashedLine(new Vector2(plot.Position.X, y), new Vector2(plot.End.X, y), grid, 1, 3);
+            string lbl = Compact(max * g / div);
+            DrawString(font, new Vector2(0, y + 3), lbl, HorizontalAlignment.Right, left - 8, fs, UiTokens.TextDisabled);
         }
-        // Legenda.
+        // Legenda a esquerda do topo.
         float lx = plot.Position.X;
         foreach (var s in Series)
         {
-            DrawRect(new Rect2(lx, 5, 10, 3), s.Color);
-            DrawString(UiFonts.Condensed, new Vector2(lx + 14, 11), s.Name.ToUpperInvariant(), HorizontalAlignment.Left, -1, fs, UiTokens.TextSecondary);
-            lx += 18 + UiFonts.Condensed.GetStringSize(s.Name.ToUpperInvariant(), HorizontalAlignment.Left, -1, fs).X + 12;
+            DrawRect(new Rect2(lx, 6, 8, 2), s.Color);
+            DrawString(UiFonts.Medium, new Vector2(lx + 12, 11), s.Name, HorizontalAlignment.Left, -1, 10, UiTokens.TextSecondary);
+            lx += 22 + UiFonts.Medium.GetStringSize(s.Name, HorizontalAlignment.Left, -1, 10).X + 14;
         }
         if (n < 2)
         {
-            DrawString(UiFonts.Regular, new Vector2(plot.Position.X, plot.GetCenter().Y), EmptyText, HorizontalAlignment.Center, plot.Size.X, 12, UiTokens.TextDisabled);
+            DrawString(UiFonts.Regular, new Vector2(plot.Position.X, plot.GetCenter().Y), EmptyText, HorizontalAlignment.Center, plot.Size.X, 11, UiTokens.TextDisabled);
             return;
         }
         float X(int i) => plot.Position.X + i * plot.Size.X / (n - 1);
         float Y(float v) => plot.End.Y - v / max * plot.Size.Y;
-        for (int i = 0; i < XLabels.Count && i < n; i += Math.Max(1, n / 6))
-            DrawString(font, new Vector2(X(i) - 16, Size.Y - 3), XLabels[i], HorizontalAlignment.Center, 32, fs, UiTokens.TextDisabled);
+        int step = Math.Max(1, n / 6);
+        for (int i = 0; i < XLabels.Count && i < n; i += step)
+            DrawString(font, new Vector2(X(i) - 20, Size.Y - 4), XLabels[i], HorizontalAlignment.Center, 40, fs, UiTokens.TextDisabled);
         foreach (var s in Series)
         {
             if (s.Values.Count < 2) continue;
             var pts = new Vector2[s.Values.Count];
             for (int i = 0; i < s.Values.Count; i++) pts[i] = new Vector2(X(i), Y(s.Values[i]));
-            var area = new List<Vector2>(pts) { new(pts[^1].X, plot.End.Y), new(pts[0].X, plot.End.Y) };
-            DrawColoredPolygon(area.ToArray(), new Color(s.Color, 0.08f));
-            DrawPolyline(pts, s.Color, 1.6f, true);
+            // Area em degrade (opaca junto da linha, transparente no eixo).
+            var poly = new Vector2[pts.Length + 2];
+            var cols = new Color[pts.Length + 2];
+            for (int i = 0; i < pts.Length; i++) { poly[i] = pts[i]; cols[i] = new Color(s.Color, 0.16f); }
+            poly[^2] = new Vector2(pts[^1].X, plot.End.Y); cols[^2] = new Color(s.Color, 0.0f);
+            poly[^1] = new Vector2(pts[0].X, plot.End.Y); cols[^1] = new Color(s.Color, 0.0f);
+            DrawPolygon(poly, cols);
+            DrawPolyline(pts, s.Color, 1.5f, true);
+            DrawCircle(pts[^1], 2.5f, s.Color);
+            DrawString(font, new Vector2(pts[^1].X + 6, pts[^1].Y + 3), Compact(s.Values[^1]), HorizontalAlignment.Left, -1, 10, s.Color);
         }
         if (_hoverX >= plot.Position.X && _hoverX <= plot.End.X)
         {
             int i = Mathf.Clamp(Mathf.RoundToInt((_hoverX - plot.Position.X) / plot.Size.X * (n - 1)), 0, n - 1);
-            DrawLine(new Vector2(X(i), plot.Position.Y), new Vector2(X(i), plot.End.Y), UiTokens.BorderStrong, 1);
+            DrawLine(new Vector2(X(i), plot.Position.Y), new Vector2(X(i), plot.End.Y), new Color(UiTokens.TextSecondary, 0.5f), 1);
             var lines = new List<(string, Color)> { (i < XLabels.Count ? XLabels[i] : "", UiTokens.TextPrimary) };
-            foreach (var s in Series) if (i < s.Values.Count) lines.Add(($"{s.Name}: {s.Values[i]:0}", s.Color));
-            float w = lines.Max(l => UiFonts.SemiBold.GetStringSize(l.Item1, HorizontalAlignment.Left, -1, 11).X) + 16;
-            float bx = X(i) + 8 + w > Size.X ? X(i) - w - 8 : X(i) + 8;
-            var box = new Rect2(bx, plot.Position.Y + 4, w, lines.Count * 15 + 8);
-            DrawStyleBox(ThemeFactory.Box(UiTokens.SurfaceHeader, 0, border: UiTokens.BorderStrong, radius: 3), box);
+            foreach (var s in Series) if (i < s.Values.Count) lines.Add(($"{s.Name}: {Compact(s.Values[i])}", s.Color));
+            float w = lines.Max(l => UiFonts.Medium.GetStringSize(l.Item1, HorizontalAlignment.Left, -1, 11).X) + 18;
+            float bx = X(i) + 10 + w > Size.X ? X(i) - w - 10 : X(i) + 10;
+            var box = new Rect2(bx, plot.Position.Y + 4, w, lines.Count * 15 + 10);
+            DrawStyleBox(ThemeFactory.Box(new Color("#0B0E12"), 0, border: UiTokens.BorderStrong, radius: 2), box);
             for (int k = 0; k < lines.Count; k++)
-                DrawString(UiFonts.SemiBold, new Vector2(box.Position.X + 8, box.Position.Y + 16 + k * 15), lines[k].Item1, HorizontalAlignment.Left, -1, 11, lines[k].Item2);
-            foreach (var s in Series) if (i < s.Values.Count) DrawCircle(new Vector2(X(i), Y(s.Values[i])), 3, s.Color);
+                DrawString(k == 0 ? UiFonts.SemiBold : UiFonts.Medium, new Vector2(box.Position.X + 9, box.Position.Y + 17 + k * 15), lines[k].Item1, HorizontalAlignment.Left, -1, 11, lines[k].Item2);
+            foreach (var s in Series) if (i < s.Values.Count) { DrawCircle(new Vector2(X(i), Y(s.Values[i])), 4, new Color("#0B0E12")); DrawCircle(new Vector2(X(i), Y(s.Values[i])), 2.5f, s.Color); }
         }
     }
+
+    private static string Compact(float v) => v >= 10000 ? (v / 1000f).ToString("0.#", System.Globalization.CultureInfo.GetCultureInfo("pt-BR")) + " mil"
+        : v >= 100 ? v.ToString("0", System.Globalization.CultureInfo.GetCultureInfo("pt-BR"))
+        : v.ToString("0.#", System.Globalization.CultureInfo.GetCultureInfo("pt-BR"));
 
     private static float NiceMax(float v)
     {

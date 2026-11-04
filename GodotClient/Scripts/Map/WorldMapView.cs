@@ -1281,7 +1281,9 @@ public partial class WorldMapView : Node2D
     {
         string key = z.Id + "#" + a.Id;
         var c = ToScreen(_layout.AreaCenter(z.Id, a.Id));
-        float r = EmblemRadius() * (focus ? 1.12f : 1f);
+        // Mesma geometria no cache e no foco: o emblema em foco cobre exatamente o de baixo
+        // (sem duplicar); o destaque e um anel externo.
+        float r = EmblemRadius();
         var col = AreaPalette.Color(a.Kind);
 
         // Afastado (mundo todo e lotes livres): o emblema vira um ponto discreto.
@@ -1307,7 +1309,8 @@ public partial class WorldMapView : Node2D
                 start += span;
             }
         }
-        o.DrawArc(c, r, 0, Mathf.Tau, 32, col, focus ? 3f : 2f, true);
+        o.DrawArc(c, r, 0, Mathf.Tau, 32, col, 2f, true);
+        if (focus) o.DrawArc(c, r + 3.5f, 0, Mathf.Tau, 40, new Color(UiTokens.AccentSoft, 0.95f), 2f, true);
         AreaPalette.DrawGlyph(o, a.Kind, c, r * 0.55f, col);
 
         if (people.Count > 0)
@@ -1322,8 +1325,9 @@ public partial class WorldMapView : Node2D
             o.DrawString(f, new Vector2(bc.X - ts.X / 2f, bc.Y + f.GetAscent(11) / 2f - 1), text, HorizontalAlignment.Left, -1, 11, UiTokens.TextPrimary);
         }
 
-        // Nome da area ao aproximar (ou em foco); portais sempre mostram o destino.
-        if (Detail >= 2.4f || focus || focus)
+        // Nome da area ao aproximar (no cache) ou em foco (so se o cache ainda nao o desenhou).
+        bool nameInCache = Detail >= 2.4f;
+        if (focus ? !nameInCache : nameInCache)
         {
             var f = UiFonts.SemiBold;
             int size = Detail >= 2.6f ? 12 : 11;
@@ -1354,6 +1358,8 @@ public partial class WorldMapView : Node2D
         var at = z.IsCity
             ? ToScreen(new Vector2(hubPos.X, hubPos.Y + _layout.CityWallRadius(z.Id) + 6)) + new Vector2(0, 14)
             : ToScreen(new Vector2(c.X, c.Y - _layout.ZoneRadius * 0.80f));
+        // Topo da zona fora da tela: o nome desce para dentro da vista (nao some atras da barra).
+        at.Y = Mathf.Max(at.Y, _viewArea.Position.Y + 34);
 
         // Nome: cabe na largura da zona (encolhe ate 10 px); afastado demais, so em foco.
         var font = UiFonts.Display;

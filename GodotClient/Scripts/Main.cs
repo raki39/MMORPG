@@ -25,6 +25,43 @@ namespace GodotClient;
 public partial class Main : Node
 {
     private void ApplyStartZoom(float factor) => _map.ZoomBy(factor);
+
+    // ---------- Historico de fichas (voltar / avancar) ----------
+    private readonly List<(string Kind, string Id, int Tab)> _navHistory = new();
+    private int _navAt = -1;
+    private bool _navigating;
+
+    private void PushHistory(string kind, string id)
+    {
+        if (_navigating) return;
+        if (_navAt >= 0 && _modal != null && IsInstanceValid(_modal))
+            _navHistory[_navAt] = (_navHistory[_navAt].Kind, _navHistory[_navAt].Id, _modal.CurrentTab);
+        if (_navAt >= 0 && _navHistory[_navAt].Kind == kind && _navHistory[_navAt].Id == id) return;
+        if (_navAt + 1 < _navHistory.Count) _navHistory.RemoveRange(_navAt + 1, _navHistory.Count - _navAt - 1);
+        _navHistory.Add((kind, id, 0));
+        if (_navHistory.Count > 60) _navHistory.RemoveAt(0);
+        _navAt = _navHistory.Count - 1;
+    }
+
+    private void Navigate(int delta)
+    {
+        int to = _navAt + delta;
+        if (to < 0 || to >= _navHistory.Count) return;
+        if (_modal != null && IsInstanceValid(_modal))
+            _navHistory[_navAt] = (_navHistory[_navAt].Kind, _navHistory[_navAt].Id, _modal.CurrentTab);
+        _navigating = true;
+        _navAt = to;
+        var (kind, id, tab) = _navHistory[to];
+        switch (kind)
+        {
+            case "person": OpenPerson(int.Parse(id, CultureInfo.InvariantCulture)); break;
+            case "zone": OpenZone(id); break;
+            case "area": { var p = id.Split('#'); OpenArea(p[0], p[1]); break; }
+            case "quest": OpenQuest(id); break;
+        }
+        _navigating = false;
+        if (_modal != null && IsInstanceValid(_modal) && tab > 0 && tab < _modal.TabCount) _modal.SelectTab(tab);
+    }
     private Vector2? _fakeMouse;
 
     private readonly Dictionary<string, string> _args = new(StringComparer.Ordinal);
@@ -105,10 +142,15 @@ public partial class Main : Node
             OpenZone = OpenZone,
             OpenArea = OpenArea,
             OpenQuest = OpenQuest,
+            WatchPerson = id => _host?.WatchPerson(id),
             FocusArea = (z, a) => { _map.SelectArea(z + "#" + a); _map.FocusArea(z, a); },
         };
 
         _map.Setup(content, _host.Layout, _host.Persons, terrain);
+        ModalFrame.CanGoBack = () => _navAt > 0;
+        ModalFrame.CanGoForward = () => _navAt >= 0 && _navAt < _navHistory.Count - 1;
+        ModalFrame.GoBack = () => Navigate(-1);
+        ModalFrame.GoForward = () => Navigate(+1);
         _map.RegionSelected += id => { if (id.Length > 0) OpenZone(id); };
         _map.PersonSelected += OpenPerson;
         _map.AreaSelected += OpenArea;
@@ -221,6 +263,7 @@ public partial class Main : Node
     private void OpenPerson(int personId)
     {
         if (_host == null || personId < 1 || personId > _host.Persons.Count) return;
+        PushHistory("person", personId.ToString(CultureInfo.InvariantCulture));
         CloseOverlays();
         _map.SelectPerson(personId);
         _modal = new PlayerModal(_ctx, personId);
@@ -231,6 +274,7 @@ public partial class Main : Node
     private void OpenZone(string zoneId)
     {
         if (_host == null || !_ctx.Content.Regions.ContainsKey(zoneId)) return;
+        PushHistory("zone", zoneId);
         CloseOverlays();
         _map.SelectRegion(zoneId);
         _modal = new ZoneModal(_ctx, _map, zoneId);
@@ -241,6 +285,7 @@ public partial class Main : Node
     private void OpenArea(string zoneId, string areaId)
     {
         if (_host == null || !_ctx.Content.Regions.TryGetValue(zoneId, out var zr) || zr.Areas.All(a => a.Id != areaId)) return;
+        PushHistory("area", zoneId + "#" + areaId);
         CloseOverlays();
         _map.SelectArea(zoneId + "#" + areaId);
         _modal = new AreaModal(_ctx, _map, zoneId, areaId);
@@ -251,6 +296,7 @@ public partial class Main : Node
     private void OpenQuest(string questId)
     {
         if (_host == null || !_ctx.Content.Quests.ContainsKey(questId)) return;
+        PushHistory("quest", questId);
         CloseOverlays();
         _modal = new QuestModal(_ctx, questId);
         _modal.Closed += () => _modal = null;

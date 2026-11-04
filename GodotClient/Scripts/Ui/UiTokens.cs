@@ -9,29 +9,29 @@ namespace GodotClient.Ui;
 public static class UiTokens
 {
     // Superficies (do fundo para cima)
-    public static readonly Color Background = new("#0A0E13");
-    public static readonly Color Surface = new("#10161E");
-    public static readonly Color SurfaceGlass = new(0.063f, 0.086f, 0.118f, 0.96f);
-    public static readonly Color SurfaceRaised = new("#161E29");
-    public static readonly Color SurfaceHeader = new("#1A2330");
-    public static readonly Color SurfaceHover = new("#1F2A39");
+    public static readonly Color Background = new("#08090C");
+    public static readonly Color Surface = new("#0D1015");
+    public static readonly Color SurfaceGlass = new(0.047f, 0.063f, 0.082f, 0.97f);
+    public static readonly Color SurfaceRaised = new("#12161C");
+    public static readonly Color SurfaceHeader = new("#171B22");
+    public static readonly Color SurfaceHover = new("#1D232C");
     public static readonly Color RowAlt = new(1, 1, 1, 0.025f);
-    public static readonly Color Border = new("#232D3A");
-    public static readonly Color BorderStrong = new("#34414F");
+    public static readonly Color Border = new("#222831");
+    public static readonly Color BorderStrong = new("#313944");
     public static readonly Color Shadow = new(0, 0, 0, 0.45f);
 
     // Texto
-    public static readonly Color TextPrimary = new("#E6E1D6");
-    public static readonly Color TextSecondary = new("#8C97A3");
-    public static readonly Color TextDisabled = new("#56606B");
+    public static readonly Color TextPrimary = new("#ECEEF1");
+    public static readonly Color TextSecondary = new("#8B94A1");
+    public static readonly Color TextDisabled = new("#58606B");
 
     // Acao e estado
-    public static readonly Color Accent = new("#D9A441");
-    public static readonly Color AccentSoft = new("#EAC67A");
-    public static readonly Color Info = new("#4FB3D9");
-    public static readonly Color Success = new("#55C08A");
-    public static readonly Color Warning = new("#E8954A");
-    public static readonly Color Danger = new("#E45A55");
+    public static readonly Color Accent = new("#D4A64A");
+    public static readonly Color AccentSoft = new("#E8C67F");
+    public static readonly Color Info = new("#4DA8E8");
+    public static readonly Color Success = new("#4CC38A");
+    public static readonly Color Warning = new("#E89A4A");
+    public static readonly Color Danger = new("#E5544F");
 
     // Mapa
     public static readonly Color Road = new("#C9A86A");
@@ -40,16 +40,16 @@ public static class UiTokens
     public const int S4 = 4, S8 = 8, S12 = 12, S16 = 16, S24 = 24, S32 = 32;
 
     // Tipografia (px) — densa
-    public const int FontCaption = 11;
-    public const int FontSmall = 12;
-    public const int FontBody = 13;
+    public const int FontCaption = 10;
+    public const int FontSmall = 11;
+    public const int FontBody = 12;
     public const int FontTitle = 15;
     public const int FontHeading = 20;
 
     // Forma
     public const int ControlHeight = 28;
-    public const int CornerRadius = 3;
-    public const int PanelRadius = 4;
+    public const int CornerRadius = 2;
+    public const int PanelRadius = 2;
 
     public const int TopBarHeight = 50;
     public const int SidePanelWidth = 430;
