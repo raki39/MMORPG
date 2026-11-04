@@ -34,16 +34,21 @@ public static class BehaviorTuning
     public const int RepeatPenalty = 140;
     /// <summary>Penalidade quando viagem + atividade nao cabem no tempo restante da sessao.</summary>
     public const int TimeBudgetPenalty = 400;
-    // ---- Quests (D-031) ----
+    // ---- Quests (D-031; recalibrado no D-036 com os atributos vivos) ----
     /// <summary>Quadro com quest elegivel para aceitar.</summary>
-    public const int QuestOfferWeight = 150;
+    public const int QuestOfferWeight = 210;
     /// <summary>Quadro com quest pronta para entregar (uma pronta).</summary>
-    public const int QuestDeliverWeight = 160;
+    public const int QuestDeliverWeight = 220;
     /// <summary>A mais por quest pronta alem da primeira: carregar varias prontas puxa de volta ao quadro.</summary>
     public const int QuestDeliverPerExtra = 90;
     /// <summary>Atividade ou ponto de missao que avanca a etapa atual de uma quest ativa.</summary>
-    public const int QuestStepWeight = 220;
-    /// <summary>Aleatoriedade pequena e reproduzivel (+-).</summary>
+    public const int QuestStepWeight = 250;
+    // ---- Atributos na decisao (D-036) ----
+    /// <summary>Lealdade: preferencia por continuar na zona onde estava (com lealdade 1000).</summary>
+    public const int WeightFamiliar = 60;
+    /// <summary>Agressividade: gosto por desafio, por nivel acima do proprio (ate 3 niveis).</summary>
+    public const int WeightChallengePerLevel = 40;
+    /// <summary>Aleatoriedade pequena e reproduzivel (+-); escala com o conhecimento do jogo.</summary>
     public const int Noise = 50;
 
     /// <summary>Duracao real de uma atividade em relacao a tipica (permille).</summary>

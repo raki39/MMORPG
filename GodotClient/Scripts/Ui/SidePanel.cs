@@ -297,6 +297,16 @@ public partial class SidePanel : PanelContainer
             case "quest_accepted": return ($"{who} aceitou {QuestName(e.Detail)}", UiTokens.Accent.Darkened(0.1f));
             case "quest_step_completed": return ($"{who} cumpriu etapa de {QuestName((e.Detail ?? "").Split('#')[0])}", UiTokens.Info.Darkened(0.2f));
             case "quest_completed": return ($"{who} entregou {QuestName(e.Detail)}", UiTokens.Success);
+            case "goal_set": return ($"{who} adotou um objetivo", UiTokens.Accent.Darkened(0.1f));
+            case "goal_completed": return ($"{who} concluiu um objetivo pessoal", UiTokens.Success);
+            case "goal_abandoned": return ($"{who} desistiu de um objetivo", UiTokens.TextSecondary);
+            case "trait_changed":
+            {
+                var parts = (e.Detail ?? "").Split(':');
+                if (parts.Length != 3) return ($"{who} mudou um atributo", UiTokens.TextSecondary);
+                bool up = string.CompareOrdinal(parts[2].PadLeft(2), parts[1].PadLeft(2)) > 0;
+                return ($"{who}: {AttributeInfo.Name(parts[0])} {(up ? "subiu" : "caiu")} para {parts[2]}", up ? UiTokens.Success : UiTokens.Danger);
+            }
             case "server_opened": return ("Servidor aberto ao público", UiTokens.Success);
             case "server_closed": return ("Servidor fechado", UiTokens.Danger);
             default: return ($"{who} {e.Type}", UiTokens.TextSecondary);

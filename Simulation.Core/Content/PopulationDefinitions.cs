@@ -56,6 +56,10 @@ public sealed class PopulationProfileDefinition : IContentDefinition
     public TraitRange DaysPerWeek { get; set; } = new();
     /// <summary>Quanto fins de semana/feriados aumentam disponibilidade (permille, 0 = nada).</summary>
     public TraitRange WeekendBoost { get; set; } = new();
+
+    // Jogador (D-036)
+    /// <summary>Talento da pessoa como jogador (permille): potencial e velocidade de aprendizado das capacidades.</summary>
+    public TraitRange Talent { get; set; } = new();
 }
 
 public sealed class NamePoolDefinition

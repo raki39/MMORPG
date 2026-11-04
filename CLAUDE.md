@@ -51,5 +51,5 @@ tools/perf.ps1   # desempenho do cliente: falha se o p95 do quadro passar de 6,9
 
 - M0 e teste de viabilidade concluídos. M1 quase concluído (falta a revisão em 1366×768).
 - M2 em andamento. A rotina está validada com metas e várias seeds (D-024, `docs/validacao.md`).
-- Próximos passos, em ordem (D-025, D-026): XP e curva (teto 30, feito: D-027) → redistribuir e ampliar áreas (feito: D-028) → quests por área de quest (feito: D-031) → recalibrar a curva (escolha a ou b do criador, D-028) → objetivos pessoais e continuidade; depois o combate do M3. Ver `docs/backlog.md`.
+- Próximos passos, em ordem (D-025, D-026): XP e curva (teto 30, feito: D-027) → redistribuir e ampliar áreas (feito: D-028) → quests por área de quest (feito: D-031) → objetivos pessoais e atributos vivos (feito: D-036) → classes e itens iniciais → recalibrar a curva (escolha a ou b do criador, D-028) → continuidade; depois o combate do M3. Ver `docs/backlog.md`.
 - Após cada entrega: `tools/godot.ps1 export` (o atalho "MMORPG Tycoon" na Área de Trabalho abre `build/MMOTycoon.exe`).

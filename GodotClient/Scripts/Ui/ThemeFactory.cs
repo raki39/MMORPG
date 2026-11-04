@@ -79,10 +79,18 @@ public static class ThemeFactory
         t.SetFontSize("font_size", "CheckBox", UiTokens.FontSmall);
 
         // Tooltip padrao (os ricos usam RichTip).
-        t.SetStylebox("panel", "TooltipPanel", Box(UiTokens.SurfaceHeader, 10, border: UiTokens.BorderStrong, radius: 3));
-        t.SetColor("font_color", "TooltipLabel", UiTokens.TextPrimary);
-        t.SetFont("font", "TooltipLabel", UiFonts.Regular);
-        t.SetFontSize("font_size", "TooltipLabel", UiTokens.FontSmall);
+        var tip = new StyleBoxFlat
+        {
+            BgColor = new Color("#141920"), BorderColor = UiTokens.BorderStrong,
+            ContentMarginLeft = 14, ContentMarginRight = 14, ContentMarginTop = 11, ContentMarginBottom = 12,
+            ShadowColor = new Color(0, 0, 0, 0.55f), ShadowSize = 12, ShadowOffset = new Vector2(0, 4), AntiAliasing = true,
+        };
+        tip.SetBorderWidthAll(1);
+        tip.SetCornerRadiusAll(4);
+        t.SetStylebox("panel", "TooltipPanel", tip);
+        t.SetColor("font_color", "TooltipLabel", UiTokens.TextLabel);
+        t.SetFont("font", "TooltipLabel", UiFonts.Medium);
+        t.SetFontSize("font_size", "TooltipLabel", UiTokens.FontBody);
         return t;
     }
 
@@ -175,41 +183,57 @@ public static class RichTip
     public static Control Make(string text) =>
         string.IsNullOrWhiteSpace(text) ? new Control { Visible = false } : Build(text);
 
+    /// <summary>
+    /// Conteudo da dica (o fundo e a borda vem do TooltipPanel do tema): titulo de 14 px,
+    /// pares rotulo/valor de 13 px e notas legiveis com quebra de linha.
+    /// </summary>
     public static Control Build(string text)
     {
-        var panel = new PanelContainer();
-        var sb = ThemeFactory.Box(UiTokens.SurfaceHeader, 12, border: UiTokens.BorderStrong, radius: 3);
-        sb.ContentMarginTop = 9;
-        sb.ContentMarginBottom = 9;
-        sb.BorderWidthTop = 2;
-        sb.BorderColor = UiTokens.Accent;
-        sb.ShadowColor = new Color(0, 0, 0, 0.5f);
-        sb.ShadowSize = 8;
-        panel.AddThemeStyleboxOverride("panel", sb);
         var col = new VBoxContainer();
-        col.AddThemeConstantOverride("separation", 3);
-        panel.AddChild(col);
+        col.AddThemeConstantOverride("separation", 5);
         var lines = text.Split('\n');
+        bool notesStarted = false;
         for (int i = 0; i < lines.Length; i++)
         {
             var line = lines[i];
-            if (i == 0) { col.AddChild(ThemeFactory.Text(line, 13, UiTokens.TextPrimary, UiFonts.SemiBold)); continue; }
-            if (line.StartsWith("~")) { col.AddChild(ThemeFactory.Text(line[1..].Trim(), UiTokens.FontCaption, UiTokens.TextDisabled)); continue; }
+            if (i == 0)
+            {
+                var title = ThemeFactory.Text(line, 14, UiTokens.TextPrimary, UiFonts.SemiBold);
+                col.AddChild(title);
+                continue;
+            }
+            if (line.StartsWith("~"))
+            {
+                if (!notesStarted && col.GetChildCount() > 1)
+                    col.AddChild(new ColorRect { Color = UiTokens.Divider, CustomMinimumSize = new Vector2(0, 1) });
+                notesStarted = true;
+                var note = ThemeFactory.Text(line[1..].Trim(), UiTokens.FontSmall, new Color("#A9B2BE"));
+                note.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+                note.CustomMinimumSize = new Vector2(Math.Min(340, Math.Max(220, line.Length * 6)), 0);
+                col.AddChild(note);
+                continue;
+            }
             var pair = line.Split('|');
             if (pair.Length == 2)
             {
                 var row = new HBoxContainer();
-                row.AddThemeConstantOverride("separation", 16);
-                var k = ThemeFactory.Text(pair[0], UiTokens.FontSmall, UiTokens.TextSecondary);
+                row.AddThemeConstantOverride("separation", 20);
+                var k = ThemeFactory.Text(pair[0], UiTokens.FontSmall, UiTokens.TextSecondary, UiFonts.Medium);
                 k.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
                 row.AddChild(k);
-                row.AddChild(ThemeFactory.Text(pair[1], UiTokens.FontSmall, UiTokens.TextPrimary, UiFonts.Numbers));
+                row.AddChild(ThemeFactory.Text(pair[1], UiTokens.FontBody, UiTokens.TextPrimary, UiFonts.Numbers));
                 col.AddChild(row);
             }
-            else col.AddChild(ThemeFactory.Text(line, UiTokens.FontSmall, UiTokens.TextSecondary));
+            else
+            {
+                var l = ThemeFactory.Text(line, UiTokens.FontSmall, UiTokens.TextLabel);
+                l.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+                l.CustomMinimumSize = new Vector2(Math.Min(340, Math.Max(200, line.Length * 6)), 0);
+                col.AddChild(l);
+            }
         }
-        panel.CustomMinimumSize = new Vector2(220, 0);
-        return panel;
+        col.CustomMinimumSize = new Vector2(220, 0);
+        return col;
     }
 }
 

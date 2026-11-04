@@ -625,6 +625,7 @@ public static class ContentValidator
             Permille(p, "willingnessToPay", pr.WillingnessToPay, v);
             Permille(p, "paidAdvantageSensitivity", pr.PaidAdvantageSensitivity, v);
             Permille(p, "weekendBoost", pr.WeekendBoost, v);
+            Permille(p, "talent", pr.Talent, v);
             Range(p, "preferredStartHour", pr.PreferredStartHour, 0, 23, v);
             Range(p, "sessionMinutes", pr.SessionMinutes, 10, 720, v);
             Range(p, "daysPerWeek", pr.DaysPerWeek, 0, 7, v);

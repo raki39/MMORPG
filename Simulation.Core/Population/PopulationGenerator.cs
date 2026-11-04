@@ -55,6 +55,8 @@ public static class PopulationGenerator
             DaysPerWeek = Roll(rng, profile.DaysPerWeek, 0, 7),
             WeekendBoost = Roll(rng, profile.WeekendBoost, 0, 1000),
         };
+        // Sorteado por ultimo (D-036): nao altera os tracos ja existentes das populacoes.
+        t.Talent = Roll(rng, profile.Talent, 0, 1000);
 
         ulong appearance = RngStreams.DeriveSeed(campaignSeed, AppearanceStreamName, personId);
         return new Person(personId, name, profile.Id, appearance, t);

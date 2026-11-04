@@ -125,7 +125,12 @@ Falta para fechar o M2:
 - [x] Menu principal lateral recolhível, barra mais limpa, painel do mapa de 340 px fechado ao iniciar (D-035)
 - [x] Ficha do jogador: personalidade no cabeçalho, Inventário · M5, Progresso e objetivos, Horários de jogo, aba Estatísticas (D-035)
 - [x] Ajustes de UX: dica vazia, menu lateral, rolagem, tabelas (vão, ordenação), filtros nas listas, personalidade e perfil, quem concluiu cada missão (D-035)
-- [ ] Objetivos pessoais na simulação (D-026) e exibição no card "Progresso e objetivos"
+- [x] Objetivos pessoais na simulação e no card "Progresso e objetivos" (D-036)
+- [x] Atributos do jogador vivos (sobem e caem devagar), talento e potencial; dica do que cada um faz (D-036, docs/atributos.md)
+- [ ] Classes e itens iniciais (próximo passo combinado com o criador)
+- [ ] Aba "Personagem" na página do jogador: classe, nível, itens, status e combate do personagem (separado dos atributos do jogador)
+- [ ] Combate (M3) usa os atributos do jogador junto com os do personagem (Mecânica, PvP, Coordenação); chamar OnPvpKill nos abates
+- [ ] Inatividade por atualização perdida (M7) no lugar dos 14 dias para o Conhecimento
 - [ ] Relatório de moderadores (inspeção de jogadores, M9)
 - [ ] Abas de Inventário e Banco (M5) e últimos abates (M3) com dados reais
 - [ ] Ícones de áreas mais detalhados no mapa

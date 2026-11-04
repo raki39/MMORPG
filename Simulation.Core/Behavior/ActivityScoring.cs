@@ -40,7 +40,7 @@ public static class ActivityScoring
     private static readonly string[] NeedsGroupSystem = { ActivityTypes.Recruit };
 
     public static List<ScoredOption> Evaluate(Character ch, PersonTraits t, ContentDatabase content, RouteFinder routes,
-        Func<string, string, int> occupancy, long now, DeterministicRng rng, QuestSystem? quests = null)
+        Func<string, string, int> occupancy, long now, DeterministicRng rng, QuestSystem? quests = null, GoalSystem? goals = null)
     {
         var options = new List<ScoredOption>();
         int remaining = (int)Math.Max(0, (ch.SessionEndTick - now) / Time.SimTime.TicksPerMinute);
@@ -93,10 +93,14 @@ public static class ActivityScoring
 
                 // Adequacao ao nivel pelo desafio da propria atividade (D-027), nao pela faixa da zona.
                 int challenge = ProgressionRules.ChallengeLevel(content, a);
-                if (ProgressionRules.MilliXpPerMinute(content, a, ch.Level) > 0)
+                bool yieldsXp = ProgressionRules.MilliXpPerMinute(content, a, ch.Level) > 0;
+                int fit = yieldsXp ? ProgressionRules.Efficiency(content.Progression, ch.Level, challenge) : 0;
+                if (yieldsXp)
                 {
-                    int fit = ProgressionRules.Efficiency(content.Progression, ch.Level, challenge);
                     f.Add(new DecisionFactor("level_fit", (fit - 500) * BehaviorTuning.WeightReward / 1000));
+                    // Agressividade (D-036): gosto por desafio acima do proprio nivel.
+                    if (challenge > ch.Level)
+                        f.Add(new DecisionFactor("challenge", t.Aggressiveness * Math.Min(3, challenge - ch.Level) * BehaviorTuning.WeightChallengePerLevel / 1000));
                 }
 
                 int count = occupancy(region.Id, a.Id);
@@ -104,19 +108,23 @@ public static class ActivityScoring
                 if (a.Type == ActivityTypes.Socialize)
                     f.Add(new DecisionFactor("company", t.Sociability * Math.Min(count, 10) / 10 * BehaviorTuning.WeightSocial / 1000));
                 else if (a.Type == ActivityTypes.Hunt || a.Type == ActivityTypes.Gather)
-                    f.Add(new DecisionFactor("crowding", -crowd * BehaviorTuning.WeightCrowding / 1000));
+                {
+                    // Coordenacao divide o lugar melhor; oportunismo foge da disputa (D-036).
+                    int crowdWeight = BehaviorTuning.WeightCrowding * (1150 - t.Coordination * 3 / 10) / 1000 * (900 + t.Opportunism * 2 / 10) / 1000;
+                    f.Add(new DecisionFactor("crowding", -crowd * crowdWeight / 1000));
+                }
                 else if (count > 0)
                     f.Add(new DecisionFactor("company", t.Socializing * Math.Min(count, 5) / 5 * BehaviorTuning.WeightSocial / 3000));
 
-                int risk = a.BaseRiskPermille + (region.Pvp == PvpRules.Open ? 250 : 0)
-                           + Math.Max(0, challenge - ch.Level) * 120;
-                risk = Math.Min(1000, risk);
+                // Risco percebido: mecanica alta da confianca (D-036).
+                int risk = RiskOf(region, a, challenge, ch.Level) * (1150 - t.MechanicalSkill * 3 / 10) / 1000;
                 if (risk > 0)
                     f.Add(new DecisionFactor("risk", -risk * t.RiskAversion / 1000 * BehaviorTuning.WeightRisk / 1000));
 
                 if (travel > 0)
                 {
-                    int travelCost = Math.Min(1000, travel * 1000 / Math.Max(30, remaining));
+                    // Conhecimento do jogo: rotas e deslocamentos pesam menos para quem conhece (D-036).
+                    int travelCost = Math.Min(1000, travel * 1000 / Math.Max(30, remaining)) * (1100 - t.GameKnowledge / 5) / 1000;
                     f.Add(new DecisionFactor("travel", -travelCost * BehaviorTuning.WeightTravel / 1000));
                 }
                 if (travel + a.TypicalMinutes > remaining + BehaviorTuning.LogoutToleranceMinutes)
@@ -128,7 +136,18 @@ public static class ActivityScoring
 
                 if (questTerm is { } qt) f.Add(new DecisionFactor(qt.Key, qt.Value));
 
-                int noise = rng.NextIntInclusive(-BehaviorTuning.Noise, BehaviorTuning.Noise);
+                // Lealdade: prefere continuar na zona onde estava jogando (D-036).
+                if (ch.LastActivityKey.Length > 0 && ch.LastActivityKey.StartsWith(region.Id + "/", StringComparison.Ordinal))
+                    f.Add(new DecisionFactor("familiarity", t.Loyalty * BehaviorTuning.WeightFamiliar / 1000));
+
+                // Objetivos pessoais: influenciam com o peso do comprometimento, sem obrigar (D-036).
+                bool delivers = questTerm is { Key: "quest_deliver" };
+                if (goals != null && goals.Bonus(ch, region, a, yieldsXp, fit, delivers) is > 0 and var gb)
+                    f.Add(new DecisionFactor("goal", gb));
+
+                // Ruido: quem conhece o jogo decide de forma mais consistente (D-036).
+                int amp = BehaviorTuning.Noise * (1400 - t.GameKnowledge * 8 / 10) / 1000;
+                int noise = rng.NextIntInclusive(-amp, amp);
                 f.Add(new DecisionFactor("noise", noise));
 
                 int utility = 0;
@@ -144,6 +163,21 @@ public static class ActivityScoring
             return c != 0 ? c : string.CompareOrdinal(x.Key, y.Key);
         });
         return options;
+    }
+
+    /// <summary>Risco bruto da atividade (permille): base, PvP aberto e desafio acima do nivel.</summary>
+    public static int RiskOf(RegionDefinition region, ActivityDefinition a, int challenge, int level) =>
+        Math.Min(1000, a.BaseRiskPermille + (region.Pvp == PvpRules.Open ? 250 : 0) + Math.Max(0, challenge - level) * 120);
+
+    /// <summary>
+    /// Rendimento de XP pelos tracos (permille, D-036): conhecimento do jogo em tudo
+    /// (0,95–1,05) e mecanica nas atividades de combate (0,88–1,12).
+    /// </summary>
+    public static int TraitXpPermille(PersonTraits t, string type)
+    {
+        int k = 950 + t.GameKnowledge / 10;
+        bool combat = type is ActivityTypes.Hunt or ActivityTypes.Boss or ActivityTypes.Patrol or ActivityTypes.Ambush;
+        return combat ? k * (880 + t.MechanicalSkill * 24 / 100) / 1000 : k;
     }
 
     /// <summary>Quanto o perfil gosta do tipo de atividade (permille).</summary>

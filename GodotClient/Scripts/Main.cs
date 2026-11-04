@@ -97,6 +97,9 @@ public partial class Main : Node
     private Control _speedSeg = null!;
     private Button _backButton = null!, _forwardButton = null!, _returnButton = null!;
     private int _speedBeforePage = 1;
+    private Vector2 _lastMouse;
+    private long _lastRefreshTick = -1;
+    private bool _watchedSeen;
     private bool _pausedByPage;
     private bool OnMap => _modal == null || !IsInstanceValid(_modal);
     private readonly Dictionary<int, List<SimEvent>> _history = new();
@@ -216,7 +219,9 @@ public partial class Main : Node
         {
             int id = p == "auto"
                 ? Enumerable.Range(1, _host.Snapshot.ByPerson.Length - 1).FirstOrDefault(i => _host.Snapshot.ByPerson[i] is { Status: Simulation.Core.Population.CharacterStatus.Doing } v && v.LastDecision != null)
-                : int.TryParse(p, out var n) ? n : 0;
+                : p == "goal"   // capturas: primeiro jogador com objetivo pessoal ativo
+                    ? Enumerable.Range(1, _host.Snapshot.ByPerson.Length - 1).FirstOrDefault(i => _host.Snapshot.ByPerson[i] is { } v && v.Goals.Count > 0)
+                    : int.TryParse(p, out var n) ? n : 0;
             if (id > 0) OpenPerson(id);
         }
         if (_args.TryGetValue("focus", out var fz) && _ctx.Content.Regions.ContainsKey(fz)) _map.FocusRegion(fz);
@@ -251,6 +256,14 @@ public partial class Main : Node
         }
         if (_args.TryGetValue("side", out var sd) && sd == "off" && _sideOpen) ToggleSidePanel();
         if (_args.TryGetValue("nav", out var nv) && nv == "off") _nav?.SetExpanded(false);
+        if (_args.ContainsKey("tip-demo"))
+        {
+            // Capturas: dica de exemplo com a moldura do tema (o mouse real nao e simulado).
+            var demo = new PanelContainer { Position = new Vector2(700, 300) };
+            demo.AddThemeStyleboxOverride("panel", _ui.Theme.GetStylebox("panel", "TooltipPanel"));
+            demo.AddChild(RichTip.Build("Mecânica\nAtual|13 / 20\nNo início|12 / 20 (+38 desde o início)\nPotencial|17 / 20 (talento Experiente)\n~Influencia: Rendimento em combate (XP de caça de ×0,88 a ×1,12) e menos medo de risco. No combate (M3) será a habilidade de execução do jogador.\n~Muda com: Sobe com tempo em combate: mais rápido com talento, mais devagar perto do potencial. Cai depois de 7 dias sem jogar."));
+            _ui.AddChild(demo);
+        }
         if (_args.TryGetValue("side-tab", out var stb) && int.TryParse(stb, out var sti)) { if (!_sideOpen) ToggleSidePanel(); _side?.ShowTab(sti); }
         if (_args.TryGetValue("warp", out var wp) && wp.Split('x') is { Length: 2 } wpp
             && float.TryParse(wpp[0], NumberStyles.Float, CultureInfo.InvariantCulture, out var wx)
@@ -519,8 +532,21 @@ public partial class Main : Node
         if (_modalTimer >= 1.0 || _frames == 8)
         {
             _modalTimer = 0;
-            if (_modal != null && IsInstanceValid(_modal)) _modal.RefreshLive();
-            else _side?.Refresh();
+            var mouse = GetViewport().GetMousePosition();
+            bool reading = mouse == _lastMouse;   // mouse parado: pode estar lendo uma dica
+            _lastMouse = mouse;
+            var snapNow = _host.Snapshot;
+            bool watchedArrived = snapNow.Watched != null && !_watchedSeen;
+            _watchedSeen = snapNow.Watched != null;
+            if (_modal != null && IsInstanceValid(_modal))
+            {
+                if ((snapNow.Tick != _lastRefreshTick || watchedArrived) && !reading)
+                {
+                    _lastRefreshTick = snapNow.Tick;
+                    _modal.RefreshLive();
+                }
+            }
+            else if (!(reading && _side != null && _side.Visible && _side.GetGlobalRect().HasPoint(mouse))) _side?.Refresh();
             if (_quick != null && IsInstanceValid(_quick) && !_quick.GetGlobalRect().HasPoint(GetViewport().GetMousePosition())) _quick.Refresh();
         }
         HandleAutomation(delta);

@@ -51,6 +51,52 @@ public sealed class PersonTraits
     public int SessionMinutes;
     public int DaysPerWeek;
     public int WeekendBoost;
+
+    // Jogador (D-036): talento da pessoa (nao do personagem). Define o potencial e a velocidade
+    // de aprendizado das capacidades (mecanica, conhecimento, coordenacao). Nao muda.
+    public int Talent;
+
+    /// <summary>Tracos que mudam com a experiencia (D-036), pela chave do conteudo.</summary>
+    public static readonly string[] DynamicKeys =
+    {
+        "pve", "pvp", "trade", "exploration", "socializing",
+        "sociability", "aggressiveness", "patience", "loyalty", "riskAversion",
+        "mechanicalSkill", "gameKnowledge", "coordination", "cheatPropensity", "opportunism",
+    };
+
+    public int Get(string key) => key switch
+    {
+        "pve" => Pve, "pvp" => Pvp, "trade" => Trade, "exploration" => Exploration, "socializing" => Socializing,
+        "sociability" => Sociability, "aggressiveness" => Aggressiveness, "patience" => Patience, "loyalty" => Loyalty,
+        "riskAversion" => RiskAversion, "mechanicalSkill" => MechanicalSkill, "gameKnowledge" => GameKnowledge,
+        "coordination" => Coordination, "cheatPropensity" => CheatPropensity, "opportunism" => Opportunism,
+        _ => throw new ArgumentException($"Traço desconhecido: {key}"),
+    };
+
+    internal void Set(string key, int value)
+    {
+        switch (key)
+        {
+            case "pve": Pve = value; break;
+            case "pvp": Pvp = value; break;
+            case "trade": Trade = value; break;
+            case "exploration": Exploration = value; break;
+            case "socializing": Socializing = value; break;
+            case "sociability": Sociability = value; break;
+            case "aggressiveness": Aggressiveness = value; break;
+            case "patience": Patience = value; break;
+            case "loyalty": Loyalty = value; break;
+            case "riskAversion": RiskAversion = value; break;
+            case "mechanicalSkill": MechanicalSkill = value; break;
+            case "gameKnowledge": GameKnowledge = value; break;
+            case "coordination": Coordination = value; break;
+            case "cheatPropensity": CheatPropensity = value; break;
+            case "opportunism": Opportunism = value; break;
+            default: throw new ArgumentException($"Traço desconhecido: {key}");
+        }
+    }
+
+    public PersonTraits Clone() => (PersonTraits)MemberwiseClone();
 }
 
 /// <summary>Estado emocional/engajamento, variavel ao longo da campanha (permille).</summary>
@@ -76,6 +122,7 @@ public sealed class Person
         ProfileId = profileId;
         AppearanceSeed = appearanceSeed;
         Traits = traits;
+        BaseTraits = traits.Clone();
     }
 
     public int Id { get; }
@@ -84,7 +131,13 @@ public sealed class Person
     public string ProfileId { get; }
     /// <summary>Semente estavel da aparencia, derivada do ID: mesma pessoa, mesmo visual.</summary>
     public ulong AppearanceSeed { get; }
+    /// <summary>Tracos atuais: mudam com a experiencia, dentro de limites em torno da base (D-036).</summary>
     public PersonTraits Traits { get; }
+    /// <summary>Tracos de nascenca (imutaveis): referencia dos limites e da comparacao "era X".</summary>
+    public PersonTraits BaseTraits { get; }
+    /// <summary>Pratica acumulada por direcao e traco ("+mechanicalSkill" = minutos ate o proximo ponto).</summary>
+    internal SortedDictionary<string, int> Practice { get; } = new(StringComparer.Ordinal);
+    public IReadOnlyDictionary<string, int> PracticeProgress => Practice;
     public PersonMood Mood { get; } = new();
     public LifecycleState State { get; internal set; } = LifecycleState.PotentialInterested;
     /// <summary>Conta no MMORPG (0 = ainda nao registrada).</summary>
@@ -180,6 +233,53 @@ public sealed class ActiveQuest
     public int StepMinutes { get; internal set; }
 }
 
+/// <summary>Tipos de objetivo pessoal (D-036).</summary>
+public static class GoalTypes
+{
+    public const string ReachLevel = "reach_level";
+    public const string DiscoverZone = "discover_zone";
+    public const string CompleteQuest = "complete_quest";
+    public const string PracticeActivity = "practice_activity";
+}
+
+/// <summary>
+/// Objetivo pessoal (D-026/D-036): algo que a pessoa quer conseguir, escolhido pelo perfil e
+/// pela personalidade. Influencia as decisoes com o peso do comprometimento; nao obriga.
+/// </summary>
+public sealed class PersonalGoal
+{
+    public PersonalGoal(string type, string target, int targetValue, int startValue, int commitment,
+        string motiveKey, int motiveValue, long setTick, long setPlayedTicks)
+    {
+        Type = type;
+        Target = target;
+        TargetValue = targetValue;
+        StartValue = startValue;
+        Commitment = commitment;
+        MotiveKey = motiveKey;
+        MotiveValue = motiveValue;
+        SetTick = setTick;
+        LastProgressPlayedTicks = setPlayedTicks;
+    }
+
+    public string Type { get; }
+    /// <summary>Alvo: zona, quest ou tipo de atividade (vazio para nivel).</summary>
+    public string Target { get; }
+    /// <summary>Valor alvo: nivel desejado ou minutos de pratica.</summary>
+    public int TargetValue { get; }
+    public int StartValue { get; }
+    /// <summary>Quanto a pessoa se apega ao objetivo (permille): paciencia e lealdade.</summary>
+    public int Commitment { get; }
+    /// <summary>Traco que mais pesou na escolha (ex.: exploration).</summary>
+    public string MotiveKey { get; }
+    public int MotiveValue { get; }
+    public long SetTick { get; }
+    /// <summary>Progresso acumulado (minutos de pratica; etapas da quest).</summary>
+    public int Progress { get; internal set; }
+    /// <summary>Tempo conectado do personagem no ultimo avanco (abandono por falta de progresso).</summary>
+    public long LastProgressPlayedTicks { get; internal set; }
+}
+
 /// <summary>Historico de uma quest para o personagem.</summary>
 public sealed class QuestRecord
 {
@@ -260,6 +360,13 @@ public sealed class Character
     /// <summary>XP vindo de quests e de atividades (medida de XP por fonte).</summary>
     public long XpFromQuests { get; internal set; }
     public long XpFromActivities { get; internal set; }
+
+    // ---- Objetivos pessoais (D-036) ----
+    internal List<PersonalGoal> GoalList { get; } = new();
+    public IReadOnlyList<PersonalGoal> Goals => GoalList;
+    public int GoalsSet { get; internal set; }
+    public int GoalsCompleted { get; internal set; }
+    public int GoalsAbandoned { get; internal set; }
 
     /// <summary>Tempo conectado ate o instante informado, incluindo a sessao em andamento.</summary>
     public long PlayedTicksAt(long now) =>

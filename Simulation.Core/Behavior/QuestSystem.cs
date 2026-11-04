@@ -24,6 +24,10 @@ public sealed class QuestSystem
         _gainXp = gainXp;
     }
 
+    /// <summary>Avisos para objetivos e atributos (D-036): etapa cumprida e quest entregue.</summary>
+    internal Action<Character, string>? StepCompleted { get; set; }
+    internal Action<Character, string>? Completed { get; set; }
+
     private ContentDatabase C => _w.Content;
     private long Now => _w.Clock.Tick;
     private long Today => _w.Clock.Calendar.DayIndex(Now);
@@ -113,6 +117,7 @@ public sealed class QuestSystem
             aq.StepMinutes = 0;
             _w.Emit("quest_step_completed", EventImportance.Low, new[] { new EntityRef("character", ch.Id) },
                 new[] { new EventCause(step.Type, 1000) }, $"{q.Id}#{aq.StepIndex}");
+            StepCompleted?.Invoke(ch, q.Id);
         }
 
         var board = BoardAt(region.Id, a.Id);
@@ -159,5 +164,6 @@ public sealed class QuestSystem
         _w.Emit("quest_completed", EventImportance.Normal, new[] { new EntityRef("character", ch.Id) },
             new[] { new EventCause("quest_reward_xp", (int)Math.Min(int.MaxValue, xp)), new EventCause(q.Category, 1000) }, q.Id);
         if (xp > 0) _gainXp(ch, xp, "quest");
+        Completed?.Invoke(ch, q.Id);
     }
 }

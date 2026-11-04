@@ -740,3 +740,68 @@ Proposta do criador, analisada com o Claude.
 - **Jogadores:** coluna Personalidade; perfil no cabeçalho da ficha (saiu do subtítulo).
 - **Ficha do jogador:** Missões na 2ª linha e Progresso e objetivos na 3ª, para os cards da 2ª linha não esticarem.
 - **Missões:** lista "Quem concluiu" na Visão geral (10 mais recentes) e aba "Concluíram" com a tabela completa (perfil, classe, nível atual, entregas, última entrega, situação). O snapshot passa a levar o dia da última entrega de cada missão por personagem.
+
+## D-036 — Atributos vivos do jogador, talento e objetivos pessoais
+**Data:** 04/11/2026 · **Estado:** aceita (calibração a revisar)
+
+**Pedido do criador:**
+- Objetivos pessoais coerentes com o perfil e a personalidade, que influenciem sem ser regra fixa.
+- Saber o que cada atributo faz, com dica na ficha.
+- Todos os atributos devem agir de verdade.
+- Os atributos devem subir e cair devagar, como nos jogos de gestão esportiva, até um potencial que depende de um traço de talento.
+- Os atributos são do jogador (a pessoa), não do personagem.
+
+**Decisões** (detalhe em `docs/atributos.md`):
+- **Atributos agindo:**
+  - Mecânica: XP em combate e percepção de risco.
+  - Conhecimento: XP geral, peso do deslocamento e consistência das decisões.
+  - Coordenação: convivência com lugares cheios.
+  - Lealdade: fator "zona onde já estava".
+  - Agressividade: fator "desafio".
+  - Oportunismo: fuga de disputa.
+  - Os que já agiam (gostos, sociabilidade, paciência, aversão a risco) continuam.
+  - Trapaça segue sem efeito até o M9.
+- **Atributos vivos:**
+  - sobem com prática e experiência e caem com inatividade (Mecânica após 7 dias, Conhecimento após 14);
+  - ritmo lento, com desaceleração perto do teto;
+  - cada traço fica entre um piso e um teto; os valores de nascença (`BaseTraits`) ficam guardados;
+  - mudança visível na escala 1–20 gera `trait_changed` com a causa.
+- **Talento (novo traço da pessoa, fixo):**
+  - definido por perfil em `population.json`;
+  - faixas: Noob, Inexperiente, Padrão, Experiente, Prodígio, Gênio;
+  - define o potencial e a velocidade de aprendizado só das capacidades;
+  - sorteado por último no gerador, para não mudar os traços já existentes das populações.
+- **Objetivos pessoais** (chegar a um nível, descobrir uma zona, concluir uma missão, praticar a atividade preferida):
+  - escolhidos ao conectar, com peso pelos traços;
+  - influenciam pelo fator "objetivo pessoal", proporcional ao comprometimento;
+  - podem ser abandonados (falta de progresso ou impaciência);
+  - concluídos, reforçam o motivo.
+- **Recalibração das missões:** os atributos vivos puxam a população para a caça ao longo da campanha (quem gosta reforça o gosto; a confiança diante do risco cresce). Para manter o equilíbrio do D-031, os pesos das missões subiram: oferta 150 → 210, entrega 160 → 220, etapa 220 → 250. A decisão foi medida desligando cada fator isoladamente.
+- **Determinismo e hash:** tudo determinístico, em inteiros e com causas; `StateHasher` passou para v5.
+- **Testes:** 12 novos.
+
+**Validação** (90 dias × 1.000 pessoas × 5 seeds): 15 de 21 metas dentro da faixa, como no D-031.
+- Combate entrou na faixa: 35,7%.
+- Horas até o nível 30: 192 → 171, na borda da faixa (170–230). Isso é efeito do crescimento da Mecânica e do Conhecimento; entra na recalibração da curva, que depende da escolha do criador (a ou b, D-028).
+
+**Combate (M3):** os atributos do jogador entram junto com os do personagem. Dois personagens iguais se saem diferente conforme a Mecânica e o gosto ou experiência em PvP de quem joga. O gancho `OnPvpKill` já existe.
+
+**Interface:**
+- página do jogador com "Atributos do jogador";
+- seta de evolução desde o início;
+- barra com o potencial das capacidades;
+- dica de cada atributo: o que influencia e o que o faz mudar;
+- talento no cabeçalho;
+- objetivos reais em "Progresso e objetivos";
+- eventos novos no histórico;
+- tiramos "Sessão até" do cabeçalho.
+
+**Ajustes de interface no D-036:**
+- **Dicas:**
+  - o fio dourado do topo pintava a borda inteira de laranja; agora a borda é neutra (o fundo vem do `TooltipPanel` do tema);
+  - título de 14 px, valores de 13 px, notas legíveis com quebra de linha.
+- **Dicas que piscavam:**
+  - as páginas se reconstruíam a cada segundo e recriavam o elemento sob o mouse;
+  - agora a página só se atualiza quando a simulação avança (fora do mapa o tempo está pausado) ou quando chega o detalhe do jogador, e nunca com o mouse parado;
+  - o painel do mapa também não se refaz enquanto o mouse está parado sobre ele.
+- **Engajamento** de conta nova: janela mínima de 2 dias, para não estourar (antes passava de 500%).

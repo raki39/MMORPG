@@ -11,7 +11,7 @@ namespace Simulation.Core.World;
 /// </summary>
 public static class StateHasher
 {
-    public const int FormatVersion = 4;
+    public const int FormatVersion = 5;
 
     public static string Compute(WorldState w)
     {
@@ -69,6 +69,14 @@ public static class StateHasher
             h.Long(c.DailyDay);
             foreach (var kv in c.DailyByBoard) { h.Str(kv.Key); h.Int(kv.Value); }
             h.Long(c.XpFromQuests); h.Long(c.XpFromActivities);
+            // Objetivos pessoais (D-036).
+            h.Int(c.Goals.Count);
+            foreach (var g in c.Goals)
+            {
+                h.Str(g.Type); h.Str(g.Target); h.Int(g.TargetValue); h.Int(g.StartValue); h.Int(g.Commitment);
+                h.Str(g.MotiveKey); h.Int(g.MotiveValue); h.Long(g.SetTick); h.Int(g.Progress); h.Long(g.LastProgressPlayedTicks);
+            }
+            h.Int(c.GoalsSet); h.Int(c.GoalsCompleted); h.Int(c.GoalsAbandoned);
         }
         h.Int(w.QuestStats.Count);
         foreach (var kv in w.QuestStats)
@@ -114,7 +122,11 @@ public static class StateHasher
         h.Int(t.MechanicalSkill); h.Int(t.GameKnowledge); h.Int(t.Coordination);
         h.Int(t.CheatPropensity); h.Int(t.Opportunism);
         h.Int(t.LeisureBudgetCentsPerMonth); h.Int(t.WillingnessToPay); h.Int(t.PaidAdvantageSensitivity);
-        h.Int(t.PreferredStartHour); h.Int(t.SessionMinutes); h.Int(t.DaysPerWeek); h.Int(t.WeekendBoost);
+        h.Int(t.PreferredStartHour); h.Int(t.SessionMinutes); h.Int(t.DaysPerWeek); h.Int(t.WeekendBoost); h.Int(t.Talent);
+        // Atributos vivos (D-036): base de nascenca e pratica acumulada.
+        foreach (var k in PersonTraits.DynamicKeys) h.Int(p.BaseTraits.Get(k));
+        h.Int(p.PracticeProgress.Count);
+        foreach (var kv in p.PracticeProgress) { h.Str(kv.Key); h.Int(kv.Value); }
         var m = p.Mood;
         h.Int(m.Satisfaction); h.Int(m.Fatigue); h.Int(m.Frustration); h.Int(m.Engagement); h.Int(m.ReturnIntention);
     }

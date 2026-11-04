@@ -27,16 +27,29 @@ public sealed class BehaviorSystem
     private readonly WorldState _w;
     private readonly RouteFinder _routes;
     private readonly QuestSystem _quests;
+    private readonly TraitDynamics _traits;
+    private readonly GoalSystem _goals;
 
     public BehaviorSystem(WorldState world)
     {
         _w = world;
         _routes = new RouteFinder(world.Content, new ZoneLayout(world.Content));
         _quests = new QuestSystem(world, GainExperience);
+        _traits = new TraitDynamics(world);
+        _goals = new GoalSystem(world, _quests, _traits);
+        _quests.StepCompleted = (ch, questId) => _goals.OnQuestStep(ch, questId);
+        _quests.Completed = (ch, questId) =>
+        {
+            var p = _w.GetPerson(ch.PersonId);
+            _traits.OnQuestCompleted(p);
+            _goals.OnQuestCompleted(p, ch, questId);
+        };
     }
 
     public RouteFinder Routes => _routes;
     public QuestSystem Quests => _quests;
+    public TraitDynamics Traits => _traits;
+    public GoalSystem Goals => _goals;
 
     public IEnumerable<(string Type, Action<ScheduledEvent> Handler)> Handlers()
     {
@@ -141,6 +154,7 @@ public sealed class BehaviorSystem
         foreach (var p in _w.Persons)
         {
             if (p.State != LifecycleState.Registered && p.State != LifecycleState.Offline && p.State != LifecycleState.Online) continue;
+            _traits.OnDaily(p, day);   // inatividade (D-036), antes de decidir se joga hoje
             var rng = Rng("behavior.session", p.Id * 100_000L + day);
             int chance = p.Traits.DaysPerWeek * 1000 / 7;
             chance = kind == DayKind.Weekday
@@ -205,6 +219,8 @@ public sealed class BehaviorSystem
         ch.LogoutPending = false;
         _w.Scheduler.Schedule(end, EvSessionEnd, p.Id);
         _w.Emit("session_started", EventImportance.Low, new[] { new EntityRef("person", p.Id) }, detail: $"{minutes} min");
+        // Objetivos pessoais (D-036): revisa ao conectar, antes da primeira decisao.
+        _goals.Review(p, ch, Rng("behavior.goals", ch.Id * 1_000_000L + ch.DecisionCount));
         Decide(ch, p);
     }
 
@@ -258,7 +274,7 @@ public sealed class BehaviorSystem
     {
         var rng = Rng("behavior.decision", ch.Id * 1_000_000L + ch.DecisionCount);
         ch.DecisionCount++;
-        var options = ActivityScoring.Evaluate(ch, p.Traits, _w.Content, _routes, _w.OccupancyOf, Now, rng, _quests);
+        var options = ActivityScoring.Evaluate(ch, p.Traits, _w.Content, _routes, _w.OccupancyOf, Now, rng, _quests, _goals);
 
         if (options.Count == 0)
         {
@@ -325,8 +341,11 @@ public sealed class BehaviorSystem
             // Ao entrar numa zona, as saidas revelam as zonas ligadas a ela.
             foreach (var c in _w.Content.Regions[ch.RegionId].Connections)
                 if (ch.Known.Add(c.To))
+                {
                     _w.Emit("region_discovered", EventImportance.Low, new[] { new EntityRef("character", ch.Id) },
                         new[] { new EventCause("zone_exit_seen", 1000) }, c.To);
+                    Discovered(ch, c.To);
+                }
         }
         if (ch.LogoutPending) { Logout(ch, "session_time"); return; }
         if (ch.Waypoints.Count > 0) NextLeg(ch);
@@ -349,7 +368,9 @@ public sealed class BehaviorSystem
         var ch = _w.GetCharacter((int)ev.TargetId);
         if (ch.Status != CharacterStatus.Doing || ch.ActivityEndTick != ev.Tick) return;
         var p = _w.GetPerson(ch.PersonId);
-        AddActivityTime(ch, ActivityTypeOf(ch), ev.Tick - ch.ActivityStartTick);
+        string doneType = ActivityTypeOf(ch);
+        bool firstTimeType = !ch.ActivityTicks.ContainsKey(doneType);
+        AddActivityTime(ch, doneType, ev.Tick - ch.ActivityStartTick);
 
         if (ch.ActivityId.Length > 0)
         {
@@ -357,15 +378,24 @@ public sealed class BehaviorSystem
             var a = region.FindActivity(ch.ActivityId)!;
             _w.AddOccupancy(region.Id, a.Id, -1);
             int minutes = (int)((ev.Tick - ch.ActivityStartTick) / SimTime.TicksPerMinute);
+            int levelBefore = ch.Level;
             AwardExperience(ch, a, region, minutes);
             _quests.OnActivityDone(ch, region, a, minutes);
+            // Atributos vivos e objetivos (D-036): pratica, gosto, risco enfrentado.
+            int challenge = ProgressionRules.ChallengeLevel(_w.Content, a);
+            int fit = ProgressionRules.MilliXpPerMinute(_w.Content, a, levelBefore) > 0 ? ProgressionRules.Efficiency(_w.Content.Progression, levelBefore, challenge) : 0;
+            _traits.OnActivity(p, ch, a, minutes, fit, ActivityScoring.RiskOf(region, a, challenge, levelBefore), firstTimeType);
+            _goals.OnActivity(p, ch, a, minutes);
             // Explorar revela mais longe: as zonas ligadas as vizinhas.
             if (a.Type == ActivityTypes.Explore)
                 foreach (var c in region.Connections)
                     foreach (var c2 in _w.Content.Regions[c.To].Connections)
                         if (ch.Known.Add(c2.To))
+                        {
                             _w.Emit("region_discovered", EventImportance.Normal, new[] { new EntityRef("character", ch.Id) },
                                 new[] { new EventCause("exploration", 1000) }, c2.To);
+                            Discovered(ch, c2.To);
+                        }
         }
         ch.ActivityId = "";
         ch.TargetRegionId = "";
@@ -374,6 +404,14 @@ public sealed class BehaviorSystem
 
         if (ch.LogoutPending || Now >= ch.SessionEndTick) { Logout(ch, "session_time"); return; }
         Decide(ch, p);
+    }
+
+    /// <summary>Zona revelada: conhecimento, gosto por explorar e objetivos (D-036).</summary>
+    private void Discovered(Character ch, string zoneId)
+    {
+        var p = _w.GetPerson(ch.PersonId);
+        _traits.OnRegionDiscovered(p);
+        _goals.OnDiscovered(p, ch, zoneId);
     }
 
     /// <summary>Tipo da atividade atual; "idle" quando esperando sem opcao viavel.</summary>
@@ -390,6 +428,8 @@ public sealed class BehaviorSystem
     private void AwardExperience(Character ch, ActivityDefinition a, RegionDefinition region, int minutes)
     {
         long xp = ProgressionRules.XpFor(_w.Content, a, ch.Level, minutes);
+        // Rendimento pelos tracos (D-036): conhecimento do jogo e, em combate, mecanica.
+        xp = xp * ActivityScoring.TraitXpPermille(_w.GetPerson(ch.PersonId).Traits, a.Type) / 1000;
         if (xp <= 0) return;
         ch.XpFromActivities += xp;
         GainExperience(ch, xp, a.Type);
@@ -400,6 +440,7 @@ public sealed class BehaviorSystem
     {
         var p = _w.Content.Progression;
         if (xp <= 0 || ch.Level >= p.LevelCap) return;
+        int before = ch.Level;
         ch.Experience += xp;
         while (ch.Level < p.LevelCap && ch.Experience >= ProgressionRules.XpToNextLevel(p, ch.Level))
         {
@@ -410,5 +451,6 @@ public sealed class BehaviorSystem
             _w.Emit("level_up", EventImportance.Normal, new[] { new EntityRef("character", ch.Id) },
                 new[] { new EventCause(source, 1000) }, $"nível {ch.Level}");
         }
+        if (ch.Level > before) _goals.OnLevelUp(_w.GetPerson(ch.PersonId), ch);
     }
 }

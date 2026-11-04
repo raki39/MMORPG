@@ -43,6 +43,11 @@ public sealed class CharacterView
     public long XpFromActivities { get; init; }
     /// <summary>Tempo conectado acumulado (ticks) no momento da publicacao.</summary>
     public long PlayedTicks { get; init; }
+    /// <summary>Objetivos pessoais em andamento (copia, D-036).</summary>
+    public IReadOnlyList<GoalView> Goals { get; init; } = Array.Empty<GoalView>();
+    public int GoalsSet { get; init; }
+    public int GoalsCompleted { get; init; }
+    public int GoalsAbandoned { get; init; }
 
     /// <summary>Posicao no tick informado (mesma regra do Core: interpolacao do trecho).</summary>
     public (float X, float Y) PositionAt(long tick)
@@ -55,6 +60,9 @@ public sealed class CharacterView
 
 /// <summary>Detalhe da pessoa com a ficha aberta (copiado so para ela, a cada publicacao).</summary>
 public sealed record CharacterDetailView(int PersonId, long PlayedTicks, IReadOnlyDictionary<string, long> ActivityTicks, IReadOnlyList<long> LevelTicks);
+
+/// <summary>Objetivo pessoal (copia imutavel, D-036).</summary>
+public sealed record GoalView(string Type, string Target, int TargetValue, int StartValue, int Progress, int Commitment, string MotiveKey, int MotiveValue, long SetTick);
 
 /// <summary>Progresso de uma quest ativa (copia imutavel).</summary>
 public sealed record QuestProgressView(string QuestId, int StepIndex, int StepMinutes, long AcceptedTick);
@@ -91,6 +99,8 @@ public sealed class PersonInfo
     public ulong AppearanceSeed { get; init; }
     /// <summary>Tracos gerados na criacao (nao mudam depois; leitura segura).</summary>
     public PersonTraits Traits { get; init; } = null!;
+    /// <summary>Tracos de nascenca (imutaveis): comparacao "era X" e limites (D-036).</summary>
+    public PersonTraits BaseTraits { get; init; } = null!;
 }
 
 /// <summary>
@@ -154,7 +164,7 @@ public sealed class SimulationHost : IDisposable
         Layout = new ZoneLayout(content);
         _engine = WorldFactory.Create(content, new WorldConfig { Seed = seed, PopulationSize = population });
         Persons = _engine.World.Persons
-            .Select(p => new PersonInfo { Id = p.Id, Name = p.Name, ProfileId = p.ProfileId, AppearanceSeed = p.AppearanceSeed, Traits = p.Traits })
+            .Select(p => new PersonInfo { Id = p.Id, Name = p.Name, ProfileId = p.ProfileId, AppearanceSeed = p.AppearanceSeed, Traits = p.Traits, BaseTraits = p.BaseTraits })
             .ToArray();
         Calendar = _engine.World.Clock.Calendar;
         _snapshot = BuildSnapshot(-1);
@@ -296,6 +306,11 @@ public sealed class SimulationHost : IDisposable
                     : c.QuestHistory.Where(kv => kv.Value.Completions > 0).Select(kv => (kv.Key, kv.Value.Completions, kv.Value.LastCompletedDay)).ToArray(),
                 XpFromQuests = c.XpFromQuests,
                 PlayedTicks = c.PlayedTicksAt(w.Clock.Tick),
+                Goals = c.Goals.Count == 0 ? Array.Empty<GoalView>()
+                    : c.Goals.Select(g => new GoalView(g.Type, g.Target, g.TargetValue, g.StartValue, g.Progress, g.Commitment, g.MotiveKey, g.MotiveValue, g.SetTick)).ToArray(),
+                GoalsSet = c.GoalsSet,
+                GoalsCompleted = c.GoalsCompleted,
+                GoalsAbandoned = c.GoalsAbandoned,
                 XpFromActivities = c.XpFromActivities,
             };
         }

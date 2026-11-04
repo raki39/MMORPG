@@ -569,3 +569,19 @@ public static class CardTexture
         return _tex;
     }
 }
+
+/// <summary>Barra de atributo com o potencial (parte clara ate o teto), estilo jogo de gestao.</summary>
+public partial class PotentialBar : Control
+{
+    private readonly float _t, _potential;
+    private readonly Color _color;
+    public PotentialBar(float t, float potential, Color color) { _t = Mathf.Clamp(t, 0, 1); _potential = Mathf.Clamp(potential, 0, 1); _color = color; MouseFilter = MouseFilterEnum.Ignore; }
+
+    public override void _Draw()
+    {
+        float h = Mathf.Round(Mathf.Min(Size.Y, 4)), y = Mathf.Round((Size.Y - h) / 2f), w = Mathf.Round(Size.X);
+        DrawRect(new Rect2(0, y, w, h), UiTokens.Track);
+        if (_potential > _t) DrawRect(new Rect2(0, y, Mathf.Round(w * _potential), h), new Color(UiTokens.Accent, 0.30f));
+        if (_t > 0) DrawRect(new Rect2(0, y, Mathf.Max(2, Mathf.Round(w * _t)), h), _color);
+    }
+}
