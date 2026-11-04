@@ -1,0 +1,26 @@
+; Projeto Godot mantido apenas como texto (sem uso do editor). Ver CLAUDE.md.
+; UTF-8 sem BOM: o parser do Godot rejeita BOM.
+
+config_version=5
+
+[application]
+
+config/name="MMORPG Tycoon"
+config/description="Cliente gráfico: visualização e comandos para Simulation.Core."
+run/main_scene="res://Scenes/Main.tscn"
+config/features=PackedStringArray("4.7", "C#", "Forward Plus")
+
+[display]
+
+window/size/viewport_width=1600
+window/size/viewport_height=900
+
+[dotnet]
+
+project/assembly_name="GodotClient"
+
+[rendering]
+
+renderer/rendering_method="forward_plus"
+environment/defaults/default_clear_color=Color(0.0627, 0.0824, 0.1137, 1)
+anti_aliasing/quality/msaa_2d=2

@@ -19,14 +19,14 @@ Referência de design: [design.md](design.md).
 - O cliente referencia `Simulation.Core` por `ProjectReference`, com fonte única e .NET moderno (ver D-002).
 - Sem login nem ativação de licença.
 
-**Consequências.** `UnityClient/` vira `GameClient/`. O 3D precisa de técnicas de lote (`MultiMeshInstance3D`) para multidões; isso é medido no M4. Instalação local: `C:\Users\Pichau\Tools\Godot_v4.7.2-stable_mono_win64\` (SHA-512 do zip conferido com `SHA512-SUMS.txt` oficial).
+**Consequências.** `UnityClient/` vira `GodotClient/` (nome do plano v1.4). O 3D precisa de técnicas de lote (`MultiMeshInstance3D`) para multidões; isso é medido no M4. Instalação local: `C:\Users\Pichau\Tools\Godot_v4.7.2-stable_mono_win64\` (SHA-512 do zip conferido com `SHA512-SUMS.txt` oficial).
 
 ## D-002 — .NET 10 (LTS) em todos os projetos
 **Data:** 04/11/2026 · **Estado:** aceita
 
 **Contexto.** Com a Unity, o Core estaria preso a `netstandard2.1` e C# 9. O .NET 8 encerra o suporte em 10/11/2026.
 
-**Decisão.** Todos os projetos (Core, Infrastructure, Runner, Tests e o futuro GameClient) usam `net10.0`. SDK local: 10.0.403.
+**Decisão.** Todos os projetos (Core, Infrastructure, Runner, Tests e o futuro GodotClient) usam `net10.0`. SDK local: 10.0.403.
 
 **Verificação.** Projeto Godot mínimo com `Godot.NET.Sdk/4.7.2` e `<TargetFramework>net10.0</TargetFramework>`, compilado com `dotnet build` e executado com `--headless`: imprimiu `.NET 10.0.14`. Teste executado em 04/11/2026.
 
@@ -102,3 +102,24 @@ Seguindo o plano v1.4 (seção 4.4.1), cada região declara `activities` com tip
 **Data:** 04/11/2026 · **Estado:** aceita
 
 Template padrão do SDK 10. Testes estatísticos usam várias seeds e tolerâncias justificadas no próprio teste.
+
+## D-012 — Identidade visual própria ("Atlas") e fontes Inter + Cinzel
+**Data:** 04/11/2026 · **Estado:** aceita (desvio consciente do plano 12.1)
+
+O criador pediu outra paleta e mais textura e dimensão. Paleta própria em `GodotClient/Scripts/Ui/UiTokens.cs`: tinta escura azulada, dourado como ação principal (`#E8B44E`) e texto levemente quente. Fontes OFL embutidas: Inter (variável, números tabulares) para a interface e Cinzel para nomes no mapa. O mapa usa um shader de terreno procedural (relevo, biomas, curvas de nível, mar animado, nuvens, dia e noite) e a população é desenhada numa única MultiMesh.
+
+## D-013 — Operação do Godot sem editor: script único e armadilhas conhecidas
+**Data:** 04/11/2026 · **Estado:** aceita
+
+- `tools/godot.ps1 run|build|import|shot|export` concentra os comandos: ajusta o PATH (dotnet x64 primeiro), remove `ELECTRON_RUN_AS_NODE`, compila, importa e exporta.
+- O export do Godot .NET exige `GodotClient/GodotClient.sln` (criada e versionada).
+- No PowerShell 5.1, um log do Godot em stderr vira erro fatal com `$ErrorActionPreference = 'Stop'`; o script usa `Continue` ao chamar o Godot.
+- Arquivos `.import` gerados pela importação são versionados; `.godot/` não.
+- O executável lê o mundo de `Content/` ao lado do `.exe`; o export copia `Content/presets`.
+
+## D-014 — Resultado do teste de viabilidade do Godot
+**Data:** 04/11/2026 · **Estado:** concluído
+
+Projeto `GodotClient/` criado e mantido só por texto e terminal. Ele compila com `dotnet build`, importa e roda com `--headless`, gera capturas automáticas (`--screenshot`) e exporta `build/MMOTycoon.exe` (~188 MB com o runtime .NET embutido). O executável exportado foi executado e capturado com sucesso. A simulação roda em thread própria e a tela lê snapshots.
+
+FPS médio medido em 1920×1080, RTX 3060, velocidade 10×, 6 s, mapa com movimento de demonstração: 100 pessoas, 144 FPS (VSync); 2.000 pessoas, 143 FPS; 10.000 pessoas, 94 FPS. É uma medida desta máquina, não uma promessa de capacidade.

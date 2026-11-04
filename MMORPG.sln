@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Simulation.Runner", "Simula
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Simulation.Tests", "Simulation.Tests\Simulation.Tests.csproj", "{F8B6DDA8-2FCC-4941-B827-DE353EB4AA6D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GodotClient", "GodotClient\GodotClient.csproj", "{557F2922-BA15-4B37-91B6-304B2FD2F954}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -69,6 +71,18 @@ Global
 		{F8B6DDA8-2FCC-4941-B827-DE353EB4AA6D}.Release|x64.Build.0 = Release|Any CPU
 		{F8B6DDA8-2FCC-4941-B827-DE353EB4AA6D}.Release|x86.ActiveCfg = Release|Any CPU
 		{F8B6DDA8-2FCC-4941-B827-DE353EB4AA6D}.Release|x86.Build.0 = Release|Any CPU
+		{557F2922-BA15-4B37-91B6-304B2FD2F954}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{557F2922-BA15-4B37-91B6-304B2FD2F954}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{557F2922-BA15-4B37-91B6-304B2FD2F954}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{557F2922-BA15-4B37-91B6-304B2FD2F954}.Debug|x64.Build.0 = Debug|Any CPU
+		{557F2922-BA15-4B37-91B6-304B2FD2F954}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{557F2922-BA15-4B37-91B6-304B2FD2F954}.Debug|x86.Build.0 = Debug|Any CPU
+		{557F2922-BA15-4B37-91B6-304B2FD2F954}.Release|Any CPU.ActiveCfg = Debug|Any CPU
+		{557F2922-BA15-4B37-91B6-304B2FD2F954}.Release|Any CPU.Build.0 = Debug|Any CPU
+		{557F2922-BA15-4B37-91B6-304B2FD2F954}.Release|x64.ActiveCfg = Debug|Any CPU
+		{557F2922-BA15-4B37-91B6-304B2FD2F954}.Release|x64.Build.0 = Debug|Any CPU
+		{557F2922-BA15-4B37-91B6-304B2FD2F954}.Release|x86.ActiveCfg = Debug|Any CPU
+		{557F2922-BA15-4B37-91B6-304B2FD2F954}.Release|x86.Build.0 = Debug|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

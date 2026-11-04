@@ -2,7 +2,8 @@
 
 Jogo de gestão single-player e offline: o jogador cria e administra um MMORPG e a empresa que o opera. Cada usuário desse MMORPG é uma pessoa simulada individualmente.
 
-- Design (referência única): `docs/design.md`
+- Design: `docs/Plano_MMO_Tycoon_Godot_Claude.md` (arquivo do criador; nunca apagar nem mover). `docs/design.md` é só um apontador.
+- O plano é **referência e base, não regra rígida**: use julgamento técnico quando houver opção melhor e registre o desvio e o motivo em `docs/decisoes.md`.
 - Decisões: `docs/decisoes.md` · Backlog: `docs/backlog.md`
 
 ## Arquitetura
@@ -11,7 +12,7 @@ Jogo de gestão single-player e offline: o jogador cria e administra um MMORPG e
 - `Simulation.Infrastructure`: JSON de conteúdo, cenários e relatórios (M0); SQLite e saves depois. O Core não depende dela.
 - `Simulation.Runner`: CLI headless que compõe Core e Infrastructure.
 - `Simulation.Tests`: xUnit.
-- `GameClient/` (a criar): projeto Godot 4.7.2 .NET; visualização, interface e comandos para o Core via `ProjectReference`.
+- `GodotClient/`: projeto Godot 4.7.2 .NET; visualização, interface e comandos para o Core via `ProjectReference`. Nada de um nó por jogador no mapa; desenho em lote.
 - `Content/presets/<mundo>/`: `world`, `regions` (com `activities`), `classes`, `abilities`, `items`, `creatures`, `population` (`.json`) + `scenario.json` (só do runner).
 - JSON é o formato de troca; o save SQLite guarda o conteúdo da campanha; a execução usa memória (D-008).
 

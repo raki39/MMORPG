@@ -14,8 +14,8 @@ TestResults/
 # Godot
 .godot/
 *.translation
-GameClient/export/
-GameClient/builds/
+GodotClient/export/
+/build/
 mono_crash.*
 
 # Sistema

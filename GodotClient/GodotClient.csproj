@@ -1,0 +1,18 @@
+<Project Sdk="Godot.NET.Sdk/4.7.2">
+
+  <!--
+    Cliente Godot. Referencia o Core e a Infrastructure por ProjectReference (fonte unica, D-001/D-002).
+    Toda regra de jogo vive no Core; aqui so apresentacao, entrada e adaptadores.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <RootNamespace>GodotClient</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Simulation.Core\Simulation.Core.csproj" />
+    <ProjectReference Include="..\Simulation.Infrastructure\Simulation.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

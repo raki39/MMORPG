@@ -5,7 +5,7 @@ Legenda: `[x]` feito e verificado · `[ ]` pendente · `[~]` parcial.
 
 ## Pendências de ambiente e documentação
 
-- [ ] Adotar o plano v1.4 (`Plano_MMO_Tycoon_Godot_Claude.md`) como `docs/design.md`. O arquivo ainda não foi colocado no repositório; hoje `docs/design.md` é a v1.3 adaptada para Godot por substituição de texto.
+- [x] Plano do criador em `docs/Plano_MMO_Tycoon_Godot_Claude.md` (v1.5, com o ciclo JSON → save SQLite → memória); `docs/design.md` virou apontador.
 - [ ] PATH: `C:\Program Files (x86)\dotnet` (x86, sem SDK) vem antes de `C:\Program Files\dotnet` no PATH do sistema. Até corrigir, chame `"C:\Program Files\dotnet\dotnet.exe"` ou ajuste a ordem (precisa de administrador).
 - [ ] Remover a pasta parcial da Unity `C:\Program Files\Unity` (~2,3 GB; precisa de administrador).
 
@@ -26,15 +26,15 @@ Critério: compilar sem Godot, executar cenário reproduzível e exportar CSV/Ma
 - [x] Runner com `daily.csv`, `events.csv`, `commands.csv`, `population.csv`, `summary.md` e `metadata.json`
 - [x] 65 testes automatizados
 
-## Teste de viabilidade Godot (antes do M1)
+## Teste de viabilidade Godot (antes do M1) ✅
 
 Objetivo (plano v1.4): provar na prática que o projeto Godot é criado e mantido só pelo terminal.
 
-- [ ] Criar `GameClient/` (Godot 4.7.2 .NET) inteiramente por arquivos de texto, referenciando `Simulation.Core`
-- [ ] Importar e rodar por linha de comando; gerar captura de tela automática
-- [ ] Mapa 2D das regiões (posições do conteúdo) com a população se movendo (fixture claramente identificada até o M2)
-- [ ] Exportar build Windows pela linha de comando (templates de exportação 4.7.2)
-- [ ] Registrar resultado e limitações em `decisoes.md`
+- [x] Criar `GodotClient/` (Godot 4.7.2 .NET) inteiramente por arquivos de texto, referenciando `Simulation.Core`
+- [x] Importar e rodar por linha de comando; gerar captura de tela automática
+- [x] Mapa 2D das regiões com a população se movendo (fixture identificada como demonstração)
+- [x] Exportar build Windows pela linha de comando (`tools/godot.ps1 export`)
+- [x] Registrar resultado e limitações em `decisoes.md` (D-012 a D-014)
 
 ## M1 — HUD e mapa
 
