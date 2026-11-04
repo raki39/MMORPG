@@ -29,6 +29,8 @@ public static class WorldFactory
 
         // O dia 0 fecha na meia-noite seguinte (tick = 1 dia).
         world.Scheduler.Schedule(SimTime.TicksPerDay, SimulationEngine.DailyRollupEvent, payload: 0);
+        // Planejamento de sessoes a partir do dia 1 (no dia 0 as sessoes vem do registro).
+        world.Scheduler.Schedule(SimTime.TicksPerDay, Behavior.BehaviorSystem.EvDailySessions, payload: 1);
         return engine;
     }
 

@@ -44,14 +44,27 @@ Objetivo (plano v1.4): provar na prática que o projeto Godot é criado e mantid
 - [ ] Ponte cliente ↔ Core: snapshots de leitura e envio de comandos; simulação fora do frame de renderização
 - [ ] Capturas de revisão em 1920×1080 e 1366×768
 
-## M2 — População (resumo)
+## M2 — População (em andamento)
 
-- [ ] Sessões: calendário individual, login e logout, estados de ciclo de vida
-- [ ] Registro: criação de Conta e Personagem
-- [ ] Conhecimento de locais por pessoa (descoberta por exploração, anúncios e amigos)
-- [ ] Decisão por utilidade só sobre atividades de locais conhecidos, com valores dependentes do estado do mundo (lotação, risco, viagem, amigos)
-- [ ] Explicação da escolha com os fatores calculados
-- [ ] Critério: 100 pessoas entram e saem, escolhem atividades dos locais conhecidos e exibem motivos reais
+- [x] Registro progressivo no lançamento; conta e personagem (classe pelos traços, apelido)
+- [x] Sessões pelo calendário individual (horário preferido, dias por semana, fim de semana/feriado)
+- [x] Conhecimento de zonas (inicial, saídas visíveis, exploração)
+- [x] Decisão por utilidade entre atividades das zonas conhecidas, com fatores registrados e explicação na ficha
+- [x] Deslocamento geométrico pelas estradas das zonas; posições reais no mapa (D-015, D-016)
+- [x] XP e níveis provisórios
+- [x] Relatório do runner com registros, DAU, pico online, sessões, escolhas por zona, níveis e exemplos de decisão
+- [ ] Abandono e retorno (satisfação, frustração, intenção de retorno)
+- [ ] Memória de experiências marcantes influenciando escolhas
+- [ ] Teste estatístico do critério "trabalhador 19h–23h" com amostra e tolerância documentadas
+
+## Cliente (mapa e fichas)
+
+- [x] Mapa de zonas: células, fronteiras, estradas, saídas, pontos de atividade, camadas (lotação, perigo, nível)
+- [x] Fichas em modal de jogador e zona; bolhas de aglomeração com lista e busca
+- [x] Rascunho de configuração de zona com validação do Core (publicação no M7)
+- [ ] Faixa de eventos (notícias do servidor) e navegação com histórico (voltar)
+- [ ] Tabelas de Comunidade/Economia com virtualização
+- [ ] Revisão visual completa em 1366×768 das fichas
 
 ## Marcos seguintes
 

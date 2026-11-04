@@ -31,5 +31,7 @@ public sealed class SetServerOpenCommand : ISimCommand
         if (Open) w.Server.LastOpenedTick = ctx.Tick;
         w.Emit(Open ? "server_opened" : "server_closed", EventImportance.High,
             causes: new[] { new EventCause("manager_command", 1000, sourceCommandSequence: ctx.Envelope.Sequence) });
+        if (Open) w.Behavior.OnServerOpened();
+        else w.Behavior.OnServerClosed();
     }
 }

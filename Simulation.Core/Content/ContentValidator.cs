@@ -62,7 +62,7 @@ public static class ContentValidator
             var start = set.Regions.FirstOrDefault(r => r.Id == set.World.StartingRegionId);
             if (start == null)
                 v.Error(WorldFile, "startingRegionId", $"Região '{set.World.StartingRegionId}' não existe.");
-            else if (start.Kind != RegionKinds.City)
+            else if (!start.IsCity)
                 v.Error(WorldFile, "startingRegionId", "A região inicial precisa ser uma cidade (zona segura).");
         }
 
@@ -86,6 +86,8 @@ public static class ContentValidator
         if (string.IsNullOrWhiteSpace(w.Name)) v.Error(WorldFile, "name", "Nome do mundo obrigatório.");
         if (!DateTime.TryParseExact(w.StartDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out _))
             v.Error(WorldFile, "startDate", $"Data '{w.StartDate}' inválida; use yyyy-MM-dd.");
+        if (w.ZoneRadius < 60 || w.ZoneRadius > 300)
+            v.Error(WorldFile, "zoneRadius", "Raio padrão das zonas deve estar entre 60 e 300 unidades (600 m a 3 km).");
         if (string.IsNullOrWhiteSpace(w.StartingRegionId))
             v.Error(WorldFile, "startingRegionId", "Região inicial obrigatória.");
         for (int i = 0; i < w.Holidays.Count; i++)
@@ -138,10 +140,18 @@ public static class ContentValidator
             var r = set.Regions[i];
             string p = $"regions[{i}]";
             v.Require(RegionsFile, p + ".name", r.Name);
-            v.OneOf(RegionsFile, p + ".kind", r.Kind, RegionKinds.All);
+            v.OneOf(RegionsFile, p + ".function", r.Function, ZoneFunctions.All);
             v.OneOf(RegionsFile, p + ".pvp", r.Pvp, PvpRules.All);
-            if (r.Kind == RegionKinds.City && r.Pvp != PvpRules.None)
+            v.OneOf(RegionsFile, p + ".deathRule", r.DeathRule, DeathRules.All);
+            v.OneOf(RegionsFile, p + ".control", r.Control, ControlRules.All);
+            if (r.IsCity && r.Pvp != PvpRules.None)
                 v.Error(RegionsFile, p + ".pvp", "Cidades são sempre zonas sem PvP.");
+            if (r.IsCity && r.DeathRule != DeathRules.None)
+                v.Error(RegionsFile, p + ".deathRule", "Cidades não podem ter perda por morte.");
+            if (r.IsCity && r.Control != ControlRules.Neutral)
+                v.Error(RegionsFile, p + ".control", "Cidades não são disputáveis nesta versão.");
+            if (r.DeathRule == DeathRules.FullLoot && r.Pvp == PvpRules.None)
+                v.Warning(RegionsFile, p + ".deathRule", "Full loot sem PvP só se aplica a mortes por criaturas.");
             if (r.LevelMin < 1) v.Error(RegionsFile, p + ".levelMin", "Nível mínimo deve ser >= 1.");
             if (r.LevelMax < r.LevelMin) v.Error(RegionsFile, p + ".levelMax", "Nível máximo menor que o mínimo.");
             if (r.Capacity <= 0) v.Error(RegionsFile, p + ".capacity", "Capacidade deve ser > 0.");
@@ -159,9 +169,12 @@ public static class ContentValidator
                 {
                     var other = set.Regions.First(x => x.Id == con.To);
                     if (!other.Connections.Any(x => x.To == r.Id))
-                        v.Warning(RegionsFile, cp + ".to", $"Conexão de mão única: '{con.To}' não volta para '{r.Id}'.");
+                        v.Error(RegionsFile, cp + ".to", $"Conexão de mão única: '{con.To}' não volta para '{r.Id}' (toda passagem tem portão dos dois lados).");
+                    long dx = other.MapPosition.X - r.MapPosition.X, dy = other.MapPosition.Y - r.MapPosition.Y;
+                    double gap = Math.Sqrt(dx * dx + dy * dy) - 2.0 * set.World.ZoneRadius;
+                    if (gap > 120)
+                        v.Warning(RegionsFile, cp + ".to", $"Zonas conectadas estão a {gap:0} unidades de distância; a estrada entre os portões ficará longa.");
                 }
-                if (con.TravelMinutes <= 0) v.Error(RegionsFile, cp + ".travelMinutes", "Tempo de viagem deve ser > 0 min.");
             }
             for (int k = 0; k < r.ResourceItemIds.Count; k++)
                 if (!itemIds.Contains(r.ResourceItemIds[k]))
@@ -316,7 +329,7 @@ public static class ContentValidator
                 var region = set.Regions.FirstOrDefault(r => r.Id == rid);
                 if (region == null)
                     v.Error(CreaturesFile, $"{p}.regionIds[{k}]", $"Região '{rid}' não existe.");
-                else if (region.Kind == RegionKinds.City)
+                else if (region.IsCity)
                     v.Error(CreaturesFile, $"{p}.regionIds[{k}]", $"Criaturas hostis não podem aparecer na cidade '{rid}'.");
             }
             for (int k = 0; k < c.Loot.Count; k++)
@@ -337,7 +350,7 @@ public static class ContentValidator
         {
             var r = set.Regions[i];
             string rp = $"regions[{i}]";
-            bool isCity = r.Kind == RegionKinds.City;
+            bool isCity = r.IsCity;
             if (r.Activities.Count == 0)
                 v.Warning(f, rp + ".activities", "Local não oferece nenhuma atividade; jogadores simulados não terão motivo para visitá-lo.");
 
@@ -420,6 +433,8 @@ public static class ContentValidator
         if (pop.Profiles.Count == 0) v.Error(PopulationFile, "profiles", "Defina ao menos um perfil de população.");
         if (pop.Names.FirstNames.Count == 0) v.Error(PopulationFile, "names.firstNames", "Lista de nomes vazia.");
         if (pop.Names.LastNames.Count == 0) v.Error(PopulationFile, "names.lastNames", "Lista de sobrenomes vazia.");
+        if (pop.Names.NickPrefixes.Count == 0) v.Error(PopulationFile, "names.nickPrefixes", "Lista de prefixos de apelido vazia.");
+        if (pop.Names.NickSuffixes.Count == 0) v.Error(PopulationFile, "names.nickSuffixes", "Lista de sufixos de apelido vazia.");
         for (int i = 0; i < pop.Profiles.Count; i++)
         {
             var pr = pop.Profiles[i];

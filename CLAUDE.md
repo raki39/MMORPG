@@ -45,4 +45,5 @@ dotnet run --project Simulation.Runner -- --days 1 --no-skip   # verificação t
 
 ## Marco atual
 
-- M0 concluído. Próximo: teste de viabilidade do Godot (projeto criado só pelo terminal, mapa com população se movendo) e depois M1 (HUD e mapa). Ver `docs/backlog.md`.
+- M0 e teste de viabilidade concluídos. M2 em andamento (comportamento real, zonas D-015/D-016) junto com o mapa/fichas do M1. Ver `docs/backlog.md`.
+- Após cada entrega: `tools/godot.ps1 export` (o atalho "MMORPG Tycoon" na Área de Trabalho abre `build/MMOTycoon.exe`).

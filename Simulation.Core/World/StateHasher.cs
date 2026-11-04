@@ -11,7 +11,7 @@ namespace Simulation.Core.World;
 /// </summary>
 public static class StateHasher
 {
-    public const int FormatVersion = 1;
+    public const int FormatVersion = 2;
 
     public static string Compute(WorldState w)
     {
@@ -39,9 +39,28 @@ public static class StateHasher
         h.Int(w.Characters.Count);
         foreach (var c in w.Characters)
         {
-            h.Int(c.Id); h.Int(c.AccountId); h.Str(c.Name); h.Str(c.ClassId);
+            h.Int(c.Id); h.Int(c.AccountId); h.Int(c.PersonId); h.Str(c.Name); h.Str(c.ClassId);
             h.Int(c.Level); h.Long(c.Experience); h.Long(c.GoldCopper); h.Str(c.RegionId);
+            h.Int((int)c.Status); h.Str(c.TargetRegionId); h.Str(c.ActivityId);
+            h.Int(c.Position.X); h.Int(c.Position.Y); h.Int(c.MoveTo.X); h.Int(c.MoveTo.Y);
+            h.Long(c.MoveStartTick); h.Long(c.MoveEndTick); h.Str(c.MoveEntersZone);
+            h.Int(c.RemainingWaypoints.Count);
+            foreach (var wp in c.RemainingWaypoints) { h.Int(wp.Pos.X); h.Int(wp.Pos.Y); h.Str(wp.EntersZone); }
+            h.Long(c.SessionStartTick); h.Long(c.ActivityStartTick); h.Long(c.ActivityEndTick); h.Long(c.SessionEndTick);
+            h.Bool(c.LogoutPending);
+            h.Int(c.KnownRegions.Count);
+            foreach (var r in c.KnownRegions) h.Str(r);
+            h.Int(c.DecisionCount); h.Str(c.LastActivityKey); h.Int(c.RepeatCount);
+            if (c.LastDecision != null)
+            {
+                h.Long(c.LastDecision.Tick); h.Str(c.LastDecision.RegionId); h.Str(c.LastDecision.ActivityId);
+                h.Int(c.LastDecision.Utility); h.Int(c.LastDecision.OptionsConsidered);
+                foreach (var f in c.LastDecision.Factors) { h.Str(f.Key); h.Int(f.Contribution); }
+            }
         }
+
+        h.Int(w.OnlineCount);
+        foreach (var kv in w.Occupancy) { h.Str(kv.Key); h.Int(kv.Value); }
 
         h.Long(w.Scheduler.NextSequence);
         foreach (var ev in w.Scheduler.SnapshotOrdered())
@@ -57,7 +76,10 @@ public static class StateHasher
         }
 
         h.Long(w.Events.NextEventId);
-        h.Int(w.Today.CommandsApplied); h.Int(w.Today.CommandsRejected); h.Int(w.Today.EventsEmitted);
+        var d = w.Today;
+        h.Int(d.CommandsApplied); h.Int(d.CommandsRejected); h.Int(d.EventsEmitted);
+        h.Int(d.Registrations); h.Int(d.SessionsStarted); h.Int(d.ActivePlayers); h.Int(d.PeakOnline);
+        h.Int(d.ActivitiesChosen); h.Int(d.LevelUps); h.Long(d.PlayMinutes);
         h.Int(w.History.Count);
 
         return h.Finish();
@@ -66,7 +88,7 @@ public static class StateHasher
     private static void HashPerson(Writer h, Person p)
     {
         h.Int(p.Id); h.Str(p.Name); h.Str(p.ProfileId); h.ULong(p.AppearanceSeed);
-        h.Int((int)p.State); h.Int(p.AccountId);
+        h.Int((int)p.State); h.Int(p.AccountId); h.Int(p.CharacterId); h.Long(p.LastPlayedDay);
         var t = p.Traits;
         h.Int(t.Pve); h.Int(t.Pvp); h.Int(t.Trade); h.Int(t.Exploration); h.Int(t.Socializing);
         h.Int(t.Sociability); h.Int(t.Aggressiveness); h.Int(t.Patience); h.Int(t.Loyalty); h.Int(t.RiskAversion);

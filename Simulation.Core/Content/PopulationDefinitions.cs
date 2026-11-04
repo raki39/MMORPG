@@ -62,6 +62,9 @@ public sealed class NamePoolDefinition
 {
     public List<string> FirstNames { get; set; } = new();
     public List<string> LastNames { get; set; } = new();
+    /// <summary>Partes para apelidos de personagem (prefixo + sufixo).</summary>
+    public List<string> NickPrefixes { get; set; } = new();
+    public List<string> NickSuffixes { get; set; } = new();
 }
 
 public sealed class PopulationDefinition

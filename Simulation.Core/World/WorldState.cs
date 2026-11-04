@@ -22,12 +22,26 @@ public sealed class DayCounters
     public int CommandsApplied;
     public int CommandsRejected;
     public int EventsEmitted;
+    public int Registrations;
+    public int SessionsStarted;
+    public int ActivePlayers;
+    public int PeakOnline;
+    public int ActivitiesChosen;
+    public int LevelUps;
+    public long PlayMinutes;
 
-    internal void Reset()
+    internal void Reset(int onlineNow)
     {
         CommandsApplied = 0;
         CommandsRejected = 0;
         EventsEmitted = 0;
+        Registrations = 0;
+        SessionsStarted = 0;
+        ActivePlayers = 0;
+        PeakOnline = onlineNow;
+        ActivitiesChosen = 0;
+        LevelUps = 0;
+        PlayMinutes = 0;
     }
 }
 
@@ -46,6 +60,14 @@ public sealed class DailyRecord
     public int CommandsApplied { get; set; }
     public int CommandsRejected { get; set; }
     public int EventsEmitted { get; set; }
+    public int Registrations { get; set; }
+    public int SessionsStarted { get; set; }
+    /// <summary>Pessoas distintas que jogaram no dia (DAU).</summary>
+    public int ActivePlayers { get; set; }
+    public int PeakOnline { get; set; }
+    public int ActivitiesChosen { get; set; }
+    public int LevelUps { get; set; }
+    public long PlayMinutes { get; set; }
 }
 
 /// <summary>
@@ -84,6 +106,47 @@ public sealed class WorldState
     public IReadOnlyList<DailyRecord> History => _history;
 
     public Person GetPerson(int id) => _persons[id - 1];
+    public Character GetCharacter(int id) => _characters[id - 1];
+
+    /// <summary>Sistema de comportamento (definido pelo motor na criacao).</summary>
+    internal Behavior.BehaviorSystem Behavior { get; set; } = null!;
+
+    /// <summary>Pessoas conectadas agora.</summary>
+    public int OnlineCount { get; internal set; }
+
+    /// <summary>
+    /// Personagens fazendo ou indo fazer cada atividade ("regiao/atividade"). Base da lotacao
+    /// percebida nas decisoes. Ordenado para hash estavel.
+    /// </summary>
+    internal SortedDictionary<string, int> Occupancy { get; } = new(StringComparer.Ordinal);
+
+    public int OccupancyOf(string regionId, string activityId) =>
+        Occupancy.TryGetValue(ActivityKey(regionId, activityId), out var n) ? n : 0;
+
+    public static string ActivityKey(string regionId, string activityId) => regionId + "/" + activityId;
+
+    internal void AddOccupancy(string regionId, string activityId, int delta)
+    {
+        if (activityId.Length == 0) return;
+        string key = ActivityKey(regionId, activityId);
+        int n = (Occupancy.TryGetValue(key, out var v) ? v : 0) + delta;
+        if (n < 0) throw new InvalidOperationException($"Ocupação negativa em {key}.");
+        if (n == 0) Occupancy.Remove(key); else Occupancy[key] = n;
+    }
+
+    internal Account AddAccount(int personId, long tick)
+    {
+        var a = new Account(_accounts.Count + 1, personId, tick);
+        _accounts.Add(a);
+        return a;
+    }
+
+    internal Character AddCharacter(int accountId, int personId, string name, string classId, string regionId)
+    {
+        var c = new Character(_characters.Count + 1, accountId, name, classId) { PersonId = personId, RegionId = regionId };
+        _characters.Add(c);
+        return c;
+    }
 
     internal void AddPerson(Person p)
     {

@@ -2,8 +2,8 @@ using System.Globalization;
 using Godot;
 using Simulation.Core.Commands;
 using Simulation.Core.Content;
+using Simulation.Core.Events;
 using Simulation.Infrastructure.Content;
-using GodotClient.Fixtures;
 using GodotClient.Map;
 using GodotClient.Sim;
 using GodotClient.Ui;
@@ -11,37 +11,40 @@ using GodotClient.Ui;
 namespace GodotClient;
 
 /// <summary>
-/// Raiz do cliente. Monta HUD por codigo com os tokens, conecta mapa, host da simulacao
-/// e fixture de movimento (demonstracao ate o M2).
+/// Raiz do cliente: mapa de zonas em tela cheia, barra superior, camadas, legenda e
+/// fichas (modais) de jogadores e zonas. Toda informacao vem do Core via snapshot/eventos.
 ///
-/// Argumentos (depois de "--" na linha de comando do Godot):
-///   --world=PASTA  --seed=N  --population=N  --speed=N
-///   --select=ID_REGIAO | --person=ID   selecao inicial
-///   --hour=H             avanca a simulacao ate a hora H do primeiro dia (capturas)
-///   --sim-minutes=N      avanca a simulacao N minutos antes de comecar
-///   --screenshot=ARQ     salva PNG apos --frames=N quadros e encerra
-///   --measure-seconds=S  imprime FPS medio apos S segundos e encerra
+/// Argumentos (depois de "--"):
+///   --world=PASTA  --seed=N  --population=N  --speed=N  --layer=normal|lotacao|perigo|nivel
+///   --hour=H | --sim-minutes=N    avanca a simulacao antes de comecar (capturas)
+///   --open-person=ID | --open-zone=ID | --open-cluster   abre uma ficha ao iniciar
+///   --tab=N               aba inicial da ficha aberta
+///   --screenshot=ARQ --frames=N    captura e encerra
+///   --measure-seconds=S   imprime FPS medio e encerra
 /// </summary>
 public partial class Main : Node
 {
     private readonly Dictionary<string, string> _args = new(StringComparer.Ordinal);
     private SimulationHost? _host;
-    private DemoMovementFixture? _fixture;
+    private ClientContext _ctx = null!;
     private WorldMapView _map = null!;
-    private ColorRect _terrain = null!;
     private Control _ui = null!;
-    private Label _clockLabel = null!, _dateLabel = null!, _speedLabel = null!, _fpsLabel = null!, _populationLabel = null!;
+    private Label _clockLabel = null!, _dateLabel = null!, _speedLabel = null!, _fpsLabel = null!, _onlineLabel = null!, _registeredLabel = null!;
     private Label? _worldNameLabel;
     private PanelContainer _serverChip = null!;
-    private VBoxContainer _inspector = null!;
-    private Label? _inspectorCount;
+    private VBoxContainer _layerLegend = null!;
     private readonly List<Button> _speedButtons = new();
+    private readonly List<Button> _layerButtons = new();
     private int _lastNonZeroSpeed = 1;
-    private double _uiTimer;
+    private double _uiTimer, _modalTimer;
     private int _frames;
     private double _measureElapsed;
     private int _measureFrames;
     private bool _serverOpenShown;
+    private ModalFrame? _modal;
+    private ClusterPopover? _popover;
+    private readonly Dictionary<int, List<SimEvent>> _history = new();
+    private readonly Dictionary<int, int> _characterToPerson = new();
 
     public override void _Ready()
     {
@@ -51,10 +54,9 @@ public partial class Main : Node
             _args[kv[0]] = kv.Length > 1 ? kv[1] : "true";
         }
 
-        // Camadas: terreno (shader) -> mapa -> HUD.
-        _terrain = new ColorRect { MouseFilter = Control.MouseFilterEnum.Ignore, Color = UiTokens.Background };
-        _terrain.SetAnchorsPreset(Control.LayoutPreset.FullRect);
-        AddChild(_terrain);
+        var terrain = new ColorRect { MouseFilter = Control.MouseFilterEnum.Ignore, Color = UiTokens.Background };
+        terrain.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+        AddChild(terrain);
         _map = new WorldMapView();
         AddChild(_map);
         _ui = new Control { Theme = ThemeFactory.Build(), MouseFilter = Control.MouseFilterEnum.Ignore };
@@ -71,17 +73,31 @@ public partial class Main : Node
             return;
         }
         var content = load.Database!;
-
         ulong seed = ulong.Parse(Arg("seed", "42"), CultureInfo.InvariantCulture);
         int population = int.Parse(Arg("population", "100"), CultureInfo.InvariantCulture);
         _host = new SimulationHost(content, seed, population);
-        _fixture = new DemoMovementFixture(content, _host.Persons, seed);
-        _map.Setup(content, _fixture, _host.Persons, _terrain);
-        _map.RegionSelected += OnRegionSelected;
-        _map.PersonSelected += OnPersonSelected;
+
+        _ctx = new ClientContext
+        {
+            Content = content,
+            Calendar = _host.Calendar,
+            Layout = _host.Layout,
+            Persons = _host.Persons,
+            Snapshot = () => _host.Snapshot,
+            PersonHistory = id => _history.TryGetValue(id, out var l) ? l : (IReadOnlyList<SimEvent>)Array.Empty<SimEvent>(),
+            FocusPerson = (id, follow) => { _map.SelectPerson(id); _map.FocusPerson(id, follow); },
+            FocusZone = id => { _map.SelectRegion(id); _map.FocusRegion(id); },
+            OpenPerson = OpenPerson,
+            OpenZone = OpenZone,
+        };
+
+        _map.Setup(content, _host.Layout, _host.Persons, terrain);
+        _map.RegionSelected += id => { if (id.Length > 0) OpenZone(id); };
+        _map.PersonSelected += OpenPerson;
+        _map.ClusterSelected += OpenCluster;
 
         BuildTopBar(content);
-        BuildInspector();
+        BuildLayerPanel();
         BuildLegend(content);
         BuildMapControls();
 
@@ -94,21 +110,37 @@ public partial class Main : Node
         if (preRoll > 0) _host.AdvanceBeforeStart(preRoll);
         _host.Speed = int.Parse(Arg("speed", "1"), CultureInfo.InvariantCulture);
         _host.Start();
+        CollectEvents();
 
         SyncSpeedButtons();
         GetViewport().SizeChanged += () => FitMap(false);
         FitMap(true);
+        SetLayer(Arg("layer", "normal") switch { "lotacao" => MapLayer.Crowding, "perigo" => MapLayer.Danger, "nivel" => MapLayer.Level, _ => MapLayer.Normal });
+        CallDeferred(nameof(OpenFromArgs));
+    }
 
-        if (_args.TryGetValue("select", out var sel) && content.Regions.ContainsKey(sel))
+    private void OpenFromArgs()
+    {
+        _map.SetSnapshot(_host!.Snapshot);
+        _map._Process(0);
+        if (_args.TryGetValue("open-person", out var p))
         {
-            _map.SelectRegion(sel);
-            OnRegionSelected(sel);
+            int id = p == "auto"
+                ? Enumerable.Range(1, _host.Snapshot.ByPerson.Length - 1).FirstOrDefault(i => _host.Snapshot.ByPerson[i] is { Status: Simulation.Core.Population.CharacterStatus.Doing } v && v.LastDecision != null)
+                : int.TryParse(p, out var n) ? n : 0;
+            if (id > 0) OpenPerson(id);
         }
-        if (_args.TryGetValue("person", out var pid) && int.TryParse(pid, out int personId) && personId >= 1 && personId <= _host.Persons.Count)
+        if (_args.TryGetValue("open-zone", out var z) && _ctx.Content.Regions.ContainsKey(z)) OpenZone(z);
+        if (_args.ContainsKey("open-cluster"))
         {
-            _map.SelectPerson(personId);
-            OnPersonSelected(personId);
+            var snap = _host.Snapshot;
+            var best = Enumerable.Range(1, snap.ByPerson.Length - 1)
+                .Where(i => snap.ByPerson[i] is { Status: Simulation.Core.Population.CharacterStatus.Doing } v && v.ActivityId.Length > 0)
+                .GroupBy(i => snap.ByPerson[i]!.TargetRegionId + "/" + snap.ByPerson[i]!.ActivityId)
+                .OrderByDescending(g => g.Count()).FirstOrDefault();
+            if (best != null) OpenCluster(best.Key, GetViewport().GetVisibleRect().Size / 2f);
         }
+        if (_modal != null && _args.TryGetValue("tab", out var tab) && int.TryParse(tab, out int ti)) _modal.SelectTab(ti);
     }
 
     private string Arg(string key, string fallback) => _args.TryGetValue(key, out var v) ? v : fallback;
@@ -120,24 +152,82 @@ public partial class Main : Node
         string exeDir = System.IO.Path.GetDirectoryName(OS.GetExecutablePath()) ?? "";
         string besideExe = System.IO.Path.Combine(exeDir, rel);
         if (System.IO.Directory.Exists(besideExe)) return besideExe;
-        string projectDir = ProjectSettings.GlobalizePath("res://");
-        return System.IO.Path.GetFullPath(System.IO.Path.Combine(projectDir, "..", rel));
-    }
-
-    private Rect2 MapArea()
-    {
-        var size = GetViewport().GetVisibleRect().Size;
-        return new Rect2(0, UiTokens.TopBarHeight, size.X - UiTokens.InspectorWidth - UiTokens.S24, size.Y - UiTokens.TopBarHeight);
+        return System.IO.Path.GetFullPath(System.IO.Path.Combine(ProjectSettings.GlobalizePath("res://"), "..", rel));
     }
 
     private void FitMap(bool instant)
     {
         var size = GetViewport().GetVisibleRect().Size;
         if (_worldNameLabel != null) _worldNameLabel.Visible = size.X >= 1600;
-        var area = MapArea();
-        // Margem extra embaixo para a legenda.
-        _map.FitTo(new Rect2(area.Position + new Vector2(UiTokens.S24, UiTokens.S24),
-            area.Size - new Vector2(UiTokens.S24 * 2, UiTokens.S24 * 2 + 90)), instant);
+        var area = new Rect2(UiTokens.S24, UiTokens.TopBarHeight + UiTokens.S16, size.X - UiTokens.S24 * 2, size.Y - UiTokens.TopBarHeight - UiTokens.S16 - 96);
+        _map.FitTo(area, instant);
+    }
+
+    // ---------- Fichas ----------
+
+    private void CloseOverlays()
+    {
+        if (_popover != null && IsInstanceValid(_popover)) _popover.QueueFree();
+        _popover = null;
+        if (_modal != null && IsInstanceValid(_modal)) _modal.QueueFree();
+        _modal = null;
+    }
+
+    private void OpenPerson(int personId)
+    {
+        if (_host == null || personId < 1 || personId > _host.Persons.Count) return;
+        CloseOverlays();
+        _map.SelectPerson(personId);
+        _modal = new PlayerModal(_ctx, personId);
+        _modal.Closed += () => _modal = null;
+        _ui.AddChild(_modal);
+    }
+
+    private void OpenZone(string zoneId)
+    {
+        if (_host == null || !_ctx.Content.Regions.ContainsKey(zoneId)) return;
+        CloseOverlays();
+        _map.SelectRegion(zoneId);
+        _modal = new ZoneModal(_ctx, _map, zoneId);
+        _modal.Closed += () => { _modal = null; _map.SelectRegion(null); };
+        _ui.AddChild(_modal);
+    }
+
+    private void OpenCluster(string spotKey, Vector2 at)
+    {
+        CloseOverlays();
+        var parts = spotKey.Split('/');
+        var zone = _ctx.Content.Regions[parts[0]];
+        string title = parts[1].Length == 0 ? "Na encruzilhada" : _ctx.ActivityName(parts[0], parts[1]);
+        var people = _map.PeopleAt(spotKey);
+        if (people.Count == 0)
+        {
+            var snap = _host!.Snapshot;
+            people = Enumerable.Range(1, snap.ByPerson.Length - 1).Where(i => snap.ByPerson[i] is { } v && v.TargetRegionId + "/" + v.ActivityId == spotKey).ToList();
+        }
+        _popover = new ClusterPopover(_ctx, title, $"{zone.Name} · {people.Count} jogadores", people, at, GetViewport().GetVisibleRect().Size);
+        _ui.AddChild(_popover);
+    }
+
+    // ---------- Eventos por pessoa ----------
+
+    private void CollectEvents()
+    {
+        if (_host == null) return;
+        var snap = _host.Snapshot;
+        foreach (var v in snap.ByPerson) if (v != null) _characterToPerson[v.CharacterId] = v.PersonId;
+        foreach (var e in _host.DrainEvents())
+        {
+            foreach (var ent in e.Entities)
+            {
+                int pid = ent.Kind == "person" ? (int)ent.Id : ent.Kind == "character" && _characterToPerson.TryGetValue((int)ent.Id, out var p) ? p : 0;
+                if (pid == 0) continue;
+                if (!_history.TryGetValue(pid, out var list)) _history[pid] = list = new List<SimEvent>();
+                list.Insert(0, e);
+                if (list.Count > 120) list.RemoveAt(list.Count - 1);
+                break;
+            }
+        }
     }
 
     // ---------- Barra superior ----------
@@ -156,30 +246,29 @@ public partial class Main : Node
         _ui.AddChild(bar);
 
         var row = new HBoxContainer();
-        row.AddThemeConstantOverride("separation", UiTokens.S12);
+        row.AddThemeConstantOverride("separation", UiTokens.S16);
         bar.AddChild(row);
 
-        // Marca
         var brand = new HBoxContainer();
         brand.AddThemeConstantOverride("separation", UiTokens.S8);
-        var mark = new Label { Text = "◆" };
-        mark.AddThemeColorOverride("font_color", UiTokens.Accent);
-        mark.AddThemeFontSizeOverride("font_size", 16);
-        brand.AddChild(mark);
+        brand.AddChild(ThemeFactory.Text("◆", 16, UiTokens.Accent));
         brand.AddChild(ThemeFactory.Text("MMORPG TYCOON", UiTokens.FontTitle, UiTokens.AccentSoft, UiFonts.Display));
         row.AddChild(brand);
         _worldNameLabel = ThemeFactory.Text("· " + content.World.Name, UiTokens.FontBody, UiTokens.TextSecondary, UiFonts.Medium);
         row.AddChild(_worldNameLabel);
-        var demo = ThemeFactory.Chip("DEMONSTRAÇÃO", UiTokens.Warning, dot: true);
-        demo.TooltipText = DemoMovementFixture.Label + ".\nO movimento das pessoas no mapa é fictício; sessões e escolhas reais chegam no M2.";
-        demo.MouseFilter = Control.MouseFilterEnum.Stop;
-        row.AddChild(demo);
         row.AddChild(new Control { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill });
 
         _serverChip = ThemeFactory.Chip("Servidor fechado", UiTokens.TextSecondary, dot: true);
         row.AddChild(_serverChip);
 
-        // Relogio: hora grande + data menor.
+        var players = new VBoxContainer { Alignment = BoxContainer.AlignmentMode.Center };
+        players.AddThemeConstantOverride("separation", -2);
+        _onlineLabel = ThemeFactory.Text("", UiTokens.FontSmall, UiTokens.TextPrimary, UiFonts.Numbers);
+        _registeredLabel = ThemeFactory.Text("", UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Numbers);
+        players.AddChild(_onlineLabel);
+        players.AddChild(_registeredLabel);
+        row.AddChild(players);
+
         var clock = new VBoxContainer { Alignment = BoxContainer.AlignmentMode.Center };
         clock.AddThemeConstantOverride("separation", -2);
         _clockLabel = ThemeFactory.Text("00:00", 17, UiTokens.TextPrimary, UiFonts.Numbers);
@@ -190,32 +279,11 @@ public partial class Main : Node
         clock.AddChild(_dateLabel);
         row.AddChild(clock);
 
-        // Controle segmentado de velocidade.
-        var seg = new PanelContainer();
-        var segBox = ThemeFactory.Box(new Color(UiTokens.Background, 0.7f), 3, border: UiTokens.Border, radius: 10);
-        segBox.ContentMarginTop = segBox.ContentMarginBottom = 3;
-        seg.AddThemeStyleboxOverride("panel", segBox);
-        var segRow = new HBoxContainer();
-        segRow.AddThemeConstantOverride("separation", 2);
-        seg.AddChild(segRow);
+        var seg = Segmented(out var segRow);
         var group = new ButtonGroup();
         foreach (int s in SimulationHost.Speeds)
         {
-            var b = new Button
-            {
-                Text = s == 0 ? "❚❚" : $"{s}×",
-                ToggleMode = true,
-                ButtonGroup = group,
-                CustomMinimumSize = new Vector2(44, 30),
-                FocusMode = Control.FocusModeEnum.None,
-                TooltipText = s == 0 ? "Pausar (Espaço)" : $"Velocidade {s}× (tecla {Array.IndexOf(SimulationHost.Speeds, s)})",
-            };
-            b.AddThemeFontOverride("font", UiFonts.Numbers);
-            b.AddThemeFontSizeOverride("font_size", 13);
-            b.AddThemeStyleboxOverride("normal", ThemeFactory.Box(new Color(0, 0, 0, 0), 8, radius: 7));
-            b.AddThemeStyleboxOverride("hover", ThemeFactory.Box(UiTokens.SurfaceHover, 8, radius: 7));
-            b.AddThemeStyleboxOverride("pressed", ThemeFactory.Box(UiTokens.Accent, 8, radius: 7));
-            b.AddThemeStyleboxOverride("hover_pressed", ThemeFactory.Box(UiTokens.AccentSoft, 8, radius: 7));
+            var b = SegButton(s == 0 ? "❚❚" : $"{s}×", s == 0 ? "Pausar (Espaço)" : $"Velocidade {s}× (tecla {Array.IndexOf(SimulationHost.Speeds, s)})", group);
             int speed = s;
             b.Pressed += () => SetSpeed(speed);
             _speedButtons.Add(b);
@@ -223,18 +291,36 @@ public partial class Main : Node
         }
         row.AddChild(seg);
 
-        var stats = new VBoxContainer { Alignment = BoxContainer.AlignmentMode.Center };
-        stats.AddThemeConstantOverride("separation", -2);
-        _populationLabel = ThemeFactory.Text("", UiTokens.FontSmall, UiTokens.TextPrimary, UiFonts.Numbers);
         _speedLabel = ThemeFactory.Text("", UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Numbers);
-        stats.AddChild(_populationLabel);
-        stats.AddChild(_speedLabel);
-        stats.CustomMinimumSize = new Vector2(96, 0);
-        row.AddChild(stats);
-
+        _speedLabel.CustomMinimumSize = new Vector2(84, 0);
+        row.AddChild(_speedLabel);
         _fpsLabel = ThemeFactory.Text("", UiTokens.FontCaption, UiTokens.TextDisabled, UiFonts.Numbers);
-        _fpsLabel.CustomMinimumSize = new Vector2(48, 0);
+        _fpsLabel.CustomMinimumSize = new Vector2(46, 0);
         row.AddChild(_fpsLabel);
+    }
+
+    private static PanelContainer Segmented(out HBoxContainer row)
+    {
+        var seg = new PanelContainer();
+        var box = ThemeFactory.Box(new Color(UiTokens.Background, 0.7f), 3, border: UiTokens.Border, radius: 10);
+        box.ContentMarginTop = box.ContentMarginBottom = 3;
+        seg.AddThemeStyleboxOverride("panel", box);
+        row = new HBoxContainer();
+        row.AddThemeConstantOverride("separation", 2);
+        seg.AddChild(row);
+        return seg;
+    }
+
+    private static Button SegButton(string text, string tip, ButtonGroup group)
+    {
+        var b = new Button { Text = text, ToggleMode = true, ButtonGroup = group, CustomMinimumSize = new Vector2(44, 30), FocusMode = Control.FocusModeEnum.None, TooltipText = tip };
+        b.AddThemeFontOverride("font", UiFonts.Numbers);
+        b.AddThemeFontSizeOverride("font_size", 13);
+        b.AddThemeStyleboxOverride("normal", ThemeFactory.Box(new Color(0, 0, 0, 0), 10, radius: 7));
+        b.AddThemeStyleboxOverride("hover", ThemeFactory.Box(UiTokens.SurfaceHover, 10, radius: 7));
+        b.AddThemeStyleboxOverride("pressed", ThemeFactory.Box(UiTokens.Accent, 10, radius: 7));
+        b.AddThemeStyleboxOverride("hover_pressed", ThemeFactory.Box(UiTokens.AccentSoft, 10, radius: 7));
+        return b;
     }
 
     private void SetSpeed(int speed)
@@ -252,274 +338,75 @@ public partial class Main : Node
             _speedButtons[i].SetPressedNoSignal(SimulationHost.Speeds[i] == _host.Speed);
     }
 
-    // ---------- Inspecao ----------
+    // ---------- Camadas ----------
 
-    private void BuildInspector()
+    private static readonly (MapLayer Layer, string Name, string Tip)[] Layers =
     {
-        var panel = new PanelContainer { MouseFilter = Control.MouseFilterEnum.Stop };
-        panel.AddThemeStyleboxOverride("panel", ThemeFactory.Glass(UiTokens.S24));
-        panel.SetAnchorsPreset(Control.LayoutPreset.RightWide);
-        panel.OffsetLeft = -UiTokens.InspectorWidth - UiTokens.S16;
-        panel.OffsetRight = -UiTokens.S16;
-        panel.OffsetTop = UiTokens.TopBarHeight + UiTokens.S16;
-        panel.OffsetBottom = -UiTokens.S16;
-        _ui.AddChild(panel);
-
-        var scroll = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
-        panel.AddChild(scroll);
-        _inspector = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
-        _inspector.AddThemeConstantOverride("separation", UiTokens.S8);
-        scroll.AddChild(_inspector);
-        ShowEmptyInspector();
-    }
-
-    private void ClearInspector()
-    {
-        foreach (var c in _inspector.GetChildren()) c.QueueFree();
-        _inspectorCount = null;
-    }
-
-    private void ShowEmptyInspector()
-    {
-        ClearInspector();
-        _inspector.AddChild(ThemeFactory.Section("Inspeção"));
-        _inspector.AddChild(ThemeFactory.Text("Explore o mundo", UiTokens.FontHeading, UiTokens.TextPrimary, UiFonts.Display));
-        var hint = ThemeFactory.Text("Clique em uma região para ver serviços, rotas e atividades oferecidas, ou em uma pessoa para abrir a ficha.",
-            UiTokens.FontBody, UiTokens.TextSecondary);
-        hint.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        _inspector.AddChild(hint);
-        _inspector.AddChild(new HSeparator());
-        _inspector.AddChild(ThemeFactory.Section("Atalhos"));
-        foreach (var (k, d) in new[] { ("Espaço", "pausar / continuar"), ("1 – 4", "velocidade"), ("Roda", "zoom"), ("Arrastar", "mover o mapa"), ("Duplo clique", "focar região"), ("Esc", "limpar seleção") })
-            _inspector.AddChild(KeyRow(k, d));
-    }
-
-    private static HBoxContainer KeyRow(string key, string desc)
-    {
-        var row = new HBoxContainer();
-        row.AddThemeConstantOverride("separation", UiTokens.S12);
-        var keyChip = new PanelContainer();
-        var sb = ThemeFactory.Box(UiTokens.SurfaceRaised, 8, border: UiTokens.BorderStrong, radius: 6);
-        sb.ContentMarginTop = 2; sb.ContentMarginBottom = 2;
-        sb.BorderWidthBottom = 2;
-        keyChip.AddThemeStyleboxOverride("panel", sb);
-        keyChip.AddChild(ThemeFactory.Text(key, UiTokens.FontCaption, UiTokens.TextPrimary, UiFonts.SemiBold));
-        keyChip.CustomMinimumSize = new Vector2(96, 0);
-        row.AddChild(keyChip);
-        row.AddChild(ThemeFactory.Text(desc, UiTokens.FontSmall, UiTokens.TextSecondary));
-        return row;
-    }
-
-    private void OnRegionSelected(string regionId)
-    {
-        if (_host == null) return;
-        if (string.IsNullOrEmpty(regionId) || !_host.Content.Regions.TryGetValue(regionId, out var r))
-        {
-            ShowEmptyInspector();
-            return;
-        }
-
-        ClearInspector();
-        bool city = r.Kind == RegionKinds.City;
-        _inspector.AddChild(ThemeFactory.Section(city ? "Cidade" : "Área"));
-        _inspector.AddChild(ThemeFactory.Text(r.Name, UiTokens.FontHeading, UiTokens.TextPrimary, UiFonts.Display));
-
-        var chips = new HFlowContainer();
-        chips.AddThemeConstantOverride("h_separation", UiTokens.S8);
-        chips.AddThemeConstantOverride("v_separation", UiTokens.S8);
-        chips.AddChild(ThemeFactory.Chip(city ? "Zona segura" : PtBr.Biome(r.Biome), city ? UiTokens.Success : UiTokens.BiomeColor(r.Biome).Lightened(0.3f), dot: true));
-        chips.AddChild(ThemeFactory.Chip(PtBr.Pvp(r.Pvp), r.Pvp == PvpRules.Open ? UiTokens.Danger : UiTokens.TextSecondary));
-        chips.AddChild(ThemeFactory.Chip($"Níveis {r.LevelMin}–{r.LevelMax}", UiTokens.Info));
-        _inspector.AddChild(chips);
-
-        _inspector.AddChild(new HSeparator());
-        _inspector.AddChild(ThemeFactory.Section("Agora"));
-        var stat = new HBoxContainer();
-        stat.AddThemeConstantOverride("separation", UiTokens.S8);
-        _inspectorCount = ThemeFactory.Text("0", 28, UiTokens.TextPrimary, UiFonts.Numbers);
-        stat.AddChild(_inspectorCount);
-        var statText = new VBoxContainer { Alignment = BoxContainer.AlignmentMode.Center };
-        statText.AddThemeConstantOverride("separation", -2);
-        statText.AddChild(ThemeFactory.Text("pessoas no local", UiTokens.FontSmall, UiTokens.TextPrimary));
-        statText.AddChild(ThemeFactory.Text($"de {PtBr.Int(r.Capacity)} de capacidade · demonstração", UiTokens.FontCaption, UiTokens.TextSecondary));
-        stat.AddChild(statText);
-        _inspector.AddChild(stat);
-        UpdateInspectorCount();
-
-        _inspector.AddChild(new HSeparator());
-        _inspector.AddChild(ThemeFactory.Section("Rotas"));
-        foreach (var c in r.Connections)
-        {
-            string name = _host.Content.Regions.TryGetValue(c.To, out var other) ? other.Name : c.To;
-            var link = new Button
-            {
-                Text = $"{name}   ·   {c.TravelMinutes} min",
-                Alignment = HorizontalAlignment.Left,
-                CustomMinimumSize = new Vector2(0, UiTokens.ControlHeight),
-                TooltipText = $"Ir para {name}",
-                FocusMode = Control.FocusModeEnum.None,
-            };
-            string target = c.To;
-            link.Pressed += () => { _map.SelectRegion(target); _map.FocusRegion(target); OnRegionSelected(target); };
-            _inspector.AddChild(link);
-        }
-
-        _inspector.AddChild(new HSeparator());
-        _inspector.AddChild(ThemeFactory.Section($"Atividades oferecidas · {r.Activities.Count}"));
-        if (r.Activities.Count == 0)
-            _inspector.AddChild(ThemeFactory.Text("Nenhuma atividade: jogadores não terão motivo para vir.", UiTokens.FontBody, UiTokens.Warning));
-        foreach (var a in r.Activities)
-            _inspector.AddChild(ActivityCard(a));
-
-        _inspector.AddChild(new HSeparator());
-        var observe = new Button
-        {
-            Text = "Observar em 3D",
-            Disabled = true,
-            TooltipText = "Disponível a partir do M4 (observação 3D).",
-            CustomMinimumSize = new Vector2(0, UiTokens.ControlHeight + 6),
-        };
-        _inspector.AddChild(observe);
-    }
-
-    private static PanelContainer ActivityCard(ActivityDefinition a)
-    {
-        var card = new PanelContainer();
-        var sb = ThemeFactory.Box(new Color(UiTokens.SurfaceRaised, 0.7f), 12, border: UiTokens.Border, radius: 8);
-        sb.ContentMarginTop = sb.ContentMarginBottom = 9;
-        sb.BorderWidthLeft = 3;
-        sb.BorderColor = ActivityColor(a.Type);
-        card.AddThemeStyleboxOverride("panel", sb);
-        var box = new VBoxContainer();
-        box.AddThemeConstantOverride("separation", 2);
-        var head = new HBoxContainer();
-        var title = ThemeFactory.Text(a.Name, UiTokens.FontBody, UiTokens.TextPrimary, UiFonts.Medium);
-        title.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-        title.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        head.AddChild(title);
-        head.AddChild(ThemeFactory.Text(PtBr.ActivityType(a.Type).ToUpperInvariant(), UiTokens.FontCaption, ActivityColor(a.Type), UiFonts.SemiBold));
-        box.AddChild(head);
-        string group = a.MinGroupSize == a.MaxGroupSize ? $"grupo {a.MinGroupSize}" : $"grupo {a.MinGroupSize}–{a.MaxGroupSize}";
-        string risk = a.BaseRiskPermille > 0 ? $" · risco {a.BaseRiskPermille / 10}%" : "";
-        var meta = ThemeFactory.Text($"nível {a.MinLevel}+ · {group} · ~{a.TypicalMinutes} min{risk}", UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Numbers);
-        meta.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        box.AddChild(meta);
-        card.AddChild(box);
-        return card;
-    }
-
-    private static Color ActivityColor(string type) => type switch
-    {
-        ActivityTypes.Hunt or ActivityTypes.Boss => UiTokens.Danger,
-        ActivityTypes.Ambush or ActivityTypes.Patrol => UiTokens.Warning,
-        ActivityTypes.Gather or ActivityTypes.Explore => UiTokens.Success,
-        ActivityTypes.Trade or ActivityTypes.Repair => UiTokens.Accent,
-        _ => UiTokens.Info,
+        (MapLayer.Normal, "Mapa", "Terreno e biomas"),
+        (MapLayer.Crowding, "Lotação", "Jogadores presentes em relação à capacidade da zona"),
+        (MapLayer.Danger, "Perigo", "Risco das atividades, PvP e regra de morte"),
+        (MapLayer.Level, "Nível", "Faixa de nível do conteúdo"),
     };
 
-    private void OnPersonSelected(int personId)
+    private void BuildLayerPanel()
     {
-        if (_host == null || personId < 1 || personId > _host.Persons.Count) { ShowEmptyInspector(); return; }
-        var p = _host.Persons[personId - 1];
-        var profileName = _host.Content.Profiles.TryGetValue(p.ProfileId, out var pr) ? pr.Name : p.ProfileId;
-        var color = UiTokens.ProfileColor(p.ProfileId);
-        var t = p.Traits;
-
-        ClearInspector();
-        _inspector.AddChild(ThemeFactory.Section($"Pessoa #{p.Id}"));
-        var head = new HBoxContainer();
-        head.AddThemeConstantOverride("separation", UiTokens.S12);
-        head.AddChild(new PortraitBadge(p.AppearanceSeed, color) { CustomMinimumSize = new Vector2(56, 56) });
-        var names = new VBoxContainer { Alignment = BoxContainer.AlignmentMode.Center };
-        names.AddThemeConstantOverride("separation", 2);
-        names.AddChild(ThemeFactory.Text(p.Name, 21, UiTokens.TextPrimary, UiFonts.SemiBold));
-        var chips = new HBoxContainer();
-        chips.AddThemeConstantOverride("separation", 6);
-        chips.AddChild(ThemeFactory.Chip(profileName, color, dot: true));
-        chips.AddChild(ThemeFactory.Chip("Potencial interessado", UiTokens.TextSecondary));
-        names.AddChild(chips);
-        head.AddChild(names);
-        _inspector.AddChild(head);
-
-        var note = ThemeFactory.Text("Parâmetros reais gerados pelo Core. A posição no mapa ainda é demonstração.", UiTokens.FontCaption, UiTokens.TextSecondary);
-        note.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        _inspector.AddChild(note);
-
-        _inspector.AddChild(new HSeparator());
-        _inspector.AddChild(ThemeFactory.Section("Rotina"));
-        var routine = new HBoxContainer();
-        routine.AddThemeConstantOverride("separation", UiTokens.S8);
-        routine.AddChild(StatTile($"{t.PreferredStartHour:00}h", "início preferido"));
-        routine.AddChild(StatTile($"{t.SessionMinutes} min", "sessão típica"));
-        routine.AddChild(StatTile($"{t.DaysPerWeek}/7", "dias por semana"));
-        _inspector.AddChild(routine);
-
-        AddTraitGroup("Estilo de jogo", new[] { ("PvE", t.Pve), ("PvP", t.Pvp), ("Comércio", t.Trade), ("Exploração", t.Exploration), ("Social", t.Socializing) });
-        AddTraitGroup("Personalidade", new[] { ("Sociabilidade", t.Sociability), ("Agressividade", t.Aggressiveness), ("Paciência", t.Patience), ("Lealdade", t.Loyalty), ("Aversão a risco", t.RiskAversion) });
-        AddTraitGroup("Capacidade", new[] { ("Habilidade mecânica", t.MechanicalSkill), ("Conhecimento do jogo", t.GameKnowledge), ("Coordenação", t.Coordination) });
-
-        _inspector.AddChild(new HSeparator());
-        _inspector.AddChild(ThemeFactory.Section("Finanças"));
-        var money = new HBoxContainer();
-        money.AddThemeConstantOverride("separation", UiTokens.S8);
-        money.AddChild(StatTile($"R$ {PtBr.Decimal(t.LeisureBudgetCentsPerMonth / 100.0, 0)}", "lazer por mês"));
-        money.AddChild(StatTile($"{t.WillingnessToPay / 10}%", "disposição a pagar"));
-        _inspector.AddChild(money);
+        var panel = new PanelContainer { MouseFilter = Control.MouseFilterEnum.Stop };
+        panel.AddThemeStyleboxOverride("panel", ThemeFactory.Glass(12, 12));
+        panel.Position = new Vector2(UiTokens.S16, UiTokens.TopBarHeight + UiTokens.S16);
+        _ui.AddChild(panel);
+        var col = new VBoxContainer();
+        col.AddThemeConstantOverride("separation", 8);
+        panel.AddChild(col);
+        col.AddChild(ThemeFactory.Section("Camadas do mapa"));
+        var seg = Segmented(out var row);
+        var group = new ButtonGroup();
+        for (int i = 0; i < Layers.Length; i++)
+        {
+            var (l, name, tip) = Layers[i];
+            var b = SegButton(name, tip, group);
+            b.CustomMinimumSize = new Vector2(76, 30);
+            b.AddThemeFontOverride("font", UiFonts.SemiBold);
+            b.Pressed += () => SetLayer(l);
+            _layerButtons.Add(b);
+            row.AddChild(b);
+        }
+        col.AddChild(seg);
+        _layerLegend = new VBoxContainer();
+        _layerLegend.AddThemeConstantOverride("separation", 4);
+        col.AddChild(_layerLegend);
     }
 
-    private void AddTraitGroup(string title, (string Name, int Value)[] traits)
+    private void SetLayer(MapLayer layer)
     {
-        _inspector.AddChild(new HSeparator());
-        _inspector.AddChild(ThemeFactory.Section(title));
-        foreach (var (name, value) in traits)
+        _map.Layer = layer;
+        for (int i = 0; i < Layers.Length; i++) _layerButtons[i].SetPressedNoSignal(Layers[i].Layer == layer);
+        foreach (var c in _layerLegend.GetChildren()) c.QueueFree();
+        switch (layer)
         {
-            var row = new HBoxContainer();
-            row.AddThemeConstantOverride("separation", UiTokens.S8);
-            var label = ThemeFactory.Text(name, UiTokens.FontSmall, UiTokens.TextPrimary);
-            label.CustomMinimumSize = new Vector2(150, 0);
-            row.AddChild(label);
-            var bar = new ProgressBar
-            {
-                MinValue = 0, MaxValue = 1000, Value = value, ShowPercentage = false,
-                SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, SizeFlagsVertical = Control.SizeFlags.ShrinkCenter,
-                CustomMinimumSize = new Vector2(0, 7),
-                TooltipText = $"{name}: {value} de 1000",
-            };
-            var fill = ThemeFactory.Box(TraitColor(value), 0, radius: 4);
-            fill.ContentMarginTop = fill.ContentMarginBottom = 0;
-            bar.AddThemeStyleboxOverride("fill", fill);
-            row.AddChild(bar);
-            var num = ThemeFactory.Text((value / 10).ToString(CultureInfo.InvariantCulture), UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Numbers);
-            num.CustomMinimumSize = new Vector2(26, 0);
-            num.HorizontalAlignment = HorizontalAlignment.Right;
-            row.AddChild(num);
-            _inspector.AddChild(row);
+            case MapLayer.Crowding: _layerLegend.AddChild(GradientLegend(WorldMapView.Ramp(0), WorldMapView.Ramp(0.5f), WorldMapView.Ramp(1), "vazia", "25%+ da capacidade")); break;
+            case MapLayer.Danger: _layerLegend.AddChild(GradientLegend(WorldMapView.Ramp(0), WorldMapView.Ramp(0.5f), WorldMapView.Ramp(1), "segura", "PvP e alto risco")); break;
+            case MapLayer.Level: _layerLegend.AddChild(GradientLegend(new Color("#3E6FB0"), new Color("#6C5FBB"), new Color("#9B4FC6"), "nível 1", "nível 16+")); break;
+            default:
+                _layerLegend.AddChild(ThemeFactory.Text("Estradas ligam as saídas ao centro de cada zona.\nTrilhas tracejadas levam às atividades.", UiTokens.FontCaption, UiTokens.TextSecondary));
+                break;
         }
     }
 
-    private static Color TraitColor(int v) => v >= 700 ? UiTokens.Accent : v >= 400 ? UiTokens.Info : new Color(UiTokens.TextSecondary, 0.8f);
-
-    private static PanelContainer StatTile(string value, string caption)
+    private static Control GradientLegend(Color a, Color b, Color c, string left, string right)
     {
-        var tile = new PanelContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
-        var sb = ThemeFactory.Box(new Color(UiTokens.SurfaceRaised, 0.7f), 10, border: UiTokens.Border, radius: 8);
-        sb.ContentMarginTop = sb.ContentMarginBottom = 8;
-        tile.AddThemeStyleboxOverride("panel", sb);
         var col = new VBoxContainer();
-        col.AddThemeConstantOverride("separation", 0);
-        col.AddChild(ThemeFactory.Text(value, 17, UiTokens.TextPrimary, UiFonts.Numbers));
-        col.AddChild(ThemeFactory.Text(caption, UiTokens.FontCaption, UiTokens.TextSecondary));
-        tile.AddChild(col);
-        return tile;
+        col.AddThemeConstantOverride("separation", 2);
+        var tex = new GradientTexture2D { Gradient = new Gradient { Colors = new[] { a, b, c }, Offsets = new[] { 0f, 0.5f, 1f } }, Width = 256, Height = 8 };
+        col.AddChild(new TextureRect { Texture = tex, CustomMinimumSize = new Vector2(0, 8), ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, StretchMode = TextureRect.StretchModeEnum.Scale });
+        var labels = new HBoxContainer();
+        labels.AddChild(ThemeFactory.Text(left, UiTokens.FontCaption, UiTokens.TextSecondary));
+        labels.AddChild(new Control { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill });
+        labels.AddChild(ThemeFactory.Text(right, UiTokens.FontCaption, UiTokens.TextSecondary));
+        col.AddChild(labels);
+        return col;
     }
 
-    private void UpdateInspectorCount()
-    {
-        if (_inspectorCount == null || _map.SelectedRegionId == null) return;
-        _inspectorCount.Text = PtBr.Int(_map.CountIn(_map.SelectedRegionId));
-    }
-
-    // ---------- Legenda e controles do mapa ----------
+    // ---------- Legenda e controles ----------
 
     private void BuildLegend(ContentDatabase content)
     {
@@ -530,42 +417,35 @@ public partial class Main : Node
         panel.OffsetLeft = UiTokens.S16;
         panel.OffsetBottom = -UiTokens.S16;
         _ui.AddChild(panel);
-
         var col = new VBoxContainer();
         col.AddThemeConstantOverride("separation", UiTokens.S8);
         panel.AddChild(col);
-        col.AddChild(ThemeFactory.Section("População por perfil"));
-
+        col.AddChild(ThemeFactory.Section("Jogadores por perfil"));
         var profiles = new HFlowContainer { CustomMinimumSize = new Vector2(520, 0) };
         profiles.AddThemeConstantOverride("h_separation", UiTokens.S16);
         profiles.AddThemeConstantOverride("v_separation", 4);
         foreach (var p in content.ProfilesOrdered)
         {
             int count = _host!.Persons.Count(x => x.ProfileId == p.Id);
-            profiles.AddChild(LegendItem(UiTokens.ProfileColor(p.Id), p.Name, count.ToString(CultureInfo.InvariantCulture)));
+            var item = new HBoxContainer();
+            item.AddThemeConstantOverride("separation", 6);
+            item.AddChild(new DotIcon(UiTokens.ProfileColor(p.Id)) { CustomMinimumSize = new Vector2(12, 12), SizeFlagsVertical = Control.SizeFlags.ShrinkCenter });
+            item.AddChild(ThemeFactory.Text(p.Name, UiTokens.FontSmall, UiTokens.TextPrimary));
+            item.AddChild(ThemeFactory.Text(count.ToString(CultureInfo.InvariantCulture), UiTokens.FontSmall, UiTokens.TextSecondary, UiFonts.Numbers));
+            profiles.AddChild(item);
         }
         col.AddChild(profiles);
-    }
-
-    private static HBoxContainer LegendItem(Color color, string text, string count)
-    {
-        var item = new HBoxContainer();
-        item.AddThemeConstantOverride("separation", 6);
-        item.AddChild(new DotIcon(color) { CustomMinimumSize = new Vector2(12, 12), SizeFlagsVertical = Control.SizeFlags.ShrinkCenter });
-        item.AddChild(ThemeFactory.Text(text, UiTokens.FontSmall, UiTokens.TextPrimary));
-        item.AddChild(ThemeFactory.Text(count, UiTokens.FontSmall, UiTokens.TextSecondary, UiFonts.Numbers));
-        return item;
+        col.AddChild(ThemeFactory.Text("Grupos de 5+ no mesmo ponto viram uma bolha; clique para ver a lista.", UiTokens.FontCaption, UiTokens.TextDisabled));
     }
 
     private void BuildMapControls()
     {
         var panel = new PanelContainer { MouseFilter = Control.MouseFilterEnum.Stop };
-        var sb = ThemeFactory.Glass(4, 10);
-        panel.AddThemeStyleboxOverride("panel", sb);
+        panel.AddThemeStyleboxOverride("panel", ThemeFactory.Glass(4, 10));
         panel.SetAnchorsPreset(Control.LayoutPreset.BottomRight);
         panel.GrowHorizontal = Control.GrowDirection.Begin;
         panel.GrowVertical = Control.GrowDirection.Begin;
-        panel.OffsetRight = -(UiTokens.InspectorWidth + UiTokens.S16 * 2);
+        panel.OffsetRight = -UiTokens.S16;
         panel.OffsetBottom = -UiTokens.S16;
         _ui.AddChild(panel);
         var col = new VBoxContainer();
@@ -573,9 +453,9 @@ public partial class Main : Node
         panel.AddChild(col);
         foreach (var (text, tip, action) in new (string, string, Action)[]
         {
-            ("+", "Aproximar (roda do mouse)", () => _map.ZoomBy(1.3f)),
-            ("−", "Afastar (roda do mouse)", () => _map.ZoomBy(1f / 1.3f)),
-            ("⤢", "Enquadrar o mundo", () => FitMap(false)),
+            ("+", "Aproximar (roda do mouse ou +)", () => _map.ZoomBy(1.3f)),
+            ("−", "Afastar (roda do mouse ou −)", () => _map.ZoomBy(1f / 1.3f)),
+            ("⤢", "Enquadrar o mundo (Home)", () => FitMap(false)),
         })
         {
             var b = new Button { Text = text, TooltipText = tip, CustomMinimumSize = new Vector2(38, 38), FocusMode = Control.FocusModeEnum.None };
@@ -585,8 +465,6 @@ public partial class Main : Node
             col.AddChild(b);
         }
     }
-
-    // ---------- Erro ----------
 
     private void ShowError(string title, IEnumerable<string> lines)
     {
@@ -609,10 +487,10 @@ public partial class Main : Node
 
     public override void _Process(double delta)
     {
-        if (_host == null || _fixture == null) { HandleAutomation(delta); return; }
-
+        if (_host == null) { HandleAutomation(delta); return; }
         var snap = _host.Snapshot;
-        _fixture.Update(snap.Tick);
+        _map.SetSnapshot(snap);
+        CollectEvents();
         var now = _host.Calendar.ToDateTime(snap.Tick);
         _map.SetHour(now.Hour + now.Minute / 60.0 + now.Second / 3600.0);
 
@@ -622,13 +500,17 @@ public partial class Main : Node
             _uiTimer = 0;
             _clockLabel.Text = $"{now.Hour:00}:{now.Minute:00}";
             _dateLabel.Text = $"{PtBr.Date(now)} · {PtBr.DayKind(_host.Calendar.KindOf(now.Date))}";
-            _speedLabel.Text = snap.RequestedSpeed == 0 ? "pausado"
-                : snap.EffectiveSpeed < 0 ? "medindo…"
-                : $"efetiva {PtBr.Decimal(snap.EffectiveSpeed)}×";
-            _populationLabel.Text = $"{PtBr.Int(snap.PersonsTotal)} pessoas";
+            _speedLabel.Text = snap.RequestedSpeed == 0 ? "pausado" : snap.EffectiveSpeed < 0 ? "medindo…" : $"efetiva {PtBr.Decimal(snap.EffectiveSpeed)}×";
+            _onlineLabel.Text = $"● {PtBr.Int(snap.Online)} conectados";
+            _registeredLabel.Text = $"{PtBr.Int(snap.Registered)} cadastrados · {PtBr.Int(snap.PersonsTotal)} interessados";
             _fpsLabel.Text = $"{Engine.GetFramesPerSecond():0} fps";
             UpdateServerChip(snap.ServerOpen);
-            UpdateInspectorCount();
+        }
+        _modalTimer += delta;
+        if (_modalTimer >= 0.5)
+        {
+            _modalTimer = 0;
+            if (_modal != null && IsInstanceValid(_modal)) _modal.RefreshLive();
         }
         HandleAutomation(delta);
     }
@@ -648,31 +530,21 @@ public partial class Main : Node
     private void HandleAutomation(double delta)
     {
         _frames++;
-        if (_args.TryGetValue("screenshot", out var path))
+        if (_args.TryGetValue("screenshot", out var path) && _frames == int.Parse(Arg("frames", "45"), CultureInfo.InvariantCulture))
         {
-            int frames = int.Parse(Arg("frames", "45"), CultureInfo.InvariantCulture);
-            if (_frames == frames)
-            {
-                var img = GetViewport().GetTexture().GetImage();
-                var full = System.IO.Path.GetFullPath(path);
-                System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(full)!);
-                var err = img.SavePng(full);
-                GD.Print(err == Error.Ok ? $"CAPTURA_OK {full} {img.GetWidth()}x{img.GetHeight()}" : $"CAPTURA_ERRO {err}");
-                Quit();
-            }
+            var img = GetViewport().GetTexture().GetImage();
+            var full = System.IO.Path.GetFullPath(path);
+            System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(full)!);
+            var err = img.SavePng(full);
+            GD.Print(err == Error.Ok ? $"CAPTURA_OK {full} {img.GetWidth()}x{img.GetHeight()}" : $"CAPTURA_ERRO {err}");
+            Quit();
         }
         if (_args.TryGetValue("measure-seconds", out var secs))
         {
-            double limit = double.Parse(secs, CultureInfo.InvariantCulture);
-            if (_frames > 30)
+            if (_frames > 30) { _measureElapsed += delta; _measureFrames++; }
+            if (_measureElapsed >= double.Parse(secs, CultureInfo.InvariantCulture))
             {
-                _measureElapsed += delta;
-                _measureFrames++;
-            }
-            if (_measureElapsed >= limit)
-            {
-                double fps = _measureFrames / _measureElapsed;
-                GD.Print($"FPS_MEDIO {fps:F1} quadros={_measureFrames} segundos={_measureElapsed:F2} populacao={_host?.Persons.Count ?? 0}");
+                GD.Print($"FPS_MEDIO {_measureFrames / _measureElapsed:F1} quadros={_measureFrames} segundos={_measureElapsed:F2} populacao={_host?.Persons.Count ?? 0}");
                 Quit();
             }
         }
@@ -697,11 +569,7 @@ public partial class Main : Node
             case Key.Equal or Key.KpAdd: _map.ZoomBy(1.3f); break;
             case Key.Minus or Key.KpSubtract: _map.ZoomBy(1f / 1.3f); break;
             case Key.Home: FitMap(false); break;
-            case Key.Escape:
-                _map.SelectRegion(null);
-                _map.SelectPerson(0);
-                ShowEmptyInspector();
-                break;
+            case Key.Escape: CloseOverlays(); _map.SelectPerson(0); _map.SelectRegion(null); break;
             default: return;
         }
         GetViewport().SetInputAsHandled();

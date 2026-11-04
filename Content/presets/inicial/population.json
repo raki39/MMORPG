@@ -81,6 +81,14 @@
       "Costa", "Ribeiro", "Martins", "Carvalho", "Almeida", "Lopes", "Soares", "Fernandes", "Vieira", "Barbosa",
       "Rocha", "Dias", "Nascimento", "Andrade", "Moreira", "Nunes", "Marques", "Machado", "Mendes", "Freitas",
       "Cardoso", "Ramos", "Gonçalves", "Santana", "Teixeira", "Araújo", "Pinto", "Moura", "Cavalcanti", "Batista"
+    ],
+    "nickPrefixes": [
+      "Kael", "Mira", "Thor", "Lun", "Zar", "Eld", "Vex", "Ara", "Bryn", "Cor", "Dra", "Fen", "Gal", "Hal", "Isk",
+      "Jor", "Kyr", "Lyr", "Mor", "Nyx", "Ori", "Pyr", "Ral", "Syl", "Tor", "Ulf", "Val", "Wyn", "Xan", "Yri"
+    ],
+    "nickSuffixes": [
+      "dor", "wen", "gar", "iel", "ax", "ion", "ara", "uk", "ith", "on", "is", "vyr", "eth", "orn", "a",
+      "im", "ius", "ra", "gon", "lis", "mir", "nar", "oth", "ryn", "sha", "thas", "us", "ven", "zel", "yx"
     ]
   }
 }

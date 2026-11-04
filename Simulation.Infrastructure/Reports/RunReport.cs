@@ -75,9 +75,8 @@ public static class RunReportWriter
     /// <summary>Metricas previstas no plano e o marco em que passam a existir.</summary>
     public static readonly (string Metric, string Milestone)[] UnavailableMetrics =
     {
-        ("Pessoas conectadas, sessões e pico online", "M2"),
-        ("Aquisição (registros) e abandono", "M2"),
-        ("Escolhas de atividade e motivos", "M2"),
+        ("Abandono, retorno e satisfação", "M2 (próxima etapa)"),
+        ("Grupos para conteúdo de grupo (boss, recrutamento)", "M6"),
         ("Combate segmentado (dano, cura, mortes)", "M3"),
         ("Fontes e consumos de ouro", "M3/M5"),
         ("Preços negociados (médio/mediano), volume e liquidez", "M5"),
@@ -94,6 +93,7 @@ public static class RunReportWriter
         WriteEvents(Path.Combine(outDir, "events.csv"), world, events);
         WriteCommands(Path.Combine(outDir, "commands.csv"), world.Commands.History);
         WritePopulation(Path.Combine(outDir, "population.csv"), world.Persons);
+        WriteCharacters(Path.Combine(outDir, "characters.csv"), world);
         File.WriteAllText(Path.Combine(outDir, "metadata.json"),
             JsonSerializer.Serialize(meta, new JsonSerializerOptions { WriteIndented = true, PropertyNamingPolicy = JsonNamingPolicy.CamelCase }),
             new UTF8Encoding(false));
@@ -104,7 +104,7 @@ public static class RunReportWriter
     {
         var hashByDay = hashes.ToDictionary(h => h.DayIndex, h => h.Hash);
         var sb = new StringBuilder();
-        sb.Append("day,date,day_kind,closed_at_tick,persons_total,potential_interested,registered,online,server_open,commands_applied,commands_rejected,events_emitted,state_hash\n");
+        sb.Append("day,date,day_kind,closed_at_tick,persons_total,potential_interested,registered,online,server_open,commands_applied,commands_rejected,events_emitted,registrations,sessions,active_players,peak_online,activities_chosen,level_ups,play_minutes,state_hash\n");
         foreach (var d in world.History)
         {
             sb.Append(string.Join(",",
@@ -112,6 +112,8 @@ public static class RunReportWriter
                 d.ClosedAtTick.ToString(Inv), d.PersonsTotal.ToString(Inv), d.PotentialInterested.ToString(Inv),
                 d.Registered.ToString(Inv), d.Online.ToString(Inv), d.ServerOpen ? "1" : "0",
                 d.CommandsApplied.ToString(Inv), d.CommandsRejected.ToString(Inv), d.EventsEmitted.ToString(Inv),
+                d.Registrations.ToString(Inv), d.SessionsStarted.ToString(Inv), d.ActivePlayers.ToString(Inv), d.PeakOnline.ToString(Inv),
+                d.ActivitiesChosen.ToString(Inv), d.LevelUps.ToString(Inv), d.PlayMinutes.ToString(Inv),
                 hashByDay.TryGetValue(d.DayIndex, out var h) ? h : ""));
             sb.Append('\n');
         }
@@ -174,6 +176,72 @@ public static class RunReportWriter
         File.WriteAllText(path, sb.ToString(), new UTF8Encoding(false));
     }
 
+    public static void WriteCharacters(string path, WorldState world)
+    {
+        var sb = new StringBuilder("character_id,person_id,nickname,class,level,experience,status,region,known_regions,decisions,last_choice\n");
+        foreach (var c in world.Characters)
+        {
+            string last = c.LastDecision == null ? "" : c.LastDecision.RegionId + "/" + c.LastDecision.ActivityId;
+            sb.Append(string.Join(",", c.Id.ToString(Inv), c.PersonId.ToString(Inv), Csv(c.Name), c.ClassId, c.Level.ToString(Inv),
+                c.Experience.ToString(Inv), c.Status.ToString().ToLowerInvariant(), c.RegionId,
+                Csv(string.Join(";", c.KnownRegions)), c.DecisionCount.ToString(Inv), Csv(last)));
+            sb.Append('\n');
+        }
+        File.WriteAllText(path, sb.ToString(), new UTF8Encoding(false));
+    }
+
+    private static void AppendBehavior(StringBuilder sb, WorldState world, IReadOnlyList<SimEvent> events)
+    {
+        sb.AppendLine("## Comportamento");
+        sb.AppendLine();
+        var chosen = events.Where(e => e.Type == "activity_chosen" && e.Detail != null).ToList();
+        if (chosen.Count == 0)
+        {
+            sb.AppendLine("Nenhuma escolha de atividade registrada.");
+            sb.AppendLine();
+            return;
+        }
+        sb.AppendLine($"{N(chosen.Count)} escolhas de atividade. Distribuição por zona e atividade (escolhas, não tempo gasto):");
+        sb.AppendLine();
+        sb.AppendLine("| Zona | Atividade | Tipo | Escolhas | Participação |");
+        sb.AppendLine("|---|---|---|---:|---:|");
+        foreach (var g in chosen.GroupBy(e => e.Detail!).OrderByDescending(g => g.Count()).ThenBy(g => g.Key, StringComparer.Ordinal))
+        {
+            var parts = g.Key.Split('/');
+            var region = world.Content.Regions.TryGetValue(parts[0], out var r) ? r : null;
+            var act = region?.Activities.FirstOrDefault(a => a.Id == parts[1]);
+            sb.AppendLine($"| {region?.Name ?? parts[0]} | {act?.Name ?? parts[1]} | `{act?.Type}` | {N(g.Count())} | {Pct(g.Count(), chosen.Count)} |");
+        }
+        sb.AppendLine();
+
+        if (world.Characters.Count > 0)
+        {
+            sb.AppendLine("| Nível | Personagens |");
+            sb.AppendLine("|---:|---:|");
+            foreach (var g in world.Characters.GroupBy(c => c.Level).OrderBy(g => g.Key))
+                sb.AppendLine($"| {g.Key} | {N(g.Count())} |");
+            sb.AppendLine();
+            sb.AppendLine("| Classe | Personagens |");
+            sb.AppendLine("|---|---:|");
+            foreach (var g in world.Characters.GroupBy(c => c.ClassId).OrderBy(g => g.Key, StringComparer.Ordinal))
+                sb.AppendLine($"| {(world.Content.Classes.TryGetValue(g.Key, out var cl) ? cl.Name : g.Key)} | {N(g.Count())} |");
+            sb.AppendLine();
+        }
+
+        sb.AppendLine("Exemplos de decisões com os fatores calculados (permille ponderado):");
+        sb.AppendLine();
+        foreach (var c in world.Characters.Where(c => c.LastDecision != null).Take(5))
+        {
+            var d = c.LastDecision!;
+            var region = world.Content.Regions[d.RegionId];
+            var act = region.Activities.First(a => a.Id == d.ActivityId);
+            string factors = string.Join(", ", d.Factors.Where(f => f.Key != "noise").OrderByDescending(f => Math.Abs(f.Contribution))
+                .Select(f => $"{f.Key} {(f.Contribution >= 0 ? "+" : "")}{f.Contribution}"));
+            sb.AppendLine($"- **{c.Name}** (nível {c.Level}) escolheu *{act.Name}* em {region.Name} entre {d.OptionsConsidered} opções: {factors}.");
+        }
+        sb.AppendLine();
+    }
+
     public static string BuildSummary(RunMetadata m, WorldState world, IReadOnlyList<SimEvent> events, IReadOnlyList<DailyHash> hashes)
     {
         var sb = new StringBuilder();
@@ -232,8 +300,8 @@ public static class RunReportWriter
 
         sb.AppendLine("## Série diária");
         sb.AppendLine();
-        sb.AppendLine("| Dia | Data | Tipo | Pessoas | Potenciais | Registradas | Servidor | Comandos (ok/rej.) | Eventos | Hash |");
-        sb.AppendLine("|---:|---|---|---:|---:|---:|---|---|---:|---|");
+        sb.AppendLine("| Dia | Data | Tipo | Registros | Cadastrados | Ativos no dia | Pico online | Sessões | Escolhas | Subidas de nível | Horas jogadas | Hash |");
+        sb.AppendLine("|---:|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---|");
         var hashByDay = hashes.ToDictionary(h => h.DayIndex, h => h.Hash);
         var days = world.History;
         IEnumerable<DailyRecord> shown = days.Count <= 31 ? days : days.Take(7).Concat(days.Skip(days.Count - 7));
@@ -242,12 +310,14 @@ public static class RunReportWriter
         {
             if (lastShown >= 0 && d.DayIndex != lastShown + 1)
                 sb.AppendLine("| … | | | | | | | | | |");
-            sb.AppendLine($"| {d.DayIndex} | {d.Date.ToString("dd/MM/yyyy ddd", PtBr)} | {DayKindPt(d.DayKind)} | {N(d.PersonsTotal)} | {N(d.PotentialInterested)} | {N(d.Registered)} | {(d.ServerOpen ? "aberto" : "fechado")} | {d.CommandsApplied}/{d.CommandsRejected} | {N(d.EventsEmitted)} | `{(hashByDay.TryGetValue(d.DayIndex, out var h) ? Short(h) : "-")}` |");
+            sb.AppendLine($"| {d.DayIndex} | {d.Date.ToString("dd/MM/yyyy ddd", PtBr)} | {DayKindPt(d.DayKind)} | {N(d.Registrations)} | {N(d.Registered)} | {N(d.ActivePlayers)} | {N(d.PeakOnline)} | {N(d.SessionsStarted)} | {N(d.ActivitiesChosen)} | {N(d.LevelUps)} | {N(d.PlayMinutes / 60)} | `{(hashByDay.TryGetValue(d.DayIndex, out var h) ? Short(h) : "-")}` |");
             lastShown = d.DayIndex;
         }
         sb.AppendLine();
         sb.AppendLine("Tabela completa em `daily.csv`.");
         sb.AppendLine();
+
+        AppendBehavior(sb, world, events);
 
         sb.AppendLine("## População gerada");
         sb.AppendLine();

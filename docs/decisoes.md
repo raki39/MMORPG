@@ -123,3 +123,35 @@ O criador pediu outra paleta e mais textura e dimensão. Paleta própria em `God
 Projeto `GodotClient/` criado e mantido só por texto e terminal. Ele compila com `dotnet build`, importa e roda com `--headless`, gera capturas automáticas (`--screenshot`) e exporta `build/MMOTycoon.exe` (~188 MB com o runtime .NET embutido). O executável exportado foi executado e capturado com sucesso. A simulação roda em thread própria e a tela lê snapshots.
 
 FPS médio medido em 1920×1080, RTX 3060, velocidade 10×, 6 s, mapa com movimento de demonstração: 100 pessoas, 144 FPS (VSync); 2.000 pessoas, 143 FPS; 10.000 pessoas, 94 FPS. É uma medida desta máquina, não uma promessa de capacidade.
+
+## D-015 — Mundo em zonas discretas de escala única (estilo Albion)
+**Data:** 04/11/2026 · **Estado:** aceita (pedido do criador; amplia o plano 6 e 14)
+
+- Cada região é uma **zona** com fronteira clara. A **função** (`city`, `hunting`) fica separada das **regras**: combate (`pvp`: none, consensual ou open), morte (`deathRule`: none, partial ou full_loot) e controle (`control`: neutral ou contestable). Cidade é sempre segura, sem perda e neutra (validador).
+- **Não existe "zona de passagem":** toda zona tem estradas. As saídas ficam na fronteira, voltadas para cada zona conectada, e ligam-se ao centro (encruzilhada). Zonas vizinhas sem conexão declarada não se ligam; o validador exige conexão nos dois sentidos.
+- **Escala padronizada:** `world.zoneRadius` (120 unidades = 1,2 km) vale para todas as zonas, dispostas em arranjo hexagonal.
+- Conhecimento: começa na cidade e nas zonas ligadas a ela. Entrar numa zona revela as zonas ligadas às saídas dela; explorar revela duas conexões adiante.
+
+## D-016 — Deslocamento pela geometria, posições reais no Core
+**Data:** 04/11/2026 · **Estado:** aceita (hipóteses numéricas calibráveis)
+
+- 1 unidade de mapa = 10 m; velocidade a pé `BehaviorTuning.WalkSpeed` = 15 unidades/min (9 km/h).
+- `ZoneLayout` deriva do conteúdo: centro/encruzilhada, saídas (92% do raio na direção do vizinho) e pontos de atividade. Os pontos ficam fora da estrada, num anel que evita o topo (nome da zona) e as direções das saídas, ou numa posição definida no conteúdo (`spot`).
+- Viagem: do ponto atual volta à encruzilhada, segue a estrada até a saída, cruza para a próxima zona, passa pela encruzilhada dela e, no destino, sai da estrada até o ponto da atividade. Cada trecho dura distância ÷ velocidade (mínimo de 1 tick). Os minutos fixos de viagem foram removidos do conteúdo.
+- O personagem guarda posição, trecho atual e pontos seguintes; `PositionAt(tick)` interpola em inteiros. O mapa 2D (e o 3D no M4) mostram essas posições, sem movimento inventado na tela.
+- `ZoneLayout` usa `Math.Cos/Sin/Sqrt` uma vez, na carga. É reprodutível no mesmo runtime e máquina; não há promessa de identidade binária entre plataformas.
+
+## D-017 — Comportamento individual (início do M2)
+**Data:** 04/11/2026 · **Estado:** aceita (hipóteses em `BehaviorTuning`)
+
+- Lançamento: ao abrir o servidor, cada interessado registra-se em algum dia da primeira semana (pesos 30/22/16/12/9/6/5), perto do horário preferido. A conta e o personagem (classe ponderada pelos traços, apelido gerado) são criados no registro, e a primeira sessão começa no ato.
+- Sessões: à meia-noite, cada pessoa decide se joga hoje (dias por semana, com fim de semana e feriado ajustados por `weekendBoost`), a que horas (preferido ±75 min, mais cedo no fim de semana) e por quanto tempo (±20%). No fim da sessão, termina a atividade se faltarem até 15 min ou a etapa de viagem em curso.
+- Decisão por utilidade só entre atividades oferecidas por zonas conhecidas, com requisitos cumpridos e sem exigir grupo. Fatores (permille ponderado): afinidade pelos traços, adequação ao nível, companhia/lotação, risco × aversão, distância, tempo de sessão, repetição × impaciência e ruído reproduzível. Cada decisão guarda os fatores (`DecisionRecord`) e emite `activity_chosen` com as causas.
+- XP por minuto e por tipo, com curva de nível `60n² + 140n` (provisória até o combate do M3).
+- RNG por (pessoa, contador de decisões): o resultado não depende da ordem global além da ordem do agendador. O hash de estado passou ao formato v2.
+
+## D-018 — Fichas em modal e rascunho de zona
+**Data:** 04/11/2026 · **Estado:** aceita (desvio consciente do plano 12.2, a pedido do criador)
+
+- Clicar num jogador ou numa zona abre uma ficha em modal grande, com abas e ações, em vez do painel lateral. Grupos de 5 ou mais pessoas no mesmo ponto viram uma bolha clicável com lista e busca.
+- A configuração de zona edita um **rascunho** validado pelo mesmo `ContentValidator` do Core. Publicar no mundo ativo fica desabilitado, com explicação, até existir o sistema de atualizações (M7) ou o modo sandbox. Rascunhos e favoritos vivem só na sessão até existir o save.

@@ -139,7 +139,7 @@ public class EngineTests
         }
         Assert.Equal(StateHasher.Compute(full.World), StateHasher.Compute(skip.World));
         Assert.Equal(t, full.TicksExecuted);
-        Assert.True(skip.TicksExecuted < 10);
+        Assert.True(skip.TicksExecuted * 100 < full.TicksExecuted, $"salto executou {skip.TicksExecuted} de {full.TicksExecuted} ticks");
     }
 
     [Fact]

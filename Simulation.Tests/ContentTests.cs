@@ -20,6 +20,8 @@ public class ContentTests
         Assert.Equal(7, db.Creatures.Count);
         Assert.Single(db.Creatures.Values, c => c.Kind == CreatureKinds.Boss);
         Assert.All(db.Regions.Values, r => Assert.NotEmpty(r.Activities));
+        Assert.Contains(db.Regions.Values, r => r.Pvp == PvpRules.Open && r.DeathRule == DeathRules.Partial);
+        Assert.Equal(120, db.World.ZoneRadius);
         Assert.Equal(64, r.ContentHash.Length);
     }
 
@@ -63,7 +65,7 @@ public class ContentTests
     public void CidadeComPvp_EhErro()
     {
         var set = TestSupport.FreshPresetSet();
-        int idx = set.Regions.FindIndex(r => r.Kind == RegionKinds.City);
+        int idx = set.Regions.FindIndex(r => r.IsCity);
         set.Regions[idx].Pvp = PvpRules.Open;
         Assert.Contains(Errors(set), e => e.Path == $"regions[{idx}].pvp");
     }

@@ -11,6 +11,30 @@ public static class PtBr
     public static string DateTime(System.DateTime d) =>
         $"{WeekDays[(int)d.DayOfWeek]} {d.Day:00}/{d.Month:00}/{d.Year} · {d.Hour:00}:{d.Minute:00}";
 
+    public static string ShortDate(System.DateTime d) => $"{WeekDays[(int)d.DayOfWeek]} {d.Day:00}/{d.Month:00}";
+
+    public static string Function(string f) => f switch
+    {
+        ZoneFunctions.City => "Cidade",
+        ZoneFunctions.Hunting => "Zona de caça",
+        _ => f,
+    };
+
+    public static string Death(string d) => d switch
+    {
+        DeathRules.None => "Sem perda",
+        DeathRules.Partial => "Perda parcial",
+        DeathRules.FullLoot => "Full loot",
+        _ => d,
+    };
+
+    public static string Control(string c) => c switch
+    {
+        ControlRules.Neutral => "Neutra",
+        ControlRules.Contestable => "Disputável",
+        _ => c,
+    };
+
     public static string Date(System.DateTime d) => $"{WeekDays[(int)d.DayOfWeek]} {d.Day:00}/{d.Month:00}/{d.Year}";
 
     public static string Biome(string biome) => biome switch

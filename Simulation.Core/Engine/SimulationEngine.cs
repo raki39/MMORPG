@@ -45,6 +45,9 @@ public sealed class SimulationEngine
     {
         World = world;
         RegisterHandler(DailyRollupEvent, OnDailyRollup);
+        world.Behavior = new Behavior.BehaviorSystem(world);
+        foreach (var (type, handler) in world.Behavior.Handlers())
+            RegisterHandler(type, handler);
     }
 
     public WorldState World { get; }
@@ -170,8 +173,19 @@ public sealed class SimulationEngine
             CommandsApplied = w.Today.CommandsApplied,
             CommandsRejected = w.Today.CommandsRejected,
             EventsEmitted = w.Today.EventsEmitted,
+            Registrations = w.Today.Registrations,
+            SessionsStarted = w.Today.SessionsStarted,
+            ActivePlayers = w.Today.ActivePlayers,
+            PeakOnline = w.Today.PeakOnline,
+            ActivitiesChosen = w.Today.ActivitiesChosen,
+            LevelUps = w.Today.LevelUps,
+            PlayMinutes = w.Today.PlayMinutes,
         });
-        w.Today.Reset();
+        w.Today.Reset(w.OnlineCount);
+        // Quem cruza a meia-noite conectado conta como ativo no novo dia.
+        w.Today.ActivePlayers = 0;
+        foreach (var p in w.Persons)
+            if (p.IsOnline) { p.LastPlayedDay = closedDay + 1; w.Today.ActivePlayers++; }
         w.Scheduler.Schedule(w.Clock.Calendar.StartOfDay(closedDay + 2), DailyRollupEvent, payload: closedDay + 1);
     }
 }

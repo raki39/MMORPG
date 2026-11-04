@@ -19,6 +19,8 @@ public sealed class WorldDefinition
     /// <summary>Data da campanha no tick 0, formato yyyy-MM-dd.</summary>
     public string StartDate { get; set; } = "";
     public string StartingRegionId { get; set; } = "";
+    /// <summary>Raio padrao de todas as zonas (unidades de mapa; 1 unidade = 10 m). Escala unica (D-016).</summary>
+    public int ZoneRadius { get; set; }
     public List<HolidayDefinition> Holidays { get; set; } = new();
 }
 
@@ -29,21 +31,43 @@ public sealed class HolidayDefinition
     public string Name { get; set; } = "";
 }
 
-public static class RegionKinds
+/// <summary>
+/// Funcao principal da zona (D-015). Separada das regras: uma zona de caca pode ter PvP e
+/// ser disputada. Cidades sao sempre seguras. Todas as zonas tem a mesma escala e estradas.
+/// </summary>
+public static class ZoneFunctions
 {
     public const string City = "city";
-    public const string Area = "area";
-    public static readonly string[] All = { City, Area };
+    public const string Hunting = "hunting";
+    public static readonly string[] All = { City, Hunting };
 }
 
+/// <summary>Regra de combate entre jogadores na zona.</summary>
 public static class PvpRules
 {
     public const string None = "none";
     /// <summary>PvP permitido apenas entre quem marcou participacao.</summary>
     public const string Consensual = "consensual";
-    /// <summary>PvP aberto na area.</summary>
+    /// <summary>PvP aberto na zona.</summary>
     public const string Open = "open";
     public static readonly string[] All = { None, Consensual, Open };
+}
+
+/// <summary>O que se perde ao morrer na zona (detalhes de full loot no M9).</summary>
+public static class DeathRules
+{
+    public const string None = "none";
+    public const string Partial = "partial";
+    public const string FullLoot = "full_loot";
+    public static readonly string[] All = { None, Partial, FullLoot };
+}
+
+/// <summary>Controle territorial da zona (disputas de guilda no M9).</summary>
+public static class ControlRules
+{
+    public const string Neutral = "neutral";
+    public const string Contestable = "contestable";
+    public static readonly string[] All = { Neutral, Contestable };
 }
 
 public sealed class RegionDefinition : IContentDefinition
@@ -51,14 +75,22 @@ public sealed class RegionDefinition : IContentDefinition
     public string Id { get; set; } = "";
     public int Version { get; set; }
     public string Name { get; set; } = "";
-    public string Kind { get; set; } = "";
+    /// <summary>Funcao principal: city ou hunting.</summary>
+    public string Function { get; set; } = "";
     public string Biome { get; set; } = "";
     public int LevelMin { get; set; }
     public int LevelMax { get; set; }
+    /// <summary>Regra de combate: none, consensual ou open.</summary>
     public string Pvp { get; set; } = PvpRules.None;
+    /// <summary>Regra de morte: none, partial ou full_loot.</summary>
+    public string DeathRule { get; set; } = DeathRules.None;
+    /// <summary>Controle territorial: neutral ou contestable.</summary>
+    public string Control { get; set; } = ControlRules.Neutral;
+
+    public bool IsCity => Function == ZoneFunctions.City;
     /// <summary>Capacidade nominal de personagens simultaneos (modelo do MMORPG).</summary>
     public int Capacity { get; set; }
-    /// <summary>Posicao no mapa estrategico 2D (unidades de mapa).</summary>
+    /// <summary>Centro da zona no mapa (unidades de mapa; 1 unidade = 10 m).</summary>
     public MapPoint MapPosition { get; set; } = new();
     public List<RegionConnection> Connections { get; set; } = new();
     /// <summary>Itens coletaveis na regiao (ex.: minerio).</summary>
@@ -94,6 +126,7 @@ public static class ActivityTypes
 
     /// <summary>Atividades de combate contra criaturas ou jogadores: proibidas na cidade.</summary>
     public static readonly string[] NotInCity = { Hunt, Boss, Patrol, Ambush };
+
 }
 
 /// <summary>
@@ -121,6 +154,8 @@ public sealed class ActivityDefinition
     public int TypicalMinutes { get; set; }
     /// <summary>Risco base declarado pelo autor (permille); o risco percebido varia com o mundo.</summary>
     public int BaseRiskPermille { get; set; }
+    /// <summary>Posicao do ponto da atividade relativa ao centro da zona (opcional; senao automatica).</summary>
+    public MapPoint? Spot { get; set; }
 }
 
 public sealed class MapPoint
@@ -129,10 +164,13 @@ public sealed class MapPoint
     public int Y { get; set; }
 }
 
+/// <summary>
+/// Passagem declarada entre duas zonas (portao + estrada). Zonas vizinhas sem conexao nao
+/// se ligam. O tempo de viagem e calculado pela geometria e pela velocidade (D-016).
+/// </summary>
 public sealed class RegionConnection
 {
     public string To { get; set; } = "";
-    public int TravelMinutes { get; set; }
 }
 
 public static class ClassRoles

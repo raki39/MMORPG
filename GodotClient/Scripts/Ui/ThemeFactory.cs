@@ -56,6 +56,39 @@ public static class ThemeFactory
         t.SetStylebox("separator", "HSeparator", new StyleBoxLine { Color = UiTokens.Border, Thickness = 1 });
         t.SetConstant("separation", "HSeparator", UiTokens.S16);
 
+        // Campos de formulario
+        var field = Box(new Color(UiTokens.Background, 0.85f), 10, border: UiTokens.BorderStrong, radius: 7);
+        field.ContentMarginTop = field.ContentMarginBottom = 7;
+        var fieldFocus = Box(new Color(UiTokens.Background, 0.95f), 10, border: UiTokens.Accent, radius: 7);
+        fieldFocus.ContentMarginTop = fieldFocus.ContentMarginBottom = 7;
+        t.SetStylebox("normal", "LineEdit", field);
+        t.SetStylebox("focus", "LineEdit", fieldFocus);
+        t.SetStylebox("read_only", "LineEdit", Box(new Color(UiTokens.Background, 0.5f), 10, border: UiTokens.Border, radius: 7));
+        t.SetColor("font_color", "LineEdit", UiTokens.TextPrimary);
+        t.SetColor("font_placeholder_color", "LineEdit", UiTokens.TextDisabled);
+        t.SetColor("caret_color", "LineEdit", UiTokens.Accent);
+        t.SetColor("selection_color", "LineEdit", new Color(UiTokens.Accent, 0.35f));
+        t.SetStylebox("normal", "OptionButton", field);
+        t.SetStylebox("hover", "OptionButton", Box(UiTokens.SurfaceHover, 10, border: UiTokens.BorderStrong, radius: 7));
+        t.SetStylebox("pressed", "OptionButton", fieldFocus);
+        t.SetStylebox("focus", "OptionButton", fieldFocus);
+        t.SetColor("font_color", "OptionButton", UiTokens.TextPrimary);
+        t.SetColor("font_hover_color", "OptionButton", UiTokens.TextPrimary);
+        t.SetColor("font_pressed_color", "OptionButton", UiTokens.TextPrimary);
+        var popup = Box(UiTokens.SurfaceRaised, 6, border: UiTokens.BorderStrong, radius: 8);
+        t.SetStylebox("panel", "PopupMenu", popup);
+        t.SetStylebox("hover", "PopupMenu", Box(new Color(UiTokens.Accent, 0.25f), 6, radius: 6));
+        t.SetColor("font_color", "PopupMenu", UiTokens.TextPrimary);
+        t.SetColor("font_hover_color", "PopupMenu", UiTokens.TextPrimary);
+        t.SetColor("font_color", "CheckBox", UiTokens.TextPrimary);
+        t.SetColor("font_hover_color", "CheckBox", UiTokens.TextPrimary);
+        t.SetColor("font_pressed_color", "CheckBox", UiTokens.TextPrimary);
+        t.SetStylebox("normal", "CheckBox", new StyleBoxEmpty());
+        t.SetStylebox("hover", "CheckBox", new StyleBoxEmpty());
+        t.SetStylebox("pressed", "CheckBox", new StyleBoxEmpty());
+        t.SetStylebox("hover_pressed", "CheckBox", new StyleBoxEmpty());
+        t.SetStylebox("focus", "CheckBox", new StyleBoxEmpty());
+
         // Tooltip
         t.SetStylebox("panel", "TooltipPanel", Box(UiTokens.SurfaceRaised, UiTokens.S12, border: UiTokens.BorderStrong));
         t.SetColor("font_color", "TooltipLabel", UiTokens.TextPrimary);
