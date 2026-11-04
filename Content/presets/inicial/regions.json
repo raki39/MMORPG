@@ -6,6 +6,11 @@
       "version": 1,
       "name": "Vila Aurora",
       "function": "city",
+      "cityLevel": 2,
+      "cityPosition": {
+        "x": 0,
+        "y": 0
+      },
       "biome": "planicie",
       "terrain": {
         "relief": "plains",
@@ -41,7 +46,7 @@
           "id": "mercado_central",
           "name": "Mercado Central",
           "kind": "shop",
-          "radius": 15,
+          "radius": 11,
           "description": "Barracas e leiloeiros: tudo se compra e se vende aqui.",
           "activities": [
             {
@@ -57,7 +62,7 @@
           "id": "forja_de_bram",
           "name": "Forja de Bram",
           "kind": "forge",
-          "radius": 12,
+          "radius": 11,
           "description": "O ferreiro conserta armas e armaduras.",
           "activities": [
             {
@@ -73,7 +78,7 @@
           "id": "taverna_do_javali",
           "name": "Taverna do Javali Dourado",
           "kind": "tavern",
-          "radius": 15,
+          "radius": 11,
           "description": "Ponto de encontro: conversas, grupos e boatos.",
           "activities": [
             {
@@ -96,7 +101,7 @@
           "id": "praca_central",
           "name": "Praça Central",
           "kind": "town_square",
-          "radius": 15,
+          "radius": 13,
           "description": "O quadro de missões reúne pedidos de toda a região.",
           "activities": [
             {
@@ -112,7 +117,7 @@
           "id": "campo_de_treino",
           "name": "Campo de Treino",
           "kind": "training_ground",
-          "radius": 14,
+          "radius": 11,
           "description": "Bonecos de palha e instrutores da guarda.",
           "activities": [
             {
@@ -613,7 +618,14 @@
         "relief": "valley",
         "elevationPermille": 700,
         "roughnessPermille": 750,
-        "seed": 61
+        "seed": 61,
+        "river": {
+          "enabled": true,
+          "direction": 5,
+          "offset": -32,
+          "width": 6,
+          "meanderPermille": 220
+        }
       },
       "levelMin": 10,
       "levelMax": 14,
@@ -807,12 +819,24 @@
       "version": 1,
       "name": "Forte do Vau",
       "function": "city",
+      "cityLevel": 3,
+      "cityPosition": {
+        "x": 0,
+        "y": 0
+      },
       "biome": "planicie",
       "terrain": {
         "relief": "valley",
         "elevationPermille": 300,
         "roughnessPermille": 350,
-        "seed": 83
+        "seed": 83,
+        "river": {
+          "enabled": true,
+          "direction": 3,
+          "offset": 91,
+          "width": 7,
+          "meanderPermille": 220
+        }
       },
       "levelMin": 10,
       "levelMax": 20,
@@ -848,7 +872,7 @@
           "id": "mercado",
           "name": "Mercado do Vau",
           "kind": "shop",
-          "radius": 15,
+          "radius": 11,
           "description": "Barcaças descarregam no cais: mercadoria de todo o vale.",
           "activities": [
             {
@@ -864,7 +888,7 @@
           "id": "forja",
           "name": "Forja da Muralha",
           "kind": "forge",
-          "radius": 12,
+          "radius": 11,
           "description": "Ferreiros do forte reforçam armas para a fronteira.",
           "activities": [
             {
@@ -880,7 +904,7 @@
           "id": "taverna",
           "name": "Taverna da Ponte Velha",
           "kind": "tavern",
-          "radius": 15,
+          "radius": 11,
           "description": "Mercenários e caçadores trocam notícias da fronteira.",
           "activities": [
             {
@@ -903,7 +927,7 @@
           "id": "praca",
           "name": "Praça das Bandeiras",
           "kind": "town_square",
-          "radius": 15,
+          "radius": 13,
           "description": "Ordens do comandante e pedidos dos moradores.",
           "activities": [
             {
@@ -919,7 +943,7 @@
           "id": "campo_de_treino",
           "name": "Pátio de Armas",
           "kind": "training_ground",
-          "radius": 14,
+          "radius": 11,
           "description": "Veteranos do forte treinam os recém-chegados.",
           "activities": [
             {
@@ -943,7 +967,8 @@
         "relief": "marsh",
         "elevationPermille": 150,
         "roughnessPermille": 400,
-        "seed": 97
+        "seed": 97,
+        "poolsPermille": 380
       },
       "levelMin": 10,
       "levelMax": 15,
@@ -1298,6 +1323,11 @@
       "version": 1,
       "name": "Cidadela de Cinzaforte",
       "function": "city",
+      "cityLevel": 4,
+      "cityPosition": {
+        "x": 0,
+        "y": 0
+      },
       "biome": "caverna",
       "terrain": {
         "relief": "plateau",
@@ -1339,7 +1369,7 @@
           "id": "mercado",
           "name": "Bazar de Cinzaforte",
           "kind": "shop",
-          "radius": 15,
+          "radius": 11,
           "description": "Raridades das terras altas, a preços de montanha.",
           "activities": [
             {
@@ -1355,7 +1385,7 @@
           "id": "forja",
           "name": "Forja Rúnica",
           "kind": "forge",
-          "radius": 12,
+          "radius": 11,
           "description": "Runas gravadas a fogo em armas e armaduras.",
           "activities": [
             {
@@ -1371,7 +1401,7 @@
           "id": "taverna",
           "name": "Taverna do Último Fogo",
           "kind": "tavern",
-          "radius": 15,
+          "radius": 11,
           "description": "O último lugar quente antes dos picos.",
           "activities": [
             {
@@ -1394,7 +1424,7 @@
           "id": "praca",
           "name": "Praça do Juramento",
           "kind": "town_square",
-          "radius": 15,
+          "radius": 13,
           "description": "Expedições se formam diante da estátua dos fundadores.",
           "activities": [
             {
@@ -1410,7 +1440,7 @@
           "id": "campo_de_treino",
           "name": "Arena dos Veteranos",
           "kind": "training_ground",
-          "radius": 14,
+          "radius": 11,
           "description": "Duelos de treino entre os mais experientes.",
           "activities": [
             {

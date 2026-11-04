@@ -20,6 +20,11 @@ uniform int gate_count = 0;
 uniform int selected_zone = -1;
 uniform int hovered_zone = -1;
 uniform int hovered_slot = -1;
+uniform sampler2D water_tex : filter_linear, repeat_disable;  // agua do Core (D-030)
+uniform vec4 water_rect = vec4(0.0, 0.0, 4.0, 0.0);              // origem x, origem y, tamanho da celula
+uniform vec2 water_size = vec2(1.0);                             // texels
+uniform vec4 cities[8];                                          // x, y, raio da muralha, nivel
+uniform int city_count = 0;
 uniform float daylight : hint_range(0.0, 1.0) = 1.0;
 uniform float anim_time = 0.0;
 
@@ -117,16 +122,11 @@ float relief(vec4 t, vec2 m, out float water, out float crack) {
         float ridge = pow(1.0 - abs(2.0 * n - 1.0), 2.0);
         h = ridge * 0.95 + 0.25 * fbm(p * f * 2.7, 3);
     } else if (kind == 3) {
-        float n = fbm(p * 0.0065, 3);
-        float river = smoothstep(0.0, 0.10, abs(n - 0.5));
-        water = 1.0 - smoothstep(0.0, 0.018, abs(n - 0.5));
-        h = 0.45 * river + 0.25 * fbm(p * f, 3);
+        h = 0.30 * fbm(p * f, 3) + 0.12;
     } else if (kind == 4) {
         float n = fbm(p * f * 0.9, 4);
         h = smoothstep(0.44, 0.52, n) * 0.65 + 0.20 * n;
     } else if (kind == 5) {
-        float n = fbm(p * 0.020, 3);
-        water = 1.0 - smoothstep(0.38, 0.43, n);
         h = 0.10 * fbm(p * f, 3);
     } else {
         float n = fbm(p * f * 1.5, 5);
@@ -195,8 +195,42 @@ void fragment() {
                : smoothstep(1.02, 1.20, h) * step(0.85, tz.y);
     land = mix(land, vec3(0.86, 0.89, 0.93), clamp(snow, 0.0, 1.0));
     land *= 0.55 + 0.75 * shade;
-    // Agua de rios e pocas.
-    land = mix(land, vec3(0.07, 0.16, 0.19) * (0.8 + 0.4 * shade), water * 0.85);
+    // Agua de rios e pocas: a mesma do Core (as estradas contornam), com borda organica.
+    vec2 wuv = (m - water_rect.xy) / (water_rect.z * water_size);
+    // Media de 5 amostras (borda sem degraus da grade de 4 unidades) e leve ruido organico.
+    vec2 tx = 0.85 / water_size;
+    float wv = (texture(water_tex, wuv).r * 2.0
+              + texture(water_tex, wuv + vec2(tx.x, tx.y)).r + texture(water_tex, wuv + vec2(-tx.x, tx.y)).r
+              + texture(water_tex, wuv + vec2(tx.x, -tx.y)).r + texture(water_tex, wuv + vec2(-tx.x, -tx.y)).r) / 6.0;
+    wv += (fbm(m * 0.09, 2) - 0.5) * 0.18;
+    water = (zi >= 0 && wuv.x >= 0.0 && wuv.y >= 0.0 && wuv.x <= 1.0 && wuv.y <= 1.0) ? smoothstep(0.42, 0.58, wv) : 0.0;
+    // Margem barrenta, agua rasa clara na borda e funda (escura) no meio, com reflexo suave.
+    float ripple = fbm(m * 0.05 + vec2(anim_time * 0.04, anim_time * 0.025), 3);
+    float deep = smoothstep(0.62, 0.95, wv);
+    vec3 shallow_col = vec3(0.13, 0.25, 0.27);
+    vec3 deep_col = vec3(0.035, 0.095, 0.13);
+    vec3 water_col = mix(shallow_col, deep_col, deep) * (0.9 + 0.25 * ripple);
+    float bank = (smoothstep(0.26, 0.40, wv) - smoothstep(0.40, 0.52, wv)) * (zi >= 0 ? 1.0 : 0.0);
+    land = mix(land, vec3(0.31, 0.29, 0.21) * (0.75 + 0.35 * shade), bank * 0.55);
+    land = mix(land, water_col, water * 0.94);
+
+    // Cidade: calcamento de pedra dentro da muralha (padrao some quando as pedras ficam pequenas na tela).
+    for (int i = 0; i < 8; i++) {
+        if (i >= city_count) break;
+        float dc = length(m - cities[i].xy);
+        float inside_city = 1.0 - smoothstep(cities[i].z - 2.0, cities[i].z, dc);
+        if (inside_city <= 0.0) continue;
+        vec2 q = m * 0.30;
+        float row = floor(q.y);
+        q.x += mod(row, 2.0) * 0.5;
+        vec2 cell = floor(q);
+        vec2 f = fract(q) - 0.5;
+        float mortar = smoothstep(0.38, 0.47, max(abs(f.x), abs(f.y)));
+        float detail_on = smoothstep(2.0, 5.0, zoom / 0.30);
+        vec3 stone = vec3(0.46, 0.43, 0.38) * (0.88 + 0.24 * hash(cell));
+        vec3 paved = mix(stone, vec3(0.22, 0.20, 0.18), mortar * 0.55 * detail_on);
+        land = mix(land, paved * (0.70 + 0.40 * shade), inside_city * 0.88);
+    }
     // Fendas de lava.
     land = mix(land, vec3(1.0, 0.42, 0.10) * (0.7 + 0.3 * sin(anim_time * 2.0 + m.x * 0.05)), crack * (biome == 6 ? 0.85 : 0.0));
 

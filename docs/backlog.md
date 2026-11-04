@@ -75,6 +75,8 @@ Base de conteúdo e progressão (próximo passo; D-025):
 - [ ] Revisão visual das fichas alteradas no D-027 (área: nível do desafio e XP por ciclo; jogador: taxa da faixa) antes de fechar a entrega integrada
 - [x] Redistribuir e ampliar áreas até o nível 30 (D-028): 3 cidades, 12 zonas, 54 áreas com faixa, 19 criaturas novas; 2+ caças por nível (uma sem PvP); grade de lotes com 55 livres; terreno por parâmetros
 - [x] Legibilidade do mapa (D-029): ilha por máscara, zonas maiores, estradas finas e curvas, rótulos enxutos
+- [x] Terreno que a simulação respeita (D-030): água do Core (rio natural configurável, poças), estradas por A* com pontes, viagem pelo comprimento da estrada
+- [x] Cidades por nível (D-030): muralha, calçamento, casas, prédios dentro; área urbana marcada e com hover; posição da cidade no tile configurável
 - [ ] Recalibrar a curva depois do passo 3: escolha do criador entre (a) ~200 h com desaceleração suave no fim ou (b) desaceleração forte com 220–250 h
 - [ ] Catálogo de quests por cidade (principais, secundárias, diárias) com etapas reais, requisitos e recompensas; pegar no quadro sem XP
 - [ ] Medir a progressão até o 30 (horas por nível, XP por fonte, conteúdo esgotado antes da próxima faixa) e ajustar as metas
@@ -100,6 +102,9 @@ Falta para fechar o M2:
 - [x] Regras de construção de áreas no validador (D-020)
 - [x] Selos e hachura de perda por morte; contagem de jogadores por zona em destaque
 - [ ] Editor de mapa (tela própria): ocupar ou comprar lotes livres, criar zonas, áreas, monstros e quests; usa a grade e as regras do D-020/D-028
+- [ ] Editor de tiles: posicionar a cidade, rio, lagos e áreas (dentro ou fora da muralha), criar e editar estradas e conexões; tudo já é conteúdo validado (D-030)
+- [ ] Regras por área: área com regras próprias sobre a zona (ex.: cidade sem PvP dentro de zona PvP; área urbana como contêiner)
+- [ ] Estilos de cidade (vários desenhos selecionáveis, com e sem rio) e evolução do nível da cidade no jogo
 - [ ] Editor de áreas com posicionamento livre, prévia de tamanho, acesso e conflitos (usa as regras do D-020)
 - [ ] Saque das criaturas novas (loot vazio até o M3)
 - [ ] Quantidade de monstros e recursos por área (M3/M5), independente do tamanho

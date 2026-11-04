@@ -437,3 +437,57 @@ Proposta do criador, analisada com o Claude.
   - os nomes de área só aparecem bem perto ou em foco;
   - no mundo todo à vista, só as cidades e a zona em foco têm nome.
 - **Relevo:** a normal agora sai de diferenças finitas, não das derivadas de tela, que deixavam o terreno em blocos.
+
+## D-030 — Terreno que a simulação respeita, estradas calculadas e cidades por nível
+**Data:** 04/11/2026 · **Estado:** aceita (pedido do criador)
+
+**Pedidos:**
+- estradas naturais, cinzas e opacas, que não atravessam água;
+- só a cidade com nome fixo;
+- lojas dentro da cidade, com muralha e calçamento;
+- cidade com níveis;
+- área urbana marcada como as áreas de caça;
+- rio natural;
+- tudo configurável para o futuro editor de tiles.
+
+**Água é do Core** (`ZoneTerrain`).
+- É gerada com aritmética inteira determinística (`FixedNoise`), em células de 4 unidades.
+- **Rio:** nasce fino dentro da zona, serpenteia em duas escalas, alarga e termina num lago. Desvia da muralha. É configurável em `terrain.river`:
+  - ligado ou desligado;
+  - direção de 0 a 7;
+  - deslocamento, largura e sinuosidade.
+  - Sem configuração, o vale ganha um rio automático pela semente.
+- **Poças e lagos:** `terrain.poolsPermille`, em qualquer relevo (padrão: brejo 380).
+- **Terra firme garantida** sob as áreas, na encruzilhada, nos portões e dentro da muralha.
+- O mapa desenha exatamente essa água, a partir de uma textura do Core.
+
+**Estradas calculadas** (A* determinístico na grade do terreno).
+- Da encruzilhada até cada saída e até cada área (trilha), dentro da própria zona.
+- Contornam as outras áreas e seguem uma ondulação natural.
+- Cruzam água só por ponte curta, que é desenhada.
+- **O tempo de viagem segue o comprimento real da estrada** (`LegLength`), e os viajantes andam sobre ela.
+- Quando o tile muda, as estradas se recalculam sozinhas. Estradas editadas à mão ficam para o editor.
+
+**Cidade por nível** (`cityLevel` de 1 a 5).
+- **Muralha:** raio = R × (30 + 6 × nível)%. Paliçada nos níveis 1–2; pedra com torres do 3 em diante.
+- **Desenho:** casas em quantidade pelo nível, calçamento dentro da muralha e aberturas onde passam as ruas.
+- **Lojas, forja, taverna, praça e treino** ficam dentro da muralha como prédios, sem a mancha externa.
+- **Posição da cidade no tile:** `cityPosition`, um deslocamento a partir do centro. A muralha, os prédios e as estradas se adaptam.
+- **Níveis do preset:** Vila 2, Forte 3, Cidadela 4.
+
+**Área urbana** = tudo dentro da muralha.
+- Tem o mesmo desenho das áreas de caça (mancha semiopaca, núcleo e contorno tracejado).
+- Acende ao passar o mouse e tem tooltip próprio.
+- **É o lugar onde regras próprias vão valer.** Exemplo: uma cidade sem PvP dentro de uma zona com PvP. Ainda não implementado.
+
+**Rótulos:**
+- só as cidades têm nome fixo, logo abaixo da muralha;
+- as outras zonas mostram nome e regras ao passar o mouse ou quando selecionadas.
+
+**Capturas:**
+- ignoram o mouse real;
+- `--mouse=XxY` simula o hover.
+
+**Medido** (5 seeds): deslocamento em 21,8%; nível 10 em 15,6 h, 20 em 76 h, 30 em 195 h; combate em 37%.
+
+**Desvio do plano:** a seção 9 previa terreno só visual. Aqui, água e estradas passaram a afetar a simulação, porque a lógica do mundo exige: as estradas contornam rios e a viagem é mais longa.

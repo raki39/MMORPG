@@ -19,12 +19,13 @@ namespace GodotClient;
 ///   --hour=H | --sim-minutes=N    avanca a simulacao antes de comecar (capturas)
 ///   --open-person=ID | --open-zone=ID | --open-cluster   abre uma ficha ao iniciar
 ///   --tab=N               aba inicial da ficha aberta
-///   --screenshot=ARQ --frames=N    captura e encerra
+///   --screenshot=ARQ --frames=N    captura e encerra (--zoom=F, --focus=ZONA, --mouse=XxY)
 ///   --measure-seconds=S   imprime FPS medio e encerra
 /// </summary>
 public partial class Main : Node
 {
     private void ApplyStartZoom(float factor) => _map.ZoomBy(factor);
+    private Vector2? _fakeMouse;
 
     private readonly Dictionary<string, string> _args = new(StringComparer.Ordinal);
     private SimulationHost? _host;
@@ -153,6 +154,12 @@ public partial class Main : Node
             if (id > 0) OpenPerson(id);
         }
         if (_args.TryGetValue("focus", out var fz) && _ctx.Content.Regions.ContainsKey(fz)) _map.FocusRegion(fz);
+        // Capturas: ignoram o mouse real; --mouse=X,Y simula o mouse na tela (hover).
+        if (_args.ContainsKey("screenshot")) _map.IgnoreRealInput = true;
+        if (_args.TryGetValue("mouse", out var ms) && ms.Split(',', 'x') is { Length: 2 } mp
+            && float.TryParse(mp[0], NumberStyles.Float, CultureInfo.InvariantCulture, out var mx)
+            && float.TryParse(mp[1], NumberStyles.Float, CultureInfo.InvariantCulture, out var my))
+            _fakeMouse = new Vector2(mx, my);
         // Capturas: --zoom=F aproxima (F > 1) ou afasta (F < 1) a partir do enquadramento inicial.
         if (_args.TryGetValue("zoom", out var zf) && float.TryParse(zf, NumberStyles.Float, CultureInfo.InvariantCulture, out var zoomFactor) && zoomFactor > 0)
             CallDeferred(nameof(ApplyStartZoom), zoomFactor);
@@ -672,6 +679,7 @@ public partial class Main : Node
     private void HandleAutomation(double delta)
     {
         _frames++;
+        if (_fakeMouse is { } fm) _map.SimulateMouse(fm);
         if (_args.TryGetValue("screenshot", out var path) && _frames == int.Parse(Arg("frames", "45"), CultureInfo.InvariantCulture))
         {
             var img = GetViewport().GetTexture().GetImage();

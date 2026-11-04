@@ -167,6 +167,31 @@ public static class ContentValidator
             v.OneOf(RegionsFile, p + ".deathRule", r.DeathRule, DeathRules.All);
             v.OneOf(RegionsFile, p + ".control", r.Control, ControlRules.All);
             v.OneOf(RegionsFile, p + ".biome", r.Biome, Biomes.All);
+            if (r.IsCity && (r.CityLevel < 1 || r.CityLevel > 5))
+                v.Error(RegionsFile, p + ".cityLevel", "Cidades têm nível de 1 a 5 (define o tamanho da área urbana).");
+            if (!r.IsCity && r.CityLevel != 0)
+                v.Error(RegionsFile, p + ".cityLevel", "Só cidades têm nível de cidade.");
+            if (r.CityPosition != null)
+            {
+                if (!r.IsCity) v.Error(RegionsFile, p + ".cityPosition", "Só cidades têm posição de cidade.");
+                else
+                {
+                    int wallR = World.ZoneLayout.CityWallFor(r, set.World.ZoneRadius);
+                    double off = Math.Sqrt((double)r.CityPosition.X * r.CityPosition.X + (double)r.CityPosition.Y * r.CityPosition.Y);
+                    if (off + wallR > set.World.ZoneRadius * 0.80)
+                        v.Error(RegionsFile, p + ".cityPosition", $"A muralha (raio {wallR}) precisa caber na zona: afaste a cidade no máximo {Math.Max(0, set.World.ZoneRadius * 80 / 100 - wallR)} unidades do centro.");
+                }
+            }
+            var river = r.Terrain.River;
+            if (river != null)
+            {
+                if (river.Direction is < 0 or > 7) v.Error(RegionsFile, p + ".terrain.river.direction", "Direção do rio de 0 a 7 (passos de 22,5°; 0 = leste-oeste, 4 = norte-sul).");
+                if (river.Width is < 3 or > 14) v.Error(RegionsFile, p + ".terrain.river.width", "Largura do rio de 3 a 14 unidades.");
+                if (Math.Abs(river.Offset) > set.World.ZoneRadius * 8 / 10) v.Error(RegionsFile, p + ".terrain.river.offset", "O rio precisa passar dentro da zona.");
+                if (river.MeanderPermille is < 0 or > 1000) v.Error(RegionsFile, p + ".terrain.river.meanderPermille", "Sinuosidade de 0 a 1000 permille.");
+            }
+            if (r.Terrain.PoolsPermille is < 0 or > 700)
+                v.Error(RegionsFile, p + ".terrain.poolsPermille", "Cobertura de poças de 0 a 700 permille.");
             v.OneOf(RegionsFile, p + ".terrain.relief", r.Terrain.Relief, Reliefs.All);
             if (r.Terrain.ElevationPermille is < 0 or > 1000)
                 v.Error(RegionsFile, p + ".terrain.elevationPermille", "Altitude deve estar entre 0 e 1000 permille.");
@@ -470,6 +495,10 @@ public static class ContentValidator
             try { c = layout.AreaCenter(r.Id, a.Id); } catch (KeyNotFoundException) { continue; }
             if (c.DistanceTo(center) + a.Radius > set.World.ZoneRadius * 0.92)
                 v.Error(f, ap + ".position", "A área não cabe dentro da zona.");
+            int wall = layout.CityWallRadius(r.Id);
+            if (wall > 0 && c.DistanceTo(layout.Hub(r.Id)) + a.Radius > wall)
+                v.Error(f, ap + ".position", $"Na cidade, a área fica dentro da muralha (raio {wall} no nível {r.CityLevel}).");
+
             if (c.DistanceTo(layout.Hub(r.Id)) <= a.Radius + 4)
                 v.Error(f, ap + ".position", "A área cobre a encruzilhada da zona e bloquearia as estradas.");
             foreach (var con in r.Connections)

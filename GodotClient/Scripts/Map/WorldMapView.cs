@@ -70,6 +70,8 @@ public partial class WorldMapView : Node2D
     public string? HoveredRegionId { get; private set; }
     public int HoveredPersonId { get; private set; }
     private string? _hoveredArea;
+    /// <summary>Cidade cuja area urbana (dentro da muralha) esta sob o mouse.</summary>
+    private string? _hoveredUrban;
     private int _hoveredCluster = -1;
 
     public void Setup(ContentDatabase content, ZoneLayout layout, IReadOnlyList<PersonInfo> persons, ColorRect terrainRect)
@@ -142,6 +144,9 @@ public partial class WorldMapView : Node2D
         _terrain.SetShaderParameter("gates", gateArr);
         _terrain.SetShaderParameter("gate_count", gates.Count);
 
+        BuildCities();
+        BuildWaterTexture(layout);
+
         _population = new PopulationLayer();
         _population.Init(persons.Count);
         AddChild(_population);
@@ -152,7 +157,36 @@ public partial class WorldMapView : Node2D
         _tip = ThemeFactory.Glass(12, 10);
     }
 
+    /// <summary>
+    /// Agua do Core (D-030) numa textura do mundo inteiro (1 texel = 1 celula do terreno):
+    /// o mapa desenha exatamente a agua que as estradas contornam. Cidades: calcada e muralha.
+    /// </summary>
+    private void BuildWaterTexture(ZoneLayout layout)
+    {
+        int cell = Simulation.Core.World.ZoneTerrain.Cell;
+        int r = layout.ZoneRadius;
+        int minX = _zones.Min(z => z.MapPosition.X) - r, minY = _zones.Min(z => z.MapPosition.Y) - r;
+        int maxX = _zones.Max(z => z.MapPosition.X) + r, maxY = _zones.Max(z => z.MapPosition.Y) + r;
+        int w = (maxX - minX) / cell + 1, h = (maxY - minY) / cell + 1;
+        var img = Image.CreateEmpty(w, h, false, Image.Format.L8);
+        for (int j = 0; j < h; j++)
+            for (int i = 0; i < w; i++)
+                if (layout.IsWater(minX + i * cell + cell / 2, minY + j * cell + cell / 2))
+                    img.SetPixel(i, j, Colors.White);
+        _terrain.SetShaderParameter("water_tex", ImageTexture.CreateFromImage(img));
+        _terrain.SetShaderParameter("water_rect", new Vector4(minX, minY, cell, 0));
+        _terrain.SetShaderParameter("water_size", new Vector2(w, h));
+        var cities = new Vector4[8];
+        int n = 0;
+        foreach (var c in _cities.Take(8)) cities[n++] = new Vector4(c.Center.X, c.Center.Y, c.Wall, c.Level);
+        _terrain.SetShaderParameter("cities", cities);
+        _terrain.SetShaderParameter("city_count", n);
+    }
+
     public void SetSnapshot(SimSnapshot snap) => _snap = snap;
+
+    /// <summary>Capturas: posiciona o mouse virtual na tela (hover sem mouse real).</summary>
+    public void SimulateMouse(Vector2 screen) { _mouse = screen; UpdateHover(); }
 
     public int PeopleInZone(string regionId) => _zonePeople.TryGetValue(regionId, out var n) ? n : 0;
     public int PeopleAtSpot(string regionId, string activityId) => _byActivity.TryGetValue(regionId + "/" + activityId, out var n) ? n : 0;
@@ -313,41 +347,32 @@ public partial class WorldMapView : Node2D
 
     private float EmblemRadius() => Mathf.Clamp(8.5f * Mathf.Sqrt(Detail) + 1.5f, 9f, 19f);
 
-    /// <summary>Posicao de quem viaja, sobre a mesma curva desenhada para o trecho.</summary>
-    private static Vector2 TravelPoint(CharacterView v, long tick)
+    /// <summary>Posicao de quem viaja: sobre a estrada ou trilha do trecho (D-030), pela fracao do comprimento.</summary>
+    private Vector2 TravelPoint(CharacterView v, long tick)
     {
-        if (v.MoveEndTick <= v.MoveStartTick) return new Vector2(v.Position.X, v.Position.Y);
+        var a = new Vector2(v.Position.X, v.Position.Y);
+        var b = new Vector2(v.MoveTo.X, v.MoveTo.Y);
+        if (v.MoveEndTick <= v.MoveStartTick) return a;
         float t = Math.Clamp((tick - v.MoveStartTick) / (float)(v.MoveEndTick - v.MoveStartTick), 0f, 1f);
-        return CurveAt(new Vector2(v.Position.X, v.Position.Y), new Vector2(v.MoveTo.X, v.MoveTo.Y), t);
+        var road = _layout.RoadBetween(v.Position, v.MoveTo);
+        if (road == null || road.Points.Count < 2) return a.Lerp(b, t);
+        float target = t * road.Length, run = 0;
+        for (int i = 0; i + 1 < road.Points.Count; i++)
+        {
+            var p0 = new Vector2(road.Points[i].X, road.Points[i].Y);
+            var p1 = new Vector2(road.Points[i + 1].X, road.Points[i + 1].Y);
+            float seg = p0.DistanceTo(p1);
+            if (run + seg >= target && seg > 0) return p0.Lerp(p1, (target - run) / seg);
+            run += seg;
+        }
+        return b;
     }
 
-    /// <summary>
-    /// Curva suave e estavel de um trecho (coordenadas do mapa): desvio lateral que depende so
-    /// dos extremos e e igual nos dois sentidos. Estradas, trilhas e viajantes usam a mesma.
-    /// So apresentacao: o Core mede o trecho em linha reta.
-    /// </summary>
-    public static Vector2 CurveAt(Vector2 a, Vector2 b, float t)
+    private Vector2[] Screen(IReadOnlyList<MapPos> pts)
     {
-        if (a.X > b.X || (a.X == b.X && a.Y > b.Y)) { (a, b) = (b, a); t = 1f - t; }
-        var d = b - a;
-        float len = d.Length();
-        if (len < 1f) return a.Lerp(b, t);
-        var n = new Vector2(-d.Y, d.X) / len;
-        uint h = unchecked((uint)((int)a.X * 73856093) ^ (uint)((int)a.Y * 19349663) ^ (uint)((int)b.X * 83492791) ^ (uint)((int)b.Y * 50331653));
-        float s1 = (h & 0xFF) / 255f * 2f - 1f;
-        float s2 = ((h >> 8) & 0xFF) / 255f * 2f - 1f;
-        float amp = Mathf.Min(len * 0.045f, 6f);
-        float off = amp * (s1 * Mathf.Sin(Mathf.Pi * t) + 0.5f * s2 * Mathf.Sin(Mathf.Tau * t));
-        return a.Lerp(b, t) + n * off;
-    }
-
-    private Vector2[] CurveScreen(MapPos a, MapPos b, int segments)
-    {
-        var pts = new Vector2[segments + 1];
-        var am = new Vector2(a.X, a.Y);
-        var bm = new Vector2(b.X, b.Y);
-        for (int i = 0; i <= segments; i++) pts[i] = ToScreen(CurveAt(am, bm, i / (float)segments));
-        return pts;
+        var o = new Vector2[pts.Count];
+        for (int i = 0; i < pts.Count; i++) o[i] = ToScreen(pts[i]);
+        return o;
     }
 
     private void UpdatePopulation()
@@ -442,6 +467,7 @@ public partial class WorldMapView : Node2D
         _hoveredCluster = -1;
         HoveredFreeSlot = -1;
         _hoveredSlot = null;
+        _hoveredUrban = null;
         if (_dragging || !_viewArea.HasPoint(_mouse)) return;
 
         for (int i = 0; i < _clusters.Count; i++)
@@ -462,6 +488,10 @@ public partial class WorldMapView : Node2D
             float r = Mathf.Max(_layout.AreaRadius(z.Id, a.Id) * _zoom, EmblemRadius() + 2);
             if (c.DistanceTo(_mouse) <= r) { _hoveredArea = z.Id + "#" + a.Id; HoveredRegionId = z.Id; return; }
         }
+        // Area urbana: todo o espaco dentro da muralha se comporta como uma area.
+        var mm = ToMap(_mouse);
+        foreach (var city in _cities)
+            if (mm.DistanceTo(city.Center) <= city.Wall + 4) { _hoveredUrban = city.Zone.Id; HoveredRegionId = city.Zone.Id; return; }
         HoveredRegionId = ZoneAt(_mouse);
         if (HoveredRegionId == null && _grid.IsValid)
         {
@@ -491,8 +521,12 @@ public partial class WorldMapView : Node2D
 
     // ---------------- Entrada ----------------
 
+    /// <summary>Capturas automaticas: ignora mouse e teclado reais (resultado reprodutivel).</summary>
+    public bool IgnoreRealInput { get; set; }
+
     public override void _UnhandledInput(InputEvent e)
     {
+        if (IgnoreRealInput) return;
         if (e is InputEventMouseMotion mm)
         {
             _mouse = mm.Position;
@@ -554,31 +588,35 @@ public partial class WorldMapView : Node2D
         float w = Mathf.Clamp(_zoom * 1.1f, 0.8f, 2.2f);
         DrawCityLights();
 
-        // Trilhas ate as areas: finas, tracejadas e curvas (somem quando o mapa esta afastado).
+        // Trilhas ate as areas (fora da estrada): finas e tracejadas; somem com o mapa afastado.
         if (Detail >= 0.75f)
-            foreach (var (z, a, _) in _areas)
-                Trail(CurveScreen(_layout.Hub(z.Id), _layout.AreaCenter(z.Id, a.Id), 18), w);
+            foreach (var road in _layout.Roads.Where(r => r.IsTrail))
+                Trail(Screen(road.Points), w);
 
+        // Estradas: caminhos do Core (contornam agua e areas); pontes onde cruzam rio.
+        foreach (var road in _layout.Roads.Where(r => !r.IsTrail))
+            Road(Screen(road.Points), w);
         var drawnCross = new HashSet<string>(StringComparer.Ordinal);
         foreach (var z in _zones)
-        {
-            var hub = ToScreen(_layout.Hub(z.Id));
             foreach (var c in z.Connections)
             {
-                Road(CurveScreen(_layout.Hub(z.Id), _layout.Gate(z.Id, c.To), 20), w);
                 string key = string.CompareOrdinal(z.Id, c.To) < 0 ? z.Id + "|" + c.To : c.To + "|" + z.Id;
-                if (drawnCross.Add(key)) Road(CurveScreen(_layout.Gate(z.Id, c.To), _layout.Gate(c.To, z.Id), 4), w);
+                if (drawnCross.Add(key)) Road(new[] { ToScreen(_layout.Gate(z.Id, c.To)), ToScreen(_layout.Gate(c.To, z.Id)) }, w);
             }
-        }
+        foreach (var road in _layout.Roads)
+            for (int i = 0; i < road.Water.Count; i++)
+                if (road.Water[i]) Bridge(ToScreen(road.Points[i]), ToScreen(road.Points[i + 1]), w);
 
-        foreach (var (z, a, shape) in _areas) DrawAreaGround(z, a, shape);
+        foreach (var (z, a, shape) in _areas)
+            if (!z.IsCity) DrawAreaGround(z, a, shape);
+        foreach (var city in _cities) DrawCity(city, w);
 
         foreach (var z in _zones)
         {
             foreach (var c in z.Connections) DrawGate(ToScreen(_layout.Gate(z.Id, c.To)), ToScreen(_layout.Center(c.To)), w);
             var hub = ToScreen(_layout.Hub(z.Id));
-            if (z.IsCity) IconCastle(hub, 10f * w);
-            else { DrawCircle(hub, 2.8f * w, new Color(RoadEdge, 0.8f)); DrawCircle(hub, 1.8f * w, RoadLight); }
+            if (z.IsCity) IconCastle(hub, 7f * w);
+            else { DrawCircle(hub, 2.6f * w, new Color(RoadEdge, 0.8f)); DrawCircle(hub, 1.6f * w, RoadFill); }
         }
     }
 
@@ -610,19 +648,31 @@ public partial class WorldMapView : Node2D
         }
     }
 
-    // Estrada de terra: borda escura fina e leito castanho.
-    private static readonly Color RoadEdge = new("#2E241A"), RoadFill = new("#8F7756"), RoadLight = new("#BFA781");
+    // Estrada: cascalho cinza com borda escura, opaca.
+    private static readonly Color RoadEdge = new("#24221F"), RoadFill = new("#8D877C"), RoadLight = new("#B5AE9F");
 
     private void Road(Vector2[] pts, float w)
     {
-        DrawPolyline(pts, new Color(RoadEdge, 0.55f), 2.8f * w, true);
-        DrawPolyline(pts, new Color(RoadFill, 0.95f), 1.6f * w, true);
+        DrawPolyline(pts, new Color(RoadEdge, 0.85f), 3.0f * w, true);
+        DrawPolyline(pts, RoadFill, 1.8f * w, true);
     }
 
     private void Trail(Vector2[] pts, float w)
     {
-        var col = new Color(RoadLight, 0.32f);
+        var col = new Color(RoadLight, 0.45f);
         for (int i = 0; i + 1 < pts.Length; i += 2) DrawLine(pts[i], pts[i + 1], col, Mathf.Max(1f, 0.9f * w), true);
+    }
+
+    /// <summary>Ponte de madeira: tabuleiro largo com guarda-corpos.</summary>
+    private void Bridge(Vector2 a, Vector2 b, float w)
+    {
+        var dir = (b - a).Normalized();
+        var side = new Vector2(-dir.Y, dir.X);
+        var ext = dir * 1.5f * w;
+        DrawLine(a - ext, b + ext, new Color(0, 0, 0, 0.55f), 5.2f * w, true);
+        DrawLine(a - ext, b + ext, new Color("#6E5A44"), 3.8f * w, true);
+        foreach (float k in new[] { -1f, 1f })
+            DrawLine(a - ext + side * 2.1f * w * k, b + ext + side * 2.1f * w * k, new Color("#3A2E22"), Mathf.Max(1f, 0.7f * w), true);
     }
 
     private void DrawGate(Vector2 gate, Vector2 towards, float w)
@@ -630,13 +680,217 @@ public partial class WorldMapView : Node2D
         // Passagem: dois marcos de pedra de cada lado da estrada (discreto).
         var dir = (towards - gate).Normalized();
         var side = new Vector2(-dir.Y, dir.X);
-        float s = 3.4f * w;
+        float s = 3.2f * w;
         foreach (float k in new[] { -1f, 1f })
         {
             var post = gate + side * s * k;
-            DrawCircle(post, 1.9f * w + 0.8f, new Color(RoadEdge, 0.85f));
-            DrawCircle(post, 1.9f * w, RoadLight);
+            DrawCircle(post, 1.7f * w + 0.8f, new Color(RoadEdge, 0.85f));
+            DrawCircle(post, 1.7f * w, RoadLight);
         }
+    }
+
+    // ---------------- Cidades (muralha, casas e predios pelo nivel) ----------------
+
+    private sealed class CityDeco
+    {
+        public RegionDefinition Zone = null!;
+        public Vector2 Center;
+        public float Wall;
+        public int Level;
+        public Vector2[] Ring = Array.Empty<Vector2>();      // vertices da muralha (mapa)
+        public bool[] Open = Array.Empty<bool>();            // segmento i (Ring[i] -> Ring[i+1]) e abertura
+        public List<(Vector2 C, Vector2 Half, float Angle, Color Roof)> Houses = new();
+    }
+
+    private readonly List<CityDeco> _cities = new();
+
+    /// <summary>
+    /// Monta o desenho de cada cidade a partir do nivel: muralha (paliçada no nivel 1-2, pedra
+    /// com torres do 3 em diante) com aberturas onde as estradas passam, e casas espalhadas
+    /// entre as ruas e os predios. Tudo estavel pelo ID (mesma cidade, mesmo desenho).
+    /// </summary>
+    private void BuildCities()
+    {
+        _cities.Clear();
+        foreach (var z in _zones.Where(z => z.IsCity))
+        {
+            var c = _layout.Hub(z.Id);   // centro da cidade (posicao configuravel na zona)
+            var deco = new CityDeco { Zone = z, Center = new Vector2(c.X, c.Y), Wall = _layout.CityWallRadius(z.Id), Level = Math.Clamp(z.CityLevel, 1, 5) };
+            int sides = 10 + deco.Level * 2;
+            ulong h = Simulation.Core.Random.StableHash.Fnv1a64(z.Id + "#muralha");
+            var ring = new Vector2[sides + 1];
+            for (int i = 0; i <= sides; i++)
+            {
+                float ang = i * Mathf.Tau / sides + (h % 100) / 100f;
+                float jitter = 1f + ((StableNoise(h, i % sides) - 0.5f) * 0.06f);
+                ring[i] = deco.Center + new Vector2(Mathf.Cos(ang), Mathf.Sin(ang)) * deco.Wall * jitter;
+            }
+            deco.Ring = ring;
+            // Aberturas: onde estradas (nao trilhas) cruzam o raio da muralha.
+            var crossings = new List<Vector2>();
+            foreach (var road in _layout.Roads.Where(r => r.ZoneId == z.Id && !r.IsTrail))
+                foreach (var p in road.Points)
+                    if (new Vector2(p.X, p.Y).DistanceTo(deco.Center) >= deco.Wall) { crossings.Add(new Vector2(p.X, p.Y)); break; }
+            deco.Open = new bool[sides];
+            for (int i = 0; i < sides; i++)
+            {
+                var mid = (ring[i] + ring[i + 1]) / 2f;
+                deco.Open[i] = crossings.Any(x => x.DistanceTo(mid) < deco.Wall * Mathf.Tau / sides * 0.75f);
+            }
+
+            // Casas: quantidade pelo nivel; fora das ruas, dos predios e umas das outras.
+            var roads = _layout.Roads.Where(r => r.ZoneId == z.Id).Select(r => r.Points.Select(p => new Vector2(p.X, p.Y)).ToArray()).ToList();
+            var buildings = z.Areas.Select(a => (P: _layout.AreaCenter(z.Id, a.Id), R: _layout.AreaRadius(z.Id, a.Id))).ToList();
+            var roofs = new[] { new Color("#8E4B3A"), new Color("#7A5A44"), new Color("#5D5F66"), new Color("#9A6B47"), new Color("#6B4436") };
+            int want = 10 + deco.Level * 10;
+            for (int k = 0; k < want * 6 && deco.Houses.Count < want; k++)
+            {
+                float rr = Mathf.Lerp(12f, deco.Wall - 5f, Mathf.Sqrt(StableNoise(h, 1000 + k * 3)));
+                float ang = StableNoise(h, 1001 + k * 3) * Mathf.Tau;
+                var pos = deco.Center + new Vector2(Mathf.Cos(ang), Mathf.Sin(ang)) * rr;
+                if (buildings.Any(b => pos.DistanceTo(new Vector2(b.P.X, b.P.Y)) < b.R + 4)) continue;
+                if (roads.Any(pts => DistanceToPolyline(pos, pts) < 5f)) continue;
+                if (deco.Houses.Any(o => o.C.DistanceTo(pos) < 6.5f)) continue;
+                float hw = 2.2f + StableNoise(h, 1002 + k * 3) * 1.4f;
+                float hh = 1.6f + StableNoise(h, 2002 + k) * 1.0f;
+                deco.Houses.Add((pos, new Vector2(hw, hh), ang + Mathf.Pi / 2, roofs[(int)(StableNoise(h, 3002 + k) * roofs.Length) % roofs.Length]));
+            }
+            _cities.Add(deco);
+        }
+    }
+
+    private static float StableNoise(ulong seed, int i)
+    {
+        ulong x = unchecked(seed ^ ((ulong)(uint)i * 0x9E3779B97F4A7C15UL));
+        x ^= x >> 33; x = unchecked(x * 0xff51afd7ed558ccdUL); x ^= x >> 33;
+        return (x % 10000) / 10000f;
+    }
+
+    private static float DistanceToPolyline(Vector2 p, Vector2[] pts)
+    {
+        float best = float.MaxValue;
+        for (int i = 0; i + 1 < pts.Length; i++)
+        {
+            var a = pts[i];
+            var ab = pts[i + 1] - a;
+            float t = ab.LengthSquared() > 0 ? Mathf.Clamp((p - a).Dot(ab) / ab.LengthSquared(), 0, 1) : 0;
+            best = Mathf.Min(best, p.DistanceTo(a + ab * t));
+        }
+        return best;
+    }
+
+    private void DrawCity(CityDeco city, float w)
+    {
+        bool stone = city.Level >= 3;
+        float wallW = Mathf.Clamp((stone ? 2.6f : 1.8f) * _zoom, 1.4f, stone ? 7f : 5f);
+        var wallDark = stone ? new Color("#2B2824") : new Color("#2A2018");
+        var wallFill = stone ? new Color("#9C9585") : new Color("#7A5B3C");
+
+        // Area urbana: ocupa todo o espaco da muralha, com a mesma tinta semiopaca das areas de
+        // caca e coleta (e o lugar onde regras proprias da cidade vao valer, D-030).
+        // Mesmo desenho das areas de caca: mancha semiopaca, nucleo mais denso e contorno
+        // tracejado; acende ao passar o mouse (na cidade ou num predio dela) ou ao selecionar.
+        string id = city.Zone.Id;
+        bool hotCity = _hoveredUrban == id || (_hoveredArea?.StartsWith(id + "#", StringComparison.Ordinal) ?? false)
+                       || SelectedRegionId == id;
+        var cityTint = new Color("#E0B45A");
+        Vector2[] Scaled(float k) => city.Ring.Take(city.Ring.Length - 1).Select(p => ToScreen(city.Center + (p - city.Center) * k)).ToArray();
+        var ground = Scaled((city.Wall + 4f) / city.Wall);
+        DrawColoredPolygon(ground, new Color(cityTint, hotCity ? 0.30f : 0.14f));
+        DrawColoredPolygon(Scaled(0.62f), new Color(cityTint, hotCity ? 0.14f : 0.07f));
+        var edge = ground.Append(ground[0]).ToArray();
+        for (int i = 0; i + 1 < edge.Length; i++)
+        {
+            var a = edge[i];
+            var b = edge[i + 1];
+            for (float t = 0; t < 1f; t += 0.34f)
+                DrawLine(a.Lerp(b, t), a.Lerp(b, Mathf.Min(1f, t + 0.2f)), new Color(cityTint, hotCity ? 0.95f : 0.45f), hotCity ? 2.0f : 1.2f, true);
+        }
+
+        // Casas (so com o mapa perto o bastante).
+        if (Detail >= 0.75f)
+            foreach (var (c, half, ang, roof) in city.Houses)
+            {
+                var x = new Vector2(Mathf.Cos(ang), Mathf.Sin(ang)) * half.X;
+                var y = new Vector2(-Mathf.Sin(ang), Mathf.Cos(ang)) * half.Y;
+                var pts = new[] { c - x - y, c + x - y, c + x + y, c - x + y }.Select(ToScreen).ToArray();
+                DrawColoredPolygon(pts.Select(q => q + new Vector2(1.2f, 1.6f)).ToArray(), new Color(0, 0, 0, 0.45f));
+                DrawColoredPolygon(pts, roof);
+                DrawLine((pts[0] + pts[3]) / 2f, (pts[1] + pts[2]) / 2f, roof.Darkened(0.35f), Mathf.Max(1f, 0.5f * _zoom), true);
+            }
+
+        // Predios das areas da cidade (lojas, forja, taverna...): telhado no lugar da mancha.
+        foreach (var a in city.Zone.Areas) DrawCityBuilding(city.Zone, a);
+
+        // Muralha com aberturas nas ruas; torres na pedra; luz das janelas a noite.
+        for (int i = 0; i + 1 < city.Ring.Length; i++)
+        {
+            if (city.Open[i]) continue;
+            var a = ToScreen(city.Ring[i]);
+            var b = ToScreen(city.Ring[i + 1]);
+            DrawLine(a, b, wallDark, wallW + 1.6f, true);
+            DrawLine(a, b, wallFill, wallW, true);
+        }
+        for (int i = 0; i + 1 < city.Ring.Length; i++)
+        {
+            bool gateSide = city.Open[i] || city.Open[(i + city.Open.Length - 1) % city.Open.Length];
+            if (!stone && !gateSide) continue;
+            if (!stone && city.Level < 2) continue;
+            var t = ToScreen(city.Ring[i]);
+            float tr = wallW * (gateSide ? 1.25f : 0.95f);
+            DrawCircle(t + new Vector2(1, 1.5f), tr + 1, new Color(0, 0, 0, 0.45f));
+            DrawCircle(t, tr + 0.8f, wallDark);
+            DrawCircle(t, tr, wallFill.Lightened(0.08f));
+        }
+    }
+
+    private void DrawCityBuilding(RegionDefinition z, AreaDefinition a)
+    {
+        var cm = _layout.AreaCenter(z.Id, a.Id);
+        float r = _layout.AreaRadius(z.Id, a.Id);
+        var c = new Vector2(cm.X, cm.Y);
+        string key = z.Id + "#" + a.Id;
+        bool hot = key == _hoveredArea || key == SelectedAreaKey;
+        switch (a.Kind)
+        {
+            case AreaKinds.TownSquare:
+            {
+                // Praca: calcamento mais claro com fonte no meio.
+                DrawCircle(ToScreen(c), r * 0.85f * _zoom, new Color("#B7AE9C"));
+                DrawArc(ToScreen(c), r * 0.85f * _zoom, 0, Mathf.Tau, 32, new Color("#5E574C"), Mathf.Max(1f, 0.6f * _zoom), true);
+                DrawCircle(ToScreen(c), r * 0.22f * _zoom, new Color("#4A7C99"));
+                break;
+            }
+            case AreaKinds.TrainingGround:
+            {
+                // Campo de treino: terreiro de areia cercado.
+                var pts = Enumerable.Range(0, 20).Select(i => ToScreen(c + new Vector2(Mathf.Cos(i * Mathf.Tau / 20) * r * 0.95f, Mathf.Sin(i * Mathf.Tau / 20) * r * 0.7f))).ToArray();
+                DrawColoredPolygon(pts, new Color("#C2A774"));
+                DrawPolyline(pts.Append(pts[0]).ToArray(), new Color("#5A4632"), Mathf.Max(1f, 0.7f * _zoom), true);
+                break;
+            }
+            default:
+            {
+                // Loja, forja, taverna: predio com telhado de duas aguas.
+                var roof = a.Kind switch
+                {
+                    AreaKinds.Forge => new Color("#4B4A4F"),
+                    AreaKinds.Tavern => new Color("#8A4F2E"),
+                    AreaKinds.Shop => new Color("#6F5B8E"),
+                    _ => new Color("#7A6A58"),
+                };
+                float hw = r * 0.85f, hh = r * 0.62f;
+                var pts = new[] { c + new Vector2(-hw, -hh), c + new Vector2(hw, -hh), c + new Vector2(hw, hh), c + new Vector2(-hw, hh) }.Select(ToScreen).ToArray();
+                DrawColoredPolygon(pts.Select(q => q + new Vector2(2f, 2.5f)).ToArray(), new Color(0, 0, 0, 0.5f));
+                DrawColoredPolygon(pts, roof);
+                DrawColoredPolygon(new[] { pts[0], pts[1], (pts[1] + pts[2]) / 2f, (pts[0] + pts[3]) / 2f }, roof.Lightened(0.12f));
+                DrawLine((pts[0] + pts[3]) / 2f, (pts[1] + pts[2]) / 2f, roof.Darkened(0.4f), Mathf.Max(1f, 0.8f * _zoom), true);
+                if (a.Kind == AreaKinds.Forge)
+                    DrawCircle(ToScreen(c + new Vector2(hw * 0.6f, -hh * 0.4f)), Mathf.Max(1.5f, 1.2f * _zoom), new Color(1f, 0.55f, 0.15f, 0.7f + 0.3f * Mathf.Sin(_time * 6f)));
+                break;
+            }
+        }
+        if (hot) DrawArc(ToScreen(c), r * _zoom, 0, Mathf.Tau, 32, new Color(UiTokens.AccentSoft, 0.9f), 2f, true);
     }
 
     private void DrawCityLights()
@@ -646,9 +900,9 @@ public partial class WorldMapView : Node2D
         foreach (var z in _zones.Where(z => z.IsCity))
         {
             var p = ToScreen(_layout.Hub(z.Id));
-            float rad = _layout.ZoneRadius * 0.35f * _zoom;
+            float rad = _layout.CityWallRadius(z.Id) * 0.8f * _zoom;
             float flicker = 0.92f + 0.08f * Mathf.Sin(_time * 3.1f);
-            for (int i = 6; i >= 1; i--) DrawCircle(p, rad * (1f + i * 0.4f), new Color(1f, 0.72f, 0.38f, 0.035f * night * flicker));
+            for (int i = 6; i >= 1; i--) DrawCircle(p, rad * (1f + i * 0.25f), new Color(1f, 0.72f, 0.38f, 0.03f * night * flicker));
         }
     }
 
@@ -754,11 +1008,15 @@ public partial class WorldMapView : Node2D
     private void ZoneLabel(MapOverlay o, RegionDefinition z)
     {
         var c = _layout.Center(z.Id);
-        var at = ToScreen(new Vector2(c.X, c.Y - _layout.ZoneRadius * 0.80f));
         bool focused = z.Id == HoveredRegionId || z.Id == SelectedRegionId;
         var outline = new Color(0.02f, 0.03f, 0.04f, 0.85f);
-        // Mundo todo a vista: so cidades e a zona em foco tem nome (evita tamanhos misturados).
-        if (Detail < 0.75f && !focused && !z.IsCity) return;
+        // So a cidade tem nome sempre (logo abaixo da muralha); as outras zonas mostram nome e
+        // regras ao passar o mouse ou quando selecionadas.
+        if (!z.IsCity && !focused) return;
+        var hubPos = _layout.Hub(z.Id);
+        var at = z.IsCity
+            ? ToScreen(new Vector2(hubPos.X, hubPos.Y + _layout.CityWallRadius(z.Id) + 6)) + new Vector2(0, 14)
+            : ToScreen(new Vector2(c.X, c.Y - _layout.ZoneRadius * 0.80f));
 
         // Nome: cabe na largura da zona (encolhe ate 10 px); afastado demais, so em foco.
         var font = UiFonts.Display;
@@ -789,8 +1047,8 @@ public partial class WorldMapView : Node2D
             o.DrawString(nf, new Vector2(bc.X - cts.X / 2f, bc.Y + nf.GetAscent(csize) / 2f - 1), count, HorizontalAlignment.Left, -1, csize, UiTokens.TextPrimary);
         }
 
-        // Linha de regras em texto simples (sem caixas): so aproximando ou em foco.
-        if (Detail < 1.25f && !focused) return;
+        // Linha de regras em texto simples (sem caixas): so em foco.
+        if (!focused) return;
         var parts = new List<(string Text, Color Color)>
         {
             (z.IsCity ? "Cidade" : $"Nív {z.LevelMin}–{z.LevelMax}", z.IsCity ? UiTokens.Accent : UiTokens.Info),
@@ -872,6 +1130,17 @@ public partial class WorldMapView : Node2D
             lines.Add((StatusText.Of(v, _content), UiFonts.Regular, 12, UiTokens.TextSecondary));
             lines.Add(($"{person.Name} · {prof}", UiFonts.Regular, 12, UiTokens.ProfileColor(person.ProfileId)));
             lines.Add(("Clique para abrir a ficha", UiFonts.Regular, 12, UiTokens.AccentSoft));
+        }
+        else if (_hoveredUrban != null)
+        {
+            var z = _content.Regions[_hoveredUrban];
+            var deco = _cities.First(c => c.Zone.Id == z.Id);
+            lines.Add(("Área urbana", UiFonts.SemiBold, 14, UiTokens.TextPrimary));
+            lines.Add(($"{z.Name} · cidade nível {deco.Level}", UiFonts.Regular, 12, new Color("#E0B45A")));
+            lines.Add((string.Join(" · ", z.Areas.Select(a => a.Name)), UiFonts.Regular, 12, UiTokens.TextSecondary));
+            int n = PeopleInZone(z.Id);
+            lines.Add((n == 0 ? "Ninguém na cidade agora" : n == 1 ? "1 jogador na cidade" : $"{n} jogadores na cidade", UiFonts.Regular, 12, UiTokens.TextSecondary));
+            lines.Add(("Clique para a ficha da cidade", UiFonts.Regular, 12, UiTokens.AccentSoft));
         }
         else if (_hoveredArea != null)
         {

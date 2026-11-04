@@ -165,7 +165,7 @@ public class BehaviorTests
         var target = layout.Spot("floresta_sussurrante", "cacar_lobos");
         var plan = routes.Plan(start, "vila_aurora", "floresta_sussurrante", target);
         Assert.True(plan.Reachable);
-        // Encruzilhada da vila -> saida, cruza para a floresta, estrada ate a encruzilhada, sai da estrada ate o ponto.
+        // Encruzilhada da vila -> saida, cruza para a floresta, estrada ate a encruzilhada, trilha ate o ponto (comprimento pelas estradas, D-030).
         Assert.Equal(4, plan.Waypoints.Count);
         Assert.Equal(layout.Gate("vila_aurora", "floresta_sussurrante"), plan.Waypoints[0].Pos);
         Assert.Equal("floresta_sussurrante", plan.Waypoints[1].EntersZone);
@@ -173,7 +173,7 @@ public class BehaviorTests
         Assert.Equal(target, plan.Waypoints[^1].Pos);
         int sum = 0;
         var at = start;
-        foreach (var wp in plan.Waypoints) { sum += at.DistanceTo(wp.Pos); at = wp.Pos; }
+        foreach (var wp in plan.Waypoints) { sum += layout.LegLength(at, wp.Pos); Assert.True(layout.LegLength(at, wp.Pos) >= at.DistanceTo(wp.Pos) - 1); at = wp.Pos; }
         Assert.Equal(sum, plan.Distance);
         Assert.Equal((sum + BehaviorTuning.WalkSpeed - 1) / BehaviorTuning.WalkSpeed, plan.Minutes);
         // Pontos de atividade ficam dentro da zona.

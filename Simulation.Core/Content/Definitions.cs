@@ -70,6 +70,27 @@ public sealed class TerrainDefinition
     public int ElevationPermille { get; set; } = 500;
     public int RoughnessPermille { get; set; } = 500;
     public int Seed { get; set; }
+    /// <summary>
+    /// Rio que atravessa a zona (simulacao respeita: estradas so cruzam por ponte). Nulo = vale
+    /// ganha um rio automatico pela semente; outros relevos ficam sem rio.
+    /// </summary>
+    public RiverDefinition? River { get; set; }
+    /// <summary>Cobertura de pocas ou lagos (permille da zona, aproximado). Nulo = brejo 380, demais 0.</summary>
+    public int? PoolsPermille { get; set; }
+}
+
+/// <summary>Rio configuravel da zona (editor de tiles futuro).</summary>
+public sealed class RiverDefinition
+{
+    public bool Enabled { get; set; } = true;
+    /// <summary>Direcao do curso: 0..7 em passos de 22,5 graus (0 = leste-oeste, 4 = norte-sul).</summary>
+    public int Direction { get; set; }
+    /// <summary>Distancia lateral do curso ate o centro da zona (unidades; sinal = lado).</summary>
+    public int Offset { get; set; }
+    /// <summary>Meia largura da agua (unidades).</summary>
+    public int Width { get; set; } = 6;
+    /// <summary>Quanto o rio serpenteia (permille do raio da zona).</summary>
+    public int MeanderPermille { get; set; } = 220;
 }
 
 public sealed class HolidayDefinition
@@ -138,6 +159,16 @@ public sealed class RegionDefinition : IContentDefinition
     public string Control { get; set; } = ControlRules.Neutral;
 
     public bool IsCity => Function == ZoneFunctions.City;
+    /// <summary>
+    /// Nivel da cidade (1..5; 0 fora de cidades): define o tamanho da area urbana (muralha) e
+    /// o detalhe do desenho. Evoluir a cidade aumenta o nivel (futuro).
+    /// </summary>
+    public int CityLevel { get; set; }
+    /// <summary>
+    /// Posicao da cidade dentro da zona (deslocamento a partir do centro; nulo = centro). A
+    /// muralha, os predios e as estradas se adaptam (editor de tiles futuro).
+    /// </summary>
+    public MapPoint? CityPosition { get; set; }
     /// <summary>Capacidade nominal de personagens simultaneos (modelo do MMORPG).</summary>
     public int Capacity { get; set; }
     /// <summary>Centro da zona no mapa (unidades de mapa; 1 unidade = 10 m).</summary>

@@ -114,4 +114,105 @@ public class MapTests
                 }
             }
     }
+
+    [Fact]
+    public void Estradas_ContornamAgua_SoCruzamPorPonteCurta_EFicamNaZona()
+    {
+        var layout = new ZoneLayout(C);
+        int bridges = 0;
+        foreach (var z in C.Regions.Values)
+        {
+            var center = layout.Center(z.Id);
+            var roads = layout.Roads.Where(r => r.ZoneId == z.Id).ToList();
+            // Uma estrada por saida e uma trilha por area.
+            Assert.Equal(z.Connections.Count, roads.Count(r => !r.IsTrail));
+            Assert.Equal(z.Areas.Count, roads.Count(r => r.IsTrail));
+            foreach (var road in roads)
+            {
+                Assert.Equal(layout.Hub(z.Id), road.Points[0]);
+                Assert.All(road.Points, p => Assert.True(p.DistanceTo(center) <= layout.ZoneRadius + 2, $"{z.Id}: ponto fora da zona"));
+                // Agua so em pontes, e curtas (onde o rio e estreito).
+                double bridge = 0;
+                for (int i = 0; i < road.Water.Count; i++)
+                    if (road.Water[i]) bridge += road.Points[i].DistanceTo(road.Points[i + 1]);
+                if (bridge > 0) bridges++;
+                Assert.True(bridge <= 40, $"{z.Id}: ponte de {bridge:0} unidades");
+                Assert.True(road.Length >= road.Points[0].DistanceTo(road.Points[^1]));
+            }
+            // Areas em terra firme.
+            foreach (var a in z.Areas)
+                Assert.False(layout.Terrain(z.Id).AnyWater(layout.AreaCenter(z.Id, a.Id), a.Radius), $"{z.Id}/{a.Id} sobre água");
+        }
+        Assert.True(layout.Terrain("brejo_das_brumas").WaterCells > 0, "o brejo deve ter água");
+        Assert.True(layout.Terrain("forte_do_vau").WaterCells > 0, "o vale do Forte deve ter rio");
+        Assert.True(bridges > 0, "o rio do vale precisa de ponte");
+
+        // Deterministico: outra montagem gera as mesmas estradas.
+        var again = new ZoneLayout(C);
+        Assert.Equal(layout.Roads.Count, again.Roads.Count);
+        for (int i = 0; i < layout.Roads.Count; i++)
+            Assert.Equal(layout.Roads[i].Points, again.Roads[i].Points);
+    }
+
+    [Fact]
+    public void Tile_SeAdapta_ACidadeMovida_RioELagosConfigurados()
+    {
+        var set = TestSupport.FreshPresetSet();
+        var vila = set.Regions.First(r => r.Id == "vila_aurora");
+        vila.CityPosition = new MapPoint { X = 30, Y = 12 };
+        var forte = set.Regions.First(r => r.Id == "forte_do_vau");
+        forte.Terrain.River!.Enabled = false;
+        var colinas = set.Regions.First(r => r.Id == "colinas_do_vale");
+        colinas.Terrain.PoolsPermille = 250;
+        Assert.DoesNotContain(ContentValidator.Validate(set), i => i.Severity == IssueSeverity.Error);
+
+        var db = ContentDatabase.Create(set);
+        var layout = new ZoneLayout(db);
+        // Cidade movida: encruzilhada, muralha e predios acompanham.
+        var hub = layout.Hub("vila_aurora");
+        Assert.Equal(new MapPos(vila.MapPosition.X + 30, vila.MapPosition.Y + 12), hub);
+        foreach (var a in vila.Areas)
+            Assert.True(layout.AreaCenter(vila.Id, a.Id).DistanceTo(hub) + a.Radius <= layout.CityWallRadius(vila.Id));
+        Assert.All(layout.Roads.Where(r => r.ZoneId == vila.Id), r => Assert.Equal(hub, r.Points[0]));
+        // Rio desligado: sem agua. Lagos nas colinas: ha agua, as estradas contornam (ou ponte curta).
+        Assert.Equal(0, layout.Terrain("forte_do_vau").WaterCells);
+        Assert.True(layout.Terrain("colinas_do_vale").WaterCells > 0);
+        foreach (var road in layout.Roads.Where(r => r.ZoneId == colinas.Id))
+        {
+            double bridge = 0;
+            for (int i = 0; i < road.Water.Count; i++) if (road.Water[i]) bridge += road.Points[i].DistanceTo(road.Points[i + 1]);
+            Assert.True(bridge <= 40, $"ponte de {bridge:0}");
+        }
+        // A simulacao roda com o tile alterado.
+        var e = Simulation.Core.Engine.WorldFactory.Create(db, new Simulation.Core.Engine.WorldConfig { Seed = 3, PopulationSize = 60 });
+        e.Submit(new Simulation.Core.Commands.SetServerOpenCommand(true), Simulation.Core.Time.SimTime.Hours(8));
+        e.AdvanceTo(Simulation.Core.Time.SimTime.Days(3));
+        Assert.Contains(e.World.Characters, c => c.Level > 1);
+
+        // Cidade longe demais do centro: a muralha sairia da zona.
+        vila.CityPosition = new MapPoint { X = 90, Y = 0 };
+        Assert.Contains(ContentValidator.Validate(set), i => i.Path.EndsWith(".cityPosition"));
+    }
+
+    [Fact]
+    public void Cidade_TemMuralhaPeloNivel_EAsLojasFicamDentro()
+    {
+        var layout = new ZoneLayout(C);
+        foreach (var city in C.Regions.Values.Where(z => z.IsCity))
+        {
+            Assert.InRange(city.CityLevel, 1, 5);
+            int wall = layout.CityWallRadius(city.Id);
+            Assert.True(wall > 0);
+            foreach (var a in city.Areas)
+                Assert.True(layout.AreaCenter(city.Id, a.Id).DistanceTo(layout.Center(city.Id)) + a.Radius <= wall, $"{city.Id}/{a.Id} fora da muralha");
+        }
+        // Nivel maior, cidade maior.
+        var set = TestSupport.FreshPresetSet();
+        var vila = set.Regions.First(r => r.Id == "vila_aurora");
+        int before = ZoneLayout.CityWallFor(vila, set.World.ZoneRadius);
+        vila.CityLevel++;
+        Assert.True(ZoneLayout.CityWallFor(vila, set.World.ZoneRadius) > before);
+        vila.CityLevel = 9;
+        Assert.Contains(ContentValidator.Validate(set), i => i.Path.EndsWith(".cityLevel"));
+    }
 }

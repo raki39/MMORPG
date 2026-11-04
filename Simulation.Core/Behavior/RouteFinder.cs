@@ -55,8 +55,8 @@ public sealed class RouteFinder
 
     /// <summary>Custo de atravessar de A para B: centro de A ao portao, estrada, portao ao centro de B.</summary>
     private int EdgeCost(string a, string b) =>
-        _layout.Center(a).DistanceTo(_layout.Gate(a, b)) + _layout.Gate(a, b).DistanceTo(_layout.Gate(b, a))
-        + _layout.Gate(b, a).DistanceTo(_layout.Center(b));
+        _layout.LegLength(_layout.Hub(a), _layout.Gate(a, b)) + _layout.Gate(a, b).DistanceTo(_layout.Gate(b, a))
+        + _layout.LegLength(_layout.Gate(b, a), _layout.Hub(b));
 
     /// <summary>Zonas a percorrer depois de "from" ate "to" (inclusive). Nulo se inalcancavel.</summary>
     public IReadOnlyList<string>? ZonePath(string from, string to)
@@ -131,7 +131,7 @@ public sealed class RouteFinder
         var at = start;
         foreach (var w in wps)
         {
-            distance += at.DistanceTo(w.Pos);
+            distance += _layout.LegLength(at, w.Pos);
             at = w.Pos;
         }
         return new TravelPlan(wps, distance);

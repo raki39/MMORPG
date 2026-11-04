@@ -90,7 +90,7 @@ public sealed class BehaviorSystem
         string nick = MakeNickname(rng);
         string start = _w.Content.World.StartingRegionId;
         var ch = _w.AddCharacter(account.Id, p.Id, nick, classId, start);
-        ch.Position = _routes.Layout.Center(start);
+        ch.Position = _routes.Layout.Hub(start);
         account.ActiveCharacterId = ch.Id;
         p.AccountId = account.Id;
         p.CharacterId = ch.Id;
@@ -300,7 +300,7 @@ public sealed class BehaviorSystem
     {
         var wp = ch.Waypoints[0];
         ch.Waypoints.RemoveAt(0);
-        long dist = ch.Position.DistanceTo(wp.Pos);
+        long dist = _routes.Layout.LegLength(ch.Position, wp.Pos);   // pela estrada (D-030)
         long ticks = Math.Max(1, (dist * SimTime.TicksPerMinute + BehaviorTuning.WalkSpeed - 1) / BehaviorTuning.WalkSpeed);
         ch.Status = CharacterStatus.Traveling;
         ch.MoveTo = wp.Pos;
