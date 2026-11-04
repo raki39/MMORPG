@@ -74,6 +74,7 @@ Base de conteúdo e progressão (próximo passo; D-025):
 - [ ] Faixa recomendada por área e requisitos de quest (com a redistribuição e o catálogo)
 - [ ] Revisão visual das fichas alteradas no D-027 (área: nível do desafio e XP por ciclo; jogador: taxa da faixa) antes de fechar a entrega integrada
 - [x] Redistribuir e ampliar áreas até o nível 30 (D-028): 3 cidades, 12 zonas, 54 áreas com faixa, 19 criaturas novas; 2+ caças por nível (uma sem PvP); grade de lotes com 55 livres; terreno por parâmetros
+- [x] Legibilidade do mapa (D-029): ilha por máscara, zonas maiores, estradas finas e curvas, rótulos enxutos
 - [ ] Recalibrar a curva depois do passo 3: escolha do criador entre (a) ~200 h com desaceleração suave no fim ou (b) desaceleração forte com 220–250 h
 - [ ] Catálogo de quests por cidade (principais, secundárias, diárias) com etapas reais, requisitos e recompensas; pegar no quadro sem XP
 - [ ] Medir a progressão até o 30 (horas por nível, XP por fonte, conteúdo esgotado antes da próxima faixa) e ajustar as metas

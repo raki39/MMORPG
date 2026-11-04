@@ -115,13 +115,13 @@ public partial class WorldMapView : Node2D
         _terrain.SetShaderParameter("zone_terrain", terrainData);
         _terrain.SetShaderParameter("zone_info", info);
 
-        // Grade de lotes: textura colunas x linhas com o indice da zona + 1 (0 = lote livre).
+        // Grade de lotes: textura colunas x linhas (0 = mar, 1 = lote livre, 2+ = zona + 2).
         var g = _grid.Definition;
         var img = Image.CreateEmpty(Math.Max(1, g.Columns), Math.Max(1, g.Rows), false, Image.Format.R8);
         foreach (var slot in _grid.AllSlots())
         {
             string? zid = _grid.ZoneAt(slot);
-            int v = zid != null && _zoneIndex.TryGetValue(zid, out int zi) ? zi + 1 : 0;
+            int v = zid != null && _zoneIndex.TryGetValue(zid, out int zi) ? zi + 2 : _grid.IsLand(slot) ? 1 : 0;
             img.SetPixel(slot.Column, slot.Row, new Color(v / 255f, 0, 0));
         }
         _terrain.SetShaderParameter("slot_zone", ImageTexture.CreateFromImage(img));
@@ -176,8 +176,10 @@ public partial class WorldMapView : Node2D
         if (_grid.IsValid)
         {
             var g = _grid.Definition;
-            var gmin = new Vector2(g.OriginX - r * 1.6f, g.OriginY - r * 1.6f);
-            var gmax = new Vector2(g.OriginX + (g.Columns - 0.5f) * g.SpacingX + r * 1.6f, g.OriginY + (g.Rows - 1) * g.SpacingY + r * 1.6f);
+            var land = _grid.LandSlots().ToList();
+            if (land.Count == 0) land = _grid.AllSlots().ToList();
+            var gmin = new Vector2(land.Min(s => s.X) - r * 1.6f, land.Min(s => s.Y) - r * 1.6f);
+            var gmax = new Vector2(land.Max(s => s.X) + r * 1.6f, land.Max(s => s.Y) + r * 1.6f);
             var gsize = gmax - gmin;
             _minZoom = Mathf.Min(_fitZoom * 0.9f, Mathf.Min(viewArea.Size.X / gsize.X, viewArea.Size.Y / gsize.Y) * 0.85f);
         }
@@ -305,11 +307,48 @@ public partial class WorldMapView : Node2D
     {
         var v = _snap?.ByPerson is { } arr && personId < arr.Length ? arr[personId] : null;
         if (v == null || v.Status == CharacterStatus.Offline) return null;
-        if (v.Status == CharacterStatus.Traveling) { var (x, y) = v.PositionAt(_snap!.Tick); return new Vector2(x, y); }
+        if (v.Status == CharacterStatus.Traveling) return TravelPoint(v, _snap!.Tick);
         return new Vector2(v.Position.X, v.Position.Y);
     }
 
-    private float EmblemRadius() => Mathf.Clamp(11f * Mathf.Sqrt(Detail) + 2f, 11f, 22f);
+    private float EmblemRadius() => Mathf.Clamp(8.5f * Mathf.Sqrt(Detail) + 1.5f, 9f, 19f);
+
+    /// <summary>Posicao de quem viaja, sobre a mesma curva desenhada para o trecho.</summary>
+    private static Vector2 TravelPoint(CharacterView v, long tick)
+    {
+        if (v.MoveEndTick <= v.MoveStartTick) return new Vector2(v.Position.X, v.Position.Y);
+        float t = Math.Clamp((tick - v.MoveStartTick) / (float)(v.MoveEndTick - v.MoveStartTick), 0f, 1f);
+        return CurveAt(new Vector2(v.Position.X, v.Position.Y), new Vector2(v.MoveTo.X, v.MoveTo.Y), t);
+    }
+
+    /// <summary>
+    /// Curva suave e estavel de um trecho (coordenadas do mapa): desvio lateral que depende so
+    /// dos extremos e e igual nos dois sentidos. Estradas, trilhas e viajantes usam a mesma.
+    /// So apresentacao: o Core mede o trecho em linha reta.
+    /// </summary>
+    public static Vector2 CurveAt(Vector2 a, Vector2 b, float t)
+    {
+        if (a.X > b.X || (a.X == b.X && a.Y > b.Y)) { (a, b) = (b, a); t = 1f - t; }
+        var d = b - a;
+        float len = d.Length();
+        if (len < 1f) return a.Lerp(b, t);
+        var n = new Vector2(-d.Y, d.X) / len;
+        uint h = unchecked((uint)((int)a.X * 73856093) ^ (uint)((int)a.Y * 19349663) ^ (uint)((int)b.X * 83492791) ^ (uint)((int)b.Y * 50331653));
+        float s1 = (h & 0xFF) / 255f * 2f - 1f;
+        float s2 = ((h >> 8) & 0xFF) / 255f * 2f - 1f;
+        float amp = Mathf.Min(len * 0.045f, 6f);
+        float off = amp * (s1 * Mathf.Sin(Mathf.Pi * t) + 0.5f * s2 * Mathf.Sin(Mathf.Tau * t));
+        return a.Lerp(b, t) + n * off;
+    }
+
+    private Vector2[] CurveScreen(MapPos a, MapPos b, int segments)
+    {
+        var pts = new Vector2[segments + 1];
+        var am = new Vector2(a.X, a.Y);
+        var bm = new Vector2(b.X, b.Y);
+        for (int i = 0; i <= segments; i++) pts[i] = ToScreen(CurveAt(am, bm, i / (float)segments));
+        return pts;
+    }
 
     private void UpdatePopulation()
     {
@@ -381,8 +420,7 @@ public partial class WorldMapView : Node2D
         {
             var v = snap.ByPerson[id];
             if (v == null || v.Status != CharacterStatus.Traveling) continue;
-            var (x, y) = v.PositionAt(snap.Tick);
-            _personScreen[id] = ToScreen(new Vector2(x, y));
+            _personScreen[id] = ToScreen(TravelPoint(v, snap.Tick));
             _personVisible[id] = true;
         }
         for (int id = 1; id < _personVisible.Length; id++)
@@ -429,7 +467,7 @@ public partial class WorldMapView : Node2D
         {
             // Lote livre: espaco do tamanho de uma zona, reservado para expansao.
             var m = ToMap(_mouse);
-            if (_grid.NearestSlot(m.X, m.Y) is { } s && _grid.ZoneAt(s) == null
+            if (_grid.NearestSlot(m.X, m.Y) is { } s && _grid.ZoneAt(s) == null && _grid.IsLand(s)
                 && m.DistanceTo(new Vector2(s.X, s.Y)) <= _layout.ZoneRadius * 1.05f)
             {
                 _hoveredSlot = s;
@@ -513,11 +551,13 @@ public partial class WorldMapView : Node2D
     public override void _Draw()
     {
         if (_zones.Length == 0) return;
-        float w = Mathf.Clamp(_zoom * 1.3f, 0.8f, 2.4f);
+        float w = Mathf.Clamp(_zoom * 1.1f, 0.8f, 2.2f);
         DrawCityLights();
 
-        foreach (var (z, a, _) in _areas)
-            DashedLine(ToScreen(_layout.Hub(z.Id)), ToScreen(_layout.AreaCenter(z.Id, a.Id)), new Color(UiTokens.Road, 0.40f), 1.4f * w, 5f * w, 5f * w);
+        // Trilhas ate as areas: finas, tracejadas e curvas (somem quando o mapa esta afastado).
+        if (Detail >= 0.75f)
+            foreach (var (z, a, _) in _areas)
+                Trail(CurveScreen(_layout.Hub(z.Id), _layout.AreaCenter(z.Id, a.Id), 18), w);
 
         var drawnCross = new HashSet<string>(StringComparer.Ordinal);
         foreach (var z in _zones)
@@ -525,10 +565,9 @@ public partial class WorldMapView : Node2D
             var hub = ToScreen(_layout.Hub(z.Id));
             foreach (var c in z.Connections)
             {
-                var gate = ToScreen(_layout.Gate(z.Id, c.To));
-                Road(hub, gate, w);
+                Road(CurveScreen(_layout.Hub(z.Id), _layout.Gate(z.Id, c.To), 20), w);
                 string key = string.CompareOrdinal(z.Id, c.To) < 0 ? z.Id + "|" + c.To : c.To + "|" + z.Id;
-                if (drawnCross.Add(key)) Road(gate, ToScreen(_layout.Gate(c.To, z.Id)), w);
+                if (drawnCross.Add(key)) Road(CurveScreen(_layout.Gate(z.Id, c.To), _layout.Gate(c.To, z.Id), 4), w);
             }
         }
 
@@ -538,8 +577,8 @@ public partial class WorldMapView : Node2D
         {
             foreach (var c in z.Connections) DrawGate(ToScreen(_layout.Gate(z.Id, c.To)), ToScreen(_layout.Center(c.To)), w);
             var hub = ToScreen(_layout.Hub(z.Id));
-            if (z.IsCity) IconCastle(hub, 15f * w);
-            else { DrawCircle(hub, 4.5f * w, new Color(0, 0, 0, 0.5f)); DrawCircle(hub, 3.2f * w, UiTokens.Road); }
+            if (z.IsCity) IconCastle(hub, 10f * w);
+            else { DrawCircle(hub, 2.8f * w, new Color(RoadEdge, 0.8f)); DrawCircle(hub, 1.8f * w, RoadLight); }
         }
     }
 
@@ -552,7 +591,7 @@ public partial class WorldMapView : Node2D
         string key = z.Id + "#" + a.Id;
         bool hot = key == _hoveredArea || key == SelectedAreaKey;
         var pts = shape.Select(p => c + p * r).ToArray();
-        DrawColoredPolygon(pts, new Color(col, hot ? 0.26f : 0.16f));
+        DrawColoredPolygon(pts, new Color(col, hot ? 0.22f : 0.11f));
         var inner = shape.Select(p => c + p * r * 0.62f).ToArray();
         DrawColoredPolygon(inner, new Color(col, hot ? 0.12f : 0.07f));
         var outline = new Vector2[pts.Length + 1];
@@ -567,39 +606,37 @@ public partial class WorldMapView : Node2D
         else
         {
             for (int i = 0; i < pts.Length; i += 2)
-                DrawLine(pts[i], pts[(i + 1) % pts.Length], new Color(col, hot ? 0.9f : 0.6f), hot ? 2f : 1.4f, true);
+                DrawLine(pts[i], pts[(i + 1) % pts.Length], new Color(col, hot ? 0.85f : 0.35f), hot ? 1.8f : 1.1f, true);
         }
     }
 
-    private void Road(Vector2 a, Vector2 b, float w)
+    // Estrada de terra: borda escura fina e leito castanho.
+    private static readonly Color RoadEdge = new("#2E241A"), RoadFill = new("#8F7756"), RoadLight = new("#BFA781");
+
+    private void Road(Vector2[] pts, float w)
     {
-        DrawLine(a, b, new Color(0, 0, 0, 0.45f), 6.5f * w, true);
-        DrawLine(a, b, new Color(UiTokens.Road, 0.80f), 3.4f * w, true);
-        DrawLine(a, b, new Color(1, 0.92f, 0.75f, 0.25f), 1f * w, true);
+        DrawPolyline(pts, new Color(RoadEdge, 0.55f), 2.8f * w, true);
+        DrawPolyline(pts, new Color(RoadFill, 0.95f), 1.6f * w, true);
     }
 
-    private void DashedLine(Vector2 a, Vector2 b, Color color, float width, float dash, float gap)
+    private void Trail(Vector2[] pts, float w)
     {
-        float len = a.DistanceTo(b);
-        if (len < 1) return;
-        var dir = (b - a) / len;
-        float offset = (_time * 6f) % (dash + gap);
-        for (float s = -offset; s < len; s += dash + gap)
-        {
-            float s0 = Mathf.Max(0, s), s1 = Mathf.Min(len, s + dash);
-            if (s1 > s0) DrawLine(a + dir * s0, a + dir * s1, color, width, true);
-        }
+        var col = new Color(RoadLight, 0.32f);
+        for (int i = 0; i + 1 < pts.Length; i += 2) DrawLine(pts[i], pts[i + 1], col, Mathf.Max(1f, 0.9f * w), true);
     }
 
     private void DrawGate(Vector2 gate, Vector2 towards, float w)
     {
+        // Passagem: dois marcos de pedra de cada lado da estrada (discreto).
         var dir = (towards - gate).Normalized();
         var side = new Vector2(-dir.Y, dir.X);
-        float s = 6.5f * w;
-        DrawCircle(gate, s + 3, new Color(0, 0, 0, 0.45f));
-        DrawCircle(gate, s, UiTokens.Background);
-        DrawArc(gate, s, 0, Mathf.Tau, 24, UiTokens.AccentSoft, 1.6f, true);
-        DrawColoredPolygon(new[] { gate + dir * s * 0.7f, gate - dir * s * 0.3f + side * s * 0.45f, gate - dir * s * 0.3f - side * s * 0.45f }, UiTokens.AccentSoft);
+        float s = 3.4f * w;
+        foreach (float k in new[] { -1f, 1f })
+        {
+            var post = gate + side * s * k;
+            DrawCircle(post, 1.9f * w + 0.8f, new Color(RoadEdge, 0.85f));
+            DrawCircle(post, 1.9f * w, RoadLight);
+        }
     }
 
     private void DrawCityLights()
@@ -694,7 +731,7 @@ public partial class WorldMapView : Node2D
         }
 
         // Nome da area ao aproximar (ou em foco); portais sempre mostram o destino.
-        if (Detail >= 1.6f || key == _hoveredArea || key == SelectedAreaKey)
+        if (Detail >= 2.4f || key == _hoveredArea || key == SelectedAreaKey)
         {
             var f = UiFonts.SemiBold;
             int size = Detail >= 2.6f ? 12 : 11;
@@ -717,65 +754,69 @@ public partial class WorldMapView : Node2D
     private void ZoneLabel(MapOverlay o, RegionDefinition z)
     {
         var c = _layout.Center(z.Id);
-        var at = ToScreen(new Vector2(c.X, c.Y - _layout.ZoneRadius * 0.74f));
-        var font = UiFonts.Display;
-        int size = (int)Mathf.Clamp(15 * Mathf.Sqrt(Detail), 15, 24);
-        var ts = font.GetStringSize(z.Name, HorizontalAlignment.Left, -1, size);
-        var nameColor = z.Id == SelectedRegionId ? UiTokens.AccentSoft : UiTokens.TextPrimary;
-
-        // O rotulo inteiro (contagem + nome) precisa caber na largura da zona; encolhe ate 10 px
-        // e, afastado demais, so aparece em foco (hover ou selecao).
-        float room = _layout.ZoneRadius * 2f * _zoom * 0.94f;
-        while (size > 10 && font.GetStringSize(z.Name, HorizontalAlignment.Left, -1, size).X + 52 > room) size--;
-        ts = font.GetStringSize(z.Name, HorizontalAlignment.Left, -1, size);
+        var at = ToScreen(new Vector2(c.X, c.Y - _layout.ZoneRadius * 0.80f));
         bool focused = z.Id == HoveredRegionId || z.Id == SelectedRegionId;
-        if (ts.X + 52 > room && !focused) return;
+        var outline = new Color(0.02f, 0.03f, 0.04f, 0.85f);
+        // Mundo todo a vista: so cidades e a zona em foco tem nome (evita tamanhos misturados).
+        if (Detail < 0.75f && !focused && !z.IsCity) return;
 
-        // Contagem de jogadores em destaque, a esquerda do nome.
+        // Nome: cabe na largura da zona (encolhe ate 10 px); afastado demais, so em foco.
+        var font = UiFonts.Display;
+        int size = (int)Mathf.Clamp(13 * Mathf.Sqrt(Detail), 13, 20);
+        float room = _layout.ZoneRadius * 2f * _zoom * 0.86f;
+        while (size > 10 && font.GetStringSize(z.Name, HorizontalAlignment.Left, -1, size).X > room) size--;
+        var ts = font.GetStringSize(z.Name, HorizontalAlignment.Left, -1, size);
+        if (ts.X > room && !focused) return;
+
+        // Jogadores na zona: numero discreto ao lado do nome (so quando ha alguem).
         int people = PeopleInZone(z.Id);
         var nf = UiFonts.Numbers;
+        int csize = Math.Max(10, size - 3);
         string count = people.ToString(System.Globalization.CultureInfo.InvariantCulture);
-        int csize = (int)Mathf.Clamp(size * 0.9f, 10, 20);
-        var cts = nf.GetStringSize(count, HorizontalAlignment.Left, -1, csize);
-        float pillW = cts.X + 30, pillH = nf.GetHeight(csize) + 6;
-        float totalW = pillW + 8 + ts.X;
-        float x0 = at.X - totalW / 2f;
-        var pill = new Rect2(x0, at.Y - pillH + 4, pillW, pillH);
-        var pc = people > 0 ? UiTokens.Info : UiTokens.TextDisabled;
-        o.DrawStyleBox(ThemeFactory.Box(new Color(UiTokens.Background, 0.88f), 0, border: new Color(pc, 0.8f), radius: 10), pill);
-        var head = new Vector2(pill.Position.X + 11, pill.GetCenter().Y - 3);
-        o.DrawCircle(head, 3.2f, pc);
-        o.DrawArc(head + new Vector2(0, 8.5f), 5.5f, Mathf.Pi, Mathf.Tau, 12, pc, 2.4f, true);
-        o.DrawString(nf, new Vector2(pill.Position.X + 21, pill.Position.Y + 3 + nf.GetAscent(csize)), count, HorizontalAlignment.Left, -1, csize, UiTokens.TextPrimary);
-        var pos = new Vector2(x0 + pillW + 8, at.Y);
-        o.DrawStringOutline(font, pos, z.Name, HorizontalAlignment.Left, -1, size, 6, new Color(0.02f, 0.03f, 0.04f, 0.85f));
+        float cw = people > 0 ? nf.GetStringSize(count, HorizontalAlignment.Left, -1, csize).X + 12 : 0;
+        float x0 = at.X - (ts.X + (cw > 0 ? cw + 6 : 0)) / 2f;
+        var pos = new Vector2(x0, at.Y);
+        var nameColor = z.Id == SelectedRegionId ? UiTokens.AccentSoft : new Color(UiTokens.TextPrimary, 0.92f);
+        o.DrawStringOutline(font, pos, z.Name, HorizontalAlignment.Left, -1, size, 5, outline);
         o.DrawString(font, pos, z.Name, HorizontalAlignment.Left, -1, size, nameColor);
+        if (people > 0)
+        {
+            var bc = new Vector2(x0 + ts.X + 6 + cw / 2f, at.Y - font.GetAscent(size) * 0.35f);
+            float br = cw / 2f;
+            o.DrawCircle(bc, br + 1.2f, new Color(0, 0, 0, 0.6f));
+            o.DrawCircle(bc, br, UiTokens.Info.Darkened(0.35f));
+            var cts = nf.GetStringSize(count, HorizontalAlignment.Left, -1, csize);
+            o.DrawString(nf, new Vector2(bc.X - cts.X / 2f, bc.Y + nf.GetAscent(csize) / 2f - 1), count, HorizontalAlignment.Left, -1, csize, UiTokens.TextPrimary);
+        }
 
-        // Selos de regra: nivel/funcao, combate e morte (full loot bem marcado).
-        var tags = new List<(string Text, Color Color, bool Solid)>
+        // Linha de regras em texto simples (sem caixas): so aproximando ou em foco.
+        if (Detail < 1.25f && !focused) return;
+        var parts = new List<(string Text, Color Color)>
         {
-            (z.IsCity ? "CIDADE" : $"NÍV {z.LevelMin}–{z.LevelMax}", z.IsCity ? UiTokens.Accent : UiTokens.Info, false),
-            (z.Pvp == PvpRules.Open ? "PVP" : "SEGURA", z.Pvp == PvpRules.Open ? UiTokens.Danger : UiTokens.Success, false),
+            (z.IsCity ? "Cidade" : $"Nív {z.LevelMin}–{z.LevelMax}", z.IsCity ? UiTokens.Accent : UiTokens.Info),
         };
-        if (z.DeathRule == DeathRules.FullLoot) tags.Add(("☠ FULL LOOT", UiTokens.Danger, true));
-        else if (z.DeathRule == DeathRules.Partial) tags.Add(("PERDA PARCIAL", UiTokens.Warning, true));
-        if (Layer == MapLayer.Crowding) tags.Add(($"{people * 100 / Math.Max(1, z.Capacity)}% LOT.", LayerTint(z).Color, false));
-        if (Layer == MapLayer.Danger) tags.Add(($"PERIGO {(int)(DangerOf(z) * 100)}", Ramp(DangerOf(z)), false));
-        var tf = UiFonts.Bold;
-        const int tsz = 10;
-        float total = tags.Sum(t => tf.GetStringSize(t.Text, HorizontalAlignment.Left, -1, tsz).X + 14) + (tags.Count - 1) * 4;
-        if (total > room && !focused) return;   // selos so cabem com a zona grande o bastante
-        float x = at.X - total / 2f, y = at.Y + 9;
-        foreach (var (text, color, solid) in tags)
+        if (z.Pvp == PvpRules.Open) parts.Add(("PvP", UiTokens.Danger));
+        if (z.DeathRule == DeathRules.FullLoot) parts.Add(("☠ saque total", UiTokens.Danger));
+        else if (z.DeathRule == DeathRules.Partial) parts.Add(("perda parcial", UiTokens.Warning));
+        if (Layer == MapLayer.Crowding) parts.Add(($"{people * 100 / Math.Max(1, z.Capacity)}% lotação", LayerTint(z).Color));
+        if (Layer == MapLayer.Danger) parts.Add(($"perigo {(int)(DangerOf(z) * 100)}", Ramp(DangerOf(z))));
+        var tf = UiFonts.SemiBold;
+        const int tsz = 11;
+        const string sep = "  ·  ";
+        float sepW = tf.GetStringSize(sep, HorizontalAlignment.Left, -1, tsz).X;
+        float total = parts.Sum(t => tf.GetStringSize(t.Text, HorizontalAlignment.Left, -1, tsz).X) + sepW * (parts.Count - 1);
+        float x = at.X - total / 2f, y = at.Y + 4 + tf.GetAscent(tsz);
+        for (int i = 0; i < parts.Count; i++)
         {
-            float tw = tf.GetStringSize(text, HorizontalAlignment.Left, -1, tsz).X + 14;
-            var rect = new Rect2(x, y, tw, tf.GetHeight(tsz) + 6);
-            var sb = solid
-                ? ThemeFactory.Box(new Color(color, 0.92f), 0, border: color.Lightened(0.2f), radius: 8)
-                : ThemeFactory.Box(new Color(UiTokens.Background, 0.85f), 0, border: new Color(color, 0.6f), radius: 8);
-            o.DrawStyleBox(sb, rect);
-            o.DrawString(tf, new Vector2(x + 7, y + 3 + tf.GetAscent(tsz)), text, HorizontalAlignment.Left, -1, tsz, solid ? UiTokens.Background : color);
-            x += tw + 4;
+            var (text, color) = parts[i];
+            o.DrawStringOutline(tf, new Vector2(x, y), text, HorizontalAlignment.Left, -1, tsz, 4, outline);
+            o.DrawString(tf, new Vector2(x, y), text, HorizontalAlignment.Left, -1, tsz, color);
+            x += tf.GetStringSize(text, HorizontalAlignment.Left, -1, tsz).X;
+            if (i + 1 < parts.Count)
+            {
+                o.DrawString(tf, new Vector2(x, y), sep, HorizontalAlignment.Left, -1, tsz, new Color(UiTokens.TextSecondary, 0.7f));
+                x += sepW;
+            }
         }
     }
 

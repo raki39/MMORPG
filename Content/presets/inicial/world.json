@@ -6,7 +6,7 @@
     "name": "Terras de Aurora",
     "startDate": "2027-03-01",
     "startingRegionId": "vila_aurora",
-    "zoneRadius": 120,
+    "zoneRadius": 140,
     "holidays": [
       {
         "date": "01-01",
@@ -58,12 +58,21 @@
       }
     ],
     "map": {
-      "originX": 70,
-      "originY": -200,
-      "spacingX": 230,
-      "spacingY": 200,
+      "originX": 100,
+      "originY": 100,
+      "spacingX": 270,
+      "spacingY": 234,
       "columns": 10,
-      "rows": 7
+      "rows": 7,
+      "mask": [
+        "....##.#..",
+        "..######..",
+        ".########.",
+        "##########",
+        ".#########",
+        "..######..",
+        "...##....."
+      ]
     }
   }
 }

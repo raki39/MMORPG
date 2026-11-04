@@ -98,6 +98,13 @@ public static class ContentValidator
         if (g.SpacingX <= 0) v.Error(WorldFile, "map.spacingX", "Espaçamento horizontal deve ser > 0.");
         else if (g.SpacingX < w.ZoneRadius * 18 / 10 || g.SpacingX > w.ZoneRadius * 22 / 10)
             v.Error(WorldFile, "map.spacingX", $"Espaçamento deve ficar entre 1,8 e 2,2 vezes o raio das zonas ({w.ZoneRadius}), para lotes vizinhos se encostarem.");
+        if (g.Mask.Count > 0)
+        {
+            if (g.Mask.Count != g.Rows) v.Error(WorldFile, "map.mask", $"A máscara precisa de uma linha por linha da grade ({g.Rows}).");
+            for (int i = 0; i < g.Mask.Count; i++)
+                if (g.Mask[i].Length != g.Columns || g.Mask[i].Any(ch => ch != '#' && ch != '.'))
+                    v.Error(WorldFile, $"map.mask[{i}]", $"Cada linha da máscara tem {g.Columns} caracteres: '#' (terra) ou '.' (mar).");
+        }
         if (g.SpacingY <= 0) v.Error(WorldFile, "map.spacingY", "Espaçamento vertical deve ser > 0.");
         else if (g.SpacingX > 0)
         {
@@ -217,6 +224,8 @@ public static class ContentValidator
                     ? $"A zona precisa ficar no centro de um lote da grade; o mais próximo é ({n.X}, {n.Y})."
                     : "A zona está fora da grade do mapa (world.json map).");
             }
+            else if (!grid.IsLand(slot))
+                v.Error(RegionsFile, p, $"O lote ({slot.Column + 1}, {slot.Row + 1}) é mar na máscara do mapa (world.json map.mask).");
             else if (taken.TryGetValue(slot.Index(grid.Columns), out var other))
                 v.Error(RegionsFile, p, $"O lote já é ocupado por '{other}'.");
             else taken[slot.Index(grid.Columns)] = r.Id;

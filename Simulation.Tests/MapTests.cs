@@ -19,8 +19,11 @@ public class MapTests
             Assert.True(grid.TryGetSlot(z.Id, out var s), z.Id);
             Assert.Equal(z.Id, grid.ZoneAt(s));
         }
-        Assert.Equal(grid.Columns * grid.Rows - C.Regions.Count, grid.FreeSlots);
-        Assert.True(grid.FreeSlots >= C.Regions.Count * 2, "precisa de espaço para expansão");
+        Assert.Equal(grid.LandSlots().Count() - C.Regions.Count, grid.FreeSlots);
+        Assert.True(grid.FreeSlots >= C.Regions.Count, "precisa de espaço para expansão");
+        // A mascara da forma a ilha: ha mar dentro da grade e toda zona fica em terra.
+        Assert.True(grid.LandSlots().Count() < grid.Columns * grid.Rows);
+        Assert.All(C.Regions.Values, z => Assert.True(grid.TryGetSlot(z.Id, out var s) && grid.IsLand(s), z.Id));
 
         // O lote mais proximo de um ponto dentro de uma zona e o da propria zona.
         var vila = C.Regions["vila_aurora"].MapPosition;
@@ -45,12 +48,20 @@ public class MapTests
         mina.Biome = "lua";
         mina.Terrain.Relief = "cubos";
         mina.Terrain.ElevationPermille = 1200;
+        // Zona num lote de mar: a primeira linha da mascara comeca com mar.
+        var map = set.World.Map;
+        var ravina = set.Regions.First(r => r.Id == "ravina_escarlate");
+        ravina.MapPosition = new MapPoint { X = map.OriginX, Y = map.OriginY };
+        map.Mask[2] = map.Mask[2][..^1] + "x";
         var errors = ContentValidator.Validate(set).Where(i => i.Severity == IssueSeverity.Error).Select(i => i.Path + " " + i.Message).ToList();
         Assert.Contains(errors, e => e.StartsWith("regions[1].mapPosition") && e.Contains("centro de um lote"));
         Assert.Contains(errors, e => e.Contains("mapPosition") && e.Contains("já é ocupado"));
         Assert.Contains(errors, e => e.StartsWith("regions[3].biome"));
         Assert.Contains(errors, e => e.StartsWith("regions[3].terrain.relief"));
         Assert.Contains(errors, e => e.StartsWith("regions[3].terrain.elevationPermille"));
+        Assert.Contains(errors, e => e.StartsWith("regions[5].mapPosition") && e.Contains("é mar"));
+        var worldErrors = ContentValidator.Validate(set).Where(i => i.File == ContentValidator.WorldFile).Select(i => i.Path).ToList();
+        Assert.Contains("map.mask[2]", worldErrors);
     }
 
     [Fact]

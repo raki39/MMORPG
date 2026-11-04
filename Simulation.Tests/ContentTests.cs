@@ -25,7 +25,7 @@ public class ContentTests
         Assert.Contains(db.Regions.Values.SelectMany(r => r.Areas), a => a.Kind == AreaKinds.Hideout);
         Assert.Contains(db.Regions.Values, r => r.DeathRule == DeathRules.FullLoot);
         Assert.Contains(db.Regions.Values, r => r.Pvp == PvpRules.Open && r.DeathRule == DeathRules.Partial);
-        Assert.Equal(120, db.World.ZoneRadius);
+        Assert.Equal(140, db.World.ZoneRadius);
         Assert.Equal(64, r.ContentHash.Length);
     }
 
@@ -241,7 +241,7 @@ public class ContentTests
         areas[0].Position = new MapPoint { X = 0, Y = 60 };
         areas[1].Position = new MapPoint { X = 10, Y = 60 };
         // Uma terceira em cima da saida para a cidade (leste).
-        areas[2].Position = new MapPoint { X = 100, Y = 0 };
+        areas[2].Position = new MapPoint { X = set.World.ZoneRadius * 92 / 100 - 6, Y = 0 };
         var errors = Errors(set);
         Assert.Contains(errors, e => e.Path == $"regions[{forest}].areas[1].position" && e.Message.Contains("mesmo espaço"));
         Assert.Contains(errors, e => e.Path == $"regions[{forest}].areas[2].position" && e.Message.Contains("saída"));

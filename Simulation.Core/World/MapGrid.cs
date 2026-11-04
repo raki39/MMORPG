@@ -85,10 +85,22 @@ public sealed class MapGrid
         return best;
     }
 
+    /// <summary>Lote de terra (a mascara define a forma da ilha; sem mascara, tudo e terra).</summary>
+    public bool IsLand(MapSlot slot)
+    {
+        if (_g.Mask.Count == 0) return true;
+        if (slot.Row >= _g.Mask.Count) return false;
+        string line = _g.Mask[slot.Row];
+        return slot.Column < line.Length && line[slot.Column] == '#';
+    }
+
+    public IEnumerable<MapSlot> LandSlots() => AllSlots().Where(IsLand);
+
     /// <summary>Zona que ocupa o lote (nulo = lote livre).</summary>
     public string? ZoneAt(MapSlot slot) => _zoneBySlot.TryGetValue(slot.Index(Columns), out var id) ? id : null;
 
     public bool TryGetSlot(string regionId, out MapSlot slot) => _slotByZone.TryGetValue(regionId, out slot);
 
-    public int FreeSlots => Columns * Rows - _zoneBySlot.Count;
+    /// <summary>Lotes de terra sem zona (espaco para expansao).</summary>
+    public int FreeSlots => LandSlots().Count(s => ZoneAt(s) == null);
 }

@@ -41,6 +41,11 @@ public sealed class MapGridDefinition
     public int SpacingY { get; set; }
     public int Columns { get; set; }
     public int Rows { get; set; }
+    /// <summary>
+    /// Forma da terra: uma linha de texto por linha da grade, um caractere por coluna
+    /// ('#' = terra, '.' = mar). Vazio = grade inteira e terra. Zonas so em terra.
+    /// </summary>
+    public List<string> Mask { get; set; } = new();
 }
 
 /// <summary>Biomas conhecidos (cor e textura do terreno).</summary>

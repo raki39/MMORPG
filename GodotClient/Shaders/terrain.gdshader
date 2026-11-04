@@ -11,7 +11,7 @@ uniform float zoom = 1.0;
 uniform vec4 grid = vec4(0.0, 0.0, 230.0, 200.0);   // origem x, origem y, passo x, passo y
 uniform ivec2 grid_dims = ivec2(1, 1);               // colunas, linhas
 uniform float zone_radius = 120.0;
-uniform sampler2D slot_zone : filter_nearest;        // r*255 = indice da zona + 1 (0 = lote livre)
+uniform sampler2D slot_zone : filter_nearest;        // r*255: 0 = mar, 1 = lote livre, 2+ = indice da zona + 2
 uniform vec4 zone_terrain[64];   // forma do relevo, altitude, aspereza, semente
 uniform vec4 zone_info[64];      // bioma, pvp (0/1/2), morte (0/1/2), cidade (0/1)
 uniform vec4 zone_tint[64];      // rgb da camada, a = intensidade
@@ -72,14 +72,14 @@ bool in_grid(int col, int row) {
     return col >= 0 && row >= 0 && col < grid_dims.x && row < grid_dims.y;
 }
 
-// Indice da zona no lote (-1 = livre).
-int zone_of(int col, int row) {
-    float v = texelFetch(slot_zone, ivec2(col, row), 0).r * 255.0;
-    return int(v + 0.5) - 1;
+// Valor do lote: 0 mar (ou fora da grade), 1 terra livre, 2+ zona.
+int slot_val(int col, int row) {
+    if (!in_grid(col, row)) return 0;
+    return int(texelFetch(slot_zone, ivec2(col, row), 0).r * 255.0 + 0.5);
 }
 
-// Dois lotes mais proximos (inclui lotes fora da grade, para o litoral) e o mais proximo
-// dentro da grade. Distancias em unidades de mapa.
+// Dois lotes mais proximos (inclui mar e fora da grade, para o litoral) e o lote de terra
+// mais proximo. Distancias em unidades de mapa.
 void nearest_slots(vec2 m, out ivec2 s1, out float d1, out float d2, out float d_in) {
     d1 = 1e9; d2 = 1e9; d_in = 1e9; s1 = ivec2(-99);
     int r0 = int(round((m.y - grid.y) / grid.w));
@@ -93,7 +93,7 @@ void nearest_slots(vec2 m, out ivec2 s1, out float d1, out float d2, out float d
             float d = length(m - c);
             if (d < d1) { d2 = d1; d1 = d; s1 = ivec2(col, row); }
             else if (d < d2) { d2 = d; }
-            if (in_grid(col, row)) d_in = min(d_in, d);
+            if (slot_val(col, row) >= 1) d_in = min(d_in, d);
         }
     }
 }
@@ -152,12 +152,13 @@ void fragment() {
 
     ivec2 s; float d1; float d2; float d_in;
     nearest_slots(mw, s, d1, d2, d_in);
-    bool inside = in_grid(s.x, s.y);
-    int zi = inside ? zone_of(s.x, s.y) : -1;
+    int sv = slot_val(s.x, s.y);
+    bool inside = sv >= 1;
+    int zi = sv - 2;
     int slot_index = inside ? s.y * grid_dims.x + s.x : -1;
     float edge = (d2 - d1) / zone_radius;
 
-    // Litoral organico em volta da grade (a grade inteira e terra).
+    // Litoral organico em volta dos lotes de terra (a mascara da forma a ilha).
     float lv = 1.12 + (fbm(m * 0.011, 4) - 0.5) * 0.38 - d_in / zone_radius;
     if (inside) lv = max(lv, 0.10);
     float land_mask = smoothstep(-0.006, 0.006, lv);
@@ -166,10 +167,12 @@ void fragment() {
     vec4 tz = zi >= 0 ? zone_terrain[zi] : vec4(1.0, 0.25, 0.4, float(slot_index) * 7.0 + 3.0);
     float water; float crack;
     float h = relief(tz, m, water, crack);
-    h += (fbm(m * 0.06, 3) - 0.5) * 0.06;
-    // Normal pela derivada da altura em unidades de mapa.
-    float sx = dFdx(h) * zoom;
-    float sy = dFdy(h) * zoom;
+    // Normal por diferencas finitas em unidades de mapa (derivadas de tela ficavam em blocos).
+    float e = max(0.8, 1.5 / zoom);
+    float w2; float c2;
+    float sx = (relief(tz, m + vec2(e, 0.0), w2, c2) - h) / e;
+    float sy = (relief(tz, m + vec2(0.0, e), w2, c2) - h) / e;
+    h += (fbm(m * 0.06, 3) - 0.5) * 0.05;
     vec3 n = normalize(vec3(-sx * 70.0, -sy * 70.0, 1.0));
     float shade = clamp(dot(n, normalize(vec3(-0.55, -0.65, 0.70))), 0.0, 1.0);
 

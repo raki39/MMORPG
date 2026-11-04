@@ -20,8 +20,8 @@
       "control": "neutral",
       "capacity": 400,
       "mapPosition": {
-        "x": 760,
-        "y": 600
+        "x": 910,
+        "y": 1036
       },
       "connections": [
         {
@@ -145,8 +145,8 @@
       "control": "neutral",
       "capacity": 150,
       "mapPosition": {
-        "x": 530,
-        "y": 600
+        "x": 640,
+        "y": 1036
       },
       "connections": [
         {
@@ -289,8 +289,8 @@
       "control": "neutral",
       "capacity": 120,
       "mapPosition": {
-        "x": 875,
-        "y": 400
+        "x": 1045,
+        "y": 802
       },
       "connections": [
         {
@@ -431,8 +431,8 @@
       "control": "neutral",
       "capacity": 100,
       "mapPosition": {
-        "x": 990,
-        "y": 200
+        "x": 1180,
+        "y": 568
       },
       "connections": [
         {
@@ -566,8 +566,8 @@
       "control": "neutral",
       "capacity": 40,
       "mapPosition": {
-        "x": 1220,
-        "y": 200
+        "x": 1450,
+        "y": 568
       },
       "connections": [
         {
@@ -622,8 +622,8 @@
       "control": "neutral",
       "capacity": 90,
       "mapPosition": {
-        "x": 990,
-        "y": 600
+        "x": 1180,
+        "y": 1036
       },
       "connections": [
         {
@@ -714,8 +714,8 @@
       "control": "contestable",
       "capacity": 120,
       "mapPosition": {
-        "x": 1220,
-        "y": 600
+        "x": 1450,
+        "y": 1036
       },
       "connections": [
         {
@@ -821,8 +821,8 @@
       "control": "neutral",
       "capacity": 300,
       "mapPosition": {
-        "x": 1105,
-        "y": 400
+        "x": 1315,
+        "y": 802
       },
       "connections": [
         {
@@ -952,8 +952,8 @@
       "control": "neutral",
       "capacity": 120,
       "mapPosition": {
-        "x": 1335,
-        "y": 400
+        "x": 1585,
+        "y": 802
       },
       "connections": [
         {
@@ -1073,8 +1073,8 @@
       "control": "neutral",
       "capacity": 120,
       "mapPosition": {
-        "x": 1450,
-        "y": 200
+        "x": 1720,
+        "y": 568
       },
       "connections": [
         {
@@ -1191,8 +1191,8 @@
       "control": "neutral",
       "capacity": 120,
       "mapPosition": {
-        "x": 1450,
-        "y": 600
+        "x": 1720,
+        "y": 1036
       },
       "connections": [
         {
@@ -1312,8 +1312,8 @@
       "control": "neutral",
       "capacity": 300,
       "mapPosition": {
-        "x": 1565,
-        "y": 400
+        "x": 1855,
+        "y": 802
       },
       "connections": [
         {
@@ -1443,8 +1443,8 @@
       "control": "neutral",
       "capacity": 110,
       "mapPosition": {
-        "x": 1680,
-        "y": 200
+        "x": 1990,
+        "y": 568
       },
       "connections": [
         {
@@ -1584,8 +1584,8 @@
       "control": "neutral",
       "capacity": 110,
       "mapPosition": {
-        "x": 1680,
-        "y": 600
+        "x": 1990,
+        "y": 1036
       },
       "connections": [
         {
@@ -1733,8 +1733,8 @@
       "control": "neutral",
       "capacity": 100,
       "mapPosition": {
-        "x": 1795,
-        "y": 400
+        "x": 2125,
+        "y": 802
       },
       "connections": [
         {

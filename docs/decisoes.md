@@ -412,3 +412,28 @@ Proposta do criador, analisada com o Claude.
 - **A recalibração da curva fica para depois das quests** (passo 3), com a escolha do criador entre:
   - (a) total perto de 200 h, com desaceleração suave no fim;
   - (b) desaceleração forte no fim, com 220–250 h.
+
+## D-029 — Legibilidade do mapa: ilha, zonas maiores, estradas e rótulos
+**Data:** 04/11/2026 · **Estado:** aceita (pedido do criador após ver o D-028)
+
+**Problemas apontados pelo criador:** mapa poluído ao aproximar, estradas grossas e retas, texto demais por cima, zonas pequenas e fundo retangular.
+
+**Mudanças:**
+- **Zonas maiores:** raio de 120 para 140 unidades (1,4 km), grade de 270 × 234.
+  - Andar entre zonas vizinhas passa de cerca de 15 para cerca de 18 minutos.
+  - Medido: o deslocamento foi de 21,2% para 22,4% do tempo conectado. A progressão ficou um pouco mais lenta, dentro das mesmas metas: nível 10 em 15,3 h, 20 em 75 h, 30 em 193 h.
+- **Ilha:** o `world.json` ganhou `map.mask`, uma linha por linha da grade ('#' terra, '.' mar).
+  - Zona em lote de mar é erro de validação.
+  - A forma atual tem 44 lotes de terra: 15 zonas e 29 livres.
+  - O editor de mapa futuro poderá mudar a máscara, por exemplo para conquistar mar.
+- **Estradas:**
+  - finas, cor de terra, com curva suave e estável por trecho;
+  - os viajantes andam sobre a mesma curva, que é só desenho: o Core mede o trecho em linha reta;
+  - passagens viraram dois marcos discretos e as encruzilhadas, pontos pequenos;
+  - as trilhas até as áreas são finas e somem no zoom afastado.
+- **Texto:**
+  - o rótulo da zona mostra só o nome e, se houver jogadores, um número;
+  - a linha de regras (nível, PvP, perda) aparece como texto simples, sem caixas, só ao aproximar ou em foco;
+  - os nomes de área só aparecem bem perto ou em foco;
+  - no mundo todo à vista, só as cidades e a zona em foco têm nome.
+- **Relevo:** a normal agora sai de diferenças finitas, não das derivadas de tela, que deixavam o terreno em blocos.
