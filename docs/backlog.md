@@ -51,7 +51,14 @@ Critério do plano: revisar o padrão visual cedo, com fixtures identificadas e 
 
 Uma etapa por vez, fechada por inteiro (testes, validação, documentação, exportação e resumo ao criador) antes da próxima. Interface só a do sistema da etapa; polimento visual vai para a lista do M8.
 
-1. ~~Fechar o M2: plano da sessão, humor, memória, abandono e retorno~~ (feito: D-037, D-038, D-039)
+1. ~~Fechar o M2: plano da sessão, humor, memória, abandono e retorno~~ (feito: D-037, D-038, D-039, revisão D-039a)
+1b. **Pessoa: rotina de vida e traits** (proposta em [plano-pessoa.md](plano-pessoa.md), aguardando decisões do criador):
+   - P0: parâmetros da decisão no conteúdo e esquemas novos;
+   - P1: localidade e fuso;
+   - P2: obrigações, tempo livre e vontade de jogar;
+   - P3: sono e dificuldade de parar;
+   - P4: traits;
+   - a reputação do personagem entra com a Etapa 3 e as finanças com o M7.
 2. **Etapa 1 — O personagem** (decisões no D-040):
    - estatísticas diretas por classe + nível + equipamento: vida, recurso de classe, ataque e defesa físicos e mágicos, velocidade de movimento (fórmulas no conteúdo; nomes sem confundir com os atributos do jogador);
    - revisão das 3 classes e das 12 magias;
