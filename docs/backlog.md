@@ -68,18 +68,24 @@ Validação (D-024, [validacao.md](validacao.md)):
 - [x] Rodada de 5 seeds × 1.000 pessoas × 90 dias: rotina validada; progressão, deslocamento e divisão do tempo fora das metas (ver validacao.md)
 - [ ] Ajustar as metas com o criador (principalmente o ritmo de progressão)
 
-Conferência da fórmula de decisão (próximo passo; plano 4.4):
-- [ ] Comparar os termos atuais (afinidade, adequação ao nível, companhia, lotação, risco, viagem, tempo disponível, repetição, ruído) com os do plano (recompensa, diversão, social, objetivo, risco, tempo, custo, frustração) e registrar o desvio
-- [ ] Missões com faixa de nível (hoje o quadro da cidade vale para qualquer nível e domina 35% das escolhas)
-- [ ] Novidade na exploração (hoje explorar continua atraente com o mapa todo conhecido)
-- [ ] Deslocamento: 27% do tempo (atividades curtas e penalidade de repetição levam a trocar de zona)
-- [ ] Recompensa de atividades que não dão XP (taverna, comércio, conserto) e da coleta
-- [ ] Recalibrar XP e curva de níveis contra as metas de progressão
+Base de conteúdo e progressão (próximo passo; D-025):
+- [ ] Revisar XP e curva: teto 30 configurável, XP e curva no conteúdo, referência de horas jogadas por nível definida com o criador
+- [ ] Separar faixa recomendada da área, nível do desafio e requisitos da quest; XP pelo nível do desafio (a cidade deixa de valorizar missões)
+- [ ] Redistribuir e ampliar áreas até o nível 30, com faixas menores
+- [ ] Catálogo de quests por cidade (principais, secundárias, diárias) com etapas reais, requisitos e recompensas; pegar no quadro sem XP
+- [ ] Medir a progressão até o 30 (horas por nível, XP por fonte, conteúdo esgotado antes da próxima faixa) e ajustar as metas
+
+Objetivos pessoais e continuidade (depois da base; D-026):
+- [ ] Linha de base: viagem inicial × trocas × volta à cidade, permanência por área e zona, motivos de troca
+- [ ] Plano da sessão, continuidade (margem de troca, compromisso mínimo, revisão por acontecimentos) e tédio individual (preferência por variedade)
+- [ ] Objetivos gerais e secundários em dados; conhecimento "sabe que existe" × "conhece"; expectativa de progresso
+- [ ] Ficha (objetivos, intenção, plano, contribuição) e comparação antes/depois em várias seeds, com objetivos ligados e desligados
+- [ ] Teste de salvar e carregar objetivos e planos (quando o save existir)
 
 Falta para fechar o M2:
-- [ ] Objetivos por sessão (plano 4.3: ao entrar, a pessoa define o que quer fazer)
-- [ ] Satisfação, abandono e retorno (estados inativo e desistente)
-- [ ] Memória de experiências marcantes influenciando escolhas (plano 4.5)
+- [ ] Emoções iniciais (escalas e valores neutros documentados), satisfação, abandono e retorno (estados inativo e desistente)
+- [ ] Memória de experiências (plano 4.5) influenciando escolhas
+- [ ] Sessões flexíveis (encerrar por frustração, estender com teto)
 
 ## Cliente (mapa e fichas)
 
@@ -91,7 +97,7 @@ Falta para fechar o M2:
 - [x] Selos e hachura de perda por morte; contagem de jogadores por zona em destaque
 - [ ] Editor de áreas com posicionamento livre, prévia de tamanho, acesso e conflitos (usa as regras do D-020)
 - [ ] Quantidade de monstros e recursos por área (M3/M5), independente do tamanho
-- [ ] Quests como objetivos com recompensa, separadas das atividades
+- [ ] Ficha de quest e catálogo da cidade (depois do D-025)
 - [x] HUD de gestão: indicadores com mini-gráfico, painel lateral (visão geral, zonas, jogadores, eventos), tabelas e tooltips estruturados (D-022)
 - [x] Dossiê do jogador estilo FM (atributos 1–20) e dossiê de zona com tabela e gráfico
 - [ ] Dossiê de área no mesmo padrão denso (faixa de dados e tabela de tarefas)

@@ -225,3 +225,93 @@ Pedido do criador: validar o que já existe antes de seguir.
   - As missões dominam as escolhas.
   - O PvP ainda não tem combate.
 - **Correção de comportamento:** a atividade passa a ficar encerrada (personagem livre) antes da checagem de saída. Isso evita contar o mesmo tempo duas vezes.
+
+## D-025 — Base de conteúdo e progressão antes dos objetivos pessoais
+**Data:** 04/11/2026 · **Estado:** aceita (direção); números a calibrar
+
+Decisão do criador: antes dos objetivos pessoais, corrigir conteúdo e progressão. Se recompensas e faixas estiverem erradas, os objetivos só reforçam as distorções (ex.: o quadro de missões da cidade, que hoje rende XP contínuo em qualquer nível).
+
+**Ordem:**
+1. Revisar o XP e a curva de níveis.
+2. Redistribuir e ampliar as áreas.
+3. Montar o catálogo de quests por cidade.
+4. Medir a progressão até o nível 30.
+5. Integrar os objetivos pessoais sobre essa base.
+
+**Direção:**
+- **Níveis:** teto inicial 30, configurável no conteúdo. Expansões futuras podem chegar a 100.
+- **Progressão lenta.**
+  - A referência é em horas jogadas, incluindo deslocamento e cidade.
+  - Caça, exploração, coleta e quests são calibradas em conjunto, para nenhuma fonte dominar.
+  - A curva deve permitir evoluir sem depender de diárias e sem esgotar o conteúdo de uma faixa antes de alcançar a próxima.
+- **Três parâmetros separados:**
+  - faixa recomendada da área;
+  - nível do desafio (monstros, coleta, exploração);
+  - requisitos de cada quest.
+  - A faixa da zona deixa de definir a adequação de tudo que existe nela, e a faixa ampla da cidade não valoriza missões.
+  - O XP de uma atividade sai do nível do desafio comparado ao do personagem.
+- **Áreas:** mais áreas, com faixas menores, e distribuição gradual do conteúdo até o 30. Uma zona pode ter áreas de dificuldades diferentes.
+- **Quests:** viram conteúdo estruturado, não atividade.
+  - A cidade oferece a quest, e o personagem a realiza no mundo.
+  - Pegar a quest no quadro é uma ação curta e sem XP.
+  - Cada quest tem requisitos, etapas e recompensas.
+  - Categorias:
+    - **principais:** cadeias com pré-requisitos, uma vez por personagem;
+    - **secundárias:** disponibilidade e repetição definidas na própria quest;
+    - **diárias:** conjunto limitado por cidade e por personagem, renovado pelo calendário simulado.
+  - Cada cidade tem um catálogo limitado.
+  - As etapas só usam acontecimentos reais da simulação.
+- **Recompensas ainda sem sistema** (ouro, itens): ficam definidas no conteúdo e marcadas como "sem efeito nesta versão". Não são simuladas.
+- **Editor futuro:** permitirá criar quests próprias (texto, etapas, condições, recompensas). O formato de dados já nasce pensando nisso.
+- **Parâmetros configuráveis:** todos os parâmetros de XP, curva e quests ficam no conteúdo, e não em constantes do Core.
+
+## D-026 — Diretrizes acordadas para os objetivos pessoais (implementação depois do D-025)
+**Data:** 04/11/2026 · **Estado:** aceita (diretrizes)
+
+Proposta do criador, analisada com o Claude.
+
+**Estrutura:**
+- **Categorias:** objetivos gerais, secundários, da sessão e circunstanciais. Não formam uma escada obrigatória; dependências só existem quando são declaradas.
+- **Três camadas separadas:** objetivo pessoal, plano da sessão e atividade executada.
+
+**Continuidade:**
+- Ao fim de um ciclo, a pessoa primeiro verifica se continuar ainda atende ao plano.
+- Há margem mínima para trocar e compromisso mínimo configurável.
+- Acontecimentos relevantes provocam revisão.
+- Tempo de viagem já gasto não obriga a insistir num plano ruim.
+
+**Sistemas ainda não implementados × bloqueio real:**
+- "Sem efeito nesta versão: sistema econômico não implementado" é informação de desenvolvimento. Aparece só no diagnóstico e nunca como condição do mundo para a pessoa simulada.
+- Um bloqueio real é uma condição do mundo, como "precisa de capital para abrir o negócio".
+- Ambições sem sistema ficam guardadas, sem contribuição inventada. A pessoa continua com objetivos secundários executáveis conforme o perfil.
+
+**Pontuação:**
+- **Recompensa num lugar só.** A afinidade representa diversão; o avanço esperado representa progresso. O valor do XP não é contado duas vezes.
+- **O nível mantém as outras funções:** elegibilidade, dificuldade e risco.
+- **Agregação dos objetivos:**
+  - só objetivos ativos e aplicáveis entram;
+  - os pesos e limites são explícitos;
+  - um objetivo pouco relevante não pode diluir uma necessidade importante;
+  - ter mais objetivos não dá vantagem artificial.
+
+**Conhecimento:**
+- Começa com "sabe que existe" × "conhece".
+- Entrar numa zona não revela todos os seus segredos de vez.
+- No M2, descobrir zonas é a atividade disponível. Explorar o interior, achar áreas e conteúdo novo vem depois.
+- "Expectativa igual ao resultado" precisa ser verificado, porque viagem, duração variável e disponibilidade mudam o progresso da sessão.
+
+**Expectativa de progresso:**
+- Combina histórico recente, expectativa do perfil e uma referência conhecida.
+- Adapta-se aos poucos, com limite: progredir mal por dias não pode virar "satisfatório".
+- O tédio fica separado da eficiência: quem evolui bem ainda pode querer variedade.
+
+**Repetição:** a penalidade universal é substituída por tédio contextual, com uma preferência por variedade separada da paciência.
+
+**Medição:**
+- Antes de mexer, mede-se uma linha de base: viagem inicial, trocas, permanência por área e por zona, motivos de troca.
+- "Decisões que mudariam sem o termo de objetivos" é só diagnóstico local.
+- Para comparar trajetórias, usam-se execuções separadas, com os objetivos ligados e desligados por configuração.
+
+**Save:** estado novo como dado simples e no hash prepara o caminho, mas não substitui o teste de salvar e carregar. Esse teste fica pendente até o save existir (D-008).
+
+**Incrementos seguintes:** emoções (com escalas e valores neutros documentados), memória e sessões flexíveis, com teto de extensão.
