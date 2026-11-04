@@ -48,6 +48,13 @@ public sealed class CharacterView
     public int GoalsSet { get; init; }
     public int GoalsCompleted { get; init; }
     public int GoalsAbandoned { get; init; }
+    /// <summary>Situacao da pessoa no jogo (ativo, inativo, desistiu), D-039.</summary>
+    public LifecycleState State { get; init; }
+    /// <summary>Humor da pessoa (copia, D-038).</summary>
+    public MoodView Mood { get; init; } = MoodView.Neutral;
+    /// <summary>Plano da sessao em andamento (D-037); nulo fora de sessao.</summary>
+    public PlanView? Plan { get; init; }
+    public long LastPlayedDay { get; init; }
 
     /// <summary>Posicao no tick informado (mesma regra do Core: interpolacao do trecho).</summary>
     public (float X, float Y) PositionAt(long tick)
@@ -59,7 +66,30 @@ public sealed class CharacterView
 }
 
 /// <summary>Detalhe da pessoa com a ficha aberta (copiado so para ela, a cada publicacao).</summary>
-public sealed record CharacterDetailView(int PersonId, long PlayedTicks, IReadOnlyDictionary<string, long> ActivityTicks, IReadOnlyList<long> LevelTicks);
+public sealed record CharacterDetailView(int PersonId, long PlayedTicks, IReadOnlyDictionary<string, long> ActivityTicks, IReadOnlyList<long> LevelTicks)
+{
+    /// <summary>Acontecimentos marcantes (D-038), mais fortes primeiro.</summary>
+    public IReadOnlyList<MemoryView> Memories { get; init; } = Array.Empty<MemoryView>();
+    /// <summary>O que tem agradado (+) ou incomodado (-), acumulado e esmaecendo.</summary>
+    public IReadOnlyDictionary<string, int> Drivers { get; init; } = new Dictionary<string, int>();
+    /// <summary>Lugares que mais marcaram: melhores e piores impressoes ("zona/atividade").</summary>
+    public IReadOnlyList<(string Key, int Value)> Impressions { get; init; } = Array.Empty<(string, int)>();
+    /// <summary>Tedio por tipo de atividade (D-037).</summary>
+    public IReadOnlyDictionary<string, int> Boredom { get; init; } = new Dictionary<string, int>();
+}
+
+/// <summary>Humor da pessoa (copia imutavel, D-038).</summary>
+public sealed record MoodView(int Satisfaction, int Frustration, int Novelty, int Engagement, int ReturnIntention,
+    int Expectation, int LastRatio, int LastScore, int SessionsRated)
+{
+    public static readonly MoodView Neutral = new(500, 0, 1000, 500, 500, 550, 0, 500, 0);
+}
+
+/// <summary>Plano da sessao (copia imutavel, D-037).</summary>
+public sealed record PlanView(string FocusKey, string FocusType, string Reason, long FormedTick, int Cycles);
+
+/// <summary>Acontecimento marcante (copia imutavel, D-038).</summary>
+public sealed record MemoryView(string Kind, string Subject, int Valence, int Intensity, long Tick, int Count);
 
 /// <summary>Objetivo pessoal (copia imutavel, D-036).</summary>
 public sealed record GoalView(string Type, string Target, int TargetValue, int StartValue, int Progress, int Commitment, string MotiveKey, int MotiveValue, long SetTick);
@@ -82,6 +112,9 @@ public sealed class SimSnapshot
     public int PersonsTotal { get; init; }
     public int Registered { get; init; }
     public int Online { get; init; }
+    /// <summary>Retencao (D-039): inativos e desistentes agora.</summary>
+    public int Inactive { get; init; }
+    public int Quit { get; init; }
     /// <summary>Personagens por ID de pessoa (null = sem personagem).</summary>
     public CharacterView?[] ByPerson { get; init; } = Array.Empty<CharacterView?>();
     /// <summary>Detalhe da pessoa observada pela ficha aberta (nulo se nenhuma).</summary>
@@ -312,15 +345,34 @@ public sealed class SimulationHost : IDisposable
                 GoalsCompleted = c.GoalsCompleted,
                 GoalsAbandoned = c.GoalsAbandoned,
                 XpFromActivities = c.XpFromActivities,
+                State = w.GetPerson(c.PersonId).State,
+                Mood = MoodOf(w.GetPerson(c.PersonId).Mood),
+                Plan = c.Plan == null ? null : new PlanView(c.Plan.FocusKey, c.Plan.FocusType, c.Plan.Reason, c.Plan.FormedTick, c.Plan.Cycles),
+                LastPlayedDay = w.GetPerson(c.PersonId).LastPlayedDay,
             };
         }
+        int inactive = 0, quit = 0;
+        foreach (var p in w.Persons)
+            if (p.State == LifecycleState.Inactive) inactive++;
+            else if (p.State == LifecycleState.Quit) quit++;
         CharacterDetailView? watched = null;
         int wp = _watchedPerson;
         if (wp > 0 && wp <= w.Persons.Count && w.Persons[wp - 1].CharacterId > 0)
         {
             var c = w.GetCharacter(w.Persons[wp - 1].CharacterId);
+            var pw = w.Persons[wp - 1];
+            var imps = pw.PlaceImpressions.Where(kv => Math.Abs(kv.Value) >= 30).ToList();
             watched = new CharacterDetailView(wp, c.PlayedTicksAt(w.Clock.Tick),
-                c.ActivityTicksByType.ToDictionary(kv => kv.Key, kv => kv.Value, StringComparer.Ordinal), c.PlayedTicksAtLevel.ToArray());
+                c.ActivityTicksByType.ToDictionary(kv => kv.Key, kv => kv.Value, StringComparer.Ordinal), c.PlayedTicksAtLevel.ToArray())
+            {
+                Memories = pw.Memories.OrderByDescending(m => m.Intensity).ThenByDescending(m => m.Tick)
+                    .Select(m => new MemoryView(m.Kind, m.Subject, m.Valence, m.Intensity, m.Tick, m.Count)).ToArray(),
+                Drivers = pw.MoodDrivers.ToDictionary(kv => kv.Key, kv => kv.Value, StringComparer.Ordinal),
+                Impressions = imps.OrderByDescending(kv => kv.Value).Take(3)
+                    .Concat(imps.Where(kv => kv.Value < 0).OrderBy(kv => kv.Value).Take(3))
+                    .Select(kv => (kv.Key, kv.Value)).Distinct().ToArray(),
+                Boredom = c.BoredomByType.ToDictionary(kv => kv.Key, kv => kv.Value, StringComparer.Ordinal),
+            };
         }
         return new SimSnapshot
         {
@@ -332,12 +384,17 @@ public sealed class SimulationHost : IDisposable
             PersonsTotal = w.Persons.Count,
             Registered = w.Characters.Count,
             Online = w.OnlineCount,
+            Inactive = inactive,
+            Quit = quit,
             ByPerson = byPerson,
             QuestStats = w.QuestStats.ToDictionary(kv => kv.Key, kv => new QuestStatsView(kv.Value.Accepted, kv.Value.Completed,
                 kv.Value.UniqueCompleters, kv.Value.Active, kv.Value.SumPlayedTicksToComplete, kv.Value.SumLevelAtCompletion,
                 kv.Value.LastCompletedTick, kv.Value.XpGranted), StringComparer.Ordinal),
         };
     }
+
+    private static MoodView MoodOf(PersonMood m) =>
+        new(m.Satisfaction, m.Frustration, m.Novelty, m.Engagement, m.ReturnIntention, m.ProgressExpectation, m.LastProgressRatio, m.LastSessionScore, m.SessionsRated);
 
     public void Dispose()
     {

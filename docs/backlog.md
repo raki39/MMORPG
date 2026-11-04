@@ -47,9 +47,33 @@ Critério do plano: revisar o padrão visual cedo, com fixtures identificadas e 
 - [x] Capturas de revisão em 1920×1080 (automáticas, por linha de comando)
 - [ ] Capturas e revisão em 1366×768
 
-## M2 — População (em andamento)
+## Roteiro por etapas (combinado com o criador em 04/11/2026)
 
-Critério do plano: 100 pessoas entram e saem, escolhem atividades entre as oferecidas pelos locais que conhecem e exibem motivos reais. Hoje elas entram, escolhem e explicam, mas ninguém abandona o jogo.
+Uma etapa por vez, fechada por inteiro (testes, validação, documentação, exportação e resumo ao criador) antes da próxima. Interface só a do sistema da etapa; polimento visual vai para a lista do M8.
+
+1. ~~Fechar o M2: plano da sessão, humor, memória, abandono e retorno~~ (feito: D-037, D-038, D-039)
+2. **Etapa 1 — O personagem:**
+   - atributos do personagem por classe + nível + equipamento (fórmulas no conteúdo; nomes sem confundir com os atributos do jogador);
+   - revisão das 3 classes e das 12 magias;
+   - itens como instâncias (dono, origem) e equipamento inicial;
+   - inventário e carteira de ouro com fontes registradas;
+   - aba "Personagem".
+3. **Etapa 2 — Combate PvE (M3):**
+   - criaturas vivas por área e combate determinístico sem 3D;
+   - magias e efeitos combináveis;
+   - XP e saque por abate; morte;
+   - Mecânica e Conhecimento na execução (sai o bônus de XP);
+   - recalibrar a curva (a ou b).
+4. **Etapa 3 — PvP e chefe (M3):**
+   - luta real em emboscada e patrulha;
+   - perda por morte pela regra da zona;
+   - chefe com grupo provisório;
+   - painel de classes inicial.
+5. **Depois, na ordem:** ritmo de gestão (plano 3.3) → M5 economia → M6 social → M7 empresa e atualizações → M8 versão integrada. A visão 3D (M4) fica para depois dos sistemas básicos, a pedido do criador.
+
+## M2 — População ✅ (fechado em 04/11/2026, D-039)
+
+Critério do plano: 100 pessoas entram e saem, escolhem atividades entre as oferecidas pelos locais que conhecem e exibem motivos reais. Cumprido, com humor, memória, plano da sessão, abandono e retorno.
 
 Feito:
 - [x] Registro progressivo no lançamento; conta e personagem (classe pelos traços, apelido)
@@ -85,17 +109,19 @@ Base de conteúdo e progressão (próximo passo; D-025):
 - [ ] Etapas de quest por abates e itens quando existirem combate (M3) e inventário (M5); outras recompensas (reputação, desbloqueios)
 - [ ] Medir a progressão até o 30 (horas por nível, XP por fonte, conteúdo esgotado antes da próxima faixa) e ajustar as metas
 
-Objetivos pessoais e continuidade (depois da base; D-026):
-- [ ] Linha de base: viagem inicial × trocas × volta à cidade, permanência por área e zona, motivos de troca
-- [ ] Plano da sessão, continuidade (margem de troca, compromisso mínimo, revisão por acontecimentos) e tédio individual (preferência por variedade)
-- [ ] Objetivos gerais e secundários em dados; conhecimento "sabe que existe" × "conhece"; expectativa de progresso
-- [ ] Ficha (objetivos, intenção, plano, contribuição) e comparação antes/depois em várias seeds, com objetivos ligados e desligados
-- [ ] Teste de salvar e carregar objetivos e planos (quando o save existir)
-
-Falta para fechar o M2:
-- [ ] Emoções iniciais (escalas e valores neutros documentados), satisfação, abandono e retorno (estados inativo e desistente)
-- [ ] Memória de experiências (plano 4.5) influenciando escolhas
-- [ ] Sessões flexíveis (encerrar por frustração, estender com teto)
+Continuidade, humor e retenção (D-026; fechamento do M2):
+- [x] Linha de base de continuidade e motivos de troca no relatório de validação (D-037)
+- [x] Plano da sessão, continuidade (margem, compromisso mínimo, revisão por acontecimentos) e tédio por tipo com preferência por variedade (D-037)
+- [x] Expectativa de progresso com piso (D-038)
+- [x] Humor: satisfação, frustração, novidade, engajamento e intenção de continuar, com escalas documentadas (D-038, docs/comportamento.md)
+- [x] Memória de experiências influenciando escolhas (impressão por lugar) e acontecimentos marcantes (D-038)
+- [x] Sessões flexíveis: estender com teto, encerrar por frustração (D-039)
+- [x] Inativo, desistente e retorno, com causas registradas (D-039)
+- [x] Ficha: Humor, Memórias marcantes, plano da sessão; listas com Inativos e Desistiram (D-039)
+- [ ] Revisão do criador das metas de retenção e progressão (hipóteses em targets.json)
+- [ ] Conhecimento "sabe que existe" × "conhece" e exploração do interior das zonas (com o editor de mapa)
+- [ ] Ambições de longo prazo em etapas (ficar muito forte, liderar guilda)
+- [ ] Teste de salvar e carregar metas, planos, humor e memória (quando o save existir)
 
 ## Cliente (mapa e fichas)
 

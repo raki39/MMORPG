@@ -179,22 +179,100 @@ public sealed class BehaviorSystem
         long day = ev.Payload;
         long dayStart = Cal.StartOfDay(day);
         var kind = Cal.KindOf(Cal.ToDateTime(dayStart).Date);
+        var rt = _w.Content.Retention;
         foreach (var p in _w.Persons)
         {
-            if (p.State != LifecycleState.Registered && p.State != LifecycleState.Offline && p.State != LifecycleState.Online) continue;
-            _traits.OnDaily(p, day);   // inatividade (D-036), antes de decidir se joga hoje
-            _exp.OnDaily(p, p.CharacterId > 0 ? _w.GetCharacter(p.CharacterId) : null);   // humor e memoria (D-038)
+            if (p.State is LifecycleState.PotentialInterested or LifecycleState.Banned || p.CharacterId == 0) continue;
+            var ch = _w.GetCharacter(p.CharacterId);
             var rng = Rng("behavior.session", p.Id * 100_000L + day);
+            if (p.State == LifecycleState.Quit)
+            {
+                // Desistente (D-039): so a saudade dos bons momentos traz de volta (atualizacoes e convites no M6/M7).
+                _exp.OnDaily(p, ch);
+                if (!TryReturnFromQuit(p, ch, day, rng)) continue;
+            }
+            else
+            {
+                _traits.OnDaily(p, day);   // inatividade (D-036), antes de decidir se joga hoje
+                _exp.OnDaily(p, ch);       // humor e memoria (D-038)
+                if (!p.IsOnline && ReviewRetention(p, ch, day, rng)) continue;   // inativo ou desistiu (D-039)
+            }
             int chance = p.Traits.DaysPerWeek * 1000 / 7;
             chance = kind == DayKind.Weekday
                 ? chance * (1000 - p.Traits.WeekendBoost * 2 / 7) / 1000
                 : chance * (1000 + p.Traits.WeekendBoost) / 1000;
+            // O humor muda a rotina (D-039): engajado joga mais; inativo raramente aparece.
+            chance = chance * PlayFactor(p.Mood.Engagement, rt) / 1000;
+            if (p.State == LifecycleState.Inactive) chance = chance * rt.InactiveReturnPermille / 1000 * p.Mood.ReturnIntention / 1000;
             if (!rng.ChancePermille(chance)) continue;
             int minute = SessionStartMinute(p, rng, kind);
             int duration = SessionMinutes(p, rng, kind);
             _w.Scheduler.Schedule(dayStart + minute * SimTime.TicksPerMinute, EvSessionStart, p.Id, duration);
         }
         _w.Scheduler.Schedule(Cal.StartOfDay(day + 1), EvDailySessions, payload: day + 1);
+    }
+
+    /// <summary>Fator da chance de jogar pelo engajamento (permille), com piso e teto.</summary>
+    public static int PlayFactor(int engagement, RetentionSettingsDefinition rt) =>
+        Math.Clamp(1000 + (engagement - rt.EngagementNeutral) * rt.EngagementEffect / 1000, rt.MinPlayFactor, rt.MaxPlayFactor);
+
+    /// <summary>
+    /// Meia-noite (D-039): quem esta sem jogar ha muito vira inativo; inativo ha muito, ou com
+    /// intencao de continuar baixa, desiste (com as causas: o que mais incomodou). Devolve true
+    /// se desistiu agora.
+    /// </summary>
+    private bool ReviewRetention(Person p, Character ch, long day, DeterministicRng rng)
+    {
+        var rt = _w.Content.Retention;
+        long off = p.LastPlayedDay < 0 ? 0 : day - p.LastPlayedDay;
+        if (p.State != LifecycleState.Inactive && off >= rt.InactiveAfterDays)
+        {
+            p.State = LifecycleState.Inactive;
+            p.TimesInactive++;
+            _w.Today.BecameInactive++;
+            _w.Emit("player_inactive", EventImportance.Low, new[] { new EntityRef("person", p.Id), new EntityRef("character", ch.Id) },
+                new[] { new EventCause("days_without_playing", (int)off) }, off.ToString());
+        }
+        int ri = p.Mood.ReturnIntention;
+        bool quit = false;
+        string reason = "";
+        if (p.State == LifecycleState.Inactive && off >= rt.QuitAfterInactiveDays) { quit = true; reason = "long_inactivity"; }
+        else if (ri < rt.QuitBelow && rng.ChancePermille(rt.QuitChancePerDay * (rt.QuitBelow - ri) / Math.Max(1, rt.QuitBelow))) { quit = true; reason = "low_intention"; }
+        if (!quit) return false;
+        p.State = LifecycleState.Quit;
+        p.QuitDay = day;
+        p.TimesQuit++;
+        _w.Today.Quits++;
+        var causes = new List<EventCause> { new(reason, 1000) };
+        foreach (var kv in p.MoodDrivers.Where(kv => kv.Value < 0).OrderBy(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.Ordinal).Take(3))
+            causes.Add(new EventCause(kv.Key, kv.Value));
+        _w.Emit("player_quit", EventImportance.Normal, new[] { new EntityRef("person", p.Id), new EntityRef("character", ch.Id) },
+            causes.ToArray(), $"nível {ch.Level}");
+        return true;
+    }
+
+    /// <summary>
+    /// Desistente: depois de um tempo fora, pode voltar pela saudade (memorias boas, que
+    /// esmaecem) e pela lealdade. Volta com a satisfacao renovada e parte da novidade.
+    /// </summary>
+    private bool TryReturnFromQuit(Person p, Character ch, long day, DeterministicRng rng)
+    {
+        var rt = _w.Content.Retention;
+        if (p.QuitDay < 0 || day - p.QuitDay < rt.QuitReturnMinDays) return false;
+        int nostalgia = Math.Min(1000, p.Memories.Where(m => m.Valence > 0).Sum(m => m.Intensity));
+        int chance = rt.QuitReturnChancePerDay * nostalgia / 1000 * (500 + p.Traits.Loyalty) / 1000;
+        if (!rng.ChancePermille(chance)) return false;
+        p.State = LifecycleState.Offline;
+        p.TimesReturned++;
+        _w.Today.Returns++;
+        p.Mood.Satisfaction = Math.Max(p.Mood.Satisfaction, rt.ReturnSatisfaction);
+        p.Mood.Frustration = 0;
+        p.Mood.Novelty = Math.Min(1000, p.Mood.Novelty + rt.ReturnNoveltyBoost);
+        p.Mood.ProgressExpectation = ExperienceSystem.InitialExpectation(p.Traits, _w.Content.Mood);
+        _exp.UpdateEngagement(p, ch);
+        _w.Emit("player_returned", EventImportance.Normal, new[] { new EntityRef("person", p.Id), new EntityRef("character", ch.Id) },
+            new[] { new EventCause("nostalgia", nostalgia), new EventCause("days_away", (int)(day - p.QuitDay)) }, $"{day - p.QuitDay} dias");
+        return true;
     }
 
     private static int SessionStartMinute(Person p, DeterministicRng rng, DayKind kind)
@@ -216,7 +294,7 @@ public sealed class BehaviorSystem
     private void OnSessionStart(ScheduledEvent ev)
     {
         var p = _w.GetPerson((int)ev.TargetId);
-        if (!_w.Server.IsOpen || p.CharacterId == 0) return;
+        if (!_w.Server.IsOpen || p.CharacterId == 0 || p.State == LifecycleState.Quit) return;
         StartSession(p, (int)ev.Payload);
     }
 
@@ -235,6 +313,15 @@ public sealed class BehaviorSystem
             }
             return;
         }
+        if (p.State == LifecycleState.Inactive)
+        {
+            // Inativo que voltou a jogar (D-039).
+            p.TimesReturned++;
+            _w.Today.Returns++;
+            _w.Emit("player_returned", EventImportance.Normal, new[] { new EntityRef("person", p.Id), new EntityRef("character", ch.Id) },
+                new[] { new EventCause("came_back", 1000), new EventCause("days_away", (int)(Cal.DayIndex(Now) - p.LastPlayedDay)) },
+                $"{Cal.DayIndex(Now) - p.LastPlayedDay} dias");
+        }
         p.State = LifecycleState.Online;
         _w.OnlineCount++;
         _w.Today.SessionsStarted++;
@@ -246,6 +333,7 @@ public sealed class BehaviorSystem
         ch.SessionStartTick = Now;
         ch.SessionEndTick = end;
         ch.LogoutPending = false;
+        ch.SessionExtended = false;
         // Plano novo a cada sessao; o tedio se dissipa em parte fora do jogo (D-037).
         ch.Plan = null;
         ch.PlanReviewReason = "";
@@ -264,6 +352,21 @@ public sealed class BehaviorSystem
         if (!p.IsOnline) return;
         var ch = _w.GetCharacter(p.CharacterId);
         if (ch.SessionEndTick != ev.Tick) return; // sessao foi estendida
+
+        // Sessao flexivel (D-039; plano 4.3): indo bem e engajado, fica mais um pouco (uma vez, com teto).
+        var rt = _w.Content.Retention;
+        if (!ch.SessionExtended && p.Mood.Engagement >= rt.EngagementNeutral && SessionScoreSoFar(ch) >= rt.ExtendScoreAbove
+            && Rng("behavior.session_flex", ch.Id * 1_000_000L + ch.DecisionCount).ChancePermille(rt.ExtendChance))
+        {
+            int planned = (int)((ch.SessionEndTick - ch.SessionStartTick) / SimTime.TicksPerMinute);
+            int extra = Math.Max(10, planned * rt.ExtendPermille / 1000);
+            ch.SessionExtended = true;
+            ch.SessionEndTick += extra * SimTime.TicksPerMinute;
+            _w.Scheduler.Schedule(ch.SessionEndTick, EvSessionEnd, p.Id);
+            _w.Emit("session_extended", EventImportance.Low, new[] { new EntityRef("person", p.Id) },
+                new[] { new EventCause("enjoying", SessionScoreSoFar(ch)) }, $"+{extra} min");
+            return;
+        }
 
         switch (ch.Status)
         {
@@ -303,6 +406,16 @@ public sealed class BehaviorSystem
         _w.OnlineCount--;
         _w.Emit("session_ended", EventImportance.Low, new[] { new EntityRef("person", p.Id) },
             new[] { new EventCause(reason, 1000) });
+    }
+
+    /// <summary>Nota parcial da sessao: experiencias e acontecimentos ate agora (sem progresso e novidade).</summary>
+    private int SessionScoreSoFar(Character ch)
+    {
+        var L = ch.SessionLedger;
+        long sum = 0;
+        foreach (var v in L.Sums.Values) sum += v;
+        int avg = L.Minutes > 0 ? (int)(sum / L.Minutes) : 0;
+        return Math.Clamp(500 + avg + Math.Clamp(L.Points, -_w.Content.Mood.EventClamp, _w.Content.Mood.EventClamp), 0, 1000);
     }
 
     // ---------------- Decisao ----------------
@@ -462,6 +575,7 @@ public sealed class BehaviorSystem
         var p = _w.GetPerson(ch.PersonId);
         string doneType = ActivityTypeOf(ch);
         bool firstTimeType = !ch.ActivityTicks.ContainsKey(doneType);
+        bool rageQuit = false;
         AddActivityTime(ch, doneType, ev.Tick - ch.ActivityStartTick);
 
         if (ch.ActivityId.Length > 0)
@@ -480,7 +594,11 @@ public sealed class BehaviorSystem
             _goals.OnActivity(p, ch, a, minutes);
             ch.ZoneMinutes[region.Id] = (ch.ZoneMinutes.TryGetValue(region.Id, out int zm) ? zm : 0) + minutes;
             SessionRules.AccrueBoredom(ch, p.Traits, a.Type, minutes, _w.Content.Session);
-            _exp.OnActivity(p, ch, region, a, minutes, fit, fit > 0, ActivityScoring.RiskOf(region, a, challenge, levelBefore), firstTimeType);
+            int valence = _exp.OnActivity(p, ch, region, a, minutes, fit, fit > 0, ActivityScoring.RiskOf(region, a, challenge, levelBefore), firstTimeType);
+            // Frustracao alta e mais uma experiencia ruim: pode largar a sessao na hora (D-039).
+            var rt = _w.Content.Retention;
+            rageQuit = valence < 0 && p.Mood.Frustration >= rt.RageQuitFrustration
+                && Rng("behavior.session_flex", ch.Id * 1_000_000L + ch.DecisionCount + 500_000).ChancePermille(rt.RageQuitChance);
             // Explorar revela mais longe: as zonas ligadas as vizinhas.
             if (a.Type == ActivityTypes.Explore)
                 foreach (var c in region.Connections)
@@ -497,6 +615,7 @@ public sealed class BehaviorSystem
         // Atividade encerrada e contabilizada: a saida abaixo nao pode conta-la de novo.
         ch.Status = CharacterStatus.Idle;
 
+        if (rageQuit) { Logout(ch, "frustration"); return; }
         if (ch.LogoutPending || Now >= ch.SessionEndTick) { Logout(ch, "session_time"); return; }
         Decide(ch, p);
     }

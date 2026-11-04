@@ -85,6 +85,8 @@ public sealed class PopulationDefinition
     public MoodSettingsDefinition Mood { get; set; } = new();
     /// <summary>Memoria: impressoes por lugar e acontecimentos marcantes (D-038).</summary>
     public MemorySettingsDefinition Memory { get; set; } = new();
+    /// <summary>Retencao: engajamento na rotina, sessoes flexiveis, inatividade, desistencia e retorno (D-039).</summary>
+    public RetentionSettingsDefinition Retention { get; set; } = new();
 }
 
 /// <summary>
@@ -235,6 +237,10 @@ public sealed class MoodSettingsDefinition
     public int ExpectationCeiling { get; set; } = 1100;
     /// <summary>Novidade (novidade - 500) na nota da sessao.</summary>
     public int NoveltyWeight { get; set; } = 300;
+    /// <summary>Piso da novidade: abaixo de zero e saturacao (o jogo cansa sem atualizacoes).</summary>
+    public int NoveltyMin { get; set; } = -1000;
+    /// <summary>Quanto a frustracao reduz a intencao de continuar (permille).</summary>
+    public int FrustrationInIntention { get; set; } = 500;
     /// <summary>Novidade gasta por hora de jogo.</summary>
     public int NoveltyDecayPerHour { get; set; } = 20;
     /// <summary>Novidade por zona descoberta.</summary>
@@ -284,17 +290,17 @@ public sealed class MoodSettingsDefinition
     /// <summary>Os motivos acumulados perdem esta fracao por dia (permille).</summary>
     public int DriverDecayPerDay { get; set; } = 50;
     /// <summary>Peso da satisfacao no engajamento.</summary>
-    public int EngagementSatisfaction { get; set; } = 6;
+    public int EngagementSatisfaction { get; set; } = 7;
     /// <summary>Peso da calma (1000 - frustracao) no engajamento.</summary>
-    public int EngagementCalm { get; set; } = 3;
-    /// <summary>Peso da novidade no engajamento.</summary>
-    public int EngagementNovelty { get; set; } = 1;
+    public int EngagementCalm { get; set; } = 1;
+    /// <summary>Peso da novidade no engajamento (novidade de -1000..1000 levada a 0..1000).</summary>
+    public int EngagementNovelty { get; set; } = 2;
     /// <summary>Lealdade segura a intencao de continuar: (lealdade - 500) * isto / 1000.</summary>
     public int LoyaltyWeight { get; set; } = 200;
     /// <summary>Investimento: cada nivel segura a intencao de continuar.</summary>
-    public int InvestmentPerLevel { get; set; } = 5;
+    public int InvestmentPerLevel { get; set; } = 4;
     /// <summary>Teto do investimento.</summary>
-    public int InvestmentCap { get; set; } = 150;
+    public int InvestmentCap { get; set; } = 60;
 }
 
 /// <summary>Memoria da pessoa (D-038): impressoes por lugar e acontecimentos marcantes.</summary>
@@ -338,4 +344,45 @@ public sealed class MemorySettingsDefinition
     public int BadSessionScore { get; set; } = 260;
     /// <summary>Intensidade da memoria de uma sessao marcante.</summary>
     public int SessionIntensity { get; set; } = 500;
+}
+
+/// <summary>Retencao (D-039): o humor muda a rotina; inatividade, desistencia e retorno com causas.</summary>
+public sealed class RetentionSettingsDefinition
+{
+    /// <summary>Engajamento em que a rotina vale como esta.</summary>
+    public int EngagementNeutral { get; set; } = 700;
+    /// <summary>Quanto o engajamento muda a chance de jogar no dia: 1000 + (eng - neutro) * isto / 1000.</summary>
+    public int EngagementEffect { get; set; } = 1000;
+    /// <summary>Piso do fator de chance de jogar (permille).</summary>
+    public int MinPlayFactor { get; set; } = 150;
+    /// <summary>Teto do fator de chance de jogar (permille).</summary>
+    public int MaxPlayFactor { get; set; } = 1300;
+    /// <summary>Dias sem jogar para virar inativo.</summary>
+    public int InactiveAfterDays { get; set; } = 14;
+    /// <summary>Chance de jogar de quem esta inativo, em relacao a rotina (permille; vezes a intencao).</summary>
+    public int InactiveReturnPermille { get; set; } = 250;
+    /// <summary>Intencao de continuar abaixo disto pode levar a desistir.</summary>
+    public int QuitBelow { get; set; } = 420;
+    /// <summary>Chance diaria de desistir com intencao zero (permille; proporcional ao quanto esta abaixo).</summary>
+    public int QuitChancePerDay { get; set; } = 60;
+    /// <summary>Dias sem jogar para desistir de vez.</summary>
+    public int QuitAfterInactiveDays { get; set; } = 45;
+    /// <summary>Dias minimos fora antes de pensar em voltar.</summary>
+    public int QuitReturnMinDays { get; set; } = 30;
+    /// <summary>Chance diaria de voltar com saudade maxima (permille).</summary>
+    public int QuitReturnChancePerDay { get; set; } = 4;
+    /// <summary>Satisfacao minima ao voltar (recomeco).</summary>
+    public int ReturnSatisfaction { get; set; } = 550;
+    /// <summary>Novidade recuperada ao voltar depois de muito tempo.</summary>
+    public int ReturnNoveltyBoost { get; set; } = 300;
+    /// <summary>Sessao indo bem (nota parcial) a partir disto pode se estender.</summary>
+    public int ExtendScoreAbove { get; set; } = 700;
+    /// <summary>Chance de estender a sessao quando vai bem (permille).</summary>
+    public int ExtendChance { get; set; } = 400;
+    /// <summary>Extensao: fracao da duracao prevista (uma vez por sessao).</summary>
+    public int ExtendPermille { get; set; } = 300;
+    /// <summary>Frustracao a partir da qual uma experiencia ruim pode encerrar a sessao.</summary>
+    public int RageQuitFrustration { get; set; } = 600;
+    /// <summary>Chance de sair na hora apos uma experiencia ruim com frustracao alta (permille).</summary>
+    public int RageQuitChance { get; set; } = 300;
 }

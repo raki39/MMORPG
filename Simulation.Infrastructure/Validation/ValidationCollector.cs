@@ -30,6 +30,12 @@ public sealed class RunMetrics
     public SortedDictionary<string, long> SwitchReasons { get; } = new(StringComparer.Ordinal);
     /// <summary>O que mais incomoda cada pessoa registrada (motivo mais negativo), contagem (D-038).</summary>
     public SortedDictionary<string, long> TopComplaints { get; } = new(StringComparer.Ordinal);
+    /// <summary>Desistencias (D-039): motivo principal (o que mais incomodava) e dia, por evento.</summary>
+    public SortedDictionary<string, long> QuitReasons { get; } = new(StringComparer.Ordinal);
+    public List<int> QuitDays { get; } = new();
+    public List<int> QuitLevels { get; } = new();
+    public long SessionsExtended { get; set; }
+    public long RageQuits { get; set; }
     /// <summary>Notas das sessoes (D-038): sessoes otimas e ruins na janela.</summary>
     public long GreatSessions { get; set; }
     public long BadSessions { get; set; }
@@ -49,6 +55,10 @@ public sealed class ProfileStats
     public Dictionary<string, double> TraitDelta { get; init; } = new(StringComparer.Ordinal);
     public double GoalsCompleted { get; init; }
     public double GoalsAbandoned { get; init; }
+    /// <summary>Retencao no fim (D-039): % desistentes, inativos e quem voltou.</summary>
+    public double QuitPct { get; init; }
+    public double InactivePct { get; init; }
+    public double ReturnedPct { get; init; }
     /// <summary>Humor medio no fim (D-038): satisfacao, frustracao, novidade, engajamento etc.</summary>
     public Dictionary<string, double> Mood { get; init; } = new(StringComparer.Ordinal);
     /// <summary>% das sessoes em dia util que comecam no horario nobre (18h-23h).</summary>
@@ -74,7 +84,9 @@ public sealed class ValidationCollector
     private long _sessionsWithChoice, _continued, _switched, _zoneSwitched;
     private readonly List<int> _runs = new();
     private readonly SortedDictionary<string, long> _switchReasons = new(StringComparer.Ordinal);
-    private long _great, _bad, _rated;
+    private long _great, _bad, _rated, _extended, _rage;
+    private readonly SortedDictionary<string, long> _quitReasons = new(StringComparer.Ordinal);
+    private readonly List<int> _quitDays = new(), _quitLevels = new();
 
     public ValidationCollector(ContentDatabase content, int warmupDays)
     {
@@ -122,6 +134,7 @@ public sealed class ValidationCollector
                     long pid = e.Entities[0].Id;
                     if (_openSession.Remove(pid, out long start)) AddPlayed(pid, start, e.Tick);
                     if (e.Tick >= _windowStart) _rated++;
+                    if (e.Tick >= _windowStart && e.Causes.Count > 0 && e.Causes[0].Factor == "frustration") _rage++;
                     break;
                 }
                 case "activity_chosen":
@@ -149,6 +162,19 @@ public sealed class ValidationCollector
                     }
                     break;
                 }
+                case "player_quit":
+                {
+                    string why = e.Causes.Count > 1 ? e.Causes[1].Factor : e.Causes.Count > 0 ? e.Causes[0].Factor : "?";
+                    if (e.Causes.Count > 0 && e.Causes[0].Factor == "long_inactivity") why = "long_inactivity/" + why;
+                    _quitReasons[why] = _quitReasons.GetValueOrDefault(why) + 1;
+                    _quitDays.Add((int)(e.Tick / SimTime.TicksPerDay));
+                    var c = w.GetCharacter((int)e.Entities[1].Id);
+                    _quitLevels.Add(c.Level);
+                    break;
+                }
+                case "session_extended":
+                    if (e.Tick >= _windowStart) _extended++;
+                    break;
                 case "session_great":
                     if (e.Tick >= _windowStart) _great++;
                     break;
@@ -249,6 +275,9 @@ public sealed class ValidationCollector
                 GoalsCompleted = group.Count == 0 ? 0 : group.Average(c => (double)c.GoalsCompleted),
                 GoalsAbandoned = group.Count == 0 ? 0 : group.Average(c => (double)c.GoalsAbandoned),
                 Mood = MoodOf(group.Select(c => w.GetPerson(c.PersonId)).ToList()),
+                QuitPct = group.Count == 0 ? double.NaN : group.Count(c => w.GetPerson(c.PersonId).State == Simulation.Core.Population.LifecycleState.Quit) * 100.0 / group.Count,
+                InactivePct = group.Count == 0 ? double.NaN : group.Count(c => w.GetPerson(c.PersonId).State == Simulation.Core.Population.LifecycleState.Inactive) * 100.0 / group.Count,
+                ReturnedPct = group.Count == 0 ? double.NaN : group.Count(c => w.GetPerson(c.PersonId).TimesReturned > 0) * 100.0 / group.Count,
             });
         }
 
@@ -259,6 +288,11 @@ public sealed class ValidationCollector
             string key = worst.Key ?? "nenhum";
             m.TopComplaints[key] = m.TopComplaints.GetValueOrDefault(key) + 1;
         }
+        foreach (var kv in _quitReasons) m.QuitReasons[kv.Key] = kv.Value;
+        m.QuitDays.AddRange(_quitDays);
+        m.QuitLevels.AddRange(_quitLevels);
+        m.SessionsExtended = _extended;
+        m.RageQuits = _rage;
         m.GreatSessions = _great;
         m.BadSessions = _bad;
         m.RatedSessions = _rated;
@@ -337,6 +371,15 @@ public sealed class ValidationCollector
             }
             case TargetMetrics.QuestsPerCharacter:
                 return chars.Count == 0 ? (double.NaN, "") : (chars.Average(c => (double)c.QuestHistory.Values.Sum(r => r.Completions)), "");
+            case TargetMetrics.QuitShare:
+                return chars.Count == 0 ? (double.NaN, "") : (chars.Count(c => w.GetPerson(c.PersonId).State == Simulation.Core.Population.LifecycleState.Quit) * 100.0 / chars.Count, "");
+            case TargetMetrics.InactiveShare:
+                return chars.Count == 0 ? (double.NaN, "") : (chars.Count(c => w.GetPerson(c.PersonId).State == Simulation.Core.Population.LifecycleState.Inactive) * 100.0 / chars.Count, "");
+            case TargetMetrics.ReturnShare:
+            {
+                var left = chars.Select(c => w.GetPerson(c.PersonId)).Where(p => p.TimesInactive + p.TimesQuit > 0).ToList();
+                return left.Count == 0 ? (double.NaN, "ninguém saiu") : (left.Count(p => p.TimesReturned > 0) * 100.0 / left.Count, $"{left.Count} saíram");
+            }
             case TargetMetrics.PeakOnlineRatio:
                 return history.Count == 0 ? (double.NaN, "") : (history.Average(d => d.PeakOnline * 100.0 / d.Registered), "");
             default:

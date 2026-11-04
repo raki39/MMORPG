@@ -66,6 +66,8 @@ public sealed class ContentDatabase
     public MoodSettingsDefinition Mood => Set.Population.Mood;
     /// <summary>Memoria (D-038).</summary>
     public MemorySettingsDefinition Memory => Set.Population.Memory;
+    /// <summary>Retencao (D-039).</summary>
+    public RetentionSettingsDefinition Retention => Set.Population.Retention;
     public ProgressionDefinition Progression => Set.Progression;
 
     public IReadOnlyDictionary<string, RegionDefinition> Regions { get; }

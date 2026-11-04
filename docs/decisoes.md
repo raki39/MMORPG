@@ -945,3 +945,53 @@ Proposta do criador, analisada com o Claude.
 - 13% das sessões são ótimas e 0,1% são ruins.
 
 **Testes:** 9 novos (componentes, pesos pessoais, limite e reforço da memória, esmaecimento, impressão na decisão, sessão boa e ruim, piso da expectativa, determinismo e hash, validação). `StateHasher` v8.
+
+## D-039 — Abandono, retorno e sessões flexíveis; M2 fechado
+**Data:** 04/11/2026 · **Estado:** aceita (calibração a revisar com o criador)
+
+**Pedido:** fechar o M2 com abandono e retorno, antes da Etapa 1.
+
+**Decisões** (parâmetros em `population.json`, seção `retention`; resumo em `docs/comportamento.md`):
+- **O humor muda a rotina:** a chance de jogar no dia é multiplicada por um fator do engajamento (0,15–1,3). O neutro é o engajamento de quem acabou de entrar.
+- **Sessões flexíveis** (plano 4.3):
+  - sessão indo bem e pessoa engajada estende uma vez (+30%);
+  - frustração alta com mais uma experiência ruim pode encerrar a sessão na hora.
+- **Inativo:** 14 dias sem jogar. Joga com chance reduzida, conforme a intenção de continuar.
+- **Desistente:**
+  - intenção de continuar abaixo de 420 (chance diária proporcional) ou 45 dias sem jogar;
+  - o evento `player_quit` leva o que mais incomodava como causa (novidade, tédio, progresso…).
+- **Retorno:**
+  - o inativo que volta a jogar registra `player_returned`;
+  - o desistente pode voltar depois de 30 dias, pela saudade (memórias boas, que esmaecem) e pela lealdade, com recomeço: satisfação mínima, frustração zerada e parte da novidade;
+  - atualizações (M7) e convites (M6) serão os gatilhos principais.
+- **Ajustes de modelo durante a calibração:**
+  - a novidade pode ficar negativa (saturação), porque sem atualizações o jogo cansa;
+  - a intenção de continuar parte da satisfação, e não mais do engajamento, que quase não variava.
+- **Metas novas** (hipóteses do Claude em `targets.json`): desistentes 8–30%, inativos 2–15%, retorno 20–70%.
+
+**Validação** (90 dias × 1.000 pessoas × 5 seeds): 14 de 24 metas.
+- **Desistentes:** 2,5%, abaixo da faixa.
+  - Desistem 12% dos hardcore e 5,5% dos competitivos, no dia mediano 78 e no nível 30, por falta de novidade (73%) e tédio (18%).
+  - Casuais, exploradores, sociais e comerciantes quase não desistem.
+  - Motivo: hoje as únicas causas são o conteúdo esgotado e o tédio. Mortes (M3), economia (M5) e social (M6) trarão as outras, inclusive o abandono de casuais.
+  - A faixa fica como está para o criador decidir: mudar a meta para caber no resultado esconderia o que falta.
+- **Inativos:** 0,2% no fim (rotinas regulares).
+- **Retorno:** 26,5% de quem saiu (instável).
+- **Sessões por semana do hardcore:** 4,7, abaixo de 5. É o efeito de desanimar no fim do conteúdo: 98% dos hardcore estão insatisfeitos no dia 90, com a novidade esgotada. É o sinal de que o servidor precisa de atualizações.
+- Sessões estendidas: 4,4%; encerradas por frustração: ~0%.
+
+**Interface:**
+- ficha do jogador com os cards Humor e Memórias marcantes, e o plano da sessão na Situação atual;
+- o medidor do cabeçalho passou a se chamar "Ritmo de jogo", para não confundir com o engajamento do humor;
+- situação Inativo e Desistiu no cabeçalho e nas listas (abas novas);
+- eventos novos no histórico e no painel.
+
+**Testes:** 8 novos (157 no total): fator de engajamento, inativo e retorno, desistência por inatividade e por intenção (com causa), retorno pela saudade, extensão de sessão, determinismo e validação. `StateHasher` v9.
+
+**M2 fechado:**
+- o critério do plano está cumprido: 100 pessoas entram e saem, escolhem entre o que os lugares conhecidos oferecem e mostram os motivos reais;
+- também estão prontos o humor, a memória, o plano da sessão e a retenção.
+- **Pendências registradas:**
+  - teste de salvar e carregar (quando o save existir);
+  - revisão do criador das metas de progressão e retenção;
+  - recalibração da curva depois do combate.

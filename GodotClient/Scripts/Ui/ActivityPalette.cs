@@ -98,6 +98,8 @@ public static class StatusText
             content.Regions.TryGetValue(zone, out var r) ? r.FindActivity(act)?.Name ?? act : act;
         string Place(string zone, string act) =>
             content.Regions.TryGetValue(zone, out var r) && r.AreaOfActivity(act) is { } area ? area.Name : Zone(zone);
+        if (v.State == LifecycleState.Quit) return "Desistiu do jogo";
+        if (v.State == LifecycleState.Inactive) return "Inativo";
         return v.Status switch
         {
             CharacterStatus.Offline => "Desconectado",

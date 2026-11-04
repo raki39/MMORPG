@@ -300,6 +300,15 @@ public partial class SidePanel : PanelContainer
             case "goal_set": return ($"{who} adotou uma meta", UiTokens.Accent.Darkened(0.1f));
             case "goal_completed": return ($"{who} concluiu uma meta", UiTokens.Success);
             case "goal_abandoned": return ($"{who} desistiu de uma meta", UiTokens.TextSecondary);
+            case "player_quit":
+            {
+                string why = e.Causes.Count > 1 ? PlayerModal.DriverPt(e.Causes[1].Factor).ToLowerInvariant() : "";
+                return ($"{who} desistiu do jogo{(why.Length > 0 ? " — " + why : "")}", UiTokens.Danger);
+            }
+            case "player_returned": return ($"{who} voltou ao jogo ({e.Detail})", UiTokens.Success);
+            case "player_inactive": return ($"{who} ficou inativo", UiTokens.Warning);
+            case "session_great": return ($"{who} teve uma sessão ótima", UiTokens.Success.Darkened(0.1f));
+            case "session_bad": return ($"{who} teve uma sessão ruim", UiTokens.Danger.Darkened(0.1f));
             case "trait_changed":
             {
                 var parts = (e.Detail ?? "").Split(':');

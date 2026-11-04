@@ -117,18 +117,24 @@
     "companyWeight": 150, "boredomWeight": 250, "riskWeight": 150, "progressWeight": 400, "progressCarePve": 500, "progressCareAggressiveness": 300, "progressCarePvp": 200,
     "noveltyCareBase": 200, "noveltyCareExploration": 500, "noveltyCareImpatience": 300, "progressClamp": 200,
     "progressRatioCap": 2000, "expectationBase": 550, "expectationPerAggressiveness": 300, "expectationAdapt": 100, "expectationFloor": 450,
-    "expectationCeiling": 1100, "noveltyWeight": 300, "noveltyDecayPerHour": 20, "noveltyPerDiscovery": 60, "noveltyNewActivityType": 80,
+    "expectationCeiling": 1100, "noveltyWeight": 300, "noveltyMin": -1000, "frustrationInIntention": 500, "noveltyDecayPerHour": 20, "noveltyPerDiscovery": 60, "noveltyNewActivityType": 80,
     "noveltyNewActivity": 25, "noveltyPerLevel": 30, "noveltyNewQuest": 40, "eventClamp": 300, "levelUpPoints": 60,
     "questPoints": 40, "mainQuestPoints": 100, "goalCompletedPoints": 80, "discoveryPoints": 40, "goalAbandonedPoints": 80,
     "nothingToDoPoints": 60, "goalAbandonedFrustration": 80, "nothingToDoFrustration": 40, "satisfactionAdapt": 250, "fullWeightSessionMinutes": 120,
     "badSessionBelow": 400, "frustrationFromBadSession": 600, "goodSessionAbove": 600, "frustrationReliefFromGoodSession": 500, "frustrationDecayPerDay": 40,
-    "driverDecayPerDay": 50, "engagementSatisfaction": 6, "engagementCalm": 3, "engagementNovelty": 1, "loyaltyWeight": 200,
-    "investmentPerLevel": 5, "investmentCap": 150
+    "driverDecayPerDay": 50, "engagementSatisfaction": 7, "engagementCalm": 1, "engagementNovelty": 2, "loyaltyWeight": 200,
+    "investmentPerLevel": 4, "investmentCap": 60
   },
   "memory": {
     "impressionLearn": 300, "impressionDecayPositivePerDay": 15, "impressionDecayNegativePerDay": 40, "decisionWeight": 150, "impressionMinAbs": 50,
     "maxMemories": 12, "notableValence": 350, "positiveDecayPerDay": 10, "negativeDecayPerDay": 25, "levelMilestoneEvery": 5,
     "levelMilestoneIntensity": 700, "mainQuestIntensity": 650, "goalCompletedIntensity": 500, "goalAbandonedIntensity": 450, "discoveryIntensity": 300,
     "nothingToDoIntensity": 300, "greatSessionScore": 780, "badSessionScore": 260, "sessionIntensity": 500
+  },
+  "retention": {
+    "engagementNeutral": 700, "engagementEffect": 1000, "minPlayFactor": 150, "maxPlayFactor": 1300, "inactiveAfterDays": 14,
+    "inactiveReturnPermille": 250, "quitBelow": 420, "quitChancePerDay": 60, "quitAfterInactiveDays": 45, "quitReturnMinDays": 30,
+    "quitReturnChancePerDay": 4, "returnSatisfaction": 550, "returnNoveltyBoost": 300, "extendScoreAbove": 700, "extendChance": 400,
+    "extendPermille": 300, "rageQuitFrustration": 600, "rageQuitChance": 300
   }
 }

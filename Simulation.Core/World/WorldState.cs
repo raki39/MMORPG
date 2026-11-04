@@ -29,9 +29,16 @@ public sealed class DayCounters
     public int ActivitiesChosen;
     public int LevelUps;
     public long PlayMinutes;
+    /// <summary>Retencao (D-039): desistencias, retornos e novos inativos no dia.</summary>
+    public int Quits;
+    public int Returns;
+    public int BecameInactive;
 
     internal void Reset(int onlineNow)
     {
+        Quits = 0;
+        Returns = 0;
+        BecameInactive = 0;
         CommandsApplied = 0;
         CommandsRejected = 0;
         EventsEmitted = 0;
@@ -68,6 +75,12 @@ public sealed class DailyRecord
     public int ActivitiesChosen { get; set; }
     public int LevelUps { get; set; }
     public long PlayMinutes { get; set; }
+    /// <summary>Retencao (D-039): estado no fim do dia e movimentos do dia.</summary>
+    public int Inactive { get; set; }
+    public int Quit { get; set; }
+    public int Quits { get; set; }
+    public int Returns { get; set; }
+    public int BecameInactive { get; set; }
 }
 
 /// <summary>

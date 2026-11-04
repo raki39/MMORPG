@@ -93,7 +93,13 @@ public partial class PlayerModal : ModalFrame
             Fact("Nível", v.Level.ToString(), UiTokens.Accent, v.Level >= prog.LevelCap
                 ? $"Nível {v.Level}\n~Nível máximo atual ({prog.LevelCap})."
                 : $"Nível {v.Level}\nXP|{PtBr.Int(v.Experience)} / {PtBr.Int(need)}\nPara o próximo|{v.Experience * 100 / Math.Max(1, need)}%\nTaxa da faixa|×{stage}\n~Faixas de nível mais altas rendem menos XP.", "award");
-            Fact("Status", online ? "Conectado" : "Desconectado", online ? UiTokens.Success : UiTokens.TextSecondary, "", "activity");
+            var (stText, stColor, stTip) = v.State switch
+            {
+                LifecycleState.Quit => ("Desistiu", UiTokens.Danger, "Desistiu do jogo\n~Saiu pelo que mais incomodava (veja Humor). Pode voltar pela saudade dos bons momentos."),
+                LifecycleState.Inactive => ("Inativo", UiTokens.Warning, $"Inativo\nÚltimo dia jogado|{PtBr.ShortDate(_ctx.Calendar.ToDateTime(_ctx.Calendar.StartOfDay(v.LastPlayedDay)))}\n~Mais de 14 dias sem jogar: volta com chance menor, conforme a intenção de continuar."),
+                _ => (online ? "Conectado" : "Desconectado", online ? UiTokens.Success : UiTokens.TextSecondary, ""),
+            };
+            Fact("Status", stText, stColor, stTip, "activity");
             Fact("Zona", _ctx.ZoneName(v.RegionId), UiTokens.TextSecondary, "", "map-pin");
             Fact("Conhece", $"{v.KnownRegions}/{_ctx.Content.Regions.Count}", UiTokens.TextSecondary, "Zonas conhecidas\n~Só zonas conhecidas entram nas decisões. Viajar e explorar revelam mais.", "compass");
             Fact("Perfil", ProfileName, color, $"Perfil {ProfileName}\n~{ProfileHint(_person.ProfileId)} Tendência de origem; a pessoa não é um clone do perfil.", "user");
@@ -111,8 +117,8 @@ public partial class PlayerModal : ModalFrame
             var gauge = new SemiGauge
             {
                 CustomMinimumSize = new Vector2(168, 84), Value = Mathf.Clamp(e.Pct / 1.2f, 0, 1), Center = $"{e.Pct * 100:0}%",
-                Caption = $"Engajamento · {e.Days} dia{(e.Days == 1 ? "" : "s")}", Verdict = EngagementVerdict(e.Pct), Color = RatingColor(EngagementScore(e.Pct)),
-                TooltipText = $"Engajamento\nJogou|{e.Played} min\nPrevisto pela rotina|{e.Expected} min\nDias com sessão|{e.DaysPlayed} de {e.Days}\n~Minutos jogados ÷ minutos previstos pela rotina (sessão típica × dias por semana) nos últimos {e.Days} dias, contando hoje até agora.",
+                Caption = $"Ritmo de jogo · {e.Days} dia{(e.Days == 1 ? "" : "s")}", Verdict = EngagementVerdict(e.Pct), Color = RatingColor(EngagementScore(e.Pct)),
+                TooltipText = $"Ritmo de jogo\nJogou|{e.Played} min\nPrevisto pela rotina|{e.Expected} min\nDias com sessão|{e.DaysPlayed} de {e.Days}\n~Minutos jogados ÷ minutos previstos pela rotina (sessão típica × dias por semana) nos últimos {e.Days} dias, contando hoje até agora. O engajamento (vontade de jogar) fica no card Humor.",
             };
             Highlight.AddChild(gauge);
         }
@@ -267,7 +273,180 @@ public partial class PlayerModal : ModalFrame
             (Card("Zonas frequentadas", ZonesBody(), info: "Onde escolhe jogar\n~Escolhas de atividade por zona registradas desde que o jogo foi aberto. Clique para abrir a zona."), 3),
             (Card("Progresso e metas", GoalsBody(v, st), info: "Nível, personalidade e metas de curto prazo\n~Metas de curto prazo (chegar a um nível, descobrir uma zona, concluir uma missão, praticar uma atividade) influenciam as escolhas sem obrigar. Ambições de longo prazo (ex.: liderar guilda) virão em etapas."), 3),
             (Card("Atividades recentes", RecentBody(), info: "Últimos acontecimentos\n~Clique numa linha para abrir a área, a zona ou a missão. Histórico completo na aba Histórico."), 6));
-        return Column(12, row1, row2, row3);
+        var row4 = Grid(12,
+            (Card("Humor", MoodBody(v, detail), info: "Como a pessoa está se sentindo no jogo (D-038)\n~Cada sessão vira uma nota: gosto pelas atividades, encaixe de nível, lotação, companhia, tédio, risco, progresso contra a expectativa, novidade e conquistas. A satisfação é a média dessas notas; o engajamento muda quanto ela joga; a intenção de continuar decide se fica."), 6),
+            (Card("Memórias marcantes", MemoriesBody(detail), info: "O que ficou na memória (D-038)\n~Conquistas duram mais que frustrações. A impressão de cada lugar atrai ou afasta nas próximas escolhas."), 6));
+        return Column(12, row1, row2, row3, row4);
+    }
+
+    // ----- Humor e memoria (D-038/D-039) -----
+
+    public static string DriverPt(string key) => key switch
+    {
+        "fun" => "Gosto pelas atividades",
+        "fit" => "Encaixe de nível",
+        "crowding" => "Lotação",
+        "company" => "Companhia",
+        "boredom" => "Tédio",
+        "risk" => "Risco",
+        "progress" => "Progresso",
+        "novelty" => "Novidade",
+        "events" => "Conquistas e reveses",
+        "low_intention" => "Intenção de continuar baixa",
+        "long_inactivity" => "Sumiu por muito tempo",
+        "nostalgia" => "Saudade",
+        "came_back" => "Voltou a jogar",
+        "days_away" => "Dias fora",
+        _ => key,
+    };
+
+    private static string DriverHint(string key) => key switch
+    {
+        "fun" => "Faz atividades de que gosta (ou não).",
+        "fit" => "O conteúdo combina com o nível do personagem.",
+        "crowding" => "Caça e coleta disputadas incomodam; coordenação alivia.",
+        "company" => "Gente por perto, sobretudo na taverna para os sociáveis.",
+        "boredom" => "Repetir o mesmo tipo de atividade cansa.",
+        "risk" => "Risco emociona quem tem pouca aversão e incomoda quem tem muita.",
+        "progress" => "XP da sessão contra o que a pessoa espera (pesa mais para quem liga para evoluir).",
+        "novelty" => "Coisas novas para ver e fazer; sem atualizações, a novidade acaba e o jogo satura.",
+        "events" => "Níveis, missões, metas e descobertas; metas abandonadas e falta do que fazer.",
+        _ => "",
+    };
+
+    private Control MoodBody(CharacterView v, CharacterDetailView? detail)
+    {
+        var m = v.Mood;
+        Color Scale(int value, bool higherIsBetter) => (higherIsBetter ? value : 1000 - value) switch
+        {
+            >= 650 => UiTokens.Success,
+            >= 450 => UiTokens.Accent,
+            >= 300 => UiTokens.Warning,
+            _ => UiTokens.Danger,
+        };
+        Control Line(string label, int value, int max, Color color, string text, string tip)
+        {
+            var t = new TipPanel { TooltipText = tip, MouseFilter = MouseFilterEnum.Stop };
+            t.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
+            t.AddChild(Bar(label, Math.Max(0, value), max, color, text, 150));
+            return t;
+        }
+        string novelty = m.Novelty >= 0 ? $"{m.Novelty / 10}%" : "saturado";
+        var bars = Column(9,
+            Line("Satisfação", m.Satisfaction, 1000, Scale(m.Satisfaction, true), $"{m.Satisfaction / 10}%",
+                $"Satisfação\nAtual|{m.Satisfaction / 10}%\nÚltima sessão|nota {m.LastScore / 10}\nSessões avaliadas|{m.SessionsRated}\n~Média móvel das notas das sessões; sessões curtas pesam menos."),
+            Line("Frustração", m.Frustration, 1000, Scale(m.Frustration, false), $"{m.Frustration / 10}%",
+                "Frustração\n~Sobe com metas abandonadas, falta do que fazer e sessões ruins; passa com o tempo e com sessões boas. Alta, pode fazer largar a sessão no meio."),
+            Line("Novidade", m.Novelty, 1000, m.Novelty >= 300 ? UiTokens.Info : m.Novelty >= 0 ? UiTokens.Warning : UiTokens.Danger, novelty,
+                "Novidade\n~Gasta com as horas de jogo e renovada por zonas, atividades, níveis e missões novas. Abaixo de zero é saturação: sem atualizações (M7), o jogo cansa."),
+            Line("Engajamento", m.Engagement, 1000, Scale(m.Engagement, true), $"{m.Engagement / 10}%",
+                "Engajamento\n~Vontade de jogar: satisfação, calma e novidade. Engajado joga mais dias que a rotina; desanimado, menos."),
+            Line("Intenção de continuar", m.ReturnIntention, 1000, Scale(m.ReturnIntention, true), $"{m.ReturnIntention / 10}%",
+                "Intenção de continuar\n~Satisfação menos frustração; lealdade e o nível já investido seguram. Muito baixa, a pessoa pode desistir."));
+        var col = Column(12, bars);
+        col.AddChild(KeyValue("Progresso esperado", $"{m.Expectation / 10}% da referência · última sessão {m.LastRatio / 10}%", UiTokens.TextSecondary));
+
+        var drivers = detail?.Drivers ?? new Dictionary<string, int>();
+        var good = drivers.Where(kv => kv.Value > 0).OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.Ordinal).Take(3).ToList();
+        var bad = drivers.Where(kv => kv.Value < 0).OrderBy(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.Ordinal).Take(3).ToList();
+        Control List(string title, List<KeyValuePair<string, int>> items, Color color, string icon)
+        {
+            var c = Column(6, Section(title));
+            if (items.Count == 0) c.AddChild(Wrap("Nada se destaca ainda.", UiTokens.FontSmall, UiTokens.TextSecondary));
+            foreach (var kv in items)
+            {
+                var t = new TipPanel { TooltipText = $"{DriverPt(kv.Key)}\n~{DriverHint(kv.Key)}", MouseFilter = MouseFilterEnum.Stop };
+                t.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
+                var r = new HBoxContainer();
+                r.AddThemeConstantOverride("separation", 8);
+                r.AddChild(new Icon(icon, 14, color));
+                r.AddChild(ThemeFactory.Text(DriverPt(kv.Key), UiTokens.FontSmall, UiTokens.TextLabel, UiFonts.Medium));
+                t.AddChild(r);
+                c.AddChild(t);
+            }
+            c.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+            return c;
+        }
+        var lists = Row(24, List("O que agrada", good, UiTokens.Success, "trending-up"), List("O que incomoda", bad, UiTokens.Danger, "trending-down"));
+        col.AddChild(lists);
+        return col;
+    }
+
+    private string MemoryText(MemoryView m)
+    {
+        string Place(string key)
+        {
+            var p = key.Split('/');
+            return p.Length == 2 ? $"{_ctx.ActivityName(p[0], p[1])} · {_ctx.PlaceName(p[0], p[1])}" : key;
+        }
+        return m.Kind switch
+        {
+            "level_milestone" => $"Chegou ao nível {m.Subject}",
+            "main_quest" => $"Missão principal: {QuestName(m.Subject)}",
+            "quest" => $"Missão: {QuestName(m.Subject)}",
+            "goal_completed" => $"Concluiu a meta: {GoalDetail(m.Subject)}",
+            "goal_abandoned" => $"Desistiu da meta: {GoalDetail(m.Subject)}",
+            "discovery" => $"Descobriu {_ctx.ZoneName(m.Subject)}",
+            "great_activity" => $"Ótima experiência: {Place(m.Subject)}",
+            "awful_activity" => $"Experiência ruim: {Place(m.Subject)}",
+            "great_session" => "Uma sessão ótima",
+            "bad_session" => "Uma sessão ruim",
+            "nothing_to_do" => $"Ficou sem nada para fazer em {_ctx.ZoneName(m.Subject)}",
+            _ => m.Kind,
+        };
+    }
+
+    private static string MemoryIcon(string kind) => kind switch
+    {
+        "level_milestone" => "award",
+        "main_quest" => "medal",
+        "quest" => "scroll-text",
+        "goal_completed" => "trophy",
+        "goal_abandoned" => "circle-x",
+        "discovery" => "map",
+        "great_activity" => "star",
+        "awful_activity" => "trending-down",
+        "great_session" => "sparkles",
+        "bad_session" => "trending-down",
+        "nothing_to_do" => "hourglass",
+        _ => "book-open",
+    };
+
+    private Control MemoriesBody(CharacterDetailView? detail)
+    {
+        var col = Column(8);
+        var mems = detail?.Memories ?? Array.Empty<MemoryView>();
+        if (mems.Count == 0)
+            col.AddChild(Wrap(detail == null ? "Carregando…" : "Nada marcante ainda: as primeiras conquistas e frustrações aparecem aqui.", UiTokens.FontSmall, UiTokens.TextSecondary));
+        foreach (var m in mems.Take(6))
+        {
+            bool goodMem = m.Valence >= 0;
+            var t = new TipPanel
+            {
+                TooltipText = $"{MemoryText(m)}\nIntensidade|{m.Intensity / 10}%\nQuando|{PtBr.ShortDate(_ctx.Calendar.ToDateTime(m.Tick))}" + (m.Count > 1 ? $"\nVezes|{m.Count}" : "")
+                    + "\n~Lembranças perdem força com o tempo; as boas duram mais que as frustrações. A saudade dos bons momentos pode trazer de volta quem desistiu.",
+                MouseFilter = MouseFilterEnum.Stop,
+            };
+            t.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
+            t.AddChild(GoalRow(MemoryIcon(m.Kind), MemoryText(m), m.Intensity / 1000f, goodMem ? UiTokens.Success : UiTokens.Danger));
+            col.AddChild(t);
+        }
+        var imps = detail?.Impressions ?? Array.Empty<(string, int)>();
+        if (imps.Count > 0)
+        {
+            col.AddChild(Section("Lugares que marcaram"));
+            foreach (var (key, value) in imps)
+            {
+                var p = key.Split('/');
+                if (p.Length != 2) continue;
+                string name = $"{_ctx.ActivityName(p[0], p[1])} · {_ctx.PlaceName(p[0], p[1])}";
+                var t = new TipPanel { TooltipText = $"{name}\nImpressão|{(value > 0 ? "+" : "")}{value / 10}%\n~Pesa nas próximas escolhas: boa atrai, ruim afasta.", MouseFilter = MouseFilterEnum.Stop };
+                t.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
+                t.AddChild(KeyValue(name, $"{(value > 0 ? "+" : "")}{value / 10}%", value > 0 ? UiTokens.Success : UiTokens.Danger));
+                col.AddChild(t);
+            }
+        }
+        return col;
     }
 
     // ---------------- Estatisticas (D-035) ----------------
@@ -603,7 +782,25 @@ public partial class PlayerModal : ModalFrame
             col.AddChild(KeyValue("Sessão", $"{_ctx.Clock(v.SessionStartTick)} – {_ctx.Clock(v.SessionEndTick)}"));
             col.AddChild(KeyValue("Restante", $"{Math.Max(0, (v.SessionEndTick - now) / Simulation.Core.Time.SimTime.TicksPerMinute)} min", UiTokens.AccentSoft));
         }
+        if (v.Plan is { } plan)
+        {
+            var fp = plan.FocusKey.Split('/');
+            string focus = fp.Length == 2 ? $"{_ctx.ActivityName(fp[0], fp[1])} · {_ctx.PlaceName(fp[0], fp[1])}" : plan.FocusKey;
+            var tip = new TipPanel
+            {
+                TooltipText = $"Plano da sessão\nFoco|{focus}\nMotivo|{FactorPt(plan.Reason)}\nDesde|{_ctx.Clock(plan.FormedTick)}\nCiclos seguidos|{plan.Cycles}\n~A pessoa continua no foco enquanto nenhuma outra opção for claramente melhor (margem e compromisso mínimo). Etapas, níveis, metas e zonas novas liberam a revisão.",
+                MouseFilter = MouseFilterEnum.Stop,
+            };
+            tip.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
+            tip.AddChild(KeyValue("Plano da sessão", focus, UiTokens.AccentSoft));
+            col.AddChild(tip);
+        }
         var dcs = v.LastDecision;
+        if (dcs != null && dcs.ContinuedPlan && dcs.RunnerUpActivityKey.Length > 0)
+        {
+            var rp = dcs.RunnerUpActivityKey.Split('/');
+            col.AddChild(Wrap($"Seguiu o plano: {_ctx.ActivityName(rp[0], rp[1])} tinha só +{dcs.PlanGap} de nota, pouco para trocar.", UiTokens.FontCaption, UiTokens.TextSecondary));
+        }
         if (dcs != null)
         {
             col.AddChild(new Control { CustomMinimumSize = new Vector2(0, 2) });
@@ -628,7 +825,7 @@ public partial class PlayerModal : ModalFrame
                 row.AddChild(r);
                 col.AddChild(row);
             }
-            if (dcs.RunnerUpActivityKey.Length > 0)
+            if (dcs.RunnerUpActivityKey.Length > 0 && !dcs.ContinuedPlan)
             {
                 var p = dcs.RunnerUpActivityKey.Split('/');
                 col.AddChild(KeyValue("2ª opção", _ctx.ActivityName(p[0], p[1]), UiTokens.TextSecondary));
@@ -1052,6 +1249,14 @@ public partial class PlayerModal : ModalFrame
             case "goal_completed": icon = "trophy"; break;
             case "goal_abandoned": icon = "circle-x"; break;
             case "trait_changed": icon = "activity"; break;
+            case "session_plan": icon = "flag"; break;
+            case "plan_changed": icon = "flag"; break;
+            case "session_great": icon = "sparkles"; break;
+            case "session_bad": icon = "trending-down"; break;
+            case "session_extended": icon = "timer"; break;
+            case "player_inactive": icon = "hourglass"; break;
+            case "player_quit": icon = "circle-x"; break;
+            case "player_returned": icon = "door-open"; break;
             case "person_registered": icon = "user"; break;
             case "region_discovered": icon = "map"; { string zid = e.Detail ?? ""; go = () => _ctx.OpenZone(zid); } break;
             case "quest_accepted": icon = "scroll-text"; { string q = e.Detail ?? ""; go = () => _ctx.OpenQuest(q); } break;
@@ -1089,7 +1294,16 @@ public partial class PlayerModal : ModalFrame
         "risk" => "Risco percebido",
         "travel" => "Distância",
         "time_budget" => "Tempo de sessão",
-        "repetition" => "Cansaço de repetir",
+        "boredom" => "Tédio",
+        "memory" => "Lembrança do lugar",
+        "nothing_new" => "Nada novo para explorar",
+        "plan_continuity" => "Plano da sessão",
+        "quest_completed" => "Missão entregue",
+        "level_up" => "Nível novo",
+        "goal_completed" => "Meta concluída",
+        "goal_abandoned" => "Meta abandonada",
+        "zone_discovered" => "Zona descoberta",
+        "focus_unavailable" => "Foco concluído ou indisponível",
         "noise" => "Variação do momento",
         "quest_offer" => "Missão para aceitar",
         "quest_deliver" => "Missão para entregar",
@@ -1109,7 +1323,10 @@ public partial class PlayerModal : ModalFrame
         "risk" => "Risco da atividade, PvP e nível × aversão a risco.",
         "travel" => "Tempo andando até lá em relação ao tempo de sessão.",
         "time_budget" => "Viagem + atividade não cabem no tempo restante.",
-        "repetition" => "Repetir a mesma coisa cansa (menos para os pacientes).",
+        "boredom" => "Tédio do tipo de atividade: cresce com o tempo fazendo a mesma coisa, mais rápido para quem gosta de variedade; a paciência alivia.",
+        "memory" => "Impressão deixada pelo lugar nas experiências anteriores: boa atrai, ruim afasta.",
+        "nothing_new" => "Explorar onde tudo ao redor já é conhecido perde a graça de descobrir.",
+        "plan_continuity" => "Seguiu o plano da sessão: outra opção era melhor por pouco.",
         "quest_offer" => "O quadro tem missão que a pessoa pode aceitar.",
         "quest_deliver" => "Há missões prontas para entregar no quadro (mais prontas, mais vontade de voltar).",
         "quest_step" => "Fazer isto avança a etapa atual de uma missão em andamento.",
@@ -1245,6 +1462,29 @@ public partial class PlayerModal : ModalFrame
             case "goal_set": return ($"Nova meta: {GoalDetail(e.Detail)}", UiTokens.Accent);
             case "goal_completed": return ($"Concluiu a meta: {GoalDetail(e.Detail)}", UiTokens.Success);
             case "goal_abandoned": return ($"Desistiu da meta: {GoalDetail(e.Detail)}{(e.Causes.Count > 0 && e.Causes[0].Factor == "impatience" ? " (impaciência)" : " (sem progresso)")}", UiTokens.TextSecondary);
+            case "session_plan":
+            case "plan_changed":
+            {
+                var fp = (e.Detail ?? "/").Split('/');
+                string focus = fp.Length == 2 ? $"{_ctx.ActivityName(fp[0], fp[1])} · {_ctx.PlaceName(fp[0], fp[1])}" : e.Detail ?? "";
+                string planWhy = e.Causes.Count > 0 ? FactorPt(e.Causes[0].Factor).ToLowerInvariant() : "";
+                return e.Type == "session_plan" ? ($"Plano da sessão: {focus} ({planWhy})", UiTokens.AccentSoft) : ($"Mudou o plano: {focus} ({planWhy})", UiTokens.AccentSoft);
+            }
+            case "session_great":
+            case "session_bad":
+            {
+                string sessWhy = string.Join(", ", e.Causes.Take(2).Select(c => DriverPt(c.Factor).ToLowerInvariant()));
+                return e.Type == "session_great" ? ($"Sessão ótima — {sessWhy}", UiTokens.Success) : ($"Sessão ruim — {sessWhy}", UiTokens.Danger);
+            }
+            case "session_extended": return ($"Ficou mais um pouco ({e.Detail}): estava gostando", UiTokens.Success);
+            case "player_inactive": return ($"Ficou inativo: {e.Detail} dias sem jogar", UiTokens.Warning);
+            case "player_quit":
+            {
+                string quitWhy = e.Causes.Count > 1 ? DriverPt(e.Causes[1].Factor).ToLowerInvariant() : e.Causes.Count > 0 ? DriverPt(e.Causes[0].Factor).ToLowerInvariant() : "";
+                return ($"Desistiu do jogo — {quitWhy}", UiTokens.Danger);
+            }
+            case "player_returned":
+                return ($"Voltou ao jogo depois de {e.Detail} ({(e.Causes.Count > 0 ? DriverPt(e.Causes[0].Factor).ToLowerInvariant() : "")})", UiTokens.Success);
             case "trait_changed":
             {
                 var parts = (e.Detail ?? "").Split(':');

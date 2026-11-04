@@ -726,6 +726,42 @@ public static class ContentValidator
             ("noveltyCareExploration", pop.Mood.NoveltyCareExploration), ("noveltyCareImpatience", pop.Mood.NoveltyCareImpatience),
         })
             if (value is < 0 or > 1000) v.Error(PopulationFile, "mood." + name, "Use um valor de 0 a 1000.");
+        // Retencao (D-039).
+        foreach (var (name, value) in new (string, int)[]
+        {
+            ("engagementNeutral", pop.Retention.EngagementNeutral),
+            ("engagementEffect", pop.Retention.EngagementEffect),
+            ("minPlayFactor", pop.Retention.MinPlayFactor),
+            ("maxPlayFactor", pop.Retention.MaxPlayFactor),
+            ("inactiveAfterDays", pop.Retention.InactiveAfterDays),
+            ("inactiveReturnPermille", pop.Retention.InactiveReturnPermille),
+            ("quitBelow", pop.Retention.QuitBelow),
+            ("quitChancePerDay", pop.Retention.QuitChancePerDay),
+            ("quitAfterInactiveDays", pop.Retention.QuitAfterInactiveDays),
+            ("quitReturnMinDays", pop.Retention.QuitReturnMinDays),
+            ("quitReturnChancePerDay", pop.Retention.QuitReturnChancePerDay),
+            ("returnSatisfaction", pop.Retention.ReturnSatisfaction),
+            ("returnNoveltyBoost", pop.Retention.ReturnNoveltyBoost),
+            ("extendScoreAbove", pop.Retention.ExtendScoreAbove),
+            ("extendChance", pop.Retention.ExtendChance),
+            ("extendPermille", pop.Retention.ExtendPermille),
+            ("rageQuitFrustration", pop.Retention.RageQuitFrustration),
+            ("rageQuitChance", pop.Retention.RageQuitChance)
+        })
+            if (value < 0) v.Error(PopulationFile, "retention." + name, "O valor não pode ser negativo.");
+        var rt = pop.Retention;
+        foreach (var (name, value) in new (string, int)[]
+        {
+            ("engagementNeutral", rt.EngagementNeutral), ("inactiveReturnPermille", rt.InactiveReturnPermille), ("quitBelow", rt.QuitBelow),
+            ("quitChancePerDay", rt.QuitChancePerDay), ("quitReturnChancePerDay", rt.QuitReturnChancePerDay), ("returnSatisfaction", rt.ReturnSatisfaction),
+            ("extendScoreAbove", rt.ExtendScoreAbove), ("extendChance", rt.ExtendChance), ("rageQuitFrustration", rt.RageQuitFrustration), ("rageQuitChance", rt.RageQuitChance),
+        })
+            if (value > 1000) v.Error(PopulationFile, "retention." + name, "Use um valor de 0 a 1000.");
+        if (rt.MinPlayFactor > rt.MaxPlayFactor) v.Error(PopulationFile, "retention.minPlayFactor", "O piso não pode passar do teto.");
+        if (rt.InactiveAfterDays < 1) v.Error(PopulationFile, "retention.inactiveAfterDays", "Use 1 dia ou mais.");
+        if (rt.QuitAfterInactiveDays <= rt.InactiveAfterDays) v.Error(PopulationFile, "retention.quitAfterInactiveDays", "Precisa ser maior que inactiveAfterDays.");
+        if (pop.Mood.NoveltyMin is < -1000 or > 0) v.Error(PopulationFile, "mood.noveltyMin", "Use um valor de -1000 a 0.");
+        if (pop.Mood.FrustrationInIntention is < 0 or > 1000) v.Error(PopulationFile, "mood.frustrationInIntention", "Use um valor de 0 a 1000.");
         if (pop.Mood.ExpectationFloor > pop.Mood.ExpectationCeiling) v.Error(PopulationFile, "mood.expectationFloor", "O piso da expectativa não pode passar do teto.");
         if (pop.Memory.MaxMemories < 1) v.Error(PopulationFile, "memory.maxMemories", "Guarde ao menos uma memória.");
         if (pop.Memory.LevelMilestoneEvery < 1) v.Error(PopulationFile, "memory.levelMilestoneEvery", "Use 1 ou mais.");

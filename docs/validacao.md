@@ -193,11 +193,29 @@ Mesma rodada: 5 seeds × 1.000 pessoas × 90 dias. **15 de 21 metas dentro da fa
 **Achado da ficha da quest:** com peso fixo de entrega, muitos personagens carregavam quests "prontas para entregar" por dias.
 - O peso de entrega passou a crescer com o número de quests prontas.
 
+## Resultado no fechamento do M2 (D-037 a D-039, 04/11/2026)
+
+90 dias × 1.000 pessoas × 5 seeds: **14 de 24 metas** dentro da faixa (3 metas novas de retenção).
+
+- **Continuidade (D-037):**
+  - escolhas que continuam a mesma atividade: 50% → 71%;
+  - tempo andando: 31% → 24%;
+  - combate: 35% → 40%;
+  - exploração: 13% → 7%.
+- **Progressão:** horas até o 30 caíram para 162 (anda-se menos). A recalibração fica para depois do combate (D-028, escolha a ou b).
+- **Humor (D-038):**
+  - casuais e exploradores satisfeitos;
+  - 98% dos hardcore insatisfeitos no dia 90, com a novidade esgotada (nível 30 e mundo conhecido);
+  - competitivos vêm logo atrás.
+- **Retenção (D-039):**
+  - desistem 2,5% (abaixo da meta de 8–30%), quase todos hardcore e competitivos, no dia mediano 78 e no nível 30, por falta de novidade e tédio;
+  - casuais quase não desistem porque ainda faltam as causas: mortes (M3), economia (M5) e social (M6).
+- **Seções novas do relatório:** continuidade e motivos de troca, humor e memória por perfil, retenção e motivos de desistência, evolução dos atributos.
+
 ## Próximos passos
 
-Ordem do D-025:
-1. ~~Redistribuir e ampliar as áreas até o nível 30~~ (feito, D-028).
-2. ~~Montar o catálogo de quests~~ (feito por área de quest, D-031).
-3. Recalibrar a curva com a escolha do criador (D-028: (a) cerca de 200 h com desaceleração suave ou (b) desaceleração forte com 220–250 h).
-4. Integrar os objetivos pessoais (D-026).
-5. Combate (M3).
+Roteiro por etapas (backlog):
+1. Etapa 1 — personagem (classes, atributos do personagem, itens iniciais, inventário e ouro).
+2. Etapa 2 — combate PvE (M3) e recalibração da curva com a escolha do criador (D-028: (a) cerca de 200 h com desaceleração suave ou (b) desaceleração forte com 220–250 h).
+3. Etapa 3 — PvP e chefe.
+4. Revisar com o criador as metas de retenção quando mortes, economia e social existirem.

@@ -193,6 +193,11 @@ public sealed class Person
     /// <summary>Ultimo dia (indice) em que jogou; -1 = nunca.</summary>
     public long LastPlayedDay { get; internal set; } = -1;
     public bool IsOnline => State == LifecycleState.Online;
+    /// <summary>Dia em que desistiu (-1 = nunca) e quantas vezes desistiu e voltou (D-039).</summary>
+    public long QuitDay { get; internal set; } = -1;
+    public int TimesQuit { get; internal set; }
+    public int TimesReturned { get; internal set; }
+    public int TimesInactive { get; internal set; }
 }
 
 /// <summary>Conta no MMORPG (plano 4.1). Criada no registro (M2).</summary>
@@ -432,6 +437,8 @@ public sealed class Character
     public long ActivityEndTick { get; internal set; }
     public long SessionEndTick { get; internal set; }
     public bool LogoutPending { get; internal set; }
+    /// <summary>A sessao atual ja foi estendida por estar indo bem (D-039).</summary>
+    public bool SessionExtended { get; internal set; }
     /// <summary>Locais que o personagem conhece (so estes entram nas decisoes).</summary>
     internal SortedSet<string> Known { get; } = new(StringComparer.Ordinal);
     public IReadOnlyCollection<string> KnownRegions => Known;

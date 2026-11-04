@@ -146,6 +146,32 @@ public static class ValidationReport
             sb.Append($"| {days} | {(-mech).ToString("0.00;-0.00;0.00", PtBr)} | {(-know).ToString("0.00;-0.00;0.00", PtBr)} |\n");
         }
 
+        // ---- Retencao (D-039) ----
+        sb.Append("\n## Retenção (média das seeds, no fim)\n\n");
+        sb.Append("| Perfil | Desistiram | Inativos | Voltaram alguma vez |\n|---|---:|---:|---:|\n");
+        foreach (var id in runs[0].Profiles.Select(p => p.Id))
+        {
+            var ps = runs.Select(r => r.Profiles.First(p => p.Id == id)).ToList();
+            sb.Append($"| {ps[0].Name} | {Fmt(ps.Average(p => p.QuitPct))}% | {Fmt(ps.Average(p => p.InactivePct))}% | {Fmt(ps.Average(p => p.ReturnedPct))}% |\n");
+        }
+        var quitDays = runs.SelectMany(r => r.QuitDays).Select(d => (double)d).ToList();
+        var quitLevels = runs.SelectMany(r => r.QuitLevels).Select(d => (double)d).ToList();
+        if (quitDays.Count > 0)
+            sb.Append($"\nDesistências: dia mediano {Fmt(Percentile(quitDays, 0.5))}, nível mediano {Fmt(Percentile(quitLevels, 0.5))}.");
+        long rated2 = runs.Sum(r => r.RatedSessions);
+        if (rated2 > 0)
+            sb.Append($" Sessões estendidas por estarem indo bem: {Pct(runs.Sum(r => r.SessionsExtended), rated2)}; encerradas por frustração: {Pct(runs.Sum(r => r.RageQuits), rated2)}.");
+        sb.Append("\n");
+        var qr = new SortedDictionary<string, long>(StringComparer.Ordinal);
+        foreach (var r in runs) foreach (var kv in r.QuitReasons) qr[kv.Key] = qr.GetValueOrDefault(kv.Key) + kv.Value;
+        if (qr.Count > 0)
+        {
+            long allQ = Math.Max(1, qr.Values.Sum());
+            sb.Append("\nMotivo principal das desistências (o que mais incomodava; \"long_inactivity/\" = sumiu por muito tempo):\n\n| Motivo | Desistências |\n|---|---:|\n");
+            foreach (var kv in qr.OrderByDescending(k => k.Value).ThenBy(k => k.Key, StringComparer.Ordinal))
+                sb.Append($"| {kv.Key} | {Pct(kv.Value, allQ)} |\n");
+        }
+
         // ---- Humor e memoria (D-038) ----
         sb.Append("\n## Humor e memória (média das seeds, no fim)\n\n");
         sb.Append("Satisfação, frustração, novidade e engajamento em permille (0–1000); progresso em permille do XP de referência do nível.\n\n");
@@ -301,6 +327,8 @@ public static class ValidationReport
         var v = values.Where(x => !double.IsNaN(x)).ToList();
         return v.Count == 0 ? double.NaN : v.Average();
     }
+
+    private static double Percentile(List<double> v, double q) => ValidationCollector.Percentile(v, q);
 
     private static string Fmt(double v) => double.IsNaN(v) ? "—" : v.ToString(Math.Abs(v) >= 100 ? "N0" : "N1", PtBr);
     private static string Num(double v) => double.IsNaN(v) ? "" : v.ToString("0.###", Inv);

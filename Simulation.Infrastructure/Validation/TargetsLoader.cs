@@ -55,11 +55,17 @@ public static class TargetMetrics
     public const string QuestXpShare = "quest_xp_share";
     /// <summary>Quests concluidas por personagem (media).</summary>
     public const string QuestsPerCharacter = "quests_per_character";
+    /// <summary>% dos cadastrados que estao desistentes no fim (D-039).</summary>
+    public const string QuitShare = "quit_share";
+    /// <summary>% dos cadastrados inativos no fim (D-039).</summary>
+    public const string InactiveShare = "inactive_share";
+    /// <summary>% de quem ficou inativo ou desistiu e voltou ao menos uma vez (D-039).</summary>
+    public const string ReturnShare = "return_share";
 
     public static readonly string[] All =
     {
         HoursToLevel, ReachedLevel, SessionsPerWeek, HoursPerWeek, ActivityShare, DauRatio, WeekendLift, PeakOnlineRatio,
-        QuestXpShare, QuestsPerCharacter,
+        QuestXpShare, QuestsPerCharacter, QuitShare, InactiveShare, ReturnShare,
     };
 
     /// <summary>Pseudo-tipos aceitos em activity_share alem dos tipos de atividade.</summary>

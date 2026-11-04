@@ -67,7 +67,7 @@
     {
       "id": "dau_dia_util", "name": "Jogadores ativos em dia útil / cadastrados", "metric": "dau_ratio", "dayKind": "weekday",
       "min": 30, "max": 55, "unit": "%",
-      "rationale": "Sem abandono ainda, todos os cadastrados continuam na base; com abandono (fim do M2) essa razão deve cair."
+      "rationale": "Com abandono (D-039), desistentes saem da base; inativos continuam nela e puxam a razão para baixo."
     },
     {
       "id": "fim_de_semana", "name": "Ativos no fim de semana ÷ ativos em dia útil", "metric": "weekend_lift",
@@ -108,6 +108,21 @@
       "id": "tempo_deslocamento", "name": "Tempo andando ou esperando", "metric": "activity_share",
       "types": ["travel", "idle"], "min": 5, "max": 20, "unit": "%",
       "rationale": "Caminhar faz parte do mundo, mas acima de 20% da sessão vira perda de tempo."
+    },
+    {
+      "id": "desistentes_fim", "name": "Desistentes no fim / cadastrados", "metric": "quit_share",
+      "min": 8, "max": 30, "unit": "%",
+      "rationale": "Hipótese do Claude (D-039): em 90 dias parte da base desiste, sobretudo quem esgota o conteúdo ou não acha o que gosta. Sem mortes, economia e social, as causas ainda são poucas; a faixa sobe quando esses sistemas existirem."
+    },
+    {
+      "id": "inativos_fim", "name": "Inativos no fim / cadastrados", "metric": "inactive_share",
+      "min": 2, "max": 15, "unit": "%",
+      "rationale": "Hipótese do Claude (D-039): parte dos irregulares fica mais de 14 dias sem jogar; a maioria volta ou desiste."
+    },
+    {
+      "id": "retorno", "name": "Quem saiu e voltou (inativos e desistentes)", "metric": "return_share",
+      "min": 20, "max": 70, "unit": "%",
+      "rationale": "Hipótese do Claude (D-039): inativos voltam pela rotina; desistentes, pela saudade (atualizações e convites no M6/M7)."
     }
   ]
 }

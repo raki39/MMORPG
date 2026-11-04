@@ -146,7 +146,7 @@ public sealed class SimulationEngine
     {
         var w = World;
         long closedDay = ev.Payload;
-        int potential = 0, registered = 0, online = 0;
+        int potential = 0, registered = 0, online = 0, inactive = 0, quit = 0;
         foreach (var p in w.Persons)
         {
             switch (p.State)
@@ -154,8 +154,9 @@ public sealed class SimulationEngine
                 case LifecycleState.PotentialInterested: potential++; break;
                 case LifecycleState.Online: online++; registered++; break;
                 case LifecycleState.Registered:
-                case LifecycleState.Offline:
-                case LifecycleState.Inactive: registered++; break;
+                case LifecycleState.Offline: registered++; break;
+                case LifecycleState.Inactive: registered++; inactive++; break;
+                case LifecycleState.Quit: quit++; break;
             }
         }
         var date = w.Clock.Calendar.ToDateTime(w.Clock.Calendar.StartOfDay(closedDay)).Date;
@@ -180,6 +181,11 @@ public sealed class SimulationEngine
             ActivitiesChosen = w.Today.ActivitiesChosen,
             LevelUps = w.Today.LevelUps,
             PlayMinutes = w.Today.PlayMinutes,
+            Inactive = inactive,
+            Quit = quit,
+            Quits = w.Today.Quits,
+            Returns = w.Today.Returns,
+            BecameInactive = w.Today.BecameInactive,
         });
         w.Today.Reset(w.OnlineCount);
         // Quem cruza a meia-noite conectado conta como ativo no novo dia.

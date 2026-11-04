@@ -11,7 +11,7 @@ namespace Simulation.Core.World;
 /// </summary>
 public static class StateHasher
 {
-    public const int FormatVersion = 8;
+    public const int FormatVersion = 9;
 
     public static string Compute(WorldState w)
     {
@@ -47,7 +47,7 @@ public static class StateHasher
             h.Int(c.RemainingWaypoints.Count);
             foreach (var wp in c.RemainingWaypoints) { h.Int(wp.Pos.X); h.Int(wp.Pos.Y); h.Str(wp.EntersZone); }
             h.Long(c.SessionStartTick); h.Long(c.ActivityStartTick); h.Long(c.ActivityEndTick); h.Long(c.SessionEndTick);
-            h.Bool(c.LogoutPending);
+            h.Bool(c.LogoutPending); h.Bool(c.SessionExtended);
             h.Int(c.KnownRegions.Count);
             foreach (var r in c.KnownRegions) h.Str(r);
             h.Int(c.DecisionCount); h.Str(c.LastActivityKey); h.Int(c.RepeatCount);
@@ -119,6 +119,7 @@ public static class StateHasher
         h.Int(d.CommandsApplied); h.Int(d.CommandsRejected); h.Int(d.EventsEmitted);
         h.Int(d.Registrations); h.Int(d.SessionsStarted); h.Int(d.ActivePlayers); h.Int(d.PeakOnline);
         h.Int(d.ActivitiesChosen); h.Int(d.LevelUps); h.Long(d.PlayMinutes);
+        h.Int(d.Quits); h.Int(d.Returns); h.Int(d.BecameInactive);
         h.Int(w.History.Count);
 
         return h.Finish();
@@ -128,6 +129,7 @@ public static class StateHasher
     {
         h.Int(p.Id); h.Str(p.Name); h.Str(p.ProfileId); h.ULong(p.AppearanceSeed);
         h.Int((int)p.State); h.Int(p.AccountId); h.Int(p.CharacterId); h.Long(p.LastPlayedDay);
+        h.Long(p.QuitDay); h.Int(p.TimesQuit); h.Int(p.TimesReturned); h.Int(p.TimesInactive);
         var t = p.Traits;
         h.Int(t.Pve); h.Int(t.Pvp); h.Int(t.Trade); h.Int(t.Exploration); h.Int(t.Socializing);
         h.Int(t.Sociability); h.Int(t.Aggressiveness); h.Int(t.Patience); h.Int(t.Loyalty); h.Int(t.RiskAversion);

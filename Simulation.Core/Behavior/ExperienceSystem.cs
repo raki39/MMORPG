@@ -115,7 +115,8 @@ public sealed class ExperienceSystem
         int minutes = (int)((now - ch.SessionStartTick) / SimTime.TicksPerMinute);
         if (minutes <= 0) return mood.LastSessionScore;
 
-        mood.Novelty = Math.Max(0, mood.Novelty - minutes * m.NoveltyDecayPerHour / 60);
+        // Sem nada novo, a novidade segue caindo abaixo de zero: saturacao (o jogo cansa sem atualizacoes).
+        mood.Novelty = Math.Max(m.NoveltyMin, mood.Novelty - minutes * m.NoveltyDecayPerHour / 60);
         var parts = new SortedDictionary<string, int>(StringComparer.Ordinal);
         foreach (var kv in L.Sums) parts[kv.Key] = (int)(kv.Value / Math.Max(1, L.Minutes));
         parts[Progress] = ProgressTerm(p, ch, minutes) * ProgressCare(p.Traits, m) / 1000;
@@ -195,9 +196,12 @@ public sealed class ExperienceSystem
         var m = M;
         var mood = p.Mood;
         mood.Engagement = Math.Clamp((mood.Satisfaction * m.EngagementSatisfaction + (1000 - mood.Frustration) * m.EngagementCalm
-            + mood.Novelty * m.EngagementNovelty) / Math.Max(1, m.EngagementSatisfaction + m.EngagementCalm + m.EngagementNovelty), 0, 1000);
+            + (mood.Novelty + 1000) / 2 * m.EngagementNovelty) / Math.Max(1, m.EngagementSatisfaction + m.EngagementCalm + m.EngagementNovelty), 0, 1000);
+        // Intencao de continuar: parte da satisfacao; a frustracao empurra para fora; lealdade e
+        // investimento (nivel) seguram quem esta insatisfeito.
         int investment = ch == null ? 0 : Math.Min(m.InvestmentCap, ch.Level * m.InvestmentPerLevel);
-        mood.ReturnIntention = Math.Clamp(mood.Engagement + (p.Traits.Loyalty - 500) * m.LoyaltyWeight / 1000 + investment, 0, 1000);
+        mood.ReturnIntention = Math.Clamp(mood.Satisfaction - mood.Frustration * m.FrustrationInIntention / 1000
+            + (p.Traits.Loyalty - 500) * m.LoyaltyWeight / 1000 + investment, 0, 1000);
     }
 
     /// <summary>Meia-noite: frustracao, motivos, impressoes e memorias perdem forca.</summary>

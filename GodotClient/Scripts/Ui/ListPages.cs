@@ -94,6 +94,8 @@ public partial class PlayersPage : ListPage
         Fact("Cadastrados", PtBr.Int(snap.Registered), UiTokens.Success, "Contas criadas no MMORPG");
         Fact("Conectados", PtBr.Int(snap.Online), UiTokens.Info, "Sessões abertas agora");
         Fact("Sem conta", PtBr.Int(snap.PersonsTotal - snap.Registered), UiTokens.Warning, "Interessados que ainda não criaram conta");
+        Fact("Inativos", PtBr.Int(snap.Inactive), UiTokens.Warning, "Inativos\n~Mais de 14 dias sem jogar. Voltam com chance menor, conforme a intenção de continuar; inativos por muito tempo desistem.");
+        Fact("Desistiram", PtBr.Int(snap.Quit), UiTokens.Danger, "Desistentes\n~Deixaram o jogo pelo que mais incomodava (veja a ficha). Podem voltar pela saudade; atualizações e convites chegam no M6 e no M7.");
         Fact("Nível médio", chars.Count == 0 ? "—" : PtBr.Decimal(chars.Average(c => c.Level), 1));
         Fact("Nível máximo", chars.Count == 0 ? "—" : chars.Max(c => c.Level).ToString());
         Fact("Favoritos", ctx.Favorites.Count.ToString(), UiTokens.Accent);
@@ -110,7 +112,7 @@ public partial class PlayersPage : ListPage
                 Tooltip = r => $"{Pers(r.Id)}\n~{PlayerModal.PersonalityOf(ctx.Persons[r.Id - 1].Traits).Text}" },
             new Column<(int Id, CharacterView V)> { Title = "Classe", Width = 90, Text = r => Cls(r.V.ClassId), SortKey = r => r.V.ClassId },
             new Column<(int Id, CharacterView V)> { Title = "Nível", Width = 54, Right = true, Numeric = true, Text = r => r.V.Level.ToString(), SortKey = r => r.V.Level * 1_000_000L + r.V.Experience },
-            new Column<(int Id, CharacterView V)> { Title = "Situação", Width = 250, Text = r => StatusText.Of(r.V, ctx.Content), SortKey = r => (int)r.V.Status, Color = r => r.V.Status == CharacterStatus.Offline ? UiTokens.TextDisabled : UiTokens.TextPrimary },
+            new Column<(int Id, CharacterView V)> { Title = "Situação", Width = 250, Text = r => StatusText.Of(r.V, ctx.Content), SortKey = r => (int)r.V.Status, Color = r => r.V.State == LifecycleState.Quit ? UiTokens.Danger : r.V.State == LifecycleState.Inactive ? UiTokens.Warning : r.V.Status == CharacterStatus.Offline ? UiTokens.TextDisabled : UiTokens.TextPrimary },
             new Column<(int Id, CharacterView V)> { Title = "Zona", Width = 150, Text = r => ctx.ZoneName(r.V.RegionId), SortKey = r => ctx.ZoneName(r.V.RegionId), Color = _ => UiTokens.TextSecondary },
             new Column<(int Id, CharacterView V)> { Title = "Zonas", Width = 54, Right = true, Numeric = true, Text = r => r.V.KnownRegions.ToString(), SortKey = r => r.V.KnownRegions, Tooltip = _ => "Zonas conhecidas" },
             new Column<(int Id, CharacterView V)> { Title = "Missões", Width = 62, Right = true, Numeric = true, Text = r => r.V.CompletedQuests.Sum(c => c.Times).ToString(), SortKey = r => r.V.CompletedQuests.Sum(c => c.Times), Tooltip = _ => "Missões entregues" },
@@ -121,6 +123,8 @@ public partial class PlayersPage : ListPage
         AddTab("Todos", () => Body(_ => true));
         AddTab($"Conectados · {snap.Online}", () => Body(v => v.Status != CharacterStatus.Offline));
         AddTab($"Favoritos · {ctx.Favorites.Count}", () => Body(v => ctx.Favorites.Contains(v.PersonId)));
+        AddTab($"Inativos · {snap.Inactive}", () => Body(v => v.State == LifecycleState.Inactive));
+        AddTab($"Desistiram · {snap.Quit}", () => Body(v => v.State == LifecycleState.Quit));
     }
 
     private Control Body(Func<CharacterView, bool> filter)
