@@ -68,28 +68,25 @@ public partial class SidePanel : PanelContainer
         }
         _scroll = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, SizeFlagsVertical = SizeFlags.ExpandFill };
         var m = new MarginContainer { SizeFlagsVertical = SizeFlags.ExpandFill };
-        foreach (var (k, v) in new[] { ("margin_left", 10), ("margin_right", 8), ("margin_top", 10), ("margin_bottom", 10) }) m.AddThemeConstantOverride(k, v);
+        foreach (var (k, v) in new[] { ("margin_left", 10), ("margin_right", 3), ("margin_top", 10), ("margin_bottom", 10) }) m.AddThemeConstantOverride(k, v);
         m.AddChild(_scroll);
         col.AddChild(m);
 
         _zoneTable = new DataTable<RegionDefinition>(new[]
         {
             new Column<RegionDefinition> { Title = "Zona", Text = z => z.Name, SortKey = z => z.Name, Tooltip = z => $"{z.Name}\nFunção|{PtBr.Function(z.Function)}\nÁreas|{z.Areas.Count}\nSaídas|{z.Connections.Count}\n~Clique para abrir o dossiê da zona." },
-            new Column<RegionDefinition> { Title = "Jog.", Width = 38, Right = true, Numeric = true, Text = z => _map.PeopleInZone(z.Id).ToString(), SortKey = z => _map.PeopleInZone(z.Id), Color = z => _map.PeopleInZone(z.Id) > 0 ? UiTokens.Info : UiTokens.TextDisabled },
-            new Column<RegionDefinition> { Title = "Lot.", Width = 40, Right = true, Numeric = true, Text = z => $"{_map.PeopleInZone(z.Id) * 100 / Math.Max(1, z.Capacity)}%", SortKey = z => _map.PeopleInZone(z.Id) / (float)Math.Max(1, z.Capacity), Tooltip = z => $"Lotação\nJogadores|{_map.PeopleInZone(z.Id)}\nCapacidade|{z.Capacity}" },
-            new Column<RegionDefinition> { Title = "Perigo", Width = 46, Right = true, Numeric = true, Text = z => ((int)(WorldMapView.DangerOf(z) * 100)).ToString(), SortKey = z => WorldMapView.DangerOf(z), Color = z => WorldMapView.Ramp(WorldMapView.DangerOf(z)), Tooltip = z => $"Índice de perigo\nCombate|{PtBr.Pvp(z.Pvp)}\nMorte|{PtBr.Death(z.DeathRule)}\n~Combina risco das atividades, PvP e regra de morte." },
-            new Column<RegionDefinition> { Title = "Nív.", Width = 44, Right = true, Numeric = true, Text = z => z.IsCity ? "—" : $"{z.LevelMin}-{z.LevelMax}", SortKey = z => z.LevelMin },
-            new Column<RegionDefinition> { Title = "Morte", Width = 56, Text = z => z.DeathRule == DeathRules.FullLoot ? "FULL" : z.DeathRule == DeathRules.Partial ? "PARCIAL" : "—", SortKey = z => z.DeathRule, Color = z => z.DeathRule == DeathRules.FullLoot ? UiTokens.Danger : z.DeathRule == DeathRules.Partial ? UiTokens.Warning : UiTokens.TextDisabled },
-        }, sortColumn: 1) { OnClick = z => _ctx.OpenZone(z.Id) };
+            new Column<RegionDefinition> { Title = "Jog.", Width = 52, Right = true, Numeric = true, Text = z => _map.PeopleInZone(z.Id).ToString(), SortKey = z => _map.PeopleInZone(z.Id), Color = z => _map.PeopleInZone(z.Id) > 0 ? UiTokens.Info : UiTokens.TextDisabled },
+            new Column<RegionDefinition> { Title = "Perigo", Width = 62, Right = true, Numeric = true, Text = z => ((int)(WorldMapView.DangerOf(z) * 100)).ToString(), SortKey = z => WorldMapView.DangerOf(z), Color = z => WorldMapView.Ramp(WorldMapView.DangerOf(z)), Tooltip = z => $"Índice de perigo\nCombate|{PtBr.Pvp(z.Pvp)}\nMorte|{PtBr.Death(z.DeathRule)}\n~Combina risco das atividades, PvP e regra de morte." },
+            new Column<RegionDefinition> { Title = "Nível", Width = 62, Right = true, Numeric = true, Text = z => z.IsCity ? "—" : $"{z.LevelMin}-{z.LevelMax}", SortKey = z => z.LevelMin },
+        }, sortColumn: 1) { OnClick = z => _ctx.OpenZone(z.Id), Gap = 10 };
         _zoneTable.OnSortChanged = () => Refresh(false);
 
         _playerTable = new DataTable<(int Id, CharacterView V)>(new[]
         {
             new Column<(int Id, CharacterView V)> { Title = "Jogador", Text = r => (_ctx.Favorites.Contains(r.Id) ? "★ " : "") + r.V.Name, SortKey = r => r.V.Name, Color = r => UiTokens.ProfileColor(_ctx.Persons[r.Id - 1].ProfileId).Lightened(0.25f), Tooltip = r => $"{r.V.Name}\nPessoa|{_ctx.Persons[r.Id - 1].Name}\nPerfil|{ProfileName(r.Id)}\n~Clique para abrir o dossiê." },
-            new Column<(int Id, CharacterView V)> { Title = "Classe", Width = 64, Text = r => ClassName(r.V.ClassId), SortKey = r => r.V.ClassId, Color = _ => UiTokens.TextSecondary },
-            new Column<(int Id, CharacterView V)> { Title = "Nv", Width = 26, Right = true, Numeric = true, Text = r => r.V.Level.ToString(), SortKey = r => r.V.Level, Color = _ => UiTokens.Info },
-            new Column<(int Id, CharacterView V)> { Title = "Fazendo", Width = 150, Text = r => StatusText.Of(r.V, _ctx.Content), SortKey = r => r.V.ActivityId, Color = _ => UiTokens.TextSecondary, Tooltip = r => $"{StatusText.Of(r.V, _ctx.Content)}\nZona|{_ctx.ZoneName(r.V.RegionId)}" },
-        }, sortColumn: 2) { OnClick = r => _ctx.OpenPerson(r.Id) };
+            new Column<(int Id, CharacterView V)> { Title = "Nv", Width = 40, Right = true, Numeric = true, Text = r => r.V.Level.ToString(), SortKey = r => r.V.Level, Color = _ => UiTokens.Info },
+            new Column<(int Id, CharacterView V)> { Title = "Fazendo", Width = 128, Text = r => StatusText.Of(r.V, _ctx.Content), SortKey = r => r.V.ActivityId, Color = _ => UiTokens.TextSecondary, Tooltip = r => $"{StatusText.Of(r.V, _ctx.Content)}\nZona|{_ctx.ZoneName(r.V.RegionId)}" },
+        }, sortColumn: 1) { OnClick = r => _ctx.OpenPerson(r.Id), Gap = 10 };
         _playerTable.OnSortChanged = () => Refresh(false);
 
         SyncTabs();
@@ -97,6 +94,22 @@ public partial class SidePanel : PanelContainer
 
     private string ProfileName(int id) => _ctx.Content.Profiles.TryGetValue(_ctx.Persons[id - 1].ProfileId, out var p) ? p.Name : "";
     private string ClassName(string id) => _ctx.Content.Classes.TryGetValue(id, out var c) ? c.Name : id;
+
+    private static Label Hint(string text)
+    {
+        var l = ThemeFactory.Text(text, UiTokens.FontCaption, UiTokens.TextDisabled);
+        l.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        l.CustomMinimumSize = new Vector2(100, 0);
+        return l;
+    }
+
+    /// <summary>Abre uma aba (capturas e atalhos).</summary>
+    public void ShowTab(int tab)
+    {
+        _tab = Math.Clamp(tab, 0, _tabs.Count - 1);
+        SyncTabs();
+        Refresh(resetScroll: true);
+    }
 
     private void SyncTabs()
     {
@@ -111,7 +124,10 @@ public partial class SidePanel : PanelContainer
         foreach (var c in _scroll.GetChildren()) { _scroll.RemoveChild(c); c.QueueFree(); }
         Control content = _tab switch { 1 => BuildZones(), 2 => BuildPlayers(), 3 => BuildEvents(), _ => BuildOverview() };
         content.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-        _scroll.AddChild(content);
+        var wrap = new MarginContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        wrap.AddThemeConstantOverride("margin_right", 12);
+        wrap.AddChild(content);
+        _scroll.AddChild(wrap);
         if (keepSearchFocus && _searchBox != null) { _searchBox.GrabFocus(); _searchBox.CaretColumn = caret; }
         if (!resetScroll) CallDeferred(nameof(RestoreScroll), scroll);
     }
@@ -177,7 +193,7 @@ public partial class SidePanel : PanelContainer
     // ---------------- Zonas ----------------
 
     private Control BuildZones() => ModalFrame.Column(8,
-        ThemeFactory.Text("Clique numa linha para abrir o dossiê. Clique no título da coluna para ordenar.", UiTokens.FontCaption, UiTokens.TextDisabled),
+        Hint("Clique numa linha para ver o resumo. Clique no título da coluna para ordenar."),
         _zoneTable.Build(_ctx.Content.Regions.Values));
 
     // ---------------- Jogadores ----------------

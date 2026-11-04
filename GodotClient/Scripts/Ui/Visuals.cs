@@ -172,7 +172,7 @@ public partial class InfoGlyph : Control
         MouseEntered += () => { _hover = true; QueueRedraw(); };
         MouseExited += () => { _hover = false; QueueRedraw(); };
     }
-    public override GodotObject _MakeCustomTooltip(string forText) => RichTip.Build(forText);
+    public override GodotObject _MakeCustomTooltip(string forText) => RichTip.Make(forText);
 
     public override void _Draw()
     {
@@ -370,7 +370,7 @@ public partial class SemiGauge : Control
     public Color Color { get; set; } = UiTokens.Accent;
 
     public SemiGauge() { MouseFilter = MouseFilterEnum.Stop; CustomMinimumSize = new Vector2(150, 78); }
-    public override GodotObject _MakeCustomTooltip(string forText) => RichTip.Build(forText);
+    public override GodotObject _MakeCustomTooltip(string forText) => RichTip.Make(forText);
 
     public override void _Draw()
     {
@@ -418,7 +418,7 @@ public partial class Pips : Control
 /// <summary>Indicador com o mesmo fundo dos cards e tooltip estruturado.</summary>
 public partial class StatTile : CardPanel
 {
-    public override GodotObject _MakeCustomTooltip(string forText) => RichTip.Build(forText);
+    public override GodotObject _MakeCustomTooltip(string forText) => RichTip.Make(forText);
 }
 
 /// <summary>Emblema quadrado com icone (missoes, paginas de lista): degrade, borda e faixa no topo.</summary>

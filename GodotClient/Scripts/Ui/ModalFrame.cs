@@ -98,7 +98,7 @@ public partial class ModalFrame : Control
         _scroll = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, SizeFlagsVertical = SizeFlags.ExpandFill };
         var body = new MarginContainer { SizeFlagsVertical = SizeFlags.ExpandFill };
         body.AddThemeConstantOverride("margin_left", 16);
-        body.AddThemeConstantOverride("margin_right", 16);
+        body.AddThemeConstantOverride("margin_right", 4);
         body.AddThemeConstantOverride("margin_top", 16);
         body.AddThemeConstantOverride("margin_bottom", 16);
         body.AddChild(_scroll);
@@ -177,7 +177,11 @@ public partial class ModalFrame : Control
         foreach (var c in _scroll.GetChildren()) { _scroll.RemoveChild(c); c.QueueFree(); }
         var content = _tabs[_current].Build();
         content.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-        _scroll.AddChild(content);
+        // Folga entre o conteudo e a barra de rolagem.
+        var wrap = new MarginContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        wrap.AddThemeConstantOverride("margin_right", 14);
+        wrap.AddChild(content);
+        _scroll.AddChild(wrap);
         if (!resetScroll) CallDeferred(nameof(RestoreScroll), scroll);
     }
 

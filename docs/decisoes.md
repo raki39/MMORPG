@@ -723,3 +723,20 @@ Proposta do criador, analisada com o Claude.
 **Desempenho:**
 - `tools/perf.ps1`: p95 entre 2,4 e 4,2 ms em todas as vistas.
 - 112 testes aprovados.
+
+**Ajustes de UX (revisão do criador, 04/11/2026):**
+- **Dica vazia:** o Godot 4.7 pede a dica personalizada mesmo sem texto, e as linhas clicáveis desenhavam uma moldura vazia ao passar o mouse. Agora uma dica sem texto devolve um controle invisível (`RichTip.Make`) e nada aparece.
+- **Menu lateral:** subopções menos recuadas, com reticências e dica com o nome completo; a seção ativa abre os subitens sozinha.
+- **Rolagem:** a barra fica no canto direito, com folga de 14 px entre ela e o conteúdo, em todas as páginas e no painel do mapa.
+- **Tabelas:**
+  - vão de 18 px entre colunas (o nível não encosta mais na situação);
+  - toda coluna ordenável mostra o indicador (seta dourada na coluna ativa, setas discretas nas outras), sempre à direita do título;
+  - no painel estreito só aparece a seta da ativa, e saíram as colunas que não cabiam.
+- **Filtros nas listas:**
+  - Jogadores: perfil, classe, personalidade, zona;
+  - Zonas: função, combate;
+  - Missões: quadro, situação;
+  - botão "Limpar" e contagem de resultados.
+- **Jogadores:** coluna Personalidade; perfil no cabeçalho da ficha (saiu do subtítulo).
+- **Ficha do jogador:** Missões na 2ª linha e Progresso e objetivos na 3ª, para os cards da 2ª linha não esticarem.
+- **Missões:** lista "Quem concluiu" na Visão geral (10 mais recentes) e aba "Concluíram" com a tabela completa (perfil, classe, nível atual, entregas, última entrega, situação). O snapshot passa a levar o dia da última entrega de cada missão por personagem.

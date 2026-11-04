@@ -251,6 +251,11 @@ public partial class Main : Node
         }
         if (_args.TryGetValue("side", out var sd) && sd == "off" && _sideOpen) ToggleSidePanel();
         if (_args.TryGetValue("nav", out var nv) && nv == "off") _nav?.SetExpanded(false);
+        if (_args.TryGetValue("side-tab", out var stb) && int.TryParse(stb, out var sti)) { if (!_sideOpen) ToggleSidePanel(); _side?.ShowTab(sti); }
+        if (_args.TryGetValue("warp", out var wp) && wp.Split('x') is { Length: 2 } wpp
+            && float.TryParse(wpp[0], NumberStyles.Float, CultureInfo.InvariantCulture, out var wx)
+            && float.TryParse(wpp[1], NumberStyles.Float, CultureInfo.InvariantCulture, out var wy))
+            GetTree().CreateTimer(0.6).Timeout += () => Input.WarpMouse(new Vector2(wx, wy));
         if (_args.TryGetValue("peek-zone", out var pz) && _ctx.Content.Regions.ContainsKey(pz)) PeekZone(pz, center);
         if (_args.ContainsKey("open-cluster"))
         {

@@ -76,6 +76,7 @@ public partial class NavSidebar : PanelContainer
         {
             if (_active == value) return;
             _active = value;
+            _open = value;
             Rebuild();
         }
     }
@@ -216,12 +217,15 @@ public partial class NavSidebar : PanelContainer
         b.CustomMinimumSize = new Vector2(0, 32);
         var r = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
         r.SetAnchorsPreset(LayoutPreset.FullRect);
-        r.OffsetLeft = 44;
-        r.OffsetRight = -10;
+        r.OffsetLeft = 26;
+        r.OffsetRight = -8;
         r.AddThemeConstantOverride("separation", 10);
         r.AddChild(new Icon(icon, 14, UiTokens.TextDisabled));
         var l = ThemeFactory.Text(label, UiTokens.FontBody, UiTokens.TextSecondary);
         l.VerticalAlignment = VerticalAlignment.Center;
+        l.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        l.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+        b.TooltipText = label;
         l.MouseFilter = MouseFilterEnum.Ignore;
         r.AddChild(l);
         b.AddChild(r);

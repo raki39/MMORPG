@@ -81,7 +81,7 @@ public partial class PlayerModal : ModalFrame
             sub.AddChild(ThemeFactory.Text($"{cls?.Name} · {RolePt(cls?.Role)}", UiTokens.FontBody, UiTokens.TextLabel, UiFonts.Medium));
             sub.AddChild(ThemeFactory.Text("·", UiTokens.FontBody, UiTokens.TextDisabled));
         }
-        sub.AddChild(ThemeFactory.Text($"{_person.Name} · {ProfileName} · Pessoa #{_person.Id}", UiTokens.FontBody, UiTokens.TextSecondary));
+        sub.AddChild(ThemeFactory.Text($"{_person.Name} · Pessoa #{_person.Id}", UiTokens.FontBody, UiTokens.TextSecondary));
         Header.AddChild(sub);
 
         if (v != null)
@@ -97,6 +97,7 @@ public partial class PlayerModal : ModalFrame
             Fact("Status", online ? "Conectado" : "Desconectado", online ? UiTokens.Success : UiTokens.TextSecondary, "", "activity");
             Fact("Zona", _ctx.ZoneName(v.RegionId), UiTokens.TextSecondary, "", "map-pin");
             Fact("Conhece", $"{v.KnownRegions}/{_ctx.Content.Regions.Count}", UiTokens.TextSecondary, "Zonas conhecidas\n~Só zonas conhecidas entram nas decisões. Viajar e explorar revelam mais.", "compass");
+            Fact("Perfil", ProfileName, color, $"Perfil {ProfileName}\n~{ProfileHint(_person.ProfileId)} Tendência de origem; a pessoa não é um clone do perfil.", "user");
             var (picon, plabel, ptext) = MainPersonality();
             Fact("Personalidade", plabel, UiTokens.AccentSoft, $"{plabel}\n~{ptext}", picon);
             if (online) Fact("Sessão", $"até {_ctx.Clock(v.SessionEndTick)}", UiTokens.TextSecondary, "Fim previsto da sessão atual", "clock");
@@ -253,13 +254,13 @@ public partial class PlayerModal : ModalFrame
             (Card("Atributos", Column(16, AttributeGrid(), Highlights()), info: AttrInfo), 6),
             (Card("Inventário · M5", InventoryBody(v), info: "Equipamento e bens\n~Inventário, equipamento, carga e ouro passam a valer com a economia (M5). Os espaços seguem as categorias de item do conteúdo."), 3));
         var row2 = Grid(12,
-            (Card("Progresso e objetivos", GoalsBody(v, st), info: "Nível, personalidade e o que a pessoa está buscando\n~Objetivos pessoais próprios chegam com o D-026; hoje as metas são o próximo nível e as missões em andamento."), 3),
+            (Card("Missões", QuestSummary(v), info: "Missões do personagem\n~Detalhes na aba Missões."), 3),
             (Card("Evolução", EvolutionBody(v, detail, st), info: "Horas jogadas ao atingir cada nível\n~Curva real deste personagem (tempo conectado acumulado)."), 3),
             (Card("Horários de jogo", HoursBody(), info: "Quando costuma jogar\n~Minutos conectados por hora do dia nas sessões registradas. Dourado: janela da rotina (início preferido + sessão típica). Útil para planejar eventos e manutenção."), 3),
             (Card("Uso do tempo", TimeUseBody(detail), info: "Divisão do tempo conectado\n~Por tipo de atividade desde o cadastro; o resto é deslocamento."), 3));
         var row3 = Grid(12,
             (Card("Zonas frequentadas", ZonesBody(), info: "Onde escolhe jogar\n~Escolhas de atividade por zona registradas desde que o jogo foi aberto. Clique para abrir a zona."), 3),
-            (Card("Missões", QuestSummary(v), info: "Missões do personagem\n~Detalhes na aba Missões."), 3),
+            (Card("Progresso e objetivos", GoalsBody(v, st), info: "Nível, personalidade e o que a pessoa está buscando\n~Objetivos pessoais próprios chegam com o D-026; hoje as metas são o próximo nível e as missões em andamento."), 3),
             (Card("Atividades recentes", RecentBody(), info: "Últimos acontecimentos\n~Clique numa linha para abrir a área, a zona ou a missão. Histórico completo na aba Histórico."), 6));
         return Column(12, row1, row2, row3);
     }
@@ -284,9 +285,11 @@ public partial class PlayerModal : ModalFrame
     // ----- Personalidade principal (cabecalho e progresso) -----
 
     /// <summary>Traco de personalidade que mais se afasta do meio (alto ou baixo).</summary>
-    private (string Icon, string Label, string Text) MainPersonality()
+    private (string Icon, string Label, string Text) MainPersonality() => PersonalityOf(_person.Traits);
+
+    /// <summary>Personalidade principal: o traco que mais se afasta do meio (alto ou baixo).</summary>
+    public static (string Icon, string Label, string Text) PersonalityOf(Simulation.Core.Population.PersonTraits t)
     {
-        var t = _person.Traits;
         var options = new (int V, string HiIcon, string Hi, string HiText, string LoIcon, string Lo, string LoText)[]
         {
             (UiTokens.To20(t.Sociability), "users", "Sociável", "Cria vínculos com facilidade e gosta de companhia.", "user", "Reservado", "Prefere jogar sozinho e em lugares vazios."),
@@ -398,7 +401,7 @@ public partial class PlayerModal : ModalFrame
         // O que as missoes ja entregues teriam dado (definido, aplicado no M5).
         long gold = 0;
         var items = new Dictionary<string, int>(StringComparer.Ordinal);
-        foreach (var (qid, times) in v.CompletedQuests)
+        foreach (var (qid, times, _) in v.CompletedQuests)
         {
             if (!_ctx.Content.Quests.TryGetValue(qid, out var q)) continue;
             gold += q.Rewards.GoldCopper * times;
@@ -1098,7 +1101,7 @@ public partial class PlayerModal : ModalFrame
         var done = new HFlowContainer();
         done.AddThemeConstantOverride("h_separation", 6);
         done.AddThemeConstantOverride("v_separation", 6);
-        foreach (var (id, times) in v.CompletedQuests.OrderBy(c => c.QuestId, StringComparer.Ordinal))
+        foreach (var (id, times, _) in v.CompletedQuests.OrderBy(c => c.QuestId, StringComparer.Ordinal))
         {
             if (!_ctx.Content.Quests.TryGetValue(id, out var q)) continue;
             string qid = id;

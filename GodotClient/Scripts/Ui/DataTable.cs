@@ -23,6 +23,8 @@ public sealed class Column<T>
 public sealed class DataTable<T>
 {
     private readonly List<Column<T>> _columns;
+    /// <summary>Espaco entre colunas (numeros a direita nao encostam no texto vizinho).</summary>
+    public int Gap { get; set; } = 18;
     private int _sortColumn;
     private bool _sortDesc;
 
@@ -44,16 +46,29 @@ public sealed class DataTable<T>
         var head = new PanelContainer();
         head.AddThemeStyleboxOverride("panel", new StyleBoxFlat { BgColor = new Color(0, 0, 0, 0), BorderColor = UiTokens.BorderStrong, BorderWidthBottom = 1, ContentMarginLeft = 6, ContentMarginRight = 6, ContentMarginTop = 2, ContentMarginBottom = 4 });
         var hrow = new HBoxContainer();
-        hrow.AddThemeConstantOverride("separation", 6);
+        hrow.AddThemeConstantOverride("separation", Gap);
         for (int i = 0; i < _columns.Count; i++)
         {
             var c = _columns[i];
             int index = i;
-            string arrow = i == _sortColumn ? (_sortDesc ? " ▼" : " ▲") : "";
-            var b = new Button { Text = c.Title + arrow, Flat = true, FocusMode = Control.FocusModeEnum.None, Alignment = c.Right ? HorizontalAlignment.Right : HorizontalAlignment.Left, ClipText = true };
+            bool sortable = c.SortKey != null;
+            var b = new TipButton { Text = c.Title, TooltipText = sortable ? $"Ordenar por {c.Title.ToLowerInvariant()}\n~Clique de novo para inverter." : "", Flat = true, FocusMode = Control.FocusModeEnum.None, Alignment = c.Right ? HorizontalAlignment.Right : HorizontalAlignment.Left, ClipText = true };
             b.AddThemeFontOverride("font", UiFonts.Medium);
             b.AddThemeFontSizeOverride("font_size", 11);
             b.AddThemeColorOverride("font_color", i == _sortColumn ? UiTokens.AccentSoft : UiTokens.TextSecondary);
+            bool showIcon = sortable && (i == _sortColumn || Gap >= 14);
+            if (showIcon)
+            {
+                // Indicador: seta da ordem atual (dourada) ou setas discretas nas outras colunas.
+                b.Icon = Icons.Get(i == _sortColumn ? (_sortDesc ? "chevron-down" : "chevron-up") : "chevrons-up-down", 12);
+                b.IconAlignment = HorizontalAlignment.Right;
+                b.AddThemeConstantOverride("h_separation", 4);
+                var ic = i == _sortColumn ? UiTokens.Accent : UiTokens.TextDisabled;
+                b.AddThemeColorOverride("icon_normal_color", ic);
+                b.AddThemeColorOverride("icon_hover_color", UiTokens.TextPrimary);
+                b.AddThemeColorOverride("icon_pressed_color", ic);
+            }
+            if (sortable) b.MouseDefaultCursorShape = Control.CursorShape.PointingHand;
             b.AddThemeColorOverride("font_hover_color", UiTokens.TextPrimary);
             foreach (var s in new[] { "normal", "hover", "pressed", "hover_pressed" }) b.AddThemeStyleboxOverride(s, new StyleBoxEmpty());
             Size(b, c);
@@ -90,7 +105,7 @@ public sealed class DataTable<T>
             var cells = new HBoxContainer { MouseFilter = Control.MouseFilterEnum.Pass };
             cells.SetAnchorsPreset(Control.LayoutPreset.FullRect);
             cells.OffsetLeft = 6; cells.OffsetRight = -6;
-            cells.AddThemeConstantOverride("separation", 6);
+            cells.AddThemeConstantOverride("separation", Gap);
             foreach (var c in _columns)
             {
                 var cell = new TipLabel

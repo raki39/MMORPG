@@ -44,7 +44,7 @@ public static class ThemeFactory
         t.SetStylebox("grabber", "VScrollBar", Box(UiTokens.BorderStrong, 0, radius: 2));
         t.SetStylebox("grabber_highlight", "VScrollBar", Box(UiTokens.TextSecondary, 0, radius: 2));
         t.SetStylebox("grabber_pressed", "VScrollBar", Box(UiTokens.Accent, 0, radius: 2));
-        t.SetStylebox("scroll", "VScrollBar", new StyleBoxFlat { BgColor = new Color(0, 0, 0, 0), ContentMarginLeft = 2, ContentMarginRight = 2 });
+        t.SetStylebox("scroll", "VScrollBar", new StyleBoxFlat { BgColor = new Color(1, 1, 1, 0.02f), ContentMarginLeft = 3, ContentMarginRight = 3, CornerRadiusTopLeft = 4, CornerRadiusTopRight = 4, CornerRadiusBottomLeft = 4, CornerRadiusBottomRight = 4 });
 
         t.SetStylebox("separator", "HSeparator", new StyleBoxLine { Color = UiTokens.Border, Thickness = 1 });
         t.SetConstant("separation", "HSeparator", 10);
@@ -168,6 +168,13 @@ public static class ThemeFactory
 /// </summary>
 public static class RichTip
 {
+    /// <summary>
+    /// Dica para _MakeCustomTooltip. O Godot 4.7 pede a dica mesmo com o texto vazio; um
+    /// controle invisivel faz ele nao mostrar nada (antes aparecia uma moldura vazia).
+    /// </summary>
+    public static Control Make(string text) =>
+        string.IsNullOrWhiteSpace(text) ? new Control { Visible = false } : Build(text);
+
     public static Control Build(string text)
     {
         var panel = new PanelContainer();
@@ -209,18 +216,18 @@ public static class RichTip
 /// <summary>Painel com tooltip estruturado (RichTip).</summary>
 public partial class TipPanel : PanelContainer
 {
-    public override GodotObject _MakeCustomTooltip(string forText) => RichTip.Build(forText);
+    public override GodotObject _MakeCustomTooltip(string forText) => RichTip.Make(forText);
 }
 
 /// <summary>Botao com tooltip estruturado (RichTip).</summary>
 public partial class TipButton : Button
 {
-    public override GodotObject _MakeCustomTooltip(string forText) => RichTip.Build(forText);
+    public override GodotObject _MakeCustomTooltip(string forText) => RichTip.Make(forText);
 }
 
 /// <summary>Rotulo com tooltip estruturado (RichTip).</summary>
 public partial class TipLabel : Label
 {
     public TipLabel() => MouseFilter = MouseFilterEnum.Stop;
-    public override GodotObject _MakeCustomTooltip(string forText) => RichTip.Build(forText);
+    public override GodotObject _MakeCustomTooltip(string forText) => RichTip.Make(forText);
 }

@@ -32,6 +32,8 @@ public partial class QuestModal : ModalFrame
         AddTab($"Objetivos · {_quest.Steps.Count + 1}", BuildSteps);
         AddTab("Requisitos e recompensas", BuildRewards);
         AddTab("Dados", BuildData, live: true);
+        AddTab($"Concluíram · {Completers().Count}", () => Column(12, Card("Quem já entregou esta missão", CompletersTable(int.MaxValue),
+            info: "Personagens que entregaram a missão\n~Clique para abrir a ficha. Ordene pelas colunas.")), live: true);
     }
 
     public static Color CategoryColor(string category) => category switch
@@ -95,7 +97,10 @@ public partial class QuestModal : ModalFrame
         var row2 = Grid(12,
             (Card($"Fazendo agora · {Stats?.Active ?? 0}", BuildDoingTable(), info: "Personagens com a missão em andamento\n~Clique para abrir a ficha."), 9),
             (Card("Em que etapa estão", StageBody(), info: "Distribuição de quem está fazendo\n~Quantos personagens estão em cada etapa agora."), 3));
-        return Column(12, row1, row2);
+        var done = Completers();
+        var row3 = Grid(12,
+            (Card($"Quem concluiu · {done.Count}", CompletersTable(10), info: "Personagens que já entregaram\n~Os 10 mais recentes; a lista completa está na aba Concluíram."), 12));
+        return Column(12, row1, row2, row3);
     }
 
     private Control StepsTimeline()
@@ -346,6 +351,41 @@ public partial class QuestModal : ModalFrame
             Stat(last, "última entrega", UiTokens.TextSecondary));
 
         return Column(12, stats, stats2, Card($"Fazendo agora · {Stats?.Active ?? 0}", BuildDoingTable(), CategoryColor(_quest.Category)));
+    }
+
+    private DataTable<(int Id, CharacterView V, int Times, long LastDay)>? _doneTable;
+
+    /// <summary>Quem ja entregou a missao (vezes e dia da ultima entrega).</summary>
+    private List<(int Id, CharacterView V, int Times, long LastDay)> Completers()
+    {
+        var snap = _ctx.Snapshot();
+        var list = new List<(int Id, CharacterView V, int Times, long LastDay)>();
+        for (int id = 1; id < snap.ByPerson.Length; id++)
+            if (snap.ByPerson[id] is { } v)
+                foreach (var (qid, times, lastDay) in v.CompletedQuests)
+                    if (qid == _quest.Id) list.Add((id, v, times, lastDay));
+        return list;
+    }
+
+    private Control CompletersTable(int max)
+    {
+        string Day(long day) => day < 0 ? "—" : PtBr.ShortDate(_ctx.Calendar.ToDateTime(day * SimTime.TicksPerDay));
+        string Prof(int id) => _ctx.Content.Profiles.TryGetValue(_ctx.Persons[id - 1].ProfileId, out var p) ? p.Name : "";
+        string Cls(string id) => _ctx.Content.Classes.TryGetValue(id, out var c) ? c.Name : id;
+        _doneTable ??= new DataTable<(int Id, CharacterView V, int Times, long LastDay)>(new[]
+        {
+            new Column<(int Id, CharacterView V, int Times, long LastDay)> { Title = "Personagem", Text = x => x.V.Name, SortKey = x => x.V.Name },
+            new Column<(int Id, CharacterView V, int Times, long LastDay)> { Title = "Perfil", Width = 110, Text = x => Prof(x.Id), SortKey = x => Prof(x.Id), Color = x => UiTokens.ProfileColor(_ctx.Persons[x.Id - 1].ProfileId).Lightened(0.15f) },
+            new Column<(int Id, CharacterView V, int Times, long LastDay)> { Title = "Classe", Width = 100, Text = x => Cls(x.V.ClassId), SortKey = x => x.V.ClassId },
+            new Column<(int Id, CharacterView V, int Times, long LastDay)> { Title = "Nível atual", Width = 84, Right = true, Numeric = true, Text = x => x.V.Level.ToString(), SortKey = x => x.V.Level },
+            new Column<(int Id, CharacterView V, int Times, long LastDay)> { Title = "Entregas", Width = 74, Right = true, Numeric = true, Text = x => x.Times.ToString(), SortKey = x => x.Times },
+            new Column<(int Id, CharacterView V, int Times, long LastDay)> { Title = "Última entrega", Width = 120, Text = x => Day(x.LastDay), SortKey = x => x.LastDay, Color = _ => UiTokens.TextSecondary },
+            new Column<(int Id, CharacterView V, int Times, long LastDay)> { Title = "Situação agora", Width = 260, Text = x => StatusText.Of(x.V, _ctx.Content), SortKey = x => (int)x.V.Status, Color = x => x.V.Status == Simulation.Core.Population.CharacterStatus.Offline ? UiTokens.TextDisabled : UiTokens.TextLabel },
+        }, sortColumn: 5) { OnClick = x => _ctx.OpenPerson(x.Id) };
+        _doneTable.OnSortChanged = () => Rebuild(false);
+        var done = Completers();
+        if (done.Count == 0) return ThemeFactory.Text("Ninguém entregou esta missão ainda.", UiTokens.FontBody, UiTokens.TextSecondary);
+        return _doneTable.Build(done.OrderByDescending(x => x.LastDay).Take(max));
     }
 
     private Control BuildDoingTable()

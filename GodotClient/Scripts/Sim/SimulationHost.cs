@@ -38,7 +38,7 @@ public sealed class CharacterView
     /// <summary>Quests em andamento (copia).</summary>
     public IReadOnlyList<QuestProgressView> ActiveQuests { get; init; } = Array.Empty<QuestProgressView>();
     /// <summary>Quests ja concluidas (ID e vezes).</summary>
-    public IReadOnlyList<(string QuestId, int Times)> CompletedQuests { get; init; } = Array.Empty<(string, int)>();
+    public IReadOnlyList<(string QuestId, int Times, long LastDay)> CompletedQuests { get; init; } = Array.Empty<(string, int, long)>();
     public long XpFromQuests { get; init; }
     public long XpFromActivities { get; init; }
     /// <summary>Tempo conectado acumulado (ticks) no momento da publicacao.</summary>
@@ -292,8 +292,8 @@ public sealed class SimulationHost : IDisposable
                 LastDecision = c.LastDecision,
                 ActiveQuests = c.ActiveQuests.Count == 0 ? Array.Empty<QuestProgressView>()
                     : c.ActiveQuests.Select(a => new QuestProgressView(a.QuestId, a.StepIndex, a.StepMinutes, a.AcceptedTick)).ToArray(),
-                CompletedQuests = c.QuestHistory.Count == 0 ? Array.Empty<(string, int)>()
-                    : c.QuestHistory.Where(kv => kv.Value.Completions > 0).Select(kv => (kv.Key, kv.Value.Completions)).ToArray(),
+                CompletedQuests = c.QuestHistory.Count == 0 ? Array.Empty<(string, int, long)>()
+                    : c.QuestHistory.Where(kv => kv.Value.Completions > 0).Select(kv => (kv.Key, kv.Value.Completions, kv.Value.LastCompletedDay)).ToArray(),
                 XpFromQuests = c.XpFromQuests,
                 PlayedTicks = c.PlayedTicksAt(w.Clock.Tick),
                 XpFromActivities = c.XpFromActivities,
