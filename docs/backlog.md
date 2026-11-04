@@ -116,7 +116,11 @@ Falta para fechar o M2:
 - [x] HUD de gestão: indicadores com mini-gráfico, painel lateral (visão geral, zonas, jogadores, eventos), tabelas e tooltips estruturados (D-022)
 - [x] Dossiê do jogador estilo FM (atributos 1–20) e dossiê de zona com tabela e gráfico
 - [x] Sistema visual v2 dos dossiês (D-033): tela cheia, voltar/avançar, Inter, cards, indicadores e gráficos analíticos; ficha do jogador com uso do tempo, ritmo de evolução e minutos por dia
-- [ ] Revisão do criador do sistema visual v2 e segunda passada nas fichas de zona, área e quest (mais gráficos e dados)
+- [x] Telas do jogo (D-034): menu, páginas com tempo pausado, cartão-resumo no mapa, listas e Configurações (tela cheia, vídeo)
+- [x] Kit visual v3 (D-034, docs/ui-kit.md): texto nítido, grade de 12 colunas, cards com textura, ícones Lucide, gráficos novos; Visão geral do jogador, da zona e da missão
+- [ ] Revisão do criador do kit v3 em 1920×1080
+- [ ] Kit v3 na página de área, nas abas secundárias (Missões, Histórico, Rotina, Jogadores e Regras da zona) e no painel lateral do mapa
+- [ ] Escala da interface nas Configurações (telas menores que 1600×900)
 - [ ] Abas de Inventário e Banco (M5) e últimos abates (M3) com dados reais
 - [ ] Ícones de áreas mais detalhados no mapa
 - [x] Navegação com histórico (voltar e avançar) entre dossiês (D-033)

@@ -628,3 +628,51 @@ Proposta do criador, analisada com o Claude.
   - tempo das saídas pela estrada real.
 
 **Desempenho** (`tools/perf.ps1`): todas as vistas com p95 entre 3,7 e 5,0 ms, dentro do orçamento de 6,9 ms.
+
+## D-034 — Telas do jogo, pausa fora do mapa e kit visual v3
+**Data:** 04/11/2026 · **Estado:** aceita (revisão do criador pendente)
+
+**Pedido do criador** (comparando com uma tela de referência de jogo de gestão):
+- O mapa é a única tela em que o tempo passa.
+- No mapa, o clique abre um resumo pequeno; "Ver informações" abre a página completa, num menu de telas.
+- Interface nítida, com detalhe e vida: fontes do tamanho certo, gráficos caprichados, alinhamento e espaçamento consistentes.
+- Configurações de vídeo e tela cheia.
+- Textura sutil nos cards.
+- Bordas dos cards alinhadas entre linhas.
+
+**Decisões:**
+- **Telas:**
+  - menu no topo (Mapa, Jogadores, Zonas, Missões) e engrenagem de Configurações;
+  - fichas viram páginas;
+  - ao sair do mapa o tempo pausa e volta na mesma velocidade (opção "Pausar fora do mapa");
+  - o mapa e seus painéis ficam ocultos e sem processamento nas páginas;
+  - histórico voltar/avançar global (Alt+←/→, botões laterais do mouse);
+  - atalhos M, J, Z e Q.
+- **Cartão-resumo no mapa** (jogador, zona e área): dados ao vivo e "Ver informações". O painel lateral e as bolhas também abrem o cartão.
+- **Páginas de lista:** Jogadores (filtros, busca, ordenação, até 300 linhas), Zonas e Missões (por categoria).
+- **Configurações:** modo de tela (F11 / Alt+Enter), tamanho da janela, VSync, limite de FPS, MSAA 2D, texto nítido/suave, FPS na barra, pausa fora do mapa, velocidade inicial, aviso de campanha e atalhos. Ficam salvas em `user://settings.cfg`, fora do estado da simulação.
+- **Kit visual v3** (`docs/ui-kit.md`):
+  - escala de tipos de 11 a 28 px, rótulos claros em peso médio;
+  - texto preso ao pixel com hinting leve e suavização LCD (comparação ampliada de quatro modos);
+  - cards com degradê, textura gerada por código, brilho e hover;
+  - grade de 12 colunas (`SpanRow`) para as bordas coincidirem entre linhas;
+  - ícones Lucide (ISC) rasterizados no tamanho exato;
+  - gráficos novos: linha com pontos e pílula de valor, colunas com topo arredondado, rosca, anéis, notas de 1 a 5 e meio-medidor;
+  - linhas clicáveis com hover.
+- **Ficha do jogador, Visão geral:**
+  - situação atual com os fatores da decisão;
+  - atributos em quatro grupos com barras e traços marcantes com ícones;
+  - relatório do analista com notas de 1 a 5 (engajamento contra a rotina, ritmo de XP/h contra a mediana do servidor, exploração, missões; a conta fica no tooltip);
+  - forma dos últimos 14 dias contra a rotina e as últimas sessões;
+  - evolução, uso do tempo e classificação no servidor;
+  - zonas frequentadas, missões e atividades recentes clicáveis.
+  - Combate, Inventário e Banco ficam em abas com o marco.
+- **Zona, missão e listas:** Visão geral da zona (lotação, perigo, atividades, áreas, regras, saídas, movimento, níveis e quem está aqui); Visão geral da missão (linha do tempo das etapas, requisitos e recompensas, funil de desempenho, distribuição por etapa).
+- **Dados de apoio (só cliente, não mudam a simulação):**
+  - diário de sessões por pessoa a partir dos eventos;
+  - tempo conectado por personagem no snapshot.
+- **O que não é mostrado:** o humor da pessoa existe no Core, mas nenhum sistema o altera ainda, então não aparece como dado (D-026).
+
+**Desempenho:**
+- `tools/perf.ps1`: todas as vistas do mapa com p95 entre 2,4 e 5,0 ms, dentro do orçamento.
+- Página do jogador: cerca de 1.100 FPS, p95 de 1,1 ms.

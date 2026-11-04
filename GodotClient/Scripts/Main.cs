@@ -103,6 +103,8 @@ public partial class Main : Node
     private bool OnMap => _modal == null || !IsInstanceValid(_modal);
     private readonly Dictionary<int, List<SimEvent>> _history = new();
     private readonly Dictionary<int, int> _characterToPerson = new();
+    private readonly Dictionary<int, List<SessionLog>> _sessions = new();
+    private readonly Dictionary<int, long> _registeredAt = new();
     private readonly MetricsHistory _metrics = new();
     private string _startNote = "";
     private PanelContainer? _emptyBanner;
@@ -155,6 +157,8 @@ public partial class Main : Node
             Snapshot = () => _host.Snapshot,
             Metrics = _metrics,
             PersonHistory = id => _history.TryGetValue(id, out var l) ? l : (IReadOnlyList<SimEvent>)Array.Empty<SimEvent>(),
+            PersonSessions = id => _sessions.TryGetValue(id, out var l) ? l : (IReadOnlyList<SessionLog>)Array.Empty<SessionLog>(),
+            RegisteredAt = id => _registeredAt.TryGetValue(id, out var t) ? t : -1,
             FocusPerson = (id, follow) => { _map.SelectPerson(id); _map.FocusPerson(id, follow); },
             FocusZone = id => { _map.SelectRegion(id); _map.FocusRegion(id); },
             OpenPerson = id => { if (OnMap) PeekPerson(id); else OpenPerson(id); },
@@ -257,6 +261,7 @@ public partial class Main : Node
             if (best != null) OpenCluster(best.Key.Split('/')[0] + "#", GetViewport().GetVisibleRect().Size / 2f);
         }
         if (_modal != null && _args.TryGetValue("tab", out var tab) && int.TryParse(tab, out int ti)) _modal.SelectTab(ti);
+        if (_modal != null && _args.TryGetValue("scroll", out var sc) && int.TryParse(sc, out int sv)) _modal.ScrollTo(sv);
     }
 
     private string Arg(string key, string fallback) => _args.TryGetValue(key, out var v) ? v : fallback;
@@ -339,6 +344,7 @@ public partial class Main : Node
         if (_mapControls != null) _mapControls.Visible = visible;
         if (_emptyBanner != null && !visible) _emptyBanner.Visible = false;
         _speedSeg.Visible = visible;
+        _speedLabel.Visible = visible;
         _returnButton.Visible = !visible;
     }
 
@@ -460,7 +466,18 @@ public partial class Main : Node
             if (pid == 0) continue;
             if (!_history.TryGetValue(pid, out var list)) _history[pid] = list = new List<SimEvent>();
             list.Insert(0, e);
-            if (list.Count > 120) list.RemoveAt(list.Count - 1);
+            if (list.Count > 300) list.RemoveAt(list.Count - 1);
+            // Diario de sessoes por pessoa (graficos de forma e engajamento).
+            if (e.Type == "session_started")
+            {
+                if (!_sessions.TryGetValue(pid, out var sl)) _sessions[pid] = sl = new List<SessionLog>();
+                int planned = int.TryParse((e.Detail ?? "").Split(' ')[0], out var pm) ? pm : 0;
+                sl.Add(new SessionLog(e.Tick, -1, planned));
+                if (sl.Count > 90) sl.RemoveAt(0);
+            }
+            else if (e.Type == "session_ended" && _sessions.TryGetValue(pid, out var se) && se.Count > 0 && se[^1].End < 0)
+                se[^1] = se[^1] with { End = e.Tick };
+            else if (e.Type == "person_registered") _registeredAt[pid] = e.Tick;
         }
     }
 
@@ -532,12 +549,12 @@ public partial class Main : Node
         var h = new HBoxContainer();
         h.AddThemeConstantOverride("separation", 8);
         var col = new VBoxContainer { Alignment = BoxContainer.AlignmentMode.Center };
-        col.AddThemeConstantOverride("separation", -3);
-        col.AddChild(ThemeFactory.Text(label.ToUpperInvariant(), 10, UiTokens.TextSecondary, UiFonts.CondensedSemiBold));
+        col.AddThemeConstantOverride("separation", -1);
+        col.AddChild(ThemeFactory.Text(label, UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Medium));
         var valRow = new HBoxContainer();
         valRow.AddThemeConstantOverride("separation", 5);
         var value = ThemeFactory.Text("0", 16, UiTokens.TextPrimary, UiFonts.Numbers);
-        var delta = ThemeFactory.Text("", 10, UiTokens.TextSecondary, UiFonts.Numbers);
+        var delta = ThemeFactory.Text("", UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Numbers);
         delta.VerticalAlignment = VerticalAlignment.Bottom;
         valRow.AddChild(value);
         valRow.AddChild(delta);
@@ -601,15 +618,15 @@ public partial class Main : Node
         // Menu principal: o mapa e a unica tela em que o tempo passa.
         var menu = new HBoxContainer();
         menu.AddThemeConstantOverride("separation", 0);
-        foreach (var (kind, name, tip) in new[]
+        foreach (var (kind, name, tip, ico) in new[]
         {
-            ("map", "Mapa", "Mapa do mundo ao vivo (M)\n~Única tela em que o tempo passa."),
-            ("players", "Jogadores", "Todos os personagens (J)\n~O tempo pausa fora do mapa."),
-            ("zones", "Zonas", "Zonas e áreas do mundo (Z)\n~O tempo pausa fora do mapa."),
-            ("quests", "Missões", "Catálogo de missões (Q)\n~O tempo pausa fora do mapa."),
+            ("map", "Mapa", "Mapa do mundo ao vivo (M)\n~Única tela em que o tempo passa.", "map"),
+            ("players", "Jogadores", "Todos os personagens (J)\n~O tempo pausa fora do mapa.", "users"),
+            ("zones", "Zonas", "Zonas e áreas do mundo (Z)\n~O tempo pausa fora do mapa.", "castle"),
+            ("quests", "Missões", "Catálogo de missões (Q)\n~O tempo pausa fora do mapa.", "scroll-text"),
         })
         {
-            var b = MenuButton(name, tip);
+            var b = MenuButton(name, tip, ico);
             string k = kind;
             b.Pressed += () => OpenSection(k);
             _menu.Add((kind, b));
@@ -653,8 +670,14 @@ public partial class Main : Node
         }
         _speedSeg = seg;
         row.AddChild(seg);
-        _returnButton = ModalFrame.Action("▶  Voltar ao mapa", "Voltar ao mapa (Esc ou M)\n~O tempo volta a correr na velocidade de antes.", () => ShowMap(), primary: true);
+        _returnButton = ModalFrame.Action("Voltar ao mapa", "Voltar ao mapa (Esc ou M)\n~O tempo volta a correr na velocidade de antes.", () => ShowMap(), primary: true);
         _returnButton.Visible = false;
+        _returnButton.Icon = Icons.Get("play", 14);
+        _returnButton.CustomMinimumSize = new Vector2(168, 34);
+        _returnButton.AddThemeFontSizeOverride("font_size", 13);
+        _returnButton.AddThemeColorOverride("icon_normal_color", UiTokens.Background);
+        _returnButton.AddThemeColorOverride("icon_hover_color", UiTokens.Background);
+        _returnButton.AddThemeConstantOverride("h_separation", 8);
         _returnButton.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
         row.AddChild(_returnButton);
 
@@ -686,11 +709,16 @@ public partial class Main : Node
         }
     }
 
-    private static Button MenuButton(string text, string tip)
+    private static Button MenuButton(string text, string tip, string icon)
     {
-        var b = new TipButton { Text = text, TooltipText = tip, ToggleMode = true, FocusMode = Control.FocusModeEnum.None, CustomMinimumSize = new Vector2(0, UiTokens.TopBarHeight - 2) };
+        var b = new TipButton { Text = text, TooltipText = tip, ToggleMode = true, FocusMode = Control.FocusModeEnum.None, CustomMinimumSize = new Vector2(0, UiTokens.TopBarHeight - 2), Icon = Icons.Get(icon, 16) };
+        b.AddThemeConstantOverride("h_separation", 8);
+        b.AddThemeColorOverride("icon_normal_color", UiTokens.TextSecondary);
+        b.AddThemeColorOverride("icon_hover_color", UiTokens.TextPrimary);
+        b.AddThemeColorOverride("icon_pressed_color", UiTokens.Accent);
+        b.AddThemeColorOverride("icon_hover_pressed_color", UiTokens.Accent);
         b.AddThemeFontOverride("font", UiFonts.Medium);
-        b.AddThemeFontSizeOverride("font_size", 13);
+        b.AddThemeFontSizeOverride("font_size", 14);
         StyleBoxFlat S(bool on, bool hover) => new()
         {
             BgColor = hover ? new Color(1, 1, 1, 0.03f) : new Color(0, 0, 0, 0), BorderColor = on ? UiTokens.Accent : new Color(0, 0, 0, 0), BorderWidthBottom = 2,
@@ -700,10 +728,10 @@ public partial class Main : Node
         b.AddThemeStyleboxOverride("hover", S(false, true));
         b.AddThemeStyleboxOverride("pressed", S(true, false));
         b.AddThemeStyleboxOverride("hover_pressed", S(true, true));
-        b.AddThemeColorOverride("font_color", UiTokens.TextSecondary);
+        b.AddThemeColorOverride("font_color", UiTokens.TextLabel);
         b.AddThemeColorOverride("font_hover_color", UiTokens.TextPrimary);
-        b.AddThemeColorOverride("font_pressed_color", UiTokens.TextPrimary);
-        b.AddThemeColorOverride("font_hover_pressed_color", UiTokens.TextPrimary);
+        b.AddThemeColorOverride("font_pressed_color", UiTokens.Accent);
+        b.AddThemeColorOverride("font_hover_pressed_color", UiTokens.AccentSoft);
         return b;
     }
 
@@ -936,7 +964,7 @@ public partial class Main : Node
             UpdateServerChip(snap.ServerOpen);
         }
         _modalTimer += delta;
-        if (_modalTimer >= 1.0)
+        if (_modalTimer >= 1.0 || _frames == 8)
         {
             _modalTimer = 0;
             if (_modal != null && IsInstanceValid(_modal)) _modal.RefreshLive();

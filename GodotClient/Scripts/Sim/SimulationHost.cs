@@ -41,6 +41,8 @@ public sealed class CharacterView
     public IReadOnlyList<(string QuestId, int Times)> CompletedQuests { get; init; } = Array.Empty<(string, int)>();
     public long XpFromQuests { get; init; }
     public long XpFromActivities { get; init; }
+    /// <summary>Tempo conectado acumulado (ticks) no momento da publicacao.</summary>
+    public long PlayedTicks { get; init; }
 
     /// <summary>Posicao no tick informado (mesma regra do Core: interpolacao do trecho).</summary>
     public (float X, float Y) PositionAt(long tick)
@@ -293,6 +295,7 @@ public sealed class SimulationHost : IDisposable
                 CompletedQuests = c.QuestHistory.Count == 0 ? Array.Empty<(string, int)>()
                     : c.QuestHistory.Where(kv => kv.Value.Completions > 0).Select(kv => (kv.Key, kv.Value.Completions)).ToArray(),
                 XpFromQuests = c.XpFromQuests,
+                PlayedTicks = c.PlayedTicksAt(w.Clock.Tick),
                 XpFromActivities = c.XpFromActivities,
             };
         }

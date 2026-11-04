@@ -13,12 +13,13 @@ public abstract partial class ListPage : ModalFrame
     protected readonly ClientContext Ctx;
     private string _search = "";
 
-    protected ListPage(ClientContext ctx, string title, string subtitle) : base(UiTokens.Accent)
+    protected ListPage(ClientContext ctx, string title, string subtitle, string icon = "list") : base(UiTokens.Accent)
     {
         Ctx = ctx;
+        Art.AddChild(new EmblemBox(icon, UiTokens.Accent) { CustomMinimumSize = new Vector2(72, 72) });
         var col = new VBoxContainer();
         col.AddThemeConstantOverride("separation", 2);
-        col.AddChild(ThemeFactory.Text(title, 24, UiTokens.TextPrimary, UiFonts.Title));
+        col.AddChild(ThemeFactory.Text(title, 28, UiTokens.TextPrimary, UiFonts.SemiBold));
         col.AddChild(ThemeFactory.Text(subtitle, UiTokens.FontBody, UiTokens.TextSecondary));
         Header.AddChild(col);
         Breadcrumb = title;
@@ -54,7 +55,7 @@ public partial class PlayersPage : ListPage
     private readonly DataTable<(int Id, CharacterView V)> _table;
     protected override string Title => "Personagens";
 
-    public PlayersPage(ClientContext ctx) : base(ctx, "Jogadores", "Todos os personagens do servidor · clique para abrir a ficha")
+    public PlayersPage(ClientContext ctx) : base(ctx, "Jogadores", "Todos os personagens do servidor · clique para abrir a ficha", "users")
     {
         var snap = ctx.Snapshot();
         var chars = snap.ByPerson.Where(v => v != null).Select(v => v!).ToList();
@@ -109,7 +110,7 @@ public partial class ZonesPage : ListPage
     private readonly DataTable<RegionDefinition> _table;
     protected override string Title => "Zonas do mundo";
 
-    public ZonesPage(ClientContext ctx, WorldMapView map) : base(ctx, "Zonas", $"{ctx.Content.World.Name} · clique para abrir a ficha da zona")
+    public ZonesPage(ClientContext ctx, WorldMapView map) : base(ctx, "Zonas", $"{ctx.Content.World.Name} · clique para abrir a ficha da zona", "castle")
     {
         _map = map;
         var zones = ctx.Content.Regions.Values.ToList();
@@ -144,7 +145,7 @@ public partial class QuestsPage : ListPage
     private readonly DataTable<QuestDefinition> _table;
     protected override string Title => "Catálogo de missões";
 
-    public QuestsPage(ClientContext ctx) : base(ctx, "Missões", "Catálogo por quadro de missões · clique para abrir a ficha")
+    public QuestsPage(ClientContext ctx) : base(ctx, "Missões", "Catálogo por quadro de missões · clique para abrir a ficha", "scroll-text")
     {
         var stats = ctx.Snapshot().QuestStats;
         var quests = ctx.Content.Quests.Values.ToList();

@@ -33,110 +33,151 @@ public sealed class ChartSeries
 }
 
 /// <summary>
-/// Grafico de linhas com eixo Y, grade, rotulos de tempo, legenda e leitura ao passar o
-/// mouse (linha vertical + valores no ponto). Dados vem de amostras reais.
+/// Grafico de linhas (kit visual, D-034): grade fina continua, rotulos de 11 px, linha de 2 px
+/// com pontos, area em degrade suave, valor do ultimo ponto em pilula e leitura ao passar o
+/// mouse (linha guia, ponto destacado e caixa com os valores). Dados vem de amostras reais.
 /// </summary>
 public partial class LineChart : Control
 {
     public IReadOnlyList<ChartSeries> Series { get; set; } = Array.Empty<ChartSeries>();
     public IReadOnlyList<string> XLabels { get; set; } = Array.Empty<string>();
     public string EmptyText { get; set; } = "Coletando dados…";
-    private float _hoverX = -1;
+    /// <summary>Sufixo das leituras (ex.: " h").</summary>
+    public string Unit { get; set; } = "";
+    /// <summary>Mostra um ponto em cada amostra (series curtas).</summary>
+    public bool Dots { get; set; } = true;
+    private int _hover = -1;
 
     public LineChart()
     {
         MouseFilter = MouseFilterEnum.Pass;
-        MouseExited += () => { _hoverX = -1; QueueRedraw(); };
+        MouseExited += () => { _hover = -1; QueueRedraw(); };
+    }
+
+    private int Count => Series.Count == 0 ? 0 : Series.Max(s => s.Values.Count);
+
+    private Rect2 Plot(float left)
+    {
+        float top = Series.Count > 1 ? 26 : 10, bottom = 22, right = 52;
+        return new Rect2(left, top, Mathf.Max(10, Size.X - left - right), Mathf.Max(10, Size.Y - top - bottom));
     }
 
     public override void _GuiInput(InputEvent e)
     {
-        if (e is InputEventMouseMotion m) { _hoverX = m.Position.X; QueueRedraw(); }
+        if (e is not InputEventMouseMotion m) return;
+        int n = Count;
+        if (n < 2) return;
+        var plot = Plot(_left);
+        int i = m.Position.X < plot.Position.X - 6 || m.Position.X > plot.End.X + 6 ? -1
+            : Mathf.Clamp(Mathf.RoundToInt((m.Position.X - plot.Position.X) / plot.Size.X * (n - 1)), 0, n - 1);
+        if (i != _hover) { _hover = i; QueueRedraw(); }
     }
+
+    private float _left = 34;
 
     public override void _Draw()
     {
-        // Grafico analitico: grade discreta, eixo com rotulos pequenos, area em degrade,
-        // linha fina, valor do ultimo ponto e leitura ao passar o mouse.
-        var font = UiFonts.Numbers;
-        const int fs = 9;
-        float left = 34, bottom = 18, top = 20, right = 44;
-        var plot = new Rect2(left, top, Size.X - left - right, Size.Y - top - bottom);
-        int n = Series.Count == 0 ? 0 : Series.Max(s => s.Values.Count);
+        var font = UiFonts.Regular;
+        const int fs = 11;
+        int n = Count;
         float max = 1;
         foreach (var s in Series) if (s.Values.Count > 0) max = Mathf.Max(max, s.Values.Max());
         max = NiceMax(max);
-        // Divisoes que dao rotulos redondos (5 para maximos 5/10/50..., 4 para 2/4/20/40...).
-        int div = Mathf.IsEqualApprox(max / Mathf.Pow(10, Mathf.Floor(Mathf.Log(max) / Mathf.Log(10))), 5f) || Mathf.IsEqualApprox(max / Mathf.Pow(10, Mathf.Floor(Mathf.Log(max) / Mathf.Log(10))), 1f) ? 5 : 4;
-        var grid = new Color(UiTokens.Border, 0.9f);
+        const int div = 4;
+        // Margem esquerda conforme o maior rotulo do eixo.
+        _left = Mathf.Ceil(font.GetStringSize(Compact(max), HorizontalAlignment.Left, -1, fs).X) + 14;
+        var plot = Plot(_left);
         for (int g = 0; g <= div; g++)
         {
             float y = Mathf.Floor(plot.End.Y - plot.Size.Y * g / div) + 0.5f;
-            if (g == 0) DrawLine(new Vector2(plot.Position.X, y), new Vector2(plot.End.X, y), UiTokens.BorderStrong, 1);
-            else DrawDashedLine(new Vector2(plot.Position.X, y), new Vector2(plot.End.X, y), grid, 1, 3);
-            string lbl = Compact(max * g / div);
-            DrawString(font, new Vector2(0, y + 3), lbl, HorizontalAlignment.Right, left - 8, fs, UiTokens.TextDisabled);
+            DrawLine(new Vector2(plot.Position.X, y), new Vector2(plot.End.X, y), g == 0 ? UiTokens.BorderStrong : UiTokens.Grid, 1);
+            DrawString(font, new Vector2(0, Mathf.Round(y + 4)), Compact(max * g / div), HorizontalAlignment.Right, _left - 10, fs, UiTokens.AxisText);
         }
-        // Legenda a esquerda do topo.
-        float lx = plot.Position.X;
-        foreach (var s in Series)
+        if (Series.Count > 1)
         {
-            DrawRect(new Rect2(lx, 6, 8, 2), s.Color);
-            DrawString(UiFonts.Medium, new Vector2(lx + 12, 11), s.Name, HorizontalAlignment.Left, -1, 10, UiTokens.TextSecondary);
-            lx += 22 + UiFonts.Medium.GetStringSize(s.Name, HorizontalAlignment.Left, -1, 10).X + 14;
+            float lx = plot.Position.X;
+            foreach (var s in Series)
+            {
+                DrawRect(new Rect2(lx, 8, 10, 3), s.Color);
+                DrawString(UiFonts.Medium, new Vector2(lx + 15, 14), s.Name, HorizontalAlignment.Left, -1, fs, UiTokens.TextSecondary);
+                lx += 15 + UiFonts.Medium.GetStringSize(s.Name, HorizontalAlignment.Left, -1, fs).X + 18;
+            }
         }
         if (n < 2)
         {
-            DrawString(UiFonts.Regular, new Vector2(plot.Position.X, plot.GetCenter().Y), EmptyText, HorizontalAlignment.Center, plot.Size.X, 11, UiTokens.TextDisabled);
+            DrawString(UiFonts.Regular, new Vector2(plot.Position.X, Mathf.Round(plot.GetCenter().Y)), EmptyText, HorizontalAlignment.Center, plot.Size.X, 12, UiTokens.TextDisabled);
             return;
         }
         float X(int i) => plot.Position.X + i * plot.Size.X / (n - 1);
         float Y(float v) => plot.End.Y - v / max * plot.Size.Y;
-        int step = Math.Max(1, n / 6);
-        for (int i = 0; i < XLabels.Count && i < n; i += step)
-            DrawString(font, new Vector2(X(i) - 20, Size.Y - 4), XLabels[i], HorizontalAlignment.Center, 40, fs, UiTokens.TextDisabled);
+        // Rotulos do eixo X: no maximo ~7, sempre o ultimo, sem sobrepor.
+        int step = Math.Max(1, (int)Mathf.Ceil(n / 7f));
+        float lastRight = -999;
+        for (int i = n - 1; i >= 0; i -= step)
+        {
+            if (i >= XLabels.Count) continue;
+            float w = font.GetStringSize(XLabels[i], HorizontalAlignment.Left, -1, fs).X;
+            float x = Mathf.Round(Mathf.Clamp(X(i) - w / 2, plot.Position.X - 4, Size.X - w));
+            if (lastRight > -999 && x + w > lastRight - 8) continue;
+            DrawString(font, new Vector2(x, Size.Y - 5), XLabels[i], HorizontalAlignment.Left, -1, fs, _hover == i ? UiTokens.TextPrimary : UiTokens.AxisText);
+            lastRight = x;
+        }
+        if (_hover >= 0)
+        {
+            float hx = Mathf.Floor(X(_hover)) + 0.5f;
+            DrawLine(new Vector2(hx, plot.Position.Y), new Vector2(hx, plot.End.Y), new Color(UiTokens.TextSecondary, 0.35f), 1);
+        }
         foreach (var s in Series)
         {
             if (s.Values.Count < 2) continue;
             var pts = new Vector2[s.Values.Count];
             for (int i = 0; i < s.Values.Count; i++) pts[i] = new Vector2(X(i), Y(s.Values[i]));
-            // Area em degrade (opaca junto da linha, transparente no eixo).
             var poly = new Vector2[pts.Length + 2];
             var cols = new Color[pts.Length + 2];
-            for (int i = 0; i < pts.Length; i++) { poly[i] = pts[i]; cols[i] = new Color(s.Color, 0.10f); }
+            for (int i = 0; i < pts.Length; i++) { poly[i] = pts[i]; cols[i] = new Color(s.Color, 0.13f); }
             poly[^2] = new Vector2(pts[^1].X, plot.End.Y); cols[^2] = new Color(s.Color, 0.0f);
             poly[^1] = new Vector2(pts[0].X, plot.End.Y); cols[^1] = new Color(s.Color, 0.0f);
             DrawPolygon(poly, cols);
             DrawPolyline(pts, s.Color, 2f, true);
-            DrawCircle(pts[^1], 2.5f, s.Color);
-            DrawString(font, new Vector2(pts[^1].X + 6, pts[^1].Y + 3), Compact(s.Values[^1]), HorizontalAlignment.Left, -1, 10, s.Color);
+            bool dots = Dots && pts.Length <= 32;
+            for (int i = 0; i < pts.Length; i++)
+            {
+                if (!dots && i != pts.Length - 1 && i != _hover) continue;
+                float r = i == _hover ? 4.5f : 3f;
+                DrawCircle(pts[i], r + 1.5f, UiTokens.CardBottom);
+                DrawCircle(pts[i], r, s.Color);
+            }
+            Visuals.ValuePill(this, new Vector2(pts[^1].X + 8, pts[^1].Y), Compact(s.Values[^1]) + Unit, s.Color, Size.X - 1);
         }
-        if (_hoverX >= plot.Position.X && _hoverX <= plot.End.X)
+        if (_hover >= 0)
         {
-            int i = Mathf.Clamp(Mathf.RoundToInt((_hoverX - plot.Position.X) / plot.Size.X * (n - 1)), 0, n - 1);
-            float hx = Mathf.Floor(X(i)) + 0.5f;
-            DrawLine(new Vector2(hx, plot.Position.Y), new Vector2(hx, plot.End.Y), new Color(UiTokens.TextSecondary, 0.5f), 1);
-            var lines = new List<(string, Color)> { (i < XLabels.Count ? XLabels[i] : "", UiTokens.TextPrimary) };
-            foreach (var s in Series) if (i < s.Values.Count) lines.Add(($"{s.Name}: {Compact(s.Values[i])}", s.Color));
-            float w = lines.Max(l => UiFonts.Medium.GetStringSize(l.Item1, HorizontalAlignment.Left, -1, 11).X) + 18;
-            float bx = X(i) + 10 + w > Size.X ? X(i) - w - 10 : X(i) + 10;
-            var box = new Rect2(Mathf.Round(bx), Mathf.Round(plot.Position.Y + 4), Mathf.Round(w), lines.Count * 15 + 10);
-            DrawStyleBox(ThemeFactory.Box(new Color("#0B0E12"), 0, border: UiTokens.BorderStrong, radius: 2), box);
+            var lines = new List<(string Text, Color Col)>();
+            foreach (var s in Series) if (_hover < s.Values.Count) lines.Add(($"{s.Name}: {Compact(s.Values[_hover])}{Unit}", s.Color));
+            string title = _hover < XLabels.Count ? XLabels[_hover] : "";
+            float w = Mathf.Max(UiFonts.SemiBold.GetStringSize(title, HorizontalAlignment.Left, -1, 12).X,
+                lines.Count == 0 ? 0 : lines.Max(l => UiFonts.Medium.GetStringSize(l.Text, HorizontalAlignment.Left, -1, 12).X + 14)) + 22;
+            float bx = X(_hover) + 12 + w > Size.X ? X(_hover) - w - 12 : X(_hover) + 12;
+            var box = new Rect2(Mathf.Round(bx), Mathf.Round(plot.Position.Y), Mathf.Round(w), 26 + lines.Count * 17);
+            Visuals.ReadoutBox(this, box);
+            DrawString(UiFonts.SemiBold, new Vector2(box.Position.X + 11, box.Position.Y + 18), title, HorizontalAlignment.Left, -1, 12, UiTokens.TextPrimary);
             for (int k = 0; k < lines.Count; k++)
-                DrawString(k == 0 ? UiFonts.SemiBold : UiFonts.Medium, new Vector2(box.Position.X + 9, box.Position.Y + 17 + k * 15), lines[k].Item1, HorizontalAlignment.Left, -1, 11, lines[k].Item2);
-            foreach (var s in Series) if (i < s.Values.Count) { DrawCircle(new Vector2(X(i), Y(s.Values[i])), 4, new Color("#0B0E12")); DrawCircle(new Vector2(X(i), Y(s.Values[i])), 2.5f, s.Color); }
+            {
+                float ly = box.Position.Y + 36 + k * 17;
+                DrawRect(new Rect2(box.Position.X + 11, ly - 7, 7, 7), lines[k].Col);
+                DrawString(UiFonts.Medium, new Vector2(box.Position.X + 25, ly), lines[k].Text, HorizontalAlignment.Left, -1, 12, UiTokens.TextLabel);
+            }
         }
     }
 
-    private static string Compact(float v) => v >= 10000 ? (v / 1000f).ToString("0.#", System.Globalization.CultureInfo.GetCultureInfo("pt-BR")) + " mil"
+    public static string Compact(float v) => v >= 10000 ? (v / 1000f).ToString("0.#", System.Globalization.CultureInfo.GetCultureInfo("pt-BR")) + " mil"
         : v >= 100 ? v.ToString("0", System.Globalization.CultureInfo.GetCultureInfo("pt-BR"))
         : v.ToString("0.#", System.Globalization.CultureInfo.GetCultureInfo("pt-BR"));
 
     private static float NiceMax(float v)
     {
-        if (v <= 5) return 5;
+        if (v <= 4) return 4;
         float mag = Mathf.Pow(10, Mathf.Floor(Mathf.Log(v) / Mathf.Log(10)));
-        foreach (var f in new[] { 1f, 2f, 2.5f, 5f, 10f }) if (f * mag >= v) return f * mag;
+        foreach (var f in new[] { 1f, 1.2f, 2f, 4f, 6f, 8f, 10f }) if (f * mag >= v) return f * mag;
         return 10 * mag;
     }
 }

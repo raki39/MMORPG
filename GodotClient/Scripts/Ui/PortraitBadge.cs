@@ -12,6 +12,8 @@ public partial class PortraitBadge : Control
     private readonly ulong _seed;
     private readonly Color _ring;
     private readonly string _initials;
+    /// <summary>Icone da classe (selo no canto e marca d'agua nos tamanhos grandes).</summary>
+    public string ClassIcon { get; set; } = "";
 
     public PortraitBadge(ulong seed, Color ring, string name = "")
     {
@@ -31,28 +33,40 @@ public partial class PortraitBadge : Control
     public override void _Draw()
     {
         var rect = new Rect2(Vector2.One, Size - Vector2.One * 2);
-        DrawRect(rect, new Color("#0D1117"));
-        DrawRect(rect, new Color(_ring, 0.12f));
+        float h = Mathf.Min(Size.X, Size.Y);
+        bool big = h >= 64;
+        // Fundo em degrade vertical tingido pelo perfil.
+        var top = new Color("#141922").Lerp(_ring, 0.16f);
+        var bottom = new Color("#0B0E13");
+        DrawPolygon(new[] { rect.Position, new Vector2(rect.End.X, rect.Position.Y), rect.End, new Vector2(rect.Position.X, rect.End.Y) },
+            new[] { top, top, bottom, bottom });
         // Faixa diagonal estavel pela semente (diferencia pessoas de mesmo perfil).
         float k = (_seed % 7) / 7f;
         var band = new[] { rect.Position + new Vector2(rect.Size.X * (0.15f + k * 0.5f), rect.Size.Y), rect.Position + new Vector2(rect.Size.X * (0.45f + k * 0.5f), rect.Size.Y), rect.Position + new Vector2(rect.Size.X, rect.Size.Y * (0.25f + k * 0.3f)), rect.Position + new Vector2(rect.Size.X, rect.Size.Y * (0.05f + k * 0.2f)) };
-        DrawColoredPolygon(band, new Color(_ring, 0.10f));
-        DrawRect(rect, new Color(_ring, 0.6f), false, 1f);
-        DrawRect(new Rect2(rect.Position, new Vector2(rect.Size.X, 2)), _ring);
-        float h = Mathf.Min(Size.X, Size.Y);
+        DrawColoredPolygon(band, new Color(_ring, 0.08f));
+        if (big && ClassIcon.Length > 0)
+        {
+            int ws = (int)(h * 0.62f);
+            DrawTextureRect(Icons.Get(ClassIcon, ws, 2f), new Rect2(((Size - new Vector2(ws, ws)) / 2f + new Vector2(h * 0.14f, h * 0.1f)).Round(), new Vector2(ws, ws)), false, new Color(_ring, 0.10f));
+        }
+        DrawRect(rect, new Color(_ring, 0.45f), false, 1f);
+        DrawRect(new Rect2(rect.Position, new Vector2(rect.Size.X, big ? 3 : 2)), _ring);
         if (_initials.Length > 0)
         {
-            int fs = (int)Mathf.Max(9, h * 0.38f);
+            int fs = (int)Mathf.Max(9, h * 0.36f);
             var font = UiFonts.Bold;
             var ts = font.GetStringSize(_initials, HorizontalAlignment.Left, -1, fs);
-            DrawString(font, new Vector2((Size.X - ts.X) / 2f, (Size.Y + font.GetAscent(fs) - font.GetDescent(fs)) / 2f), _initials, HorizontalAlignment.Left, -1, fs, _ring.Lightened(0.25f));
+            DrawString(font, new Vector2(Mathf.Round((Size.X - ts.X) / 2f), Mathf.Round((Size.Y + font.GetAscent(fs) - font.GetDescent(fs)) / 2f)), _initials, HorizontalAlignment.Left, -1, fs, _ring.Lightened(0.35f));
         }
-        else
+        if (big && ClassIcon.Length > 0)
         {
-            // Silhueta plana (cabeca e ombros), sem rosto.
-            var c = Size / 2f;
-            DrawCircle(c + new Vector2(0, -h * 0.12f), h * 0.16f, new Color(_ring, 0.75f));
-            DrawColoredPolygon(new[] { c + new Vector2(-h * 0.28f, h * 0.36f), c + new Vector2(-h * 0.2f, h * 0.1f), c + new Vector2(h * 0.2f, h * 0.1f), c + new Vector2(h * 0.28f, h * 0.36f) }, new Color(_ring, 0.55f));
+            // Selo da classe no canto inferior direito.
+            float bs = Mathf.Round(h * 0.28f);
+            var br = new Rect2(rect.End - new Vector2(bs, bs), new Vector2(bs, bs));
+            DrawRect(br, new Color("#0B0E13"));
+            DrawRect(br, new Color(_ring, 0.5f), false, 1f);
+            int isz = (int)(bs * 0.62f);
+            DrawTextureRect(Icons.Get(ClassIcon, isz), new Rect2((br.Position + (br.Size - new Vector2(isz, isz)) / 2f).Round(), new Vector2(isz, isz)), false, UiTokens.TextPrimary);
         }
     }
 }

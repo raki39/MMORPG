@@ -44,10 +44,11 @@ public partial class ZoneModal : ModalFrame
         var row = new HBoxContainer();
         row.AddThemeConstantOverride("separation", 18);
         var emblem = new ZoneEmblem(_zone) { CustomMinimumSize = new Vector2(52, 52), SizeFlagsVertical = SizeFlags.ShrinkCenter };
-        row.AddChild(emblem);
+        emblem.CustomMinimumSize = new Vector2(84, 84);
+        Art.AddChild(emblem);
         var col = new VBoxContainer { Alignment = BoxContainer.AlignmentMode.Center, SizeFlagsHorizontal = SizeFlags.ExpandFill };
         col.AddThemeConstantOverride("separation", 2);
-        col.AddChild(ThemeFactory.Text(_zone.Name, 24, UiTokens.TextPrimary, UiFonts.Title));
+        col.AddChild(ThemeFactory.Text(_zone.Name, 28, UiTokens.TextPrimary, UiFonts.SemiBold));
         string sub = _zone.IsCity ? $"{PtBr.Function(_zone.Function)} nível {_zone.CityLevel} · {PtBr.Biome(_zone.Biome)} · todos os níveis"
             : $"{PtBr.Function(_zone.Function)} · {PtBr.Biome(_zone.Biome)} · níveis {_zone.LevelMin}–{_zone.LevelMax}";
         col.AddChild(ThemeFactory.Text(sub, UiTokens.FontBody, UiTokens.TextSecondary));
@@ -70,62 +71,222 @@ public partial class ZoneModal : ModalFrame
         Actions.AddChild(Action("Observar em 3D", "Disponível a partir do M4", () => { }, enabled: false));
     }
 
-    // ---------------- Visao geral ----------------
-
-    private DataTable<AreaDefinition>? _areaTable;
+    // ---------------- Visao geral (kit D-034) ----------------
 
     private Control BuildOverview()
     {
-        _areaTable ??= new DataTable<AreaDefinition>(new[]
-        {
-            new Column<AreaDefinition> { Title = "Área", Text = a => a.Name, SortKey = a => a.Name, Color = a => AreaPalette.Color(a.Kind).Lightened(0.2f),
-                Tooltip = a => $"{a.Name}\nTipo|{AreaPalette.Name(a.Kind)}\nTamanho|{a.Radius * 20} m\n~{a.Description}" },
-            new Column<AreaDefinition> { Title = "Tipo", Width = 110, Text = a => AreaPalette.Name(a.Kind), SortKey = a => a.Kind, Color = _ => UiTokens.TextSecondary },
-            new Column<AreaDefinition> { Title = "Tarefas", Width = 230, Text = a => a.Activities.Count == 0 ? (AreaKinds.IsPortal(a.Kind) ? $"→ {a.LeadsTo} (em breve)" : "—") : string.Join(" · ", a.Activities.Select(x => x.Name)), Color = _ => UiTokens.TextSecondary,
-                Tooltip = a => a.Activities.Count == 0 ? "" : a.Name + "\n" + string.Join("\n", a.Activities.Select(x => $"{x.Name}|{_map.PeopleAtSpot(_zone.Id, x.Id)} agora")) },
-            new Column<AreaDefinition> { Title = "Jog.", Width = 40, Right = true, Numeric = true, Text = a => _map.PeopleInArea(_zone.Id, a.Id).Count.ToString(), SortKey = a => _map.PeopleInArea(_zone.Id, a.Id).Count,
-                Color = a => _map.PeopleInArea(_zone.Id, a.Id).Count > 0 ? UiTokens.Info : UiTokens.TextDisabled },
-        }, sortColumn: 3) { OnClick = a => { _ctx.OpenArea(_zone.Id, a.Id); } };
-        _areaTable.OnSortChanged = () => Rebuild(false);
+        var snap = _ctx.Snapshot();
+        var here = new List<Sim.CharacterView>();
+        for (int id = 1; id < snap.ByPerson.Length; id++)
+            if (snap.ByPerson[id] is { } v && v.Status != CharacterStatus.Offline && v.RegionId == _zone.Id) here.Add(v);
+        int people = _map.PeopleInZone(_zone.Id);
 
-        var left = Column(10, Card($"Áreas · {_zone.Areas.Count}", _areaTable.Build(_zone.Areas), ZoneAccent(_zone)));
-        if (_zone.Activities.Count > 0)
-        {
-            var whole = Column(4);
-            foreach (var a in _zone.Activities) whole.AddChild(TaskLine(a));
-            left.AddChild(Card("Na zona inteira (sem lugar fixo)", whole));
-        }
+        var row1 = Grid(12,
+            (Card("Agora na zona", NowBody(people), info: "Situação ao vivo\n~Lotação contra a capacidade, índice de perigo e o que as pessoas estão fazendo aqui."), 3),
+            (Card($"Áreas · {_zone.Areas.Count}", AreasBody(), info: "Áreas da zona\n~Clique numa área para abrir a página dela. O número à direita é quem está lá agora."), 6),
+            (Card("Regras e acesso", RulesBody(), info: "Regras da zona\n~Combate, morte e controle valem para a zona inteira. As saídas levam às zonas vizinhas pela estrada."), 3));
 
         var series = _ctx.Metrics.OnlineByZone.TryGetValue(_zone.Id, out var zs) ? zs.ToList() : new List<float>();
         var chart = new LineChart
         {
-            CustomMinimumSize = new Vector2(0, 160),
+            CustomMinimumSize = new Vector2(0, 190), Dots = false,
             XLabels = _ctx.Metrics.Ticks.Select(t => _ctx.Clock(t)).ToList(),
             Series = new[] { new ChartSeries { Name = "Jogadores na zona", Color = UiTokens.Info, Values = series } },
         };
-        var exits = Column(3);
+        var row2 = Grid(12,
+            (Card("Movimento · últimas 24 h", chart, info: "Jogadores na zona\n~Amostras a cada 10 minutos de jogo."), 6),
+            (Card("Níveis de quem está aqui", LevelsBody(here), info: "Distribuição de níveis\n~Verde: dentro da faixa da zona. Laranja: fora dela."), 3),
+            (Card("Quem está aqui", WhoBody(here), info: "Jogadores conectados na zona\n~Os de nível mais alto primeiro. Lista completa na aba Jogadores."), 3));
+        return Column(12, row1, row2);
+    }
+
+    private Control NowBody(int people)
+    {
+        float load = people / (float)Math.Max(1, _zone.Capacity);
+        float danger = WorldMapView.DangerOf(_zone);
+        var rings = Row(18,
+            Column(4, new RingGauge { CustomMinimumSize = new Vector2(84, 84), SizeFlagsHorizontal = SizeFlags.ShrinkCenter, Value = Mathf.Clamp(load * 4f, 0, 1), Color = WorldMapView.Ramp(Mathf.Clamp(load * 4f, 0, 1)), Center = $"{load * 100:0}%", Caption = "lotação" }),
+            Column(4, new RingGauge { CustomMinimumSize = new Vector2(84, 84), SizeFlagsHorizontal = SizeFlags.ShrinkCenter, Value = danger, Color = WorldMapView.Ramp(danger), Center = $"{danger * 100:0}", Caption = "perigo" }),
+            Column(2, ThemeFactory.Text(people.ToString(), 28, UiTokens.TextPrimary, UiFonts.Numbers), ThemeFactory.Text("jogadores agora", UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Medium),
+                ThemeFactory.Text($"capacidade {_zone.Capacity}", UiTokens.FontCaption, UiTokens.TextDisabled)));
+        foreach (var c in rings.GetChildren().OfType<Control>()) c.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        var col = Column(12, rings, Section("Fazendo agora"));
+        var acts = _zone.AllActivities().Select(a => (A: a, N: _map.PeopleAtSpot(_zone.Id, a.Id))).Where(x => x.N > 0).OrderByDescending(x => x.N).Take(5).ToList();
+        if (acts.Count == 0) col.AddChild(ThemeFactory.Text("Ninguém em atividade aqui agora.", UiTokens.FontSmall, UiTokens.TextDisabled));
+        int max = acts.Count == 0 ? 1 : acts.Max(x => x.N);
+        foreach (var (a, n) in acts)
+        {
+            var r = new HBoxContainer();
+            r.AddThemeConstantOverride("separation", 10);
+            r.AddChild(new Icon(PlayerModal.TypeIcon(a.Type), 16, ActivityPalette.Color(a.Type)));
+            var c = Column(4);
+            var top = new HBoxContainer();
+            var nm = ThemeFactory.Text(a.Name, UiTokens.FontSmall, UiTokens.TextLabel, UiFonts.Medium);
+            nm.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+            top.AddChild(nm);
+            top.AddChild(ThemeFactory.Text(n.ToString(), UiTokens.FontSmall, UiTokens.TextPrimary, UiFonts.Numbers));
+            c.AddChild(top);
+            c.AddChild(new ThinBar(n / (float)max, ActivityPalette.Color(a.Type)) { CustomMinimumSize = new Vector2(0, 3) });
+            r.AddChild(c);
+            col.AddChild(r);
+        }
+        return col;
+    }
+
+    private Control AreasBody()
+    {
+        var col = Column(2);
+        foreach (var area in _zone.Areas.OrderByDescending(a => _map.PeopleInArea(_zone.Id, a.Id).Count).ThenBy(a => a.Name, StringComparer.Ordinal))
+        {
+            string zid = _zone.Id, aid = area.Id;
+            int n = _map.PeopleInArea(_zone.Id, area.Id).Count;
+            var b = HoverRow(() => _ctx.OpenArea(zid, aid), $"{area.Name}\nTipo|{AreaPalette.Name(area.Kind)}\nAgora|{n}\nTamanho|{area.Radius * 20} m\n~{area.Description}");
+            b.CustomMinimumSize = new Vector2(0, 52);
+            var r = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
+            r.SetAnchorsPreset(LayoutPreset.FullRect);
+            r.OffsetLeft = 8; r.OffsetRight = -10;
+            r.AddThemeConstantOverride("separation", 12);
+            r.AddChild(new KindEmblem(area.Kind) { CustomMinimumSize = new Vector2(34, 34), SizeFlagsVertical = SizeFlags.ShrinkCenter, MouseFilter = MouseFilterEnum.Ignore });
+            var info = Column(1);
+            info.MouseFilter = MouseFilterEnum.Ignore;
+            info.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+            info.AddChild(ThemeFactory.Text(area.Name, UiTokens.FontBody, UiTokens.TextPrimary, UiFonts.Medium));
+            string tasks = area.Activities.Count == 0
+                ? (AreaKinds.IsPortal(area.Kind) ? $"Leva a {area.LeadsTo} (em breve)" : AreaPalette.Name(area.Kind))
+                : $"{AreaPalette.Name(area.Kind)} · " + string.Join(" · ", area.Activities.Select(a => a.Name));
+            var sub = ThemeFactory.Text(tasks, UiTokens.FontSmall, UiTokens.TextSecondary);
+            sub.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+            sub.CustomMinimumSize = new Vector2(120, 0);
+            info.AddChild(sub);
+            r.AddChild(info);
+            var count = ThemeFactory.Text(n.ToString(), 18, n > 0 ? UiTokens.TextPrimary : UiTokens.TextDisabled, UiFonts.Numbers);
+            count.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+            r.AddChild(count);
+            r.AddChild(new Icon("chevron-right", 14, UiTokens.TextDisabled));
+            b.AddChild(r);
+            col.AddChild(b);
+        }
+        if (_zone.Activities.Count > 0)
+            col.AddChild(ThemeFactory.Text("Na zona inteira: " + string.Join(" · ", _zone.Activities.Select(a => $"{a.Name} ({_map.PeopleAtSpot(_zone.Id, a.Id)})")), UiTokens.FontSmall, UiTokens.TextSecondary));
+        return col;
+    }
+
+    private Control RulesBody()
+    {
+        Control Line(string icon, string key, string value, Color color)
+        {
+            var r = new HBoxContainer();
+            r.AddThemeConstantOverride("separation", 10);
+            r.AddChild(new Icon(icon, 16, color));
+            var k = ThemeFactory.Text(key, UiTokens.FontSmall, UiTokens.TextSecondary);
+            k.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+            r.AddChild(k);
+            r.AddChild(ThemeFactory.Text(value, UiTokens.FontBody, UiTokens.TextPrimary, UiFonts.Medium));
+            return r;
+        }
+        var col = Column(9,
+            Line("swords", "Combate", PtBr.Pvp(_zone.Pvp), _zone.Pvp == PvpRules.Open ? UiTokens.Danger : UiTokens.Success),
+            Line("skull", "Morte", PtBr.Death(_zone.DeathRule), _zone.DeathRule == DeathRules.FullLoot ? UiTokens.Danger : _zone.DeathRule == DeathRules.Partial ? UiTokens.Warning : UiTokens.TextSecondary),
+            Line("flag", "Controle", PtBr.Control(_zone.Control), _zone.Control == ControlRules.Contestable ? UiTokens.Warning : UiTokens.TextSecondary),
+            Line("trending-up", "Níveis", _zone.IsCity ? "Todos" : $"{_zone.LevelMin}–{_zone.LevelMax}", UiTokens.Accent),
+            Line("users", "Capacidade", _zone.Capacity.ToString(), UiTokens.Info),
+            Line("trees", "Bioma", PtBr.Biome(_zone.Biome), UiTokens.BiomeColor(_zone.Biome).Lightened(0.3f)));
+        col.AddChild(new Control { CustomMinimumSize = new Vector2(0, 2) });
+        col.AddChild(Section("Saídas"));
         foreach (var c in _zone.Connections)
         {
             var other = _ctx.Content.Regions[c.To];
-            // Tempo real pela estrada (D-030): encruzilhada daqui -> saida -> travessia -> encruzilhada de la.
             var L = _ctx.Layout;
             int dist = L.LegLength(L.Hub(_zone.Id), L.Gate(_zone.Id, c.To)) + L.Gate(_zone.Id, c.To).DistanceTo(L.Gate(c.To, _zone.Id))
                        + L.LegLength(L.Gate(c.To, _zone.Id), L.Hub(c.To));
             int minutes = (dist + Simulation.Core.Behavior.BehaviorTuning.WalkSpeed - 1) / Simulation.Core.Behavior.BehaviorTuning.WalkSpeed;
-            var b = new TipButton { Text = $"→  {other.Name}", Alignment = HorizontalAlignment.Left, FocusMode = FocusModeEnum.None, CustomMinimumSize = new Vector2(0, 26),
-                TooltipText = $"Saída para {other.Name}\nCaminhada até o centro de lá|~{minutes} min\nDistância|{dist * 10} m pela estrada\nJogadores lá|{_map.PeopleInZone(c.To)}\nCombate|{PtBr.Pvp(other.Pvp)}\n~Clique para abrir o dossiê." };
             string target = c.To;
-            b.Pressed += () => { _ctx.OpenZone(target); };
-            exits.AddChild(Row(8, b, ThemeFactory.Text($"~{minutes} min", UiTokens.FontSmall, UiTokens.TextSecondary, UiFonts.Numbers)));
-            b.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+            var b = HoverRow(() => _ctx.OpenZone(target), $"Saída para {other.Name}\nCaminhada até o centro de lá|~{minutes} min\nDistância|{dist * 10} m pela estrada\nJogadores lá|{_map.PeopleInZone(c.To)}\nCombate|{PtBr.Pvp(other.Pvp)}\n~Clique para abrir a zona.");
+            b.CustomMinimumSize = new Vector2(0, 30);
+            var r = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
+            r.SetAnchorsPreset(LayoutPreset.FullRect);
+            r.OffsetLeft = 6; r.OffsetRight = -6;
+            r.AddThemeConstantOverride("separation", 10);
+            r.AddChild(new Icon("arrow-up-right", 14, UiTokens.AccentSoft));
+            var nm = ThemeFactory.Text(other.Name, UiTokens.FontBody, UiTokens.TextPrimary, UiFonts.Medium);
+            nm.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+            nm.VerticalAlignment = VerticalAlignment.Center;
+            r.AddChild(nm);
+            var t = ThemeFactory.Text($"~{minutes} min", UiTokens.FontSmall, UiTokens.TextSecondary, UiFonts.Numbers);
+            t.VerticalAlignment = VerticalAlignment.Center;
+            r.AddChild(t);
+            b.AddChild(r);
+            col.AddChild(b);
         }
-        exits.AddChild(ThemeFactory.Text("Zonas vizinhas sem saída declarada não se ligam.", UiTokens.FontCaption, UiTokens.TextDisabled));
-        var right = Column(10, Card("Jogadores na zona — últimas 24 h", chart, UiTokens.Info), Card("Saídas", exits));
-        right.CustomMinimumSize = new Vector2(420, 0);
-        return Row(12, left, right);
+        return col;
     }
 
-    /// <summary>Cartao clicavel de area: emblema, nome, tipo, tarefas e quem esta la.</summary>
+    private Control LevelsBody(List<Sim.CharacterView> here)
+    {
+        if (here.Count == 0) return ThemeFactory.Text("Ninguém conectado nesta zona agora.", UiTokens.FontSmall, UiTokens.TextDisabled);
+        int lo = Math.Max(1, Math.Min(here.Min(v => v.Level), _zone.IsCity ? 99 : _zone.LevelMin) - 1);
+        int hi = Math.Max(here.Max(v => v.Level), _zone.IsCity ? 0 : _zone.LevelMax) + 1;
+        hi = Math.Min(hi, _ctx.Content.Progression.LevelCap);
+        var values = Enumerable.Range(lo, hi - lo + 1).Select(l => (float)here.Count(v => v.Level == l)).ToList();
+        bool In(int l) => _zone.IsCity || (l >= _zone.LevelMin && l <= _zone.LevelMax);
+        var chart = new ColumnChart
+        {
+            CustomMinimumSize = new Vector2(0, 160), CountScale = true, ShowAverage = false, Unit = " jogadores",
+            Values = values, Labels = Enumerable.Range(lo, hi - lo + 1).Select(l => $"Nv {l}").ToList(),
+        };
+        var levels = Enumerable.Range(lo, hi - lo + 1).ToList();
+        chart.ColorAt = i => In(levels[i]) ? UiTokens.Success : UiTokens.Warning;
+        int inside = here.Count(v => In(v.Level));
+        return Column(12, chart, Row(0,
+            Mini($"{here.Average(v => v.Level):0.#}".Replace('.', ','), "Nível médio"),
+            Mini($"{inside * 100 / here.Count}%", "Na faixa da zona"),
+            Mini(here.Max(v => v.Level).ToString(), "Mais alto")));
+    }
+
+    private static Control Mini(string value, string caption)
+    {
+        var c = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        c.AddThemeConstantOverride("separation", 0);
+        c.AddChild(ThemeFactory.Text(value, 20, UiTokens.TextPrimary, UiFonts.Numbers));
+        c.AddChild(ThemeFactory.Text(caption, UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Medium));
+        return c;
+    }
+
+    private Control WhoBody(List<Sim.CharacterView> here)
+    {
+        var col = Column(2);
+        if (here.Count == 0) { col.AddChild(ThemeFactory.Text("Ninguém conectado nesta zona agora.", UiTokens.FontSmall, UiTokens.TextDisabled)); return col; }
+        foreach (var v in here.OrderByDescending(x => x.Level).ThenBy(x => x.Name, StringComparer.Ordinal).Take(6))
+        {
+            var p = _ctx.Persons[v.PersonId - 1];
+            int pid = v.PersonId;
+            var b = HoverRow(() => _ctx.OpenPerson(pid), $"{v.Name}\n~Clique para abrir a ficha.");
+            b.CustomMinimumSize = new Vector2(0, 40);
+            var r = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
+            r.SetAnchorsPreset(LayoutPreset.FullRect);
+            r.OffsetLeft = 6; r.OffsetRight = -6;
+            r.AddThemeConstantOverride("separation", 10);
+            r.AddChild(new PortraitBadge(p.AppearanceSeed, UiTokens.ProfileColor(p.ProfileId), v.Name) { CustomMinimumSize = new Vector2(28, 28), SizeFlagsVertical = SizeFlags.ShrinkCenter, MouseFilter = MouseFilterEnum.Ignore });
+            var info = Column(0);
+            info.MouseFilter = MouseFilterEnum.Ignore;
+            info.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+            string cls = _ctx.Content.Classes.TryGetValue(v.ClassId, out var c) ? c.Name : v.ClassId;
+            info.AddChild(ThemeFactory.Text($"{v.Name}", UiTokens.FontBody, UiTokens.TextPrimary, UiFonts.Medium));
+            var st = ThemeFactory.Text(StatusText.Of(v, _ctx.Content), UiTokens.FontCaption, UiTokens.TextSecondary);
+            st.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+            st.CustomMinimumSize = new Vector2(100, 0);
+            info.AddChild(st);
+            r.AddChild(info);
+            var lv = ThemeFactory.Text($"Nv {v.Level} · {cls}", UiTokens.FontSmall, UiTokens.TextLabel, UiFonts.Numbers);
+            lv.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+            r.AddChild(lv);
+            b.AddChild(r);
+            col.AddChild(b);
+        }
+        if (here.Count > 6) col.AddChild(ThemeFactory.Text($"+{here.Count - 6} na aba Jogadores", UiTokens.FontCaption, UiTokens.TextSecondary));
+        return col;
+    }
+
     private Control AreaCard(AreaDefinition area)
     {
         var col = AreaPalette.Color(area.Kind);

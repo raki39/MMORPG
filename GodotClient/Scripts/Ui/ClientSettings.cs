@@ -113,7 +113,8 @@ public partial class SettingsPage : ModalFrame
         _changed = changed;
         var col = new VBoxContainer();
         col.AddThemeConstantOverride("separation", 2);
-        col.AddChild(ThemeFactory.Text("Configurações", 24, UiTokens.TextPrimary, UiFonts.Title));
+        Art.AddChild(new EmblemBox("settings", UiTokens.Accent) { CustomMinimumSize = new Vector2(72, 72) });
+        col.AddChild(ThemeFactory.Text("Configurações", 28, UiTokens.TextPrimary, UiFonts.SemiBold));
         col.AddChild(ThemeFactory.Text("Preferências deste computador · salvas automaticamente", UiTokens.FontBody, UiTokens.TextSecondary));
         Header.AddChild(col);
         Breadcrumb = "Configurações";
@@ -189,8 +190,8 @@ public partial class SettingsPage : ModalFrame
                 Options(new[] { "Nítido (recomendado)", "Suave" }, ClientSettings.TextLcd ? 0 : 1, i => { ClientSettings.TextLcd = i == 0; UiFonts.ApplyRendering(); Changed(); })),
             Setting("Mostrar FPS na barra superior", "Contador de quadros por segundo ao lado do relógio.",
                 Toggle(ClientSettings.ShowFps, v => { ClientSettings.ShowFps = v; Changed(); })));
-        return Grid(12, (Card("Tela", display, info: "Modo e tamanho da janela\n~Salvo neste computador; não faz parte do save da campanha."), 1f),
-            (Card("Desempenho e qualidade", perf, info: "Opções de gráficos\n~Nenhuma delas muda o resultado da simulação."), 1f));
+        return Grid(12, (Card("Tela", display, info: "Modo e tamanho da janela\n~Salvo neste computador; não faz parte do save da campanha."), 6),
+            (Card("Desempenho e qualidade", perf, info: "Opções de gráficos\n~Nenhuma delas muda o resultado da simulação."), 6));
     }
 
     private Control BuildGame()
@@ -205,7 +206,7 @@ public partial class SettingsPage : ModalFrame
                 Toggle(ClientSettings.CampaignNote, v => { ClientSettings.CampaignNote = v; Changed(); })));
         var future = ThemeFactory.Text("Idioma, áudio, salvamento automático e acessibilidade entram aqui quando existirem no jogo.", UiTokens.FontSmall, UiTokens.TextDisabled);
         future.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        return Grid(12, (Card("Jogo", game), 1f), (Card("Em breve", future), 1f));
+        return Grid(12, (Card("Jogo", game), 6), (Card("Em breve", future), 6));
     }
 
     private Control BuildKeys()
@@ -225,6 +226,6 @@ public partial class SettingsPage : ModalFrame
             r.AddChild(ThemeFactory.Text(what, UiTokens.FontBody, UiTokens.TextPrimary));
             keys.AddChild(r);
         }
-        return Grid(12, (Card("Atalhos de teclado e mouse", keys), 1f), (new Control(), 1f));
+        return Grid(12, (Card("Atalhos de teclado e mouse", keys), 6), (new Control(), 6));
     }
 }

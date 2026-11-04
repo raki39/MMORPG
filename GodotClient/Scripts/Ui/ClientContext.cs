@@ -18,6 +18,10 @@ public sealed class ClientContext
     public MetricsHistory Metrics { get; init; } = new();
     /// <summary>Eventos recentes ligados a pessoa (mais novos primeiro).</summary>
     public Func<int, IReadOnlyList<SimEvent>> PersonHistory { get; init; } = _ => Array.Empty<SimEvent>();
+    /// <summary>Sessoes registradas da pessoa (mais antigas primeiro; End = -1 se aberta).</summary>
+    public Func<int, IReadOnlyList<SessionLog>> PersonSessions { get; init; } = _ => Array.Empty<SessionLog>();
+    /// <summary>Tick do cadastro da conta (-1 se antes do registro de eventos).</summary>
+    public Func<int, long> RegisteredAt { get; init; } = _ => -1;
     public Action<int, bool> FocusPerson { get; init; } = (_, _) => { };
     public Action<string> FocusZone { get; init; } = _ => { };
     public Action<int> OpenPerson { get; init; } = _ => { };
@@ -80,3 +84,6 @@ public sealed class ZoneDraft
         Control != r.Control || LevelMin != r.LevelMin || LevelMax != r.LevelMax || Capacity != r.Capacity ||
         Offered.Count != r.AllActivities().Count() || r.AllActivities().Any(a => !Offered.Contains(a.Id));
 }
+
+/// <summary>Sessao registrada: inicio, fim (-1 = aberta) e duracao planejada (min).</summary>
+public readonly record struct SessionLog(long Start, long End, int PlannedMinutes);

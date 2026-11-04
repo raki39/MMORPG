@@ -74,10 +74,10 @@ public partial class AreaModal : ModalFrame
     {
         var row = new HBoxContainer();
         row.AddThemeConstantOverride("separation", 20);
-        row.AddChild(new KindEmblem(_area.Kind) { CustomMinimumSize = new Vector2(52, 52), SizeFlagsVertical = SizeFlags.ShrinkCenter });
+        Art.AddChild(new KindEmblem(_area.Kind) { CustomMinimumSize = new Vector2(84, 84), SizeFlagsVertical = SizeFlags.ShrinkBegin });
         var col = new VBoxContainer { Alignment = BoxContainer.AlignmentMode.Center, SizeFlagsHorizontal = SizeFlags.ExpandFill };
         col.AddThemeConstantOverride("separation", 2);
-        col.AddChild(ThemeFactory.Text(_area.Name, 24, UiTokens.TextPrimary, UiFonts.Title));
+        col.AddChild(ThemeFactory.Text(_area.Name, 28, UiTokens.TextPrimary, UiFonts.SemiBold));
         string sub = $"{AreaPalette.Name(_area.Kind)} · {_zone.Name} · {PtBr.Pvp(_zone.Pvp)}" + (_zone.DeathRule != DeathRules.None ? $" · {PtBr.Death(_zone.DeathRule)}" : "")
             + (AreaKinds.IsPortal(_area.Kind) && _area.LeadsTo.Length > 0 ? $" · leva a {_area.LeadsTo}" : "");
         col.AddChild(ThemeFactory.Text(sub, UiTokens.FontBody, UiTokens.TextSecondary));

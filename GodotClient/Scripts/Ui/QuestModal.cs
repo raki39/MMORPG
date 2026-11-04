@@ -28,6 +28,7 @@ public partial class QuestModal : ModalFrame
         Breadcrumb = _board != null
             ? $"Mundo › {ctx.ZoneName(_board.RegionId)} › {_board.Name} › {_quest.Name}"
             : $"Missões › {_quest.Name}";
+        AddTab("Visão geral", BuildOverview, live: true);
         AddTab($"Objetivos · {_quest.Steps.Count + 1}", BuildSteps);
         AddTab("Requisitos e recompensas", BuildRewards);
         AddTab("Dados", BuildData, live: true);
@@ -59,15 +60,12 @@ public partial class QuestModal : ModalFrame
     private void BuildHeader()
     {
         var color = CategoryColor(_quest.Category);
+        Art.AddChild(new EmblemBox(_quest.Category == QuestCategories.Main ? "crown" : _quest.Category == QuestCategories.Daily ? "sun" : "scroll-text", color) { CustomMinimumSize = new Vector2(84, 84) });
         var col = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
         col.AddThemeConstantOverride("separation", 2);
-        col.AddChild(ThemeFactory.Text(_quest.Name, 24, UiTokens.TextPrimary, UiFonts.Title));
+        col.AddChild(ThemeFactory.Text(_quest.Name, 28, UiTokens.TextPrimary, UiFonts.SemiBold));
         string sub = CategoryName(_quest.Category) + (_board != null ? $" · {_board.Name} · {_ctx.ZoneName(_board.RegionId)}" : "") + " · " + Repetition(_quest);
         col.AddChild(ThemeFactory.Text(sub, UiTokens.FontBody, UiTokens.TextSecondary));
-        var desc = ThemeFactory.Text(_quest.Description, UiTokens.FontSmall, UiTokens.TextDisabled);
-        desc.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        desc.CustomMinimumSize = new Vector2(420, 0);
-        col.AddChild(desc);
         Header.AddChild(col);
 
         var s = Stats;
@@ -84,6 +82,151 @@ public partial class QuestModal : ModalFrame
             Actions.AddChild(Action("Aproximar no mapa", "Centraliza a área do quadro", () => { _ctx.FocusArea(_board.RegionId, _board.AreaId); Close(); }));
         }
         Actions.AddChild(Action("Editar quest", "O editor de quests chega em uma tela própria (conteúdo já configurável)", () => { }, enabled: false));
+    }
+
+    // ---------------- Visao geral (kit D-034) ----------------
+
+    private Control BuildOverview()
+    {
+        var row1 = Grid(12,
+            (Card($"Objetivos · {_quest.Steps.Count + 1} etapas", StepsTimeline(), info: "Etapas da missão\n~As etapas acontecem no mundo; aceitar e entregar são ações rápidas no quadro."), 6),
+            (Card("Requisitos e recompensas", RequirementsBody(), info: "Quem pode fazer e o que ganha\n~Ouro e itens já estão definidos, mas só têm efeito com a economia (M5)."), 3),
+            (Card("Desempenho da missão", FunnelBody(), info: "Números da campanha\n~Aceites, quem está fazendo e entregas desde o lançamento."), 3));
+        var row2 = Grid(12,
+            (Card($"Fazendo agora · {Stats?.Active ?? 0}", BuildDoingTable(), info: "Personagens com a missão em andamento\n~Clique para abrir a ficha."), 9),
+            (Card("Em que etapa estão", StageBody(), info: "Distribuição de quem está fazendo\n~Quantos personagens estão em cada etapa agora."), 3));
+        return Column(12, row1, row2);
+    }
+
+    private Control StepsTimeline()
+    {
+        var col = Column(0);
+        var color = CategoryColor(_quest.Category);
+        for (int i = 0; i <= _quest.Steps.Count; i++)
+        {
+            bool deliver = i == _quest.Steps.Count;
+            var step = deliver ? null : _quest.Steps[i];
+            var act = step != null && _ctx.Content.Regions.TryGetValue(step.RegionId, out var r) ? r.FindActivity(step.ActivityId) : null;
+            var row = new HBoxContainer();
+            row.AddThemeConstantOverride("separation", 14);
+            row.AddChild(new StepBadge(i + 1, color, last: deliver) { CustomMinimumSize = new Vector2(28, 52) });
+            row.AddChild(new Icon(deliver ? "medal" : step!.Type == QuestStepTypes.Visit ? "map-pin" : PlayerModal.TypeIcon(act?.Type ?? ActivityTypes.Quest), 18,
+                deliver ? UiTokens.Accent : act != null ? ActivityPalette.Color(act.Type) : UiTokens.Info));
+            var info = Column(2);
+            info.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+            if (deliver)
+            {
+                info.AddChild(ThemeFactory.Text(_board != null ? $"Entregar em {_board.Name}" : "Entregar no quadro", UiTokens.FontBody, UiTokens.TextPrimary, UiFonts.Medium));
+                info.AddChild(ThemeFactory.Text(_board != null ? $"{_ctx.ZoneName(_board.RegionId)} · a recompensa vem na entrega" : "A recompensa vem na entrega", UiTokens.FontSmall, UiTokens.TextSecondary));
+            }
+            else
+            {
+                info.AddChild(ThemeFactory.Text(step!.Text, UiTokens.FontBody, UiTokens.TextPrimary, UiFonts.Medium));
+                string what = step.Type == QuestStepTypes.Visit ? "ponto de missão" : act != null ? PtBr.ActivityType(act.Type) : "atividade";
+                info.AddChild(ThemeFactory.Text($"{_ctx.PlaceName(step.RegionId, step.ActivityId)} · {_ctx.ZoneName(step.RegionId)} · {what} · {step.Minutes} min", UiTokens.FontSmall, UiTokens.TextSecondary));
+            }
+            row.AddChild(info);
+            if (step != null && QuestSystem.IsProvisional(_ctx.Content, step))
+            {
+                var chip = ThemeFactory.Chip("Provisório", UiTokens.Warning, dot: true);
+                chip.TooltipText = "Hoje a etapa conta o TEMPO fazendo a atividade.\nAbates e itens só existem a partir do combate (M3) e da economia (M5).";
+                chip.MouseFilter = MouseFilterEnum.Stop;
+                chip.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+                row.AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill });
+                row.AddChild(chip);
+            }
+            col.AddChild(row);
+        }
+        var desc = ThemeFactory.Text(_quest.Description, UiTokens.FontSmall, UiTokens.TextSecondary);
+        desc.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        return Column(12, col, Divider(), desc);
+    }
+
+    private Control RequirementsBody()
+    {
+        Control Line(string icon, string key, string value, Color color)
+        {
+            var r = new HBoxContainer();
+            r.AddThemeConstantOverride("separation", 10);
+            r.AddChild(new Icon(icon, 16, color));
+            var k = ThemeFactory.Text(key, UiTokens.FontSmall, UiTokens.TextSecondary);
+            k.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+            r.AddChild(k);
+            var v = ThemeFactory.Text(value, UiTokens.FontBody, UiTokens.TextPrimary, UiFonts.Medium);
+            v.HorizontalAlignment = HorizontalAlignment.Right;
+            r.AddChild(v);
+            return r;
+        }
+        var col = Column(9, Section("Requisitos"),
+            Line("trending-up", "Nível", _quest.MaxLevel > 0 ? $"{_quest.MinLevel} a {_quest.MaxLevel}" : $"{_quest.MinLevel} ou mais", UiTokens.Accent),
+            Line("shield", "Classe", _quest.ClassIds.Count == 0 ? "qualquer" : string.Join(", ", _quest.ClassIds.Select(c => _ctx.Content.Classes.TryGetValue(c, out var cl) ? cl.Name : c)), UiTokens.Info),
+            Line("clock", "Repetição", Repetition(_quest), UiTokens.TextSecondary));
+        foreach (var pre in _quest.PrerequisiteQuestIds)
+        {
+            string id = pre;
+            string name = _ctx.Content.Quests.TryGetValue(pre, out var pq) ? pq.Name : pre;
+            var b = HoverRow(() => _ctx.OpenQuest(id), "Abre a quest anterior");
+            b.CustomMinimumSize = new Vector2(0, 28);
+            var r = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
+            r.SetAnchorsPreset(LayoutPreset.FullRect);
+            r.AddThemeConstantOverride("separation", 10);
+            r.AddChild(new Icon("scroll-text", 16, UiTokens.AccentSoft));
+            var k = ThemeFactory.Text("Exige", UiTokens.FontSmall, UiTokens.TextSecondary);
+            k.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+            k.VerticalAlignment = VerticalAlignment.Center;
+            r.AddChild(k);
+            var v = ThemeFactory.Text(name + "  ›", UiTokens.FontBody, UiTokens.AccentSoft, UiFonts.Medium);
+            v.VerticalAlignment = VerticalAlignment.Center;
+            r.AddChild(v);
+            b.AddChild(r);
+            col.AddChild(b);
+        }
+        col.AddChild(new Control { CustomMinimumSize = new Vector2(0, 4) });
+        col.AddChild(Section("Recompensas"));
+        long xp = QuestSystem.RewardXp(_ctx.Content, Math.Max(_quest.MinLevel, _quest.RecommendedLevel), _quest);
+        col.AddChild(Line("award", "Experiência", _quest.ScalesWithLevel ? $"{_quest.Rewards.XpPermille / 10.0:0.#}% do nível" : $"{PtBr.Int(xp)} XP", UiTokens.Success));
+        col.AddChild(Line("coins", "Ouro · M5", _quest.Rewards.GoldCopper > 0 ? Coins(_quest.Rewards.GoldCopper) : "—", UiTokens.TextDisabled));
+        foreach (var it in _quest.Rewards.ItemIds)
+            col.AddChild(Line("backpack", "Item · M5", _ctx.Content.Items.TryGetValue(it, out var item) ? item.Name : it, UiTokens.TextDisabled));
+        return col;
+    }
+
+    private Control FunnelBody()
+    {
+        var s = Stats;
+        int accepted = s?.Accepted ?? 0, completed = s?.Completed ?? 0, active = s?.Active ?? 0;
+        float rate = accepted == 0 ? 0 : completed / (float)accepted;
+        var ring = new RingGauge { CustomMinimumSize = new Vector2(96, 96), SizeFlagsVertical = SizeFlags.ShrinkCenter, Value = rate, Color = UiTokens.Success, Center = accepted == 0 ? "–" : $"{rate * 100:0}%", Caption = "conclusão" };
+        var bars = Column(8,
+            Bar("Aceitaram", accepted, Math.Max(1, accepted), UiTokens.Info, PtBr.Int(accepted), 80),
+            Bar("Fazendo", active, Math.Max(1, accepted), UiTokens.Accent, PtBr.Int(active), 80),
+            Bar("Entregaram", completed, Math.Max(1, accepted), UiTokens.Success, PtBr.Int(completed), 80));
+        bars.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        string avgHours = completed == 0 ? "–" : PtBr.Decimal(s!.SumPlayedTicksToComplete / (double)completed / SimTime.TicksPerHour) + " h";
+        string avgLevel = completed == 0 ? "–" : PtBr.Decimal(s!.SumLevelAtCompletion / (double)completed);
+        string last = s == null || s.LastCompletedTick < 0 ? "nunca" : $"{PtBr.ShortDate(_ctx.Calendar.ToDateTime(s.LastCompletedTick))} {_ctx.Clock(s.LastCompletedTick)}";
+        return Column(14, Row(16, ring, bars), Divider(),
+            KeyValue("Personagens que concluíram", PtBr.Int(s?.UniqueCompleters ?? 0)),
+            KeyValue("Tempo médio até entregar", avgHours),
+            KeyValue("Nível médio na entrega", avgLevel),
+            KeyValue("XP entregue no total", PtBr.Int(s?.XpGranted ?? 0)),
+            KeyValue("Última entrega", last));
+    }
+
+    private Control StageBody()
+    {
+        var snap = _ctx.Snapshot();
+        var counts = new float[_quest.Steps.Count + 1];
+        for (int id = 1; id < snap.ByPerson.Length; id++)
+            if (snap.ByPerson[id] is { } v)
+                foreach (var p in v.ActiveQuests)
+                    if (p.QuestId == _quest.Id) counts[Math.Min(p.StepIndex, _quest.Steps.Count)]++;
+        return new ColumnChart
+        {
+            CustomMinimumSize = new Vector2(0, 190), CountScale = true, ShowAverage = false, Unit = " personagens",
+            Values = counts, Labels = Enumerable.Range(0, counts.Length).Select(i => i == _quest.Steps.Count ? "Entrega" : $"Etapa {i + 1}").ToList(),
+            ColorAt = i => i == _quest.Steps.Count ? UiTokens.Success : UiTokens.Info, EmptyText = "Ninguém está fazendo esta missão agora.",
+        };
     }
 
     // ---------------- Objetivos ----------------
@@ -202,6 +345,12 @@ public partial class QuestModal : ModalFrame
             Stat(PtBr.Int(s?.XpGranted ?? 0), "XP entregue no total", UiTokens.Success),
             Stat(last, "última entrega", UiTokens.TextSecondary));
 
+        return Column(12, stats, stats2, Card($"Fazendo agora · {Stats?.Active ?? 0}", BuildDoingTable(), CategoryColor(_quest.Category)));
+    }
+
+    private Control BuildDoingTable()
+    {
+        var snap = _ctx.Snapshot();
         var doing = new List<(int Id, CharacterView V, QuestProgressView P)>();
         for (int id = 1; id < snap.ByPerson.Length; id++)
             if (snap.ByPerson[id] is { } v)
@@ -217,10 +366,9 @@ public partial class QuestModal : ModalFrame
         }, sortColumn: 2) { OnClick = x => { _ctx.OpenPerson(x.Id); } };
         _doingTable.OnSortChanged = () => Rebuild(false);
 
-        var body = doing.Count == 0
-            ? (Control)ThemeFactory.Text("Ninguém está fazendo esta quest agora.", UiTokens.FontBody, UiTokens.TextSecondary)
-            : _doingTable.Build(doing);
-        return Column(12, stats, stats2, Card($"Fazendo agora · {doing.Count}", body, CategoryColor(_quest.Category)));
+        return doing.Count == 0
+            ? ThemeFactory.Text("Ninguém está fazendo esta quest agora.", UiTokens.FontBody, UiTokens.TextSecondary)
+            : _doingTable.Build(doing.Take(12));
     }
 
     private string StepText((int Id, CharacterView V, QuestProgressView P) x)

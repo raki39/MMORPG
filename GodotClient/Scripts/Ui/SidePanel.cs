@@ -49,16 +49,17 @@ public partial class SidePanel : PanelContainer
         col.AddChild(tabsBg);
         foreach (var (name, i) in new[] { ("Visão geral", 0), ("Zonas", 1), ("Jogadores", 2), ("Eventos", 3) })
         {
-            var b = new Button { Text = name.ToUpperInvariant(), ToggleMode = true, FocusMode = FocusModeEnum.None, CustomMinimumSize = new Vector2(0, 34), SizeFlagsHorizontal = SizeFlags.ExpandFill };
-            b.AddThemeFontOverride("font", UiFonts.CondensedBold);
-            b.AddThemeFontSizeOverride("font_size", 12);
+            var b = new Button { Text = name, ToggleMode = true, FocusMode = FocusModeEnum.None, CustomMinimumSize = new Vector2(0, 38), SizeFlagsHorizontal = SizeFlags.ExpandFill };
+            b.AddThemeFontOverride("font", UiFonts.Medium);
+            b.AddThemeFontSizeOverride("font_size", 13);
             StyleBoxFlat T(bool on, bool hover) => new() { BgColor = hover ? UiTokens.SurfaceHover : new Color(0, 0, 0, 0), BorderColor = UiTokens.Accent, BorderWidthBottom = on ? 2 : 0 };
             b.AddThemeStyleboxOverride("normal", T(false, false));
             b.AddThemeStyleboxOverride("hover", T(false, true));
             b.AddThemeStyleboxOverride("pressed", T(true, false));
             b.AddThemeStyleboxOverride("hover_pressed", T(true, true));
-            b.AddThemeColorOverride("font_color", UiTokens.TextSecondary);
-            b.AddThemeColorOverride("font_pressed_color", UiTokens.AccentSoft);
+            b.AddThemeColorOverride("font_color", UiTokens.TextLabel);
+            b.AddThemeColorOverride("font_hover_color", UiTokens.TextPrimary);
+            b.AddThemeColorOverride("font_pressed_color", UiTokens.Accent);
             b.AddThemeColorOverride("font_hover_pressed_color", UiTokens.AccentSoft);
             int idx = i;
             b.Pressed += () => { _tab = idx; SyncTabs(); Refresh(resetScroll: true); };

@@ -159,7 +159,7 @@ public static class ThemeFactory
 
     /// <summary>Rotulo de secao: condensado, caixa alta.</summary>
     public static Label Section(string text) =>
-        Text(text.ToUpperInvariant(), UiTokens.FontSmall, UiTokens.TextSecondary, UiFonts.CondensedBold);
+        Text(text, UiTokens.FontBody, UiTokens.Accent, UiFonts.SemiBold);
 }
 
 /// <summary>

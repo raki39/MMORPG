@@ -26,62 +26,130 @@ public partial class PlayerModal : ModalFrame
         Closed += () => ctx.WatchPerson(0);
         BuildHeader();
         Breadcrumb = $"Jogadores › {View?.Name ?? _person.Name}";
-        AddTab("Perfil", BuildProfile, live: true);
+        AddTab("Visão geral", BuildProfile, live: true);
         AddTab("Missões", BuildQuests, live: true);
         AddTab("Histórico", BuildHistory, live: true);
         AddTab("Rotina e finanças", BuildRoutine);
-        AddTab("Inventário · M5", () => FutureTab("Inventário", "Itens, equipamento e carga do personagem aparecem aqui quando existirem inventário e itens na simulação (M5). As recompensas de missões já registram os itens previstos."));
-        AddTab("Banco · M5", () => FutureTab("Banco", "Ouro guardado, depósitos e movimentações aparecem aqui com a economia (M5). Hoje o ouro de missões está definido, mas ainda não é aplicado."));
+        AddTab("Combate · M3", () => FutureTab("Combate", "M3", "Abates, mortes, saque, rivais e desempenho em PvE e PvP aparecem aqui quando o combate existir na simulação. Nada é inventado antes disso."));
+        AddTab("Inventário · M5", () => FutureTab("Inventário", "M5", "Itens, equipamento e carga do personagem aparecem aqui quando existirem inventário e itens na simulação. As recompensas de missões já registram os itens previstos."));
+        AddTab("Banco · M5", () => FutureTab("Banco", "M5", "Ouro guardado, depósitos e movimentações aparecem aqui com a economia. Hoje o ouro de missões está definido, mas ainda não é aplicado."));
     }
 
     private CharacterView? View => _ctx.Snapshot().ByPerson is { } a && _person.Id < a.Length ? a[_person.Id] : null;
     private string ProfileName => _ctx.Content.Profiles.TryGetValue(_person.ProfileId, out var p) ? p.Name : _person.ProfileId;
+    private static double Hours(long ticks) => ticks / (double)Simulation.Core.Time.SimTime.TicksPerHour;
+
+    /// <summary>Icone da classe (Lucide), pelo id e, na falta, pelo papel.</summary>
+    public static string ClassIcon(string? classId, string? role) => classId switch
+    {
+        "guerreiro" => "swords",
+        "mago" => "wand-sparkles",
+        "sacerdote" => "cross",
+        _ => role == ClassRoles.Tank ? "shield" : role == ClassRoles.Support ? "heart-pulse" : "sword",
+    };
+
+    // ---------------- Cabecalho ----------------
 
     private void BuildHeader()
     {
         var v = View;
         var color = UiTokens.ProfileColor(_person.ProfileId);
-        var row = new HBoxContainer();
-        row.AddThemeConstantOverride("separation", 14);
-        row.AddChild(new PortraitBadge(_person.AppearanceSeed, color, v?.Name ?? _person.Name) { CustomMinimumSize = new Vector2(60, 60), SizeFlagsVertical = SizeFlags.ShrinkCenter });
-        var names = new VBoxContainer { Alignment = BoxContainer.AlignmentMode.Center, SizeFlagsHorizontal = SizeFlags.ExpandFill };
-        names.AddThemeConstantOverride("separation", 0);
-        names.AddChild(ThemeFactory.Text(v?.Name ?? _person.Name, 24, UiTokens.TextPrimary, UiFonts.Title));
-        var cls = v != null && _ctx.Content.Classes.TryGetValue(v.ClassId, out var c) ? c : null;
-        string line = v == null ? $"{_person.Name} · ainda sem conta" : $"{_person.Name} · {cls?.Name} ({RolePt(cls?.Role)}) · Pessoa #{_person.Id}";
-        names.AddChild(ThemeFactory.Text(line, UiTokens.FontBody, UiTokens.TextSecondary));
-        row.AddChild(names);
-        Header.AddChild(row);
+        ClassDefinition? cls = v != null && _ctx.Content.Classes.TryGetValue(v.ClassId, out var c) ? c : null;
+        string icon = ClassIcon(v?.ClassId, cls?.Role);
+        Art.AddChild(new PortraitBadge(_person.AppearanceSeed, color, v?.Name ?? _person.Name)
+        {
+            CustomMinimumSize = new Vector2(104, 104), SizeFlagsVertical = SizeFlags.ShrinkBegin, ClassIcon = v != null ? icon : "",
+        });
+
+        var nameRow = new HBoxContainer();
+        nameRow.AddThemeConstantOverride("separation", 10);
+        nameRow.AddChild(ThemeFactory.Text(v?.Name ?? _person.Name, 28, UiTokens.TextPrimary, UiFonts.SemiBold));
+        if (_ctx.Favorites.Contains(_person.Id)) nameRow.AddChild(new Icon("star", 18, UiTokens.Accent));
+        var (prev, next) = Neighbors();
+        var arrows = new HBoxContainer { SizeFlagsVertical = SizeFlags.ShrinkCenter };
+        arrows.AddThemeConstantOverride("separation", 2);
+        arrows.AddChild(IconButton("chevron-left", prev > 0 ? $"Jogador anterior\n~{NameOf(prev)} (ordem por nível)" : "Primeiro da lista", () => _ctx.OpenPerson(prev), prev > 0));
+        arrows.AddChild(IconButton("chevron-right", next > 0 ? $"Próximo jogador\n~{NameOf(next)} (ordem por nível)" : "Último da lista", () => _ctx.OpenPerson(next), next > 0));
+        nameRow.AddChild(arrows);
+        Header.AddChild(nameRow);
+        var sub = new HBoxContainer();
+        sub.AddThemeConstantOverride("separation", 7);
+        if (v != null)
+        {
+            sub.AddChild(new Icon(icon, 16, RoleColor(cls?.Role)));
+            sub.AddChild(ThemeFactory.Text($"{cls?.Name} · {RolePt(cls?.Role)}", UiTokens.FontBody, UiTokens.TextLabel, UiFonts.Medium));
+            sub.AddChild(ThemeFactory.Text("·", UiTokens.FontBody, UiTokens.TextDisabled));
+        }
+        sub.AddChild(ThemeFactory.Text($"{_person.Name} · {ProfileName} · Pessoa #{_person.Id}", UiTokens.FontBody, UiTokens.TextSecondary));
+        Header.AddChild(sub);
 
         if (v != null)
         {
             bool online = v.Status != CharacterStatus.Offline;
             var prog = _ctx.Content.Progression;
+            long need = ProgressionRules.XpToNextLevel(prog, v.Level);
             string stage = (ProgressionRules.StageRate(prog, v.Level) / 1000.0).ToString("0.##", CultureInfo.GetCultureInfo("pt-BR"));
-            Fact("Nível", v.Level.ToString(), UiTokens.Info, v.Level >= prog.LevelCap
+            Fact("Nível", v.Level.ToString(), UiTokens.Accent, v.Level >= prog.LevelCap
                 ? $"Nível {v.Level}\n~Nível máximo atual ({prog.LevelCap})."
-                : $"Nível {v.Level}\nXP|{v.Experience} / {ProgressionRules.XpToNextLevel(prog, v.Level)}\nTaxa da faixa|×{stage}\n~Faixas de nível mais altas rendem menos XP.");
-            Fact("Classe", cls?.Name ?? v.ClassId, RoleColor(cls?.Role));
-            Fact("Perfil", ProfileName, color, $"Perfil {ProfileName}\n~Tendência de origem; a pessoa não é um clone do perfil.");
-            Fact("Status", online ? "Conectado" : "Desconectado", online ? UiTokens.Success : UiTokens.TextSecondary);
-            Fact("Zona", _ctx.ZoneName(v.RegionId));
-            Fact("Conhece", $"{v.KnownRegions}/{_ctx.Content.Regions.Count} zonas", null, "Zonas conhecidas\n~Só zonas conhecidas entram nas decisões. Viajar e explorar revelam mais.");
-            if (online) Fact("Sessão", $"até {_ctx.Clock(v.SessionEndTick)}", UiTokens.AccentSoft);
+                : $"Nível {v.Level}\nXP|{PtBr.Int(v.Experience)} / {PtBr.Int(need)}\nTaxa da faixa|×{stage}\n~Faixas de nível mais altas rendem menos XP.", "award");
+            Fact("Para o próximo", v.Level >= prog.LevelCap ? "máx." : $"{v.Experience * 100 / Math.Max(1, need)}%", UiTokens.Success, "", "trending-up");
+            Fact("Status", online ? "Conectado" : "Desconectado", online ? UiTokens.Success : UiTokens.TextSecondary, "", "activity");
+            Fact("Zona", _ctx.ZoneName(v.RegionId), UiTokens.TextSecondary, "", "map-pin");
+            Fact("Conhece", $"{v.KnownRegions}/{_ctx.Content.Regions.Count}", UiTokens.TextSecondary, "Zonas conhecidas\n~Só zonas conhecidas entram nas decisões. Viajar e explorar revelam mais.", "compass");
+            Fact("Jogado", $"{PtBr.Decimal(Hours(v.PlayedTicks))} h", UiTokens.TextSecondary, "Tempo conectado desde o cadastro", "timer");
+            if (online) Fact("Sessão", $"até {_ctx.Clock(v.SessionEndTick)}", UiTokens.TextSecondary, "Fim previsto da sessão atual", "clock");
+
+            var e = Engagement();
+            var gauge = new SemiGauge
+            {
+                CustomMinimumSize = new Vector2(168, 84), Value = Mathf.Clamp(e.Pct / 1.2f, 0, 1), Center = $"{e.Pct * 100:0}%",
+                Caption = $"Engajamento · {e.Days} dia{(e.Days == 1 ? "" : "s")}", Verdict = EngagementVerdict(e.Pct), Color = RatingColor(EngagementScore(e.Pct)),
+                TooltipText = $"Engajamento\nJogou|{e.Played} min\nPrevisto pela rotina|{e.Expected} min\nDias com sessão|{e.DaysPlayed} de {e.Days}\n~Minutos jogados ÷ minutos previstos pela rotina (sessão típica × dias por semana) nos últimos {e.Days} dias, contando hoje até agora.",
+            };
+            Highlight.AddChild(gauge);
         }
-        else Fact("Status", "Interessado (sem conta)", UiTokens.Warning);
+        else Fact("Status", "Interessado (sem conta)", UiTokens.Warning, "", "user");
 
         bool on = v != null && v.Status != CharacterStatus.Offline;
-        Actions.AddChild(Action("Seguir no mapa", "Seguir no mapa\n~Centraliza e acompanha este jogador.", () => { _ctx.FocusPerson(_person.Id, true); Close(); }, primary: true, enabled: on));
-        Actions.AddChild(Action("Localizar", "Localizar\n~Centraliza o mapa no jogador.", () => { _ctx.FocusPerson(_person.Id, false); Close(); }, enabled: on));
+        Actions.AddChild(Action("Seguir no mapa", "Seguir no mapa\n~Volta ao mapa acompanhando este jogador.", () => { _ctx.FocusPerson(_person.Id, true); Close(); }, primary: true, enabled: on));
+        Actions.AddChild(Action("Localizar", "Localizar\n~Volta ao mapa centralizado no jogador.", () => { _ctx.FocusPerson(_person.Id, false); Close(); }, enabled: on));
         _favorite = Action(FavText(), "Favoritar\n~Acompanha este jogador (favoritos desta sessão).", ToggleFavorite);
         Actions.AddChild(_favorite);
         if (v != null && v.Status == CharacterStatus.Doing && v.ActivityId.Length > 0
             && _ctx.Content.Regions[v.TargetRegionId].AreaOfActivity(v.ActivityId) is { } area)
         {
             string z = v.TargetRegionId, a = area.Id;
-            Actions.AddChild(Action("Ver área", $"{area.Name}\n~Abre a ficha da área onde está.", () => { _ctx.OpenArea(z, a); }));
+            Actions.AddChild(Action("Ver área", $"{area.Name}\n~Abre a página da área onde está.", () => _ctx.OpenArea(z, a)));
         }
-        else if (v != null) Actions.AddChild(Action("Ver zona", "Ver zona\n~Abre a ficha da zona atual.", () => { _ctx.OpenZone(v.RegionId); }));
+        else if (v != null) Actions.AddChild(Action("Ver zona", "Ver zona\n~Abre a página da zona atual.", () => _ctx.OpenZone(v.RegionId)));
+    }
+
+    /// <summary>Botao so com icone (setas, acoes compactas).</summary>
+    private static Button IconButton(string icon, string tip, Action press, bool enabled = true)
+    {
+        var b = new TipButton { TooltipText = tip, FocusMode = FocusModeEnum.None, CustomMinimumSize = new Vector2(28, 28), Disabled = !enabled };
+        b.AddThemeStyleboxOverride("normal", ThemeFactory.Box(UiTokens.SurfaceRaised, 4, border: UiTokens.Border, radius: 3));
+        b.AddThemeStyleboxOverride("hover", ThemeFactory.Box(UiTokens.SurfaceHover, 4, border: UiTokens.BorderStrong, radius: 3));
+        b.AddThemeStyleboxOverride("pressed", ThemeFactory.Box(UiTokens.SurfaceHover, 4, border: UiTokens.Accent, radius: 3));
+        b.AddThemeStyleboxOverride("disabled", ThemeFactory.Box(new Color(0, 0, 0, 0), 4, border: new Color(UiTokens.Border, 0.6f), radius: 3));
+        var ic = new Icon(icon, 16, enabled ? UiTokens.TextPrimary : UiTokens.TextDisabled);
+        ic.SetAnchorsPreset(LayoutPreset.FullRect);
+        b.AddChild(ic);
+        b.Pressed += press;
+        return b;
+    }
+
+    private string NameOf(int personId) => _ctx.Snapshot().ByPerson[personId]?.Name ?? _ctx.Persons[personId - 1].Name;
+
+    /// <summary>Vizinhos na lista de jogadores (nivel, XP, id) para as setas do cabecalho.</summary>
+    private (int Prev, int Next) Neighbors()
+    {
+        var snap = _ctx.Snapshot();
+        var order = Enumerable.Range(1, snap.ByPerson.Length - 1).Where(i => snap.ByPerson[i] != null)
+            .OrderByDescending(i => snap.ByPerson[i]!.Level).ThenByDescending(i => snap.ByPerson[i]!.Experience).ThenBy(i => i).ToList();
+        int at = order.IndexOf(_person.Id);
+        if (at < 0) return (0, 0);
+        return (at > 0 ? order[at - 1] : 0, at < order.Count - 1 ? order[at + 1] : 0);
     }
 
     private string FavText() => _ctx.Favorites.Contains(_person.Id) ? "★ Favorito" : "☆ Favoritar";
@@ -92,52 +160,409 @@ public partial class PlayerModal : ModalFrame
         _favorite.Text = FavText();
     }
 
-    // ---------------- Perfil (grade de cards, D-034) ----------------
+    // ---------------- Metricas derivadas (relatorio do analista) ----------------
+
+    private readonly record struct EngagementInfo(float Pct, int Played, int Expected, int Days, int DaysPlayed);
+
+    /// <summary>Minutos jogados nos ultimos 7 dias contra o previsto pela rotina da pessoa.</summary>
+    private EngagementInfo Engagement()
+    {
+        long now = _ctx.Snapshot().Tick, tpd = Simulation.Core.Time.SimTime.TicksPerDay, tpm = Simulation.Core.Time.SimTime.TicksPerMinute;
+        var sessions = _ctx.PersonSessions(_person.Id);
+        long reg = _ctx.RegisteredAt(_person.Id);
+        long first = reg >= 0 ? reg : sessions.Count > 0 ? sessions[0].Start : now;
+        long from = Math.Max(first, now - 7 * tpd);
+        long played = 0;
+        var days = new HashSet<long>();
+        foreach (var s in sessions)
+        {
+            long end = s.End < 0 ? now : s.End;
+            long a = Math.Max(s.Start, from);
+            if (end > a) { played += end - a; days.Add(a / tpd); }
+        }
+        var t = _person.Traits;
+        double spanDays = Math.Max(0.25, (now - from) / (double)tpd);
+        int expected = (int)Math.Max(1, t.SessionMinutes * t.DaysPerWeek / 7.0 * spanDays);
+        int playedMin = (int)(played / tpm);
+        return new EngagementInfo(playedMin / (float)expected, playedMin, expected, (int)Math.Ceiling(spanDays), days.Count);
+    }
+
+    private static int EngagementScore(float pct) => pct >= 0.9f ? 5 : pct >= 0.7f ? 4 : pct >= 0.5f ? 3 : pct >= 0.3f ? 2 : 1;
+    private static string EngagementVerdict(float pct) => EngagementScore(pct) switch { 5 => "Muito ativo", 4 => "Ativo", 3 => "Regular", 2 => "Pouco ativo", _ => "Sumido" };
+
+    /// <summary>Nota de 1 a 5 pela razao contra a mediana do servidor.</summary>
+    private static int RatioScore(float ratio) => ratio >= 1.3f ? 5 : ratio >= 1.1f ? 4 : ratio >= 0.9f ? 3 : ratio >= 0.6f ? 2 : 1;
+
+    public static Color RatingColor(int score) => score switch
+    {
+        >= 5 => UiTokens.Success,
+        4 => new Color("#8FD08A"),
+        3 => UiTokens.Accent,
+        2 => UiTokens.Warning,
+        _ => UiTokens.Danger,
+    };
+
+    private sealed class ServerStats
+    {
+        public float MedianXpH, MedianKnown, MedianQuests, MyXpH;
+        public int Rank, Total, ClassRank, ClassTotal, ProfileRank, ProfileTotal, XpHRank, XpHTotal;
+    }
+
+    private static float Median(List<float> xs)
+    {
+        if (xs.Count == 0) return 0;
+        xs.Sort();
+        return xs.Count % 2 == 1 ? xs[xs.Count / 2] : (xs[xs.Count / 2 - 1] + xs[xs.Count / 2]) / 2f;
+    }
+
+    private static float XpH(CharacterView c) => c.PlayedTicks < Simulation.Core.Time.SimTime.TicksPerHour ? -1
+        : (float)((c.XpFromQuests + c.XpFromActivities) / Hours(c.PlayedTicks));
+
+    private ServerStats Server(CharacterView me)
+    {
+        var all = _ctx.Snapshot().ByPerson.Where(c => c != null).Select(c => c!).ToList();
+        var order = all.OrderByDescending(c => c.Level).ThenByDescending(c => c.Experience).ThenBy(c => c.PersonId).ToList();
+        var st = new ServerStats { Total = order.Count, Rank = order.FindIndex(c => c.PersonId == me.PersonId) + 1 };
+        var sameClass = order.Where(c => c.ClassId == me.ClassId).ToList();
+        st.ClassTotal = sameClass.Count;
+        st.ClassRank = sameClass.FindIndex(c => c.PersonId == me.PersonId) + 1;
+        var sameProfile = order.Where(c => _ctx.Persons[c.PersonId - 1].ProfileId == _person.ProfileId).ToList();
+        st.ProfileTotal = sameProfile.Count;
+        st.ProfileRank = sameProfile.FindIndex(c => c.PersonId == me.PersonId) + 1;
+        var rates = all.Select(c => (c.PersonId, R: XpH(c))).Where(x => x.R >= 0).OrderByDescending(x => x.R).ToList();
+        st.XpHTotal = rates.Count;
+        st.XpHRank = rates.FindIndex(x => x.PersonId == me.PersonId) + 1;
+        st.MyXpH = XpH(me);
+        st.MedianXpH = Median(rates.Select(x => x.R).ToList());
+        st.MedianKnown = Median(all.Select(c => (float)c.KnownRegions).ToList());
+        st.MedianQuests = Median(all.Select(c => (float)c.CompletedQuests.Sum(q => q.Times)).ToList());
+        return st;
+    }
+
+    // ---------------- Visao geral (kit D-034) ----------------
 
     private Control BuildProfile()
     {
         var v = View;
         if (v == null)
-            return Column(12, Grid(12, (Card("Atributos", AttributeGrid(), info: AttrInfo), 2f), (Card("Situação", Wrap("Ainda não criou conta no MMORPG; pode se registrar nos próximos dias do lançamento.")), 1f)));
+            return Column(12, Grid(12, (Card("Atributos", AttributeGrid(), info: AttrInfo), 8),
+                (Card("Situação", Wrap("Ainda não criou conta no MMORPG; pode se registrar nos próximos dias do lançamento.")), 4)));
         var detail = _ctx.Snapshot().Watched is { } d && d.PersonId == _person.Id ? d : null;
-        var colA = Column(12,
-            Card("Agora", NowBody(v), info: "O que está fazendo\n~Atualiza ao vivo no mapa; aqui o tempo está pausado."),
-            Card("Progresso", ProgressBody(v), info: "Progresso do personagem\n~XP até o próximo nível e a taxa da faixa de nível (faixas altas rendem menos XP)."));
+        var st = Server(v);
         var row1 = Grid(12,
-            (colA, 1.1f),
-            (Card("Atributos", Column(14, AttributeGrid(), Highlights()), info: AttrInfo), 2.2f),
-            (Card("Por que escolheu isso", DecisionBody(v), info: "Última decisão\n~Cada fator soma ou tira pontos da opção; vence a maior nota. Os pesos vêm dos traços da pessoa e do conteúdo."), 1.3f));
+            (Card("Situação atual", NowBody(v), info: "O que está fazendo e por quê\n~A última decisão mostra os fatores que somaram ou tiraram pontos da opção escolhida."), 3),
+            (Card("Atributos", Column(16, AttributeGrid(), Highlights()), info: AttrInfo), 6),
+            (Card("Relatório do analista", ReportBody(v, st), info: "Relatório do analista\n~Notas de 1 a 5 calculadas dos dados da simulação; passe o mouse em cada uma para ver a conta."), 3));
         var row2 = Grid(12,
-            (Card("Ritmo de evolução", LevelChart(detail), info: "Horas jogadas ao atingir cada nível\n~Curva real deste personagem (tempo conectado acumulado)."), 1f),
-            (Card("Minutos jogados por dia", PlayChart(), info: "Minutos conectados por dia\n~Desde o cadastro, até 14 dias. A linha tracejada é a média dos dias jogados."), 1f),
-            (Card("Uso do tempo conectado", TimeUseBody(detail), info: "Divisão do tempo conectado\n~Por tipo de atividade desde o cadastro; o resto é deslocamento."), 1f),
-            (Card("Missões", QuestSummary(v), info: "Missões do personagem\n~Detalhes na aba Missões."), 1f));
+            (Card("Forma · últimos 14 dias", FormBody(), info: "Minutos conectados por dia\n~Verde: dia no ritmo da rotina (80% da sessão típica ou mais). Vermelho: abaixo. A linha tracejada é a média dos dias jogados."), 3),
+            (Card("Evolução", EvolutionBody(v, detail, st), info: "Horas jogadas ao atingir cada nível\n~Curva real deste personagem (tempo conectado acumulado)."), 3),
+            (Card("Uso do tempo", TimeUseBody(detail), info: "Divisão do tempo conectado\n~Por tipo de atividade desde o cadastro; o resto é deslocamento."), 3),
+            (Card("Classificação", RankBody(st), info: "Posição no servidor\n~Ordem por nível e XP. XP por hora considera só quem jogou ao menos 1 hora."), 3));
         var row3 = Grid(12,
-            (Card("Atividades recentes", RecentBody(), info: "Últimos acontecimentos\n~Desde que o jogo foi aberto. Histórico completo na aba Histórico."), 1.5f),
-            (Card("Combate · últimos abates", KillsBody(), info: "Últimos abates e mortes\n~O combate chega no M3; nada é inventado antes disso."), 1f));
+            (Card("Zonas frequentadas", ZonesBody(), info: "Onde escolhe jogar\n~Escolhas de atividade por zona registradas desde que o jogo foi aberto. Clique para abrir a zona."), 3),
+            (Card("Missões", QuestSummary(v), info: "Missões do personagem\n~Detalhes na aba Missões."), 3),
+            (Card("Atividades recentes", RecentBody(), info: "Últimos acontecimentos\n~Clique numa linha para abrir a área, a zona ou a missão. Histórico completo na aba Histórico."), 6));
         return Column(12, row1, row2, row3);
     }
 
     private const string AttrInfo = "Atributos da pessoa (1 a 20)\n~Estilo de jogo e personalidade guiam as escolhas; capacidade pesa no combate (M3); conduta, nos incidentes (M9).";
 
-    /// <summary>Tabela de abates com estado vazio honesto ate o combate existir.</summary>
-    private Control KillsBody()
+    // ----- Situacao atual -----
+
+    private Control NowBody(CharacterView v)
     {
-        var head = new HBoxContainer();
-        foreach (var (t, w) in new[] { ("Quando", 80f), ("Alvo", 0f), ("Local", 160f), ("Resultado", 90f) })
+        long now = _ctx.Snapshot().Tick;
+        var col = Column(8);
+        var hero = new HBoxContainer();
+        hero.AddThemeConstantOverride("separation", 10);
+        string type = v.Status == CharacterStatus.Traveling ? "travel" : v.ActivityId.Length > 0 ? ActivityTypeOf(v.TargetRegionId, v.ActivityId) : "";
+        hero.AddChild(new Icon(v.Status == CharacterStatus.Offline ? "moon" : v.Status == CharacterStatus.Traveling ? "footprints" : TypeIcon(type), 20,
+            v.Status == CharacterStatus.Offline ? UiTokens.TextSecondary : type == "travel" ? UiTokens.Info : ActivityPalette.Color(type)));
+        var heroText = Wrap(StatusText.Of(v, _ctx.Content), 15, UiTokens.TextPrimary, UiFonts.SemiBold);
+        heroText.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        hero.AddChild(heroText);
+        col.AddChild(hero);
+        if (v.Status == CharacterStatus.Doing && v.ActivityEndTick > v.ActivityStartTick)
         {
-            var l = ThemeFactory.Text(t, UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Medium);
-            if (w > 0) l.CustomMinimumSize = new Vector2(w, 0); else l.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-            head.AddChild(l);
+            float total = v.ActivityEndTick - v.ActivityStartTick, done = Math.Clamp(now - v.ActivityStartTick, 0, (long)total);
+            col.AddChild(Bar("Atividade", done, total, UiTokens.Accent, $"{(int)(done * 100 / total)}%", 90));
         }
-        var empty = Wrap("Sem combate na simulação ainda. Abates, mortes, saque e rivais aparecem aqui no M3.", UiTokens.FontSmall, UiTokens.TextDisabled);
-        empty.HorizontalAlignment = HorizontalAlignment.Center;
-        empty.SizeFlagsVertical = SizeFlags.ExpandFill;
-        empty.VerticalAlignment = VerticalAlignment.Center;
-        return Column(8, head, new ColorRect { Color = UiTokens.Border, CustomMinimumSize = new Vector2(0, 1) }, empty);
+        else if (v.Status == CharacterStatus.Traveling && v.MoveEndTick > v.MoveStartTick)
+        {
+            float total = v.MoveEndTick - v.MoveStartTick, done = Math.Clamp(now - v.MoveStartTick, 0, (long)total);
+            col.AddChild(Bar("Trecho", done, total, UiTokens.Info, $"{(int)(done * 100 / total)}%", 90));
+        }
+        col.AddChild(KeyValue("Zona atual", _ctx.ZoneName(v.RegionId)));
+        if (v.Status != CharacterStatus.Offline)
+        {
+            col.AddChild(KeyValue("Sessão", $"{_ctx.Clock(v.SessionStartTick)} – {_ctx.Clock(v.SessionEndTick)}"));
+            col.AddChild(KeyValue("Restante", $"{Math.Max(0, (v.SessionEndTick - now) / Simulation.Core.Time.SimTime.TicksPerMinute)} min", UiTokens.AccentSoft));
+        }
+        var dcs = v.LastDecision;
+        if (dcs != null)
+        {
+            col.AddChild(new Control { CustomMinimumSize = new Vector2(0, 2) });
+            col.AddChild(Section("Por que escolheu", ThemeFactory.Text($"{dcs.OptionsConsidered} opções · nota {dcs.Utility}", UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Numbers)));
+            var factors = dcs.Factors.Where(f => f.Contribution != 0).OrderByDescending(f => Math.Abs(f.Contribution)).Take(5).ToList();
+            int max = Math.Max(1, factors.Count == 0 ? 1 : factors.Max(f => Math.Abs(f.Contribution)));
+            foreach (var f in factors)
+            {
+                var row = new TipPanel { TooltipText = $"{FactorPt(f.Key)}\nPeso|{(f.Contribution > 0 ? "+" : "")}{f.Contribution}\n~{FactorHint(f.Key)}", MouseFilter = MouseFilterEnum.Stop };
+                row.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
+                var r = new HBoxContainer();
+                r.AddThemeConstantOverride("separation", 8);
+                var l = ThemeFactory.Text(FactorPt(f.Key), UiTokens.FontSmall, UiTokens.TextLabel, UiFonts.Medium);
+                l.CustomMinimumSize = new Vector2(132, 0);
+                l.ClipText = true;
+                r.AddChild(l);
+                r.AddChild(new DivergingTrack(f.Contribution / (float)max, f.Contribution > 0 ? UiTokens.Success : UiTokens.Danger) { SizeFlagsHorizontal = SizeFlags.ExpandFill, CustomMinimumSize = new Vector2(0, 14) });
+                var n = ThemeFactory.Text((f.Contribution > 0 ? "+" : "") + f.Contribution, UiTokens.FontSmall, f.Contribution > 0 ? UiTokens.Success : UiTokens.Danger, UiFonts.Numbers);
+                n.CustomMinimumSize = new Vector2(38, 0);
+                n.HorizontalAlignment = HorizontalAlignment.Right;
+                r.AddChild(n);
+                row.AddChild(r);
+                col.AddChild(row);
+            }
+            if (dcs.RunnerUpActivityKey.Length > 0)
+            {
+                var p = dcs.RunnerUpActivityKey.Split('/');
+                col.AddChild(KeyValue("2ª opção", _ctx.ActivityName(p[0], p[1]), UiTokens.TextSecondary));
+            }
+        }
+        return col;
     }
 
-    /// <summary>Resumo das missoes: numeros e as ativas com a etapa atual.</summary>
+    // ----- Relatorio do analista -----
+
+    private Control ReportBody(CharacterView v, ServerStats st)
+    {
+        var e = Engagement();
+        int sEng = EngagementScore(e.Pct);
+        float ratioXp = st.MyXpH < 0 || st.MedianXpH <= 0 ? 1 : st.MyXpH / st.MedianXpH;
+        int sXp = st.MyXpH < 0 ? 3 : RatioScore(ratioXp);
+        int sExp = RatioScore(v.KnownRegions / Math.Max(1f, st.MedianKnown));
+        int done = v.CompletedQuests.Sum(q => q.Times);
+        int sQ = st.MedianQuests <= 0 ? (done > 0 ? 4 : 3) : RatioScore(done / st.MedianQuests);
+        long xpTotal = v.XpFromQuests + v.XpFromActivities;
+        int overall = (int)Math.Round((sEng + sXp + sExp + sQ) / 4.0, MidpointRounding.AwayFromZero);
+        string verdict = overall switch
+        {
+            5 => "Jogador de destaque",
+            4 => "Acima da média do servidor",
+            3 => "Dentro da média do servidor",
+            2 => "Abaixo da média do servidor",
+            _ => "Em risco de abandonar o jogo",
+        };
+        var col = Column(12);
+        var top = new HBoxContainer();
+        top.AddThemeConstantOverride("separation", 14);
+        top.AddChild(new RingRating(overall, 5, RatingColor(overall), 58));
+        var tt = Column(2, ThemeFactory.Text(verdict, 15, UiTokens.TextPrimary, UiFonts.SemiBold),
+            Wrap($"Média das quatro notas abaixo. {ProfileName}: {ProfileHint(_person.ProfileId)}", UiTokens.FontSmall, UiTokens.TextSecondary));
+        tt.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        top.AddChild(tt);
+        col.AddChild(top);
+        string xpText = st.MyXpH < 0 ? "Ainda sem 1 hora jogada para medir o ritmo."
+            : $"{PtBr.Int((long)st.MyXpH)} XP/h; a mediana do servidor é {PtBr.Int((long)st.MedianXpH)} XP/h ({(ratioXp >= 1 ? "+" : "")}{(ratioXp - 1) * 100:0}%).";
+        foreach (var (title, score, text, tip) in new[]
+        {
+            ("Engajamento", sEng, $"Jogou {e.Played} de {e.Expected} min previstos pela rotina nos últimos {e.Days} dias ({e.DaysPlayed} com sessão).",
+                $"Engajamento\nNota|{sEng}/5\nJogado|{e.Played} min\nPrevisto|{e.Expected} min\n~5: 90%+ · 4: 70%+ · 3: 50%+ · 2: 30%+ · 1: menos."),
+            ("Ritmo de evolução", sXp, xpText, "Ritmo de evolução\n~XP total ÷ horas jogadas, comparado à mediana do servidor. 5: 30% acima ou mais · 3: perto da mediana · 1: 40% abaixo ou mais."),
+            ("Exploração", sExp, $"Conhece {v.KnownRegions} de {_ctx.Content.Regions.Count} zonas; a mediana do servidor é {st.MedianKnown:0}.", "Exploração\n~Zonas conhecidas contra a mediana do servidor."),
+            ("Missões", sQ, $"{done} entregas (mediana {st.MedianQuests:0}). {(xpTotal == 0 ? 0 : v.XpFromQuests * 100 / xpTotal)}% do XP veio de missões.", "Missões\n~Entregas contra a mediana do servidor."),
+        })
+        {
+            col.AddChild(Divider());
+            var row = new TipPanel { TooltipText = tip, MouseFilter = MouseFilterEnum.Stop };
+            row.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
+            var r = new HBoxContainer();
+            r.AddThemeConstantOverride("separation", 14);
+            r.AddChild(new RingRating(score, 5, RatingColor(score), 42));
+            var c = Column(2, ThemeFactory.Text(title, UiTokens.FontBody, UiTokens.TextPrimary, UiFonts.SemiBold), Wrap(text, UiTokens.FontSmall, UiTokens.TextSecondary));
+            c.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+            r.AddChild(c);
+            row.AddChild(r);
+            col.AddChild(row);
+        }
+        return col;
+    }
+
+    private static string ProfileHint(string profileId) => profileId switch
+    {
+        "casual" => "joga pouco por dia e sem pressa.",
+        "competitivo" => "busca desafio e ranking.",
+        "social" => "joga pela companhia.",
+        "comerciante" => "prefere coletar e negociar.",
+        "explorador" => "quer ver o mundo inteiro.",
+        "hardcore" => "joga muitas horas e quer evoluir rápido.",
+        _ => "perfil de origem.",
+    };
+
+    // ----- Forma (minutos por dia + ultimas sessoes) -----
+
+    private Control FormBody()
+    {
+        long now = _ctx.Snapshot().Tick, tpd = Simulation.Core.Time.SimTime.TicksPerDay, tpm = Simulation.Core.Time.SimTime.TicksPerMinute;
+        long today = now / tpd;
+        var sessions = _ctx.PersonSessions(_person.Id);
+        long reg = _ctx.RegisteredAt(_person.Id);
+        long firstDay = reg >= 0 ? reg / tpd : sessions.Count > 0 ? sessions[0].Start / tpd : today;
+        int days = (int)Math.Clamp(today - firstDay + 1, 1, 14);
+        var minutes = new float[days];
+        foreach (var s in sessions)
+        {
+            long end = s.End < 0 ? now : s.End;
+            for (long t = s.Start; t < end;)
+            {
+                long dayEnd = (t / tpd + 1) * tpd;
+                long stop = Math.Min(end, dayEnd);
+                int idx = (int)(days - 1 - (today - t / tpd));
+                if (idx >= 0 && idx < days) minutes[idx] += (stop - t) / (float)tpm;
+                t = stop;
+            }
+        }
+        var labels = Enumerable.Range(0, days).Select(i => { var dt = _ctx.Calendar.ToDateTime(Math.Max(0, today - days + 1 + i) * tpd); return $"{dt.Day:00}/{dt.Month:00}"; }).ToList();
+        int routine = _person.Traits.SessionMinutes;
+        var chart = new ColumnChart
+        {
+            CustomMinimumSize = new Vector2(0, 132), Values = minutes, Labels = labels, Unit = " min",
+            ColorOf = m => m >= routine * 0.8f ? UiTokens.Success : UiTokens.Danger,
+            EmptyText = "Sem sessões registradas ainda.",
+        };
+        var played = minutes.Where(m => m > 0).ToList();
+        var stats = Row(0,
+            MiniStat(played.Count == 0 ? "–" : $"{played.Average():0}", "Média (min)"),
+            MiniStat($"{played.Count}/{days}", "Dias jogados"),
+            MiniStat($"{routine}", "Rotina (min)"));
+        var col = Column(12, chart, stats);
+        // Ultimas sessoes (tabela compacta, mais nova primeiro).
+        var grid = new GridContainer { Columns = 4 };
+        grid.AddThemeConstantOverride("h_separation", 12);
+        grid.AddThemeConstantOverride("v_separation", 6);
+        foreach (var h in new[] { "Dia", "Início", "Duração", "Prevista" })
+            grid.AddChild(Cell(h, UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Medium, h != "Dia"));
+        foreach (var s in sessions.Reverse().Take(3))
+        {
+            var dt = _ctx.Calendar.ToDateTime(s.Start);
+            long end = s.End < 0 ? now : s.End;
+            int dur = (int)((end - s.Start) / tpm);
+            grid.AddChild(Cell(PtBr.ShortDate(dt), UiTokens.FontSmall, UiTokens.TextLabel, UiFonts.Medium, false));
+            grid.AddChild(Cell(_ctx.Clock(s.Start), UiTokens.FontSmall, UiTokens.TextPrimary, UiFonts.Numbers, true));
+            grid.AddChild(Cell(s.End < 0 ? $"{dur} min ▸" : $"{dur} min", UiTokens.FontSmall, dur >= s.PlannedMinutes * 0.8f ? UiTokens.Success : UiTokens.Warning, UiFonts.Numbers, true));
+            grid.AddChild(Cell($"{s.PlannedMinutes} min", UiTokens.FontSmall, UiTokens.TextSecondary, UiFonts.Numbers, true));
+        }
+        if (sessions.Count > 0) col.AddChild(Column(8, Divider(), grid));
+        return col;
+    }
+
+    private static Label Cell(string text, int size, Color color, Font font, bool right)
+    {
+        var l = ThemeFactory.Text(text, size, color, font);
+        l.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        if (right) l.HorizontalAlignment = HorizontalAlignment.Right;
+        return l;
+    }
+
+    // ----- Evolucao -----
+
+    private Control EvolutionBody(CharacterView v, CharacterDetailView? d, ServerStats st)
+    {
+        var prog = _ctx.Content.Progression;
+        long need = ProgressionRules.XpToNextLevel(prog, v.Level);
+        bool max = v.Level >= prog.LevelCap;
+        Control chart;
+        if (d == null || d.LevelTicks.Count == 0) chart = Wrap(d == null ? "Carregando…" : "Ainda não subiu de nível.");
+        else chart = new LineChart
+        {
+            CustomMinimumSize = new Vector2(0, 170), Unit = " h",
+            XLabels = Enumerable.Range(2, d.LevelTicks.Count).Select(l => $"Nv {l}").ToList(),
+            Series = new[] { new ChartSeries { Name = "Horas até o nível", Color = UiTokens.Info, Values = d.LevelTicks.Select(t => (float)Hours(t)).ToList() } },
+        };
+        chart.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        var ring = new RingGauge
+        {
+            CustomMinimumSize = new Vector2(92, 92), SizeFlagsHorizontal = SizeFlags.ShrinkCenter,
+            Value = max ? 1 : v.Experience / (float)Math.Max(1, need), Color = UiTokens.Success,
+            Center = max ? "máx." : $"{v.Experience * 100 / Math.Max(1, need)}%", Caption = max ? "" : $"do Nv {v.Level + 1}",
+        };
+        string stage = (ProgressionRules.StageRate(prog, v.Level) / 1000.0).ToString("0.##", CultureInfo.GetCultureInfo("pt-BR"));
+        var side = Column(8, ring,
+            KeyValue("XP", max ? PtBr.Int(v.Experience) : $"{PtBr.Int(v.Experience)} / {PtBr.Int(need)}"),
+            KeyValue("Taxa da faixa", $"×{stage}"),
+            KeyValue("XP por hora", st.MyXpH < 0 ? "–" : PtBr.Int((long)st.MyXpH)));
+        side.CustomMinimumSize = new Vector2(150, 0);
+        side.SizeFlagsHorizontal = SizeFlags.ShrinkEnd;
+        return Row(16, chart, new ColorRect { Color = UiTokens.Divider, CustomMinimumSize = new Vector2(1, 0) }, side);
+    }
+
+    // ----- Classificacao -----
+
+    private Control RankBody(ServerStats st)
+    {
+        string cls = View != null && _ctx.Content.Classes.TryGetValue(View.ClassId, out var c) ? c.Name : "classe";
+        int topPct = st.Total == 0 ? 0 : (int)Math.Ceiling(st.Rank * 100.0 / st.Total);
+        Control Tile(int rank, int total, string caption)
+        {
+            var t = Column(0, ThemeFactory.Text(rank > 0 ? $"{rank}º" : "–", 22, UiTokens.TextPrimary, UiFonts.Numbers),
+                ThemeFactory.Text(caption, UiTokens.FontCaption, UiTokens.TextLabel, UiFonts.Medium),
+                ThemeFactory.Text($"de {total}", UiTokens.FontCaption, UiTokens.TextSecondary));
+            return t;
+        }
+        var grid = new GridContainer { Columns = 2 };
+        grid.AddThemeConstantOverride("h_separation", 16);
+        grid.AddThemeConstantOverride("v_separation", 14);
+        grid.AddChild(Tile(st.Rank, st.Total, "No servidor"));
+        grid.AddChild(Tile(st.ClassRank, st.ClassTotal, $"Entre {cls}s".Replace("ss", "s")));
+        grid.AddChild(Tile(st.ProfileRank, st.ProfileTotal, $"Perfil {ProfileName}"));
+        grid.AddChild(Tile(st.XpHRank, st.XpHTotal, "Em XP por hora"));
+        var badge = new HBoxContainer();
+        badge.AddThemeConstantOverride("separation", 8);
+        badge.AddChild(new Icon("trophy", 16, UiTokens.Accent));
+        badge.AddChild(ThemeFactory.Text($"Top {Math.Max(1, topPct)}% do servidor", UiTokens.FontBody, UiTokens.AccentSoft, UiFonts.SemiBold));
+        return Column(14, badge, Divider(), grid);
+    }
+
+    // ----- Zonas frequentadas -----
+
+    private Control ZonesBody()
+    {
+        var counts = new Dictionary<string, int>(StringComparer.Ordinal);
+        foreach (var e in _ctx.PersonHistory(_person.Id))
+            if (e.Type == "activity_chosen" && (e.Detail ?? "").Split('/') is { Length: 2 } p) counts[p[0]] = counts.GetValueOrDefault(p[0]) + 1;
+        if (counts.Count == 0) return Wrap("Nenhuma escolha registrada desde que o jogo foi aberto.");
+        int total = counts.Values.Sum(), max = counts.Values.Max();
+        var col = Column(6);
+        foreach (var (zid, n) in counts.OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.Ordinal).Take(5))
+        {
+            if (!_ctx.Content.Regions.TryGetValue(zid, out var z)) continue;
+            string id = zid;
+            var b = HoverRow(() => _ctx.OpenZone(id), $"{z.Name}\nEscolhas|{n} de {total}\n~Clique para abrir a zona.");
+            var r = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
+            r.SetAnchorsPreset(LayoutPreset.FullRect);
+            r.OffsetLeft = 6; r.OffsetRight = -6;
+            r.AddThemeConstantOverride("separation", 10);
+            r.AddChild(new ZoneEmblem(z) { CustomMinimumSize = new Vector2(26, 26), SizeFlagsVertical = SizeFlags.ShrinkCenter, MouseFilter = MouseFilterEnum.Ignore });
+            var info = Column(4);
+            info.MouseFilter = MouseFilterEnum.Ignore;
+            info.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+            var top = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
+            var nm = ThemeFactory.Text(z.Name, UiTokens.FontBody, UiTokens.TextPrimary, UiFonts.Medium);
+            nm.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+            top.AddChild(nm);
+            top.AddChild(ThemeFactory.Text($"{n * 100 / total}%", UiTokens.FontSmall, UiTokens.TextLabel, UiFonts.Numbers));
+            info.AddChild(top);
+            info.AddChild(new ThinBar(n / (float)max, z.IsCity ? UiTokens.Accent : UiTokens.Info) { CustomMinimumSize = new Vector2(0, 3) });
+            r.AddChild(info);
+            b.CustomMinimumSize = new Vector2(0, 40);
+            b.AddChild(r);
+            col.AddChild(b);
+        }
+        return col;
+    }
+
+    // ----- Missoes -----
+
     private Control QuestSummary(CharacterView v)
     {
         long xpTotal = v.XpFromQuests + v.XpFromActivities;
@@ -145,13 +570,30 @@ public partial class PlayerModal : ModalFrame
             MiniStat(v.ActiveQuests.Count.ToString(), "Ativas"),
             MiniStat(PtBr.Int(v.CompletedQuests.Sum(c => c.Times)), "Entregues"),
             MiniStat(xpTotal == 0 ? "–" : $"{v.XpFromQuests * 100 / xpTotal}%", "Do XP"));
-        var col = Column(8, nums);
-        foreach (var p in v.ActiveQuests.Take(3))
+        var col = Column(10, nums, Divider());
+        foreach (var p in v.ActiveQuests.Take(4))
         {
             if (!_ctx.Content.Quests.TryGetValue(p.QuestId, out var q)) continue;
             bool ready = p.StepIndex >= q.Steps.Count;
-            col.AddChild(Bar(q.Name, ready ? 1 : p.StepMinutes, ready ? 1 : q.Steps[p.StepIndex].Minutes, ready ? UiTokens.Success : UiTokens.Info,
-                ready ? "entregar" : $"etapa {p.StepIndex + 1}", 130));
+            string qid = q.Id;
+            var b = HoverRow(() => _ctx.OpenQuest(qid), $"{q.Name}\nEtapa|{Math.Min(p.StepIndex + 1, q.Steps.Count + 1)} de {q.Steps.Count + 1}\n~Clique para abrir a missão.");
+            b.CustomMinimumSize = new Vector2(0, 40);
+            var c = Column(5);
+            c.MouseFilter = MouseFilterEnum.Ignore;
+            c.SetAnchorsPreset(LayoutPreset.FullRect);
+            c.OffsetLeft = 6; c.OffsetRight = -6; c.OffsetTop = 4;
+            var top = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
+            top.AddThemeConstantOverride("separation", 8);
+            top.AddChild(new Icon("scroll-text", 14, QuestModal.CategoryColor(q.Category)));
+            var nm = ThemeFactory.Text(q.Name, UiTokens.FontSmall, UiTokens.TextPrimary, UiFonts.Medium);
+            nm.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+            nm.ClipText = true;
+            top.AddChild(nm);
+            top.AddChild(ThemeFactory.Text(ready ? "entregar" : $"{p.StepMinutes}/{q.Steps[p.StepIndex].Minutes} min", UiTokens.FontCaption, ready ? UiTokens.Success : UiTokens.TextSecondary, UiFonts.Numbers));
+            c.AddChild(top);
+            c.AddChild(new ThinBar(ready ? 1 : p.StepMinutes / (float)Math.Max(1, q.Steps[p.StepIndex].Minutes), ready ? UiTokens.Success : UiTokens.Info) { CustomMinimumSize = new Vector2(0, 3) });
+            b.AddChild(c);
+            col.AddChild(b);
         }
         if (v.ActiveQuests.Count == 0) col.AddChild(Wrap("Nenhuma missão em andamento."));
         return col;
@@ -166,159 +608,25 @@ public partial class PlayerModal : ModalFrame
         return c;
     }
 
-    /// <summary>Tracos marcantes derivados dos atributos (o que mais pesa nas escolhas).</summary>
-    private Control Highlights()
-    {
-        var t = _person.Traits;
-        var candidates = new List<(int Score, string Title, string Text)>();
-        void High(int value, string title, string text) { int v20 = UiTokens.To20(value); if (v20 >= 14) candidates.Add((v20, title, text)); }
-        void Low(int value, string title, string text) { int v20 = UiTokens.To20(value); if (v20 <= 6) candidates.Add((27 - v20, title, text)); }
-        High(t.Pve, "Caçador", "Prefere caçar criaturas; áreas de caça pesam mais nas escolhas.");
-        High(t.Pvp, "Gosta de PvP", "Procura combate contra jogadores (o PvP chega no M3).");
-        High(t.Trade, "Mercador", "Gosta de coletar, comprar e vender.");
-        High(t.Exploration, "Explorador", "Tende a descobrir zonas novas cedo.");
-        High(t.Socializing, "Sociável", "Gosta de lugares com gente e de estar em grupo.");
-        High(t.Patience, "Paciente", "Repete a mesma atividade sem cansar tão cedo.");
-        High(t.RiskAversion, "Cauteloso", "Evita perigo, PvP e conteúdo acima do nível.");
-        High(t.Loyalty, "Leal", "Tende a ficar com grupos e guildas (M6).");
-        Low(t.RiskAversion, "Destemido", "Aceita risco; encara zonas perigosas.");
-        Low(t.Patience, "Inquieto", "Cansa de repetir e troca de atividade logo.");
-        Low(t.Sociability, "Reservado", "Prefere lugares vazios e jogar sozinho.");
-        var top = candidates.OrderByDescending(c => c.Score).Take(3).ToList();
-        if (top.Count == 0) top.Add((0, "Equilibrado", "Nenhum traço se destaca; escolhe pelo conteúdo e pelo momento."));
-        var row = new HBoxContainer();
-        row.AddThemeConstantOverride("separation", 16);
-        foreach (var (_, title, text) in top)
-        {
-            var c = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsStretchRatio = 1 };
-            c.AddThemeConstantOverride("separation", 2);
-            var h = new HBoxContainer();
-            h.AddThemeConstantOverride("separation", 6);
-            h.AddChild(new ColorRect { Color = UiTokens.AccentSoft, CustomMinimumSize = new Vector2(6, 6), SizeFlagsVertical = SizeFlags.ShrinkCenter });
-            h.AddChild(ThemeFactory.Text(title, UiTokens.FontBody, UiTokens.TextPrimary, UiFonts.SemiBold));
-            c.AddChild(h);
-            var l = Wrap(text, UiTokens.FontCaption, UiTokens.TextSecondary);
-            l.CustomMinimumSize = new Vector2(120, 0);
-            c.AddChild(l);
-            row.AddChild(c);
-        }
-        return Column(10, new ColorRect { Color = UiTokens.Border, CustomMinimumSize = new Vector2(0, 1) }, row);
-    }
+    // ----- Atributos e tracos -----
 
-    private Control FutureNote(string text)
-    {
-        var l = ThemeFactory.Text(text, UiTokens.FontSmall, UiTokens.TextSecondary);
-        l.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        return l;
-    }
-
-    private Control FutureTab(string title, string text) =>
-        Column(12, Card($"{title} · disponível no M5", FutureNote(text), UiTokens.TextSecondary));
-
-    /// <summary>Minutos conectados por dia (desde o cadastro, ate 14 dias), em colunas.</summary>
-    private Control PlayChart()
-    {
-        var events = _ctx.PersonHistory(_person.Id);
-        var now = _ctx.Snapshot().Tick;
-        long tpd = Simulation.Core.Time.SimTime.TicksPerDay;
-        long today = now / tpd;
-        long first = today;
-        foreach (var e in events) if (e.Type is "person_registered" or "session_started") first = Math.Min(first, e.Tick / tpd);
-        int days = (int)Math.Clamp(today - first + 1, 1, 14);
-        var minutes = new float[days];
-        long? end = null;
-        foreach (var e in events)   // mais novos primeiro
-        {
-            if (e.Type == "session_ended") end = e.Tick;
-            else if (e.Type == "session_started")
-            {
-                long stop = end ?? now;
-                int idx = (int)(days - 1 - (today - e.Tick / tpd));
-                if (idx >= 0 && idx < days) minutes[idx] += (stop - e.Tick) / (float)Simulation.Core.Time.SimTime.TicksPerMinute;
-                end = null;
-            }
-        }
-        var labels = Enumerable.Range(0, days).Select(i =>
-        {
-            var d = _ctx.Calendar.ToDateTime(Math.Max(0, today - days + 1 + i) * tpd);
-            return $"{d.Day:00}/{d.Month:00}";
-        }).ToList();
-        float avg = minutes.Where(m => m > 0).DefaultIfEmpty(0).Average();
-        var chart = new ColumnChart
-        {
-            CustomMinimumSize = new Vector2(0, 130), Values = minutes, Labels = labels, Unit = " min",
-            ColorOf = m => m >= avg ? UiTokens.Success : new Color(UiTokens.Success, 0.55f),
-            EmptyText = "Sem sessões registradas desde que o jogo foi aberto.",
-        };
-        var foot = Row(0, MiniStat($"{avg:0}", "Média (min)"), MiniStat(minutes.Count(m => m > 0).ToString(), "Dias jogados"), MiniStat($"{minutes.Sum() / 60f:0.#}".Replace('.', ','), "Horas no período"));
-        return Column(10, chart, foot);
-    }
-
-    /// <summary>Divisao do tempo conectado por tipo de atividade (o resto e deslocamento): rosca + legenda.</summary>
-    private Control TimeUseBody(CharacterDetailView? d)
-    {
-        if (d == null || d.PlayedTicks <= 0) return Wrap("Coletando dados…");
-        long sum = d.ActivityTicks.Values.Sum();
-        var items = d.ActivityTicks.Select(kv => (Type: kv.Key, Ticks: kv.Value)).ToList();
-        items.Add(("travel", Math.Max(0, d.PlayedTicks - sum)));
-        var list = items.Where(i => i.Ticks > 0).OrderByDescending(i => i.Ticks).Take(6)
-            .Select(i => (Name: i.Type == "travel" ? "Deslocamento" : i.Type == "idle" ? "Esperando" : PtBr.ActivityType(i.Type),
-                Pct: i.Ticks * 100f / d.PlayedTicks, Hours: i.Ticks / (double)Simulation.Core.Time.SimTime.TicksPerHour,
-                Color: i.Type == "travel" ? new Color("#5B6573") : ActivityPalette.Color(i.Type))).ToList();
-        double total = d.PlayedTicks / (double)Simulation.Core.Time.SimTime.TicksPerHour;
-        var donut = new DonutChart { CustomMinimumSize = new Vector2(112, 112), SizeFlagsVertical = SizeFlags.ShrinkCenter, Slices = list.Select(x => (x.Pct, x.Color)).ToList(), Center = $"{PtBr.Decimal(total)} h", Caption = "conectado" };
-        var legend = Column(5);
-        legend.SizeFlagsVertical = SizeFlags.ShrinkCenter;
-        foreach (var x in list)
-        {
-            var row = new TipPanel { TooltipText = $"{x.Name}\nTempo|{PtBr.Decimal(x.Hours)} h\nParcela|{PtBr.Decimal(x.Pct)}%", MouseFilter = MouseFilterEnum.Stop };
-            row.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
-            var r = new HBoxContainer();
-            r.AddThemeConstantOverride("separation", 8);
-            r.AddChild(new ColorRect { Color = x.Color, CustomMinimumSize = new Vector2(8, 8), SizeFlagsVertical = SizeFlags.ShrinkCenter });
-            var n = ThemeFactory.Text(x.Name, UiTokens.FontSmall, UiTokens.TextPrimary);
-            n.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-            r.AddChild(n);
-            r.AddChild(ThemeFactory.Text($"{x.Pct:0}%", UiTokens.FontSmall, UiTokens.TextSecondary, UiFonts.Numbers));
-            row.AddChild(r);
-            legend.AddChild(row);
-        }
-        return Row(16, donut, legend);
-    }
-
-    /// <summary>Horas jogadas ate cada nivel (curva real do personagem).</summary>
-    private Control LevelChart(CharacterDetailView? d)
-    {
-        if (d == null || d.LevelTicks.Count == 0) return Wrap("Ainda não subiu de nível.");
-        var hours = d.LevelTicks.Select(t => (float)(t / (double)Simulation.Core.Time.SimTime.TicksPerHour)).ToList();
-        var chart = new LineChart
-        {
-            CustomMinimumSize = new Vector2(0, 176),
-            XLabels = Enumerable.Range(2, hours.Count).Select(l => $"Nv {l}").ToList(),
-            Series = new[] { new ChartSeries { Name = "Horas até o nível", Color = UiTokens.Info, Values = hours } },
-            TooltipText = "Cada ponto é o tempo conectado acumulado quando o personagem chegou ao nível.",
-        };
-        return chart;
-    }
-
-    /// <summary>Cor da barra de atributo: excepcional, bom, medio, fraco.</summary>
-    private static Color AttrTier(int v20) => v20 >= 17 ? UiTokens.Accent : v20 >= 14 ? UiTokens.Success : v20 >= 9 ? new Color("#7D8693") : v20 >= 6 ? new Color("#525A66") : UiTokens.Danger;
+    private static Color AttrTier(int v20) => v20 >= 18 ? UiTokens.Exceptional : v20 >= 14 ? UiTokens.Success : v20 >= 9 ? new Color("#8B94A1") : v20 >= 6 ? new Color("#4E5661") : UiTokens.Danger;
 
     private Control AttributeGrid()
     {
         var t = _person.Traits;
         Control Group(string title, (string Name, int Value, string Hint)[] items)
         {
-            var col = Column(7);
-            col.AddChild(ThemeFactory.Text(title, UiTokens.FontSmall, UiTokens.TextPrimary, UiFonts.SemiBold));
+            var col = Column(10);
+            col.AddChild(Section(title));
             foreach (var (name, value, hint) in items)
             {
                 int v20 = UiTokens.To20(value);
                 var cell = new TipPanel { TooltipText = $"{name}\nValor|{v20} / 20\nBruto|{value} / 1000\n~{hint}", MouseFilter = MouseFilterEnum.Stop };
                 cell.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
-                var c = Column(3);
+                var c = Column(5);
                 var r = new HBoxContainer();
-                var l = ThemeFactory.Text(name, UiTokens.FontSmall, UiTokens.TextSecondary);
+                var l = ThemeFactory.Text(name, UiTokens.FontBody, UiTokens.TextLabel, UiFonts.Medium);
                 l.SizeFlagsHorizontal = SizeFlags.ExpandFill;
                 r.AddChild(l);
                 r.AddChild(ThemeFactory.Text(v20.ToString(), UiTokens.FontBody, v20 >= 14 ? AttrTier(v20) : v20 <= 5 ? UiTokens.Danger : UiTokens.TextPrimary, UiFonts.Numbers));
@@ -330,7 +638,7 @@ public partial class PlayerModal : ModalFrame
             return col;
         }
         var row = new HBoxContainer();
-        row.AddThemeConstantOverride("separation", 22);
+        row.AddThemeConstantOverride("separation", 24);
         foreach (var g in new[]
         {
             Group("Estilo de jogo", new[] { ("PvE", t.Pve, "Gosto por caçar e enfrentar criaturas."), ("PvP", t.Pvp, "Gosto por combate contra jogadores."), ("Comércio", t.Trade, "Gosto por comprar, vender e coletar."), ("Exploração", t.Exploration, "Gosto por descobrir lugares."), ("Socializar", t.Socializing, "Gosto por conversar e estar em grupo.") }),
@@ -345,96 +653,169 @@ public partial class PlayerModal : ModalFrame
         return row;
     }
 
-    private Control NowBody(CharacterView v)
+    /// <summary>Tracos marcantes derivados dos atributos (o que mais pesa nas escolhas).</summary>
+    private Control Highlights()
     {
-        long now = _ctx.Snapshot().Tick;
-        var col = Column(6);
-        col.AddChild(Wrap(StatusText.Of(v, _ctx.Content), 15, UiTokens.TextPrimary, UiFonts.SemiBold));
-        if (v.Status == CharacterStatus.Doing && v.ActivityEndTick > v.ActivityStartTick)
+        var t = _person.Traits;
+        var candidates = new List<(int Score, string Icon, string Title, string Text)>();
+        void High(int value, string icon, string title, string text) { int v20 = UiTokens.To20(value); if (v20 >= 14) candidates.Add((v20, icon, title, text)); }
+        void Low(int value, string icon, string title, string text) { int v20 = UiTokens.To20(value); if (v20 <= 6) candidates.Add((27 - v20, icon, title, text)); }
+        High(t.Pve, "sword", "Caçador", "Prefere caçar criaturas; áreas de caça pesam mais nas escolhas.");
+        High(t.Pvp, "swords", "Gosta de PvP", "Procura combate contra jogadores (o PvP chega no M3).");
+        High(t.Trade, "coins", "Mercador", "Gosta de coletar, comprar e vender.");
+        High(t.Exploration, "compass", "Explorador", "Tende a descobrir zonas novas cedo.");
+        High(t.Socializing, "users", "Sociável", "Gosta de lugares com gente e de estar em grupo.");
+        High(t.Patience, "hourglass", "Paciente", "Repete a mesma atividade sem cansar tão cedo.");
+        High(t.RiskAversion, "shield", "Cauteloso", "Evita perigo, PvP e conteúdo acima do nível.");
+        High(t.Loyalty, "heart-handshake", "Leal", "Tende a ficar com grupos e guildas (M6).");
+        Low(t.RiskAversion, "flame", "Destemido", "Aceita risco; encara zonas perigosas.");
+        Low(t.Patience, "zap", "Inquieto", "Cansa de repetir e troca de atividade logo.");
+        Low(t.Sociability, "user", "Reservado", "Prefere lugares vazios e jogar sozinho.");
+        var top = candidates.OrderByDescending(c => c.Score).Take(3).ToList();
+        if (top.Count == 0) top.Add((0, "scale", "Equilibrado", "Nenhum traço se destaca; escolhe pelo conteúdo e pelo momento."));
+        var row = new HBoxContainer();
+        row.AddThemeConstantOverride("separation", 20);
+        foreach (var (_, icon, title, text) in top)
         {
-            float total = v.ActivityEndTick - v.ActivityStartTick, done = Math.Clamp(now - v.ActivityStartTick, 0, (long)total);
-            col.AddChild(Bar("Atividade", done, total, UiTokens.Accent, $"{(int)(done * 100 / total)}%", 90));
-            col.AddChild(KeyValue("Termina às", _ctx.Clock(v.ActivityEndTick)));
+            var c = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
+            c.AddThemeConstantOverride("separation", 4);
+            var h = new HBoxContainer();
+            h.AddThemeConstantOverride("separation", 8);
+            h.AddChild(new Icon(icon, 16, UiTokens.AccentSoft));
+            h.AddChild(ThemeFactory.Text(title, UiTokens.FontBody, UiTokens.TextPrimary, UiFonts.SemiBold));
+            c.AddChild(h);
+            var l = Wrap(text, UiTokens.FontSmall, UiTokens.TextSecondary);
+            l.CustomMinimumSize = new Vector2(120, 0);
+            c.AddChild(l);
+            row.AddChild(c);
         }
-        else if (v.Status == CharacterStatus.Traveling && v.MoveEndTick > v.MoveStartTick)
-        {
-            float total = v.MoveEndTick - v.MoveStartTick, done = Math.Clamp(now - v.MoveStartTick, 0, (long)total);
-            col.AddChild(Bar("Trecho", done, total, UiTokens.Info, $"{(int)(done * 100 / total)}%", 90));
-        }
-        col.AddChild(KeyValue("Zona atual", _ctx.ZoneName(v.RegionId)));
-        if (v.Status != CharacterStatus.Offline)
-        {
-            col.AddChild(KeyValue("Conectou às", _ctx.Clock(v.SessionStartTick)));
-            col.AddChild(KeyValue("Sai às (previsto)", _ctx.Clock(v.SessionEndTick)));
-            col.AddChild(KeyValue("Restante", $"{Math.Max(0, (v.SessionEndTick - now) / Simulation.Core.Time.SimTime.TicksPerMinute)} min", UiTokens.AccentSoft));
-        }
-        return col;
+        return Column(14, Divider(), row);
     }
 
-    private Control ProgressBody(CharacterView v)
+    private Control FutureNote(string text)
     {
-        var prog = _ctx.Content.Progression;
-        long need = ProgressionRules.XpToNextLevel(prog, v.Level);
-        bool max = v.Level >= prog.LevelCap;
-        var ring = new RingGauge
-        {
-            CustomMinimumSize = new Vector2(86, 86), SizeFlagsVertical = SizeFlags.ShrinkCenter,
-            Value = max ? 1 : v.Experience / (float)Math.Max(1, need), Color = UiTokens.Success,
-            Center = max ? "máx." : $"{v.Experience * 100 / Math.Max(1, need)}%", Caption = max ? "" : $"do Nv {v.Level + 1}",
-        };
-        string stage = (ProgressionRules.StageRate(prog, v.Level) / 1000.0).ToString("0.##", CultureInfo.GetCultureInfo("pt-BR"));
-        var data = Column(5,
-            KeyValue("Nível", $"{v.Level} de {prog.LevelCap}"),
-            KeyValue("XP", max ? PtBr.Int(v.Experience) : $"{PtBr.Int(v.Experience)} / {PtBr.Int(need)}"),
-            KeyValue("Taxa da faixa", $"×{stage}"),
-            KeyValue("Zonas conhecidas", $"{v.KnownRegions} de {_ctx.Content.Regions.Count}"));
-        data.SizeFlagsVertical = SizeFlags.ShrinkCenter;
-        return Row(16, ring, data);
+        var l = ThemeFactory.Text(text, UiTokens.FontBody, UiTokens.TextSecondary);
+        l.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        return l;
     }
 
-    private Control DecisionBody(CharacterView v)
+    private Control FutureTab(string title, string milestone, string text) =>
+        Grid(12, (Card($"{title} · chega no {milestone}", FutureNote(text), info: $"{title}\n~Disponível quando o sistema existir na simulação ({milestone})."), 6), (new Control(), 6));
+
+    // ----- Uso do tempo -----
+
+    /// <summary>Divisao do tempo conectado por tipo de atividade (o resto e deslocamento): rosca + legenda.</summary>
+    private Control TimeUseBody(CharacterDetailView? d)
     {
-        var d = v.LastDecision;
-        if (d == null) return Wrap("Nenhuma decisão registrada ainda.");
-        var col = Column(5);
-        col.AddChild(Wrap(_ctx.ActivityName(d.RegionId, d.ActivityId), 15, UiTokens.TextPrimary, UiFonts.SemiBold));
-        string place = _ctx.PlaceName(d.RegionId, d.ActivityId) == _ctx.ZoneName(d.RegionId) ? _ctx.ZoneName(d.RegionId) : $"{_ctx.PlaceName(d.RegionId, d.ActivityId)} · {_ctx.ZoneName(d.RegionId)}";
-        col.AddChild(Wrap($"{place} · às {_ctx.Clock(d.Tick)} · {d.OptionsConsidered} opções", UiTokens.FontCaption));
-        var factors = d.Factors.Where(f => f.Contribution != 0).OrderByDescending(f => Math.Abs(f.Contribution)).ToList();
-        int max = Math.Max(1, factors.Count == 0 ? 1 : factors.Max(f => Math.Abs(f.Contribution)));
-        foreach (var f in factors)
+        if (d == null || d.PlayedTicks <= 0) return Wrap("Carregando…");
+        long sum = d.ActivityTicks.Values.Sum();
+        var items = d.ActivityTicks.Select(kv => (Type: kv.Key, Ticks: kv.Value)).ToList();
+        items.Add(("travel", Math.Max(0, d.PlayedTicks - sum)));
+        var list = items.Where(i => i.Ticks > 0).OrderByDescending(i => i.Ticks).Take(6)
+            .Select(i => (Type: i.Type, Name: i.Type == "travel" ? "Deslocamento" : i.Type == "idle" ? "Esperando" : PtBr.ActivityType(i.Type),
+                Pct: i.Ticks * 100f / d.PlayedTicks, Hours: Hours(i.Ticks),
+                Color: i.Type == "travel" ? new Color("#5B6573") : ActivityPalette.Color(i.Type))).ToList();
+        var donut = new DonutChart { CustomMinimumSize = new Vector2(124, 124), SizeFlagsVertical = SizeFlags.ShrinkCenter, Slices = list.Select(x => (x.Pct, x.Color)).ToList(), Center = $"{PtBr.Decimal(Hours(d.PlayedTicks))} h", Caption = "conectado" };
+        var legend = Column(8);
+        legend.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        foreach (var x in list)
         {
-            var row = new TipPanel { TooltipText = $"{FactorPt(f.Key)}\nPeso|{(f.Contribution > 0 ? "+" : "")}{f.Contribution}\n~{FactorHint(f.Key)}", MouseFilter = MouseFilterEnum.Stop };
+            var row = new TipPanel { TooltipText = $"{x.Name}\nTempo|{PtBr.Decimal(x.Hours)} h\nParcela|{PtBr.Decimal(x.Pct)}%", MouseFilter = MouseFilterEnum.Stop };
             row.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
             var r = new HBoxContainer();
             r.AddThemeConstantOverride("separation", 8);
-            var l = ThemeFactory.Text(FactorPt(f.Key), UiTokens.FontSmall, UiTokens.TextPrimary);
-            l.CustomMinimumSize = new Vector2(150, 0);
-            r.AddChild(l);
-            r.AddChild(new DivergingTrack(f.Contribution / (float)max, f.Contribution > 0 ? UiTokens.Success : UiTokens.Danger) { SizeFlagsHorizontal = SizeFlags.ExpandFill, CustomMinimumSize = new Vector2(0, 12) });
-            var n = ThemeFactory.Text((f.Contribution > 0 ? "+" : "") + f.Contribution, UiTokens.FontSmall, f.Contribution > 0 ? UiTokens.Success : UiTokens.Danger, UiFonts.Numbers);
-            n.CustomMinimumSize = new Vector2(36, 0);
-            n.HorizontalAlignment = HorizontalAlignment.Right;
+            r.AddChild(new Icon(x.Type == "travel" ? "footprints" : TypeIcon(x.Type), 14, x.Color));
+            var n = ThemeFactory.Text(x.Name, UiTokens.FontSmall, UiTokens.TextLabel, UiFonts.Medium);
+            n.SizeFlagsHorizontal = SizeFlags.ExpandFill;
             r.AddChild(n);
+            r.AddChild(ThemeFactory.Text($"{x.Pct:0}%", UiTokens.FontSmall, UiTokens.TextPrimary, UiFonts.Numbers));
             row.AddChild(r);
-            col.AddChild(row);
+            legend.AddChild(row);
         }
-        col.AddChild(KeyValue("Nota final", d.Utility.ToString()));
-        if (d.RunnerUpActivityKey.Length > 0)
-        {
-            var p = d.RunnerUpActivityKey.Split('/');
-            col.AddChild(KeyValue("2ª opção", _ctx.ActivityName(p[0], p[1]), UiTokens.TextSecondary));
-        }
-        return col;
+        return Row(18, donut, legend);
     }
+
+    private string ActivityTypeOf(string zone, string activity) =>
+        _ctx.Content.Regions.TryGetValue(zone, out var r) ? r.FindActivity(activity)?.Type ?? "" : "";
+
+    /// <summary>Icone Lucide por tipo de atividade.</summary>
+    public static string TypeIcon(string type) => type switch
+    {
+        ActivityTypes.Hunt => "sword",
+        ActivityTypes.Gather => "pickaxe",
+        ActivityTypes.Boss => "crown",
+        ActivityTypes.Quest => "scroll-text",
+        ActivityTypes.Explore => "compass",
+        ActivityTypes.Trade => "store",
+        ActivityTypes.Repair => "hammer",
+        ActivityTypes.Train => "dumbbell",
+        ActivityTypes.Socialize => "beer",
+        ActivityTypes.Recruit => "users",
+        ActivityTypes.Patrol => "eye",
+        ActivityTypes.Ambush => "skull",
+        "idle" => "hourglass",
+        _ => "activity",
+    };
+
+    // ----- Atividades recentes -----
 
     private Control RecentBody()
     {
-        var col = Column(3);
+        var col = Column(2);
         var events = _ctx.PersonHistory(_person.Id);
         if (events.Count == 0) { col.AddChild(Wrap("Nada desde que o jogo foi aberto.")); return col; }
-        foreach (var e in events.Take(8)) col.AddChild(EventRow(e, compact: true));
+        foreach (var e in events.Take(9)) col.AddChild(RecentRow(e));
         return col;
+    }
+
+    /// <summary>Linha de evento: hora, icone, texto; clicavel quando leva a uma pagina.</summary>
+    private Control RecentRow(SimEvent e)
+    {
+        var (text, color) = Describe(e);
+        string icon = "activity";
+        Action? go = null;
+        var parts = (e.Detail ?? "").Split('/');
+        switch (e.Type)
+        {
+            case "activity_chosen":
+                icon = parts.Length == 2 ? TypeIcon(ActivityTypeOf(parts[0], parts[1])) : "activity";
+                if (parts.Length == 2 && _ctx.Content.Regions.TryGetValue(parts[0], out var z))
+                {
+                    string zid = parts[0];
+                    var area = z.AreaOfActivity(parts[1]);
+                    go = area != null ? () => _ctx.OpenArea(zid, area.Id) : () => _ctx.OpenZone(zid);
+                }
+                color = parts.Length == 2 ? ActivityPalette.Color(ActivityTypeOf(parts[0], parts[1])) : color;
+                break;
+            case "session_started": icon = "play"; break;
+            case "session_ended": icon = "moon"; break;
+            case "level_up": icon = "award"; break;
+            case "person_registered": icon = "user"; break;
+            case "region_discovered": icon = "map"; { string zid = e.Detail ?? ""; go = () => _ctx.OpenZone(zid); } break;
+            case "quest_accepted": icon = "scroll-text"; { string q = e.Detail ?? ""; go = () => _ctx.OpenQuest(q); } break;
+            case "quest_step_completed": icon = "circle-check"; { string q = (e.Detail ?? "").Split('#')[0]; go = () => _ctx.OpenQuest(q); } break;
+            case "quest_completed": icon = "medal"; { string q = e.Detail ?? ""; go = () => _ctx.OpenQuest(q); } break;
+        }
+        var b = HoverRow(go ?? (() => { }), go != null ? "Clique para abrir" : "");
+        if (go == null) b.MouseDefaultCursorShape = CursorShape.Arrow;
+        b.CustomMinimumSize = new Vector2(0, 30);
+        var r = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
+        r.SetAnchorsPreset(LayoutPreset.FullRect);
+        r.OffsetLeft = 8; r.OffsetRight = -8;
+        r.AddThemeConstantOverride("separation", 12);
+        var when = ThemeFactory.Text(_ctx.Clock(e.Tick), UiTokens.FontSmall, UiTokens.AxisText, UiFonts.Numbers);
+        when.CustomMinimumSize = new Vector2(38, 0);
+        when.VerticalAlignment = VerticalAlignment.Center;
+        r.AddChild(when);
+        r.AddChild(new Icon(icon, 16, color));
+        var l = ThemeFactory.Text(text, UiTokens.FontBody, UiTokens.TextLabel);
+        l.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        l.VerticalAlignment = VerticalAlignment.Center;
+        l.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+        r.AddChild(l);
+        if (go != null) r.AddChild(new Icon("chevron-right", 14, UiTokens.TextDisabled));
+        b.AddChild(r);
+        return b;
     }
 
     public static string FactorPt(string key) => key switch
@@ -539,7 +920,7 @@ public partial class PlayerModal : ModalFrame
 
     private static Label ColHead(string text, float width)
     {
-        var l = ThemeFactory.Text(text.ToUpperInvariant(), 10, UiTokens.TextSecondary, UiFonts.CondensedBold);
+        var l = ThemeFactory.Text(text, UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Medium);
         if (width > 0) l.CustomMinimumSize = new Vector2(width, 22);
         else l.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         return l;

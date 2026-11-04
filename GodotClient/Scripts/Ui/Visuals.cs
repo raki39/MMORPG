@@ -14,6 +14,7 @@ public partial class CardPanel : PanelContainer
     public CardPanel()
     {
         MouseFilter = MouseFilterEnum.Pass;
+        TextureRepeat = TextureRepeatEnum.Enabled;
         AddThemeStyleboxOverride("panel", new StyleBoxEmpty { ContentMarginLeft = 16, ContentMarginRight = 16, ContentMarginTop = 13, ContentMarginBottom = 15 });
     }
 
@@ -34,6 +35,7 @@ public partial class CardPanel : PanelContainer
         var cols = new Color[pts.Length];
         for (int i = 0; i < pts.Length; i++) cols[i] = UiTokens.CardTop.Lerp(UiTokens.CardBottom, pts[i].Y / h);
         DrawPolygon(pts, cols);
+        DrawTextureRect(CardTexture.Get(), new Rect2(2, 2, w - 4, h - 4), true, new Color(1, 1, 1, 1));
         // Brilho no canto superior direito (leque com alfa decrescente).
         float r = Mathf.Min(220, Mathf.Min(w * 0.55f, h * 0.95f));
         var fan = new Vector2[18];
@@ -43,7 +45,6 @@ public partial class CardPanel : PanelContainer
         for (int i = 0; i < 17; i++)
         {
             float a = Mathf.Pi / 2 + i / 16f * Mathf.Pi / 2;
-            fan[i + 1] = new Vector2(w - 1 + Mathf.Cos(a) * r, 1 - Mathf.Sin(a) * -r * -1);
             fan[i + 1] = new Vector2(w - 1 + Mathf.Cos(a) * r, 1 + Mathf.Sin(a) * r);
             fc[i + 1] = new Color(Glow, 0);
         }
@@ -250,6 +251,11 @@ public partial class ColumnChart : Control
     public Func<float, Color> ColorOf { get; set; } = _ => UiTokens.Success;
     public string Unit { get; set; } = "";
     public string EmptyText { get; set; } = "Sem dados ainda.";
+    /// <summary>Escala para contagens (multiplos de 3) em vez de minutos.</summary>
+    public bool CountScale { get; set; }
+    public bool ShowAverage { get; set; } = true;
+    /// <summary>Cor por indice (tem prioridade sobre ColorOf).</summary>
+    public Func<int, Color>? ColorAt { get; set; }
     private int _hover = -1;
     private const float Left = 34, Bottom = 20, Top = 8;
 
@@ -279,7 +285,8 @@ public partial class ColumnChart : Control
             return;
         }
         float max = Mathf.Max(1, Values.Max());
-        float nice = max <= 60 ? 60 : max <= 120 ? 120 : max <= 240 ? 240 : max <= 360 ? 360 : Mathf.Ceil(max / 120f) * 120;
+        float nice = CountScale ? Mathf.Max(3, Mathf.Ceil(max / 3f) * 3)
+            : max <= 60 ? 60 : max <= 120 ? 120 : max <= 240 ? 240 : max <= 360 ? 360 : Mathf.Ceil(max / 120f) * 120;
         for (int g = 0; g <= 3; g++)
         {
             float y = Mathf.Floor(plot.End.Y - plot.Size.Y * g / 3f) + 0.5f;
@@ -291,7 +298,7 @@ public partial class ColumnChart : Control
         for (int i = 0; i < Values.Count; i++)
         {
             float h = Mathf.Round(plot.Size.Y * Mathf.Clamp(Values[i] / nice, 0, 1));
-            var col = ColorOf(Values[i]);
+            var col = ColorAt?.Invoke(i) ?? ColorOf(Values[i]);
             if (_hover == i) col = col.Lightened(0.18f);
             float x = Mathf.Round(plot.Position.X + slot * i + (slot - w) / 2f);
             if (h >= 2)
@@ -307,7 +314,7 @@ public partial class ColumnChart : Control
         var played = Values.Where(v => v > 0).ToList();
         float avg = played.Count == 0 ? 0 : played.Average();
         float ay = Mathf.Floor(plot.End.Y - plot.Size.Y * Mathf.Clamp(avg / nice, 0, 1)) + 0.5f;
-        DrawDashedLine(new Vector2(plot.Position.X, ay), new Vector2(plot.End.X, ay), new Color(UiTokens.AccentSoft, 0.75f), 1, 4);
+        if (ShowAverage) DrawDashedLine(new Vector2(plot.Position.X, ay), new Vector2(plot.End.X, ay), new Color(UiTokens.AccentSoft, 0.75f), 1, 4);
         if (_hover >= 0)
         {
             string title = _hover < Labels.Count ? Labels[_hover] : "";
@@ -317,7 +324,211 @@ public partial class ColumnChart : Control
             var box = new Rect2(Mathf.Round(Mathf.Clamp(cx - tw / 2, 0, Size.X - tw)), 0, Mathf.Round(tw), 40);
             Visuals.ReadoutBox(this, box);
             DrawString(UiFonts.SemiBold, new Vector2(box.Position.X + 10, 16), title, HorizontalAlignment.Left, -1, 12, UiTokens.TextPrimary);
-            DrawString(UiFonts.Numbers, new Vector2(box.Position.X + 10, 32), value, HorizontalAlignment.Left, -1, 12, ColorOf(Values[_hover]).Lightened(0.2f));
+            DrawString(UiFonts.Numbers, new Vector2(box.Position.X + 10, 32), value, HorizontalAlignment.Left, -1, 12, (ColorAt?.Invoke(_hover) ?? ColorOf(Values[_hover])).Lightened(0.2f));
         }
+    }
+}
+
+/// <summary>Nota em anel pequeno (ex.: 4/5), como o relatorio de olheiro de um jogo de gestao.</summary>
+public partial class RingRating : Control
+{
+    private readonly int _score, _max;
+    private readonly Color _color;
+
+    public RingRating(int score, int max, Color color, int size = 40)
+    {
+        _score = score; _max = max; _color = color;
+        CustomMinimumSize = new Vector2(size, size);
+        SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        MouseFilter = MouseFilterEnum.Ignore;
+    }
+
+    public override void _Draw()
+    {
+        var c = (Size / 2f).Round();
+        float r = Mathf.Round(Mathf.Min(Size.X, Size.Y) / 2f - 3);
+        DrawArc(c, r, 0, Mathf.Tau, 72, UiTokens.Track, 3, true);
+        float t = _max <= 0 ? 0 : Mathf.Clamp(_score / (float)_max, 0, 1);
+        if (t > 0) DrawArc(c, r, -Mathf.Pi / 2, -Mathf.Pi / 2 + Mathf.Tau * t, Math.Max(8, (int)(72 * t)), _color, 3, true);
+        int fs = Size.X >= 52 ? 20 : 15;
+        string s = _score.ToString();
+        float w = UiFonts.Numbers.GetStringSize(s, HorizontalAlignment.Left, -1, fs).X;
+        float sw = UiFonts.Medium.GetStringSize("/" + _max, HorizontalAlignment.Left, -1, 9).X;
+        float x = Mathf.Round(c.X - (w + sw) / 2);
+        DrawString(UiFonts.Numbers, new Vector2(x, Mathf.Round(c.Y + fs * 0.36f)), s, HorizontalAlignment.Left, -1, fs, UiTokens.TextPrimary);
+        DrawString(UiFonts.Medium, new Vector2(x + w, Mathf.Round(c.Y + fs * 0.36f)), "/" + _max, HorizontalAlignment.Left, -1, 9, UiTokens.TextSecondary);
+    }
+}
+
+/// <summary>Meio-medidor do cabecalho (estilo nota central): arco com degrade, valor e rotulo.</summary>
+public partial class SemiGauge : Control
+{
+    public float Value { get; set; }
+    public string Center { get; set; } = "";
+    public string Caption { get; set; } = "";
+    public string Verdict { get; set; } = "";
+    public Color Color { get; set; } = UiTokens.Accent;
+
+    public SemiGauge() { MouseFilter = MouseFilterEnum.Stop; CustomMinimumSize = new Vector2(150, 78); }
+    public override GodotObject _MakeCustomTooltip(string forText) => RichTip.Build(forText);
+
+    public override void _Draw()
+    {
+        var c = new Vector2(Mathf.Round(Size.X / 2f), Mathf.Round(Size.Y - 14));
+        float r = Mathf.Min(Size.X / 2f - 8, Size.Y - 22);
+        DrawArc(c, r, Mathf.Pi, Mathf.Tau, 64, UiTokens.Track, 6, true);
+        float t = Mathf.Clamp(Value, 0, 1);
+        if (t > 0)
+        {
+            // Arco em segmentos com cor crescente (degrade ao longo do arco).
+            int seg = Math.Max(2, (int)(48 * t));
+            for (int i = 0; i < seg; i++)
+            {
+                float a0 = Mathf.Pi + Mathf.Pi * t * i / seg, a1 = Mathf.Pi + Mathf.Pi * t * (i + 1) / seg + 0.01f;
+                var col = new Color(Color, 0.45f).Lerp(Color, (i + 1f) / seg);
+                DrawArc(c, r, a0, a1, 3, col, 6, true);
+            }
+        }
+        DrawString(UiFonts.Medium, new Vector2(0, Mathf.Round(c.Y - r + 22)), Verdict, HorizontalAlignment.Center, Size.X, 11, Color.Lightened(0.15f));
+        DrawString(UiFonts.Numbers, new Vector2(0, Mathf.Round(c.Y - 2)), Center, HorizontalAlignment.Center, Size.X, 22, UiTokens.TextPrimary);
+        DrawString(UiFonts.Medium, new Vector2(0, Mathf.Round(c.Y + 13)), Caption, HorizontalAlignment.Center, Size.X, 11, UiTokens.TextSecondary);
+    }
+}
+
+/// <summary>Escala de 1 a 5 em pontos (equivalente as estrelas), com metade.</summary>
+public partial class Pips : Control
+{
+    private readonly float _value;
+    private readonly Color _color;
+    public Pips(float value, Color color) { _value = value; _color = color; CustomMinimumSize = new Vector2(5 * 12, 12); SizeFlagsVertical = SizeFlags.ShrinkCenter; MouseFilter = MouseFilterEnum.Ignore; }
+
+    public override void _Draw()
+    {
+        for (int i = 0; i < 5; i++)
+        {
+            var c = new Vector2(6 + i * 12, Mathf.Round(Size.Y / 2));
+            DrawCircle(c, 4, UiTokens.Track);
+            float f = Mathf.Clamp(_value - i, 0, 1);
+            if (f >= 0.75f) DrawCircle(c, 4, _color);
+            else if (f >= 0.25f) DrawArc(c, 2, Mathf.Pi / 2, Mathf.Pi * 1.5f, 8, _color, 4, true);
+        }
+    }
+}
+
+/// <summary>Indicador com o mesmo fundo dos cards e tooltip estruturado.</summary>
+public partial class StatTile : CardPanel
+{
+    public override GodotObject _MakeCustomTooltip(string forText) => RichTip.Build(forText);
+}
+
+/// <summary>Emblema quadrado com icone (missoes, paginas de lista): degrade, borda e faixa no topo.</summary>
+public partial class EmblemBox : Control
+{
+    private readonly string _icon;
+    private readonly Color _color;
+    public EmblemBox(string icon, Color color) { _icon = icon; _color = color; MouseFilter = MouseFilterEnum.Ignore; SizeFlagsVertical = SizeFlags.ShrinkBegin; }
+
+    public override void _Draw()
+    {
+        var rect = new Rect2(Vector2.One, Size - Vector2.One * 2);
+        var top = new Color("#141922").Lerp(_color, 0.16f);
+        var bottom = new Color("#0B0E13");
+        DrawPolygon(new[] { rect.Position, new Vector2(rect.End.X, rect.Position.Y), rect.End, new Vector2(rect.Position.X, rect.End.Y) }, new[] { top, top, bottom, bottom });
+        DrawRect(rect, new Color(_color, 0.45f), false, 1f);
+        DrawRect(new Rect2(rect.Position, new Vector2(rect.Size.X, 3)), _color);
+        int sz = (int)(Mathf.Min(Size.X, Size.Y) * 0.44f);
+        DrawTextureRect(Icons.Get(_icon, sz, 2f), new Rect2(((Size - new Vector2(sz, sz)) / 2f).Round(), new Vector2(sz, sz)), false, _color.Lightened(0.25f));
+    }
+}
+
+/// <summary>Marcador numerado de etapa com linha de ligacao (linha do tempo vertical).</summary>
+public partial class StepBadge : Control
+{
+    private readonly int _n;
+    private readonly Color _color;
+    private readonly bool _last;
+    public StepBadge(int n, Color color, bool last) { _n = n; _color = color; _last = last; MouseFilter = MouseFilterEnum.Ignore; }
+
+    public override void _Draw()
+    {
+        var c = new Vector2(Mathf.Round(Size.X / 2), Mathf.Round(Size.Y / 2));
+        if (!_last) DrawLine(new Vector2(c.X + 0.5f, c.Y + 13), new Vector2(c.X + 0.5f, Size.Y + 2), UiTokens.BorderStrong, 1);
+        if (_n > 1) DrawLine(new Vector2(c.X + 0.5f, -2), new Vector2(c.X + 0.5f, c.Y - 13), UiTokens.BorderStrong, 1);
+        DrawCircle(c, 12, UiTokens.CardBottom);
+        DrawArc(c, 12, 0, Mathf.Tau, 40, _last ? UiTokens.Accent : new Color(_color, 0.8f), 1.5f, true);
+        string t = _n.ToString();
+        float w = UiFonts.Numbers.GetStringSize(t, HorizontalAlignment.Left, -1, 12).X;
+        DrawString(UiFonts.Numbers, new Vector2(Mathf.Round(c.X - w / 2), c.Y + 4), t, HorizontalAlignment.Left, -1, 12, UiTokens.TextPrimary);
+    }
+}
+
+/// <summary>
+/// Linha de uma grade de 12 colunas: largura da coluna = (largura - 11 vaos) / 12; um item de
+/// N colunas mede N colunas + (N - 1) vaos. Assim as bordas coincidem entre linhas diferentes.
+/// </summary>
+public partial class SpanRow : Container
+{
+    public const int Columns = 12;
+    public int Gap { get; set; } = 12;
+    private readonly Dictionary<Control, int> _spans = new();
+
+    public void Add(Control item, int span)
+    {
+        _spans[item] = Math.Clamp(span, 1, Columns);
+        AddChild(item);
+    }
+
+    private IEnumerable<Control> Items => GetChildren().OfType<Control>().Where(c => c.Visible);
+
+    public override Vector2 _GetMinimumSize()
+    {
+        float h = 0, w = 0;
+        foreach (var c in Items) { var m = c.GetCombinedMinimumSize(); h = Mathf.Max(h, m.Y); w += m.X; }
+        return new Vector2(w, h);
+    }
+
+    public override void _Notification(int what)
+    {
+        if (what != NotificationSortChildren) return;
+        float col = (Size.X - Gap * (Columns - 1)) / Columns;
+        int at = 0;
+        foreach (var c in Items)
+        {
+            int span = _spans.TryGetValue(c, out var s) ? s : 1;
+            float x = Mathf.Round(at * (col + Gap));
+            float right = Mathf.Round((at + span) * (col + Gap) - Gap);
+            FitChildInRect(c, new Rect2(x, 0, right - x, Size.Y));
+            at += span;
+        }
+    }
+}
+
+/// <summary>
+/// Textura sutil dos cards (grao fino + hachura diagonal leve), gerada uma vez por codigo,
+/// deterministica (hash inteiro, sem RNG). Branca com alfa baixo: so da acabamento ao fundo.
+/// </summary>
+public static class CardTexture
+{
+    private static Texture2D? _tex;
+
+    public static Texture2D Get()
+    {
+        if (_tex != null) return _tex;
+        const int n = 128;
+        var img = Image.CreateEmpty(n, n, false, Image.Format.Rgba8);
+        for (int y = 0; y < n; y++)
+            for (int x = 0; x < n; x++)
+            {
+                uint h = (uint)(x * 374761393 + y * 668265263);
+                h = (h ^ (h >> 13)) * 1274126177u;
+                h ^= h >> 16;
+                float grain = (h & 1023) / 1023f;
+                float a = grain * 0.038f;
+                if ((x + y) % 7 == 0) a += 0.024f;          // hachura diagonal
+                if ((x - y + n * 4) % 23 == 0) a += 0.012f; // contra-hachura bem leve
+                img.SetPixel(x, y, new Color(1, 1, 1, a));
+            }
+        _tex = ImageTexture.CreateFromImage(img);
+        return _tex;
     }
 }

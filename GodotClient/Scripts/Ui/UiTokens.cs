@@ -26,10 +26,15 @@ public static class UiTokens
     public static readonly Color Track = new("#1E242C");
     public static readonly Color Grid = new("#1A1F26");
     public static readonly Color AxisText = new("#6C7581");
+    public static readonly Color Divider = new("#1F252D");
+    /// <summary>Valor excepcional (atributo 18+), como o roxo dos jogos de gestao.</summary>
+    public static readonly Color Exceptional = new("#B48CF2");
 
     // Texto
     public static readonly Color TextPrimary = new("#ECEEF1");
     public static readonly Color TextSecondary = new("#8B94A1");
+    /// <summary>Rotulos de dados: claros e legiveis (nao cinza fraco), D-034.</summary>
+    public static readonly Color TextLabel = new("#C4CAD3");
     public static readonly Color TextDisabled = new("#58606B");
 
     // Acao e estado
@@ -59,7 +64,7 @@ public static class UiTokens
     public const int CornerRadius = 2;
     public const int PanelRadius = 2;
 
-    public const int TopBarHeight = 50;
+    public const int TopBarHeight = 54;
     public const int SidePanelWidth = 430;
     public const int InspectorWidth = 380;
 
