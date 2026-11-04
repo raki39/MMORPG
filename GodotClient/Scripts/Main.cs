@@ -102,6 +102,7 @@ public partial class Main : Node
             OpenPerson = OpenPerson,
             OpenZone = OpenZone,
             OpenArea = OpenArea,
+            OpenQuest = OpenQuest,
             FocusArea = (z, a) => { _map.SelectArea(z + "#" + a); _map.FocusArea(z, a); },
         };
 
@@ -165,6 +166,7 @@ public partial class Main : Node
             CallDeferred(nameof(ApplyStartZoom), zoomFactor);
         if (_args.TryGetValue("open-zone", out var z) && _ctx.Content.Regions.ContainsKey(z)) OpenZone(z);
         if (_args.TryGetValue("open-area", out var ar) && ar.Split('#') is { Length: 2 } ap) OpenArea(ap[0], ap[1]);
+        if (_args.TryGetValue("open-quest", out var oq)) OpenQuest(oq);
         if (_args.ContainsKey("open-cluster"))
         {
             var snap = _host.Snapshot;
@@ -234,6 +236,15 @@ public partial class Main : Node
         _map.SelectArea(zoneId + "#" + areaId);
         _modal = new AreaModal(_ctx, _map, zoneId, areaId);
         _modal.Closed += () => { _modal = null; _map.SelectArea(null); };
+        _ui.AddChild(_modal);
+    }
+
+    private void OpenQuest(string questId)
+    {
+        if (_host == null || !_ctx.Content.Quests.ContainsKey(questId)) return;
+        CloseOverlays();
+        _modal = new QuestModal(_ctx, questId);
+        _modal.Closed += () => _modal = null;
         _ui.AddChild(_modal);
     }
 

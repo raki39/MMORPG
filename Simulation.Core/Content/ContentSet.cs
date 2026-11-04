@@ -13,6 +13,7 @@ public sealed class ContentSet
     public List<CreatureDefinition> Creatures { get; set; } = new();
     public PopulationDefinition Population { get; set; } = new();
     public ProgressionDefinition Progression { get; set; } = new();
+    public QuestCatalog Quests { get; set; } = new();
 
     /// <summary>Hash do conteudo de origem (calculado por quem carregou os arquivos).</summary>
     public string SourceHash { get; set; } = "";
@@ -33,7 +34,23 @@ public sealed class ContentDatabase
         Items = Index(set.Items);
         Creatures = Index(set.Creatures);
         Profiles = Index(set.Population.Profiles);
+        Quests = Index(set.Quests.Quests);
+        QuestBoards = Index(set.Quests.Boards);
+        var byActivity = new SortedDictionary<string, QuestBoardDefinition>(StringComparer.Ordinal);
+        foreach (var b in set.Quests.Boards) byActivity.TryAdd(b.RegionId + "/" + b.ActivityId, b);
+        BoardByActivity = byActivity;
+        var byBoard = new SortedDictionary<string, IReadOnlyList<QuestDefinition>>(StringComparer.Ordinal);
+        foreach (var b in set.Quests.Boards)
+            byBoard[b.Id] = set.Quests.Quests.Where(q => q.BoardId == b.Id).OrderBy(q => q.Id, StringComparer.Ordinal).ToList();
+        QuestsByBoard = byBoard;
     }
+
+    public IReadOnlyDictionary<string, QuestDefinition> Quests { get; }
+    public IReadOnlyDictionary<string, QuestBoardDefinition> QuestBoards { get; }
+    /// <summary>Quadro pela atividade de aceitar/entregar ("regiao/atividade").</summary>
+    public IReadOnlyDictionary<string, QuestBoardDefinition> BoardByActivity { get; }
+    public IReadOnlyDictionary<string, IReadOnlyList<QuestDefinition>> QuestsByBoard { get; }
+    public QuestSettings QuestSettings => Set.Quests.Settings;
 
     public ContentSet Set { get; }
     public WorldDefinition World => Set.World;

@@ -40,7 +40,7 @@ public static class ActivityScoring
     private static readonly string[] NeedsGroupSystem = { ActivityTypes.Recruit };
 
     public static List<ScoredOption> Evaluate(Character ch, PersonTraits t, ContentDatabase content, RouteFinder routes,
-        Func<string, string, int> occupancy, long now, DeterministicRng rng)
+        Func<string, string, int> occupancy, long now, DeterministicRng rng, QuestSystem? quests = null)
     {
         var options = new List<ScoredOption>();
         int remaining = (int)Math.Max(0, (ch.SessionEndTick - now) / Time.SimTime.TicksPerMinute);
@@ -57,6 +57,30 @@ public static class ActivityScoring
                 if (a.MinLevel > ch.Level) continue;
                 if (a.ClassIds.Count > 0 && !a.ClassIds.Contains(ch.ClassId)) continue;
                 if (a.RequiredItemIds.Count > 0) continue; // inventario chega no M5
+
+                // Quests (D-031): o quadro so e opcao com quest para aceitar ou entregar; ponto de
+                // missao so com etapa de visita pendente; atividade que avanca etapa ganha peso.
+                (string Key, int Value)? questTerm = null;
+                if (quests != null)
+                {
+                    var board = quests.BoardAt(region.Id, a.Id);
+                    if (board != null)
+                    {
+                        int ready = quests.ReadyCount(ch, board);
+                        bool offer = quests.CanAccept(ch) && quests.Offers(ch, board).Any();
+                        if (ready == 0 && !offer) continue;
+                        questTerm = ready > 0
+                            ? ("quest_deliver", BehaviorTuning.QuestDeliverWeight + (ready - 1) * BehaviorTuning.QuestDeliverPerExtra)
+                            : ("quest_offer", BehaviorTuning.QuestOfferWeight);
+                    }
+                    else if (a.Type == ActivityTypes.Quest)
+                    {
+                        if (!quests.AdvancesStep(ch, region.Id, a.Id)) continue;
+                        questTerm = ("quest_step", BehaviorTuning.QuestStepWeight);
+                    }
+                    else if (quests.AdvancesStep(ch, region.Id, a.Id))
+                        questTerm = ("quest_step", BehaviorTuning.QuestStepWeight);
+                }
 
                 // Caminho real: ate o portao, pelas zonas, e ate o ponto da atividade (fora da estrada).
                 var plan = routes.Plan(ch.Position, ch.RegionId, region.Id, routes.Layout.Spot(region.Id, a.Id));
@@ -101,6 +125,8 @@ public static class ActivityScoring
                 string key = region.Id + "/" + a.Id;
                 if (key == ch.LastActivityKey && ch.RepeatCount > 0)
                     f.Add(new DecisionFactor("repetition", -BehaviorTuning.RepeatPenalty * ch.RepeatCount * (1000 - t.Patience / 2) / 1000));
+
+                if (questTerm is { } qt) f.Add(new DecisionFactor(qt.Key, qt.Value));
 
                 int noise = rng.NextIntInclusive(-BehaviorTuning.Noise, BehaviorTuning.Noise);
                 f.Add(new DecisionFactor("noise", noise));

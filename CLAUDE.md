@@ -49,5 +49,5 @@ dotnet run --project Simulation.Runner -- --progression   # prévia nominal da c
 
 - M0 e teste de viabilidade concluídos. M1 quase concluído (falta a revisão em 1366×768).
 - M2 em andamento. A rotina está validada com metas e várias seeds (D-024, `docs/validacao.md`).
-- Próximos passos, em ordem (D-025, D-026): XP e curva (teto 30, feito: D-027) → redistribuir e ampliar áreas (feito: D-028) → catálogo de quests por cidade → medir a progressão até o 30 → objetivos pessoais e continuidade; depois o combate do M3. Ver `docs/backlog.md`.
+- Próximos passos, em ordem (D-025, D-026): XP e curva (teto 30, feito: D-027) → redistribuir e ampliar áreas (feito: D-028) → quests por área de quest (feito: D-031) → recalibrar a curva (escolha a ou b do criador, D-028) → objetivos pessoais e continuidade; depois o combate do M3. Ver `docs/backlog.md`.
 - Após cada entrega: `tools/godot.ps1 export` (o atalho "MMORPG Tycoon" na Área de Trabalho abre `build/MMOTycoon.exe`).

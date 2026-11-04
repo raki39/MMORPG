@@ -26,14 +26,17 @@ public sealed class BehaviorSystem
 
     private readonly WorldState _w;
     private readonly RouteFinder _routes;
+    private readonly QuestSystem _quests;
 
     public BehaviorSystem(WorldState world)
     {
         _w = world;
         _routes = new RouteFinder(world.Content, new ZoneLayout(world.Content));
+        _quests = new QuestSystem(world, GainExperience);
     }
 
     public RouteFinder Routes => _routes;
+    public QuestSystem Quests => _quests;
 
     public IEnumerable<(string Type, Action<ScheduledEvent> Handler)> Handlers()
     {
@@ -255,7 +258,7 @@ public sealed class BehaviorSystem
     {
         var rng = Rng("behavior.decision", ch.Id * 1_000_000L + ch.DecisionCount);
         ch.DecisionCount++;
-        var options = ActivityScoring.Evaluate(ch, p.Traits, _w.Content, _routes, _w.OccupancyOf, Now, rng);
+        var options = ActivityScoring.Evaluate(ch, p.Traits, _w.Content, _routes, _w.OccupancyOf, Now, rng, _quests);
 
         if (options.Count == 0)
         {
@@ -353,7 +356,9 @@ public sealed class BehaviorSystem
             var region = _w.Content.Regions[ch.TargetRegionId];
             var a = region.FindActivity(ch.ActivityId)!;
             _w.AddOccupancy(region.Id, a.Id, -1);
-            AwardExperience(ch, a, region, (int)((ev.Tick - ch.ActivityStartTick) / SimTime.TicksPerMinute));
+            int minutes = (int)((ev.Tick - ch.ActivityStartTick) / SimTime.TicksPerMinute);
+            AwardExperience(ch, a, region, minutes);
+            _quests.OnActivityDone(ch, region, a, minutes);
             // Explorar revela mais longe: as zonas ligadas as vizinhas.
             if (a.Type == ActivityTypes.Explore)
                 foreach (var c in region.Connections)
@@ -384,9 +389,17 @@ public sealed class BehaviorSystem
 
     private void AwardExperience(Character ch, ActivityDefinition a, RegionDefinition region, int minutes)
     {
-        var p = _w.Content.Progression;
         long xp = ProgressionRules.XpFor(_w.Content, a, ch.Level, minutes);
         if (xp <= 0) return;
+        ch.XpFromActivities += xp;
+        GainExperience(ch, xp, a.Type);
+    }
+
+    /// <summary>Soma XP (de atividade ou de quest) e sobe de nivel quantas vezes couber.</summary>
+    private void GainExperience(Character ch, long xp, string source)
+    {
+        var p = _w.Content.Progression;
+        if (xp <= 0 || ch.Level >= p.LevelCap) return;
         ch.Experience += xp;
         while (ch.Level < p.LevelCap && ch.Experience >= ProgressionRules.XpToNextLevel(p, ch.Level))
         {
@@ -395,7 +408,7 @@ public sealed class BehaviorSystem
             ch.LevelTicks.Add(ch.PlayedTicksAt(Now));
             _w.Today.LevelUps++;
             _w.Emit("level_up", EventImportance.Normal, new[] { new EntityRef("character", ch.Id) },
-                new[] { new EventCause(a.Type, 1000) }, $"nível {ch.Level}");
+                new[] { new EventCause(source, 1000) }, $"nível {ch.Level}");
         }
     }
 }

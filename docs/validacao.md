@@ -171,11 +171,33 @@ O hardcore chega ao conteúdo final enquanto os casuais ainda ocupam as áreas d
 - **Por nível:** coleta e exploração das zonas finais, porque poucos chegam lá.
 - **Na Cidadela, os serviços quase não são usados.** Quem está nas zonas finais caça. O sistema de objetivos e as necessidades devem mudar isso.
 
+## Resultado após as quests (D-031, 04/11/2026)
+
+Mesma rodada: 5 seeds × 1.000 pessoas × 90 dias. **15 de 21 metas dentro da faixa.**
+
+| Medida | Meta | Resultado |
+|---|---|---|
+| XP vindo de quests | 15–35% | 19,6% |
+| Quests concluídas por personagem | 4–30 | 21 |
+| Horas até o nível 10 | 8–20 h | 14,9 h |
+| Horas até o nível 20 | 80–110 h | 73 h (abaixo) |
+| Horas até o nível 30 | 170–230 h | 192 h (14–17% chegaram) |
+| Tempo em combate | 35–55% | 32,8% (abaixo) |
+| Tempo andando ou esperando | 5–20% | 30,2% (acima; antes das quests, 22%) |
+
+**O ciclo da quest anda por natureza:** ir ao quadro, ir à etapa (muitas vezes em outra zona) e voltar para entregar.
+- Medimos três calibrações de peso; a escolhida está no meio-termo (ver D-031).
+- A redução virá do plano da sessão e da continuidade (D-026): fazer as etapas onde a pessoa já está e entregar quando passar pela cidade.
+- Não foi usada compensação artificial.
+
+**Achado da ficha da quest:** com peso fixo de entrega, muitos personagens carregavam quests "prontas para entregar" por dias.
+- O peso de entrega passou a crescer com o número de quests prontas.
+
 ## Próximos passos
 
 Ordem do D-025:
 1. ~~Redistribuir e ampliar as áreas até o nível 30~~ (feito, D-028).
-2. Montar o catálogo de quests por cidade.
-3. Medir de novo.
+2. ~~Montar o catálogo de quests~~ (feito por área de quest, D-031).
+3. Recalibrar a curva com a escolha do criador (D-028: (a) cerca de 200 h com desaceleração suave ou (b) desaceleração forte com 220–250 h).
 4. Integrar os objetivos pessoais (D-026).
 5. Combate (M3).

@@ -35,6 +35,7 @@ public static class ContentLoader
         ContentValidator.CreaturesFile,
         ContentValidator.PopulationFile,
         ContentValidator.ProgressionFile,
+        ContentValidator.QuestsFile,
     };
 
     public static readonly JsonSerializerOptions JsonOptions = new()
@@ -80,6 +81,8 @@ public static class ContentLoader
         var pop = Parse<PopulationFile>(texts, ContentValidator.PopulationFile, issues);
         if (pop != null) set.Population = new PopulationDefinition { Profiles = pop.Profiles, Names = pop.Names };
         set.Progression = Parse<ProgressionFile>(texts, ContentValidator.ProgressionFile, issues)?.Progression ?? new ProgressionDefinition();
+        var quests = Parse<QuestsFile>(texts, ContentValidator.QuestsFile, issues);
+        if (quests != null) set.Quests = new QuestCatalog { Settings = quests.Settings, Boards = quests.Boards, Quests = quests.Quests };
 
         if (issues.Any(i => i.Severity == IssueSeverity.Error))
             return new ContentLoadResult { Set = set, Issues = issues, ContentHash = hash, Folder = full };
@@ -142,6 +145,13 @@ public sealed class ClassesFile : VersionedFile { public List<ClassDefinition> C
 public sealed class AbilitiesFile : VersionedFile { public List<AbilityDefinition> Abilities { get; set; } = new(); }
 public sealed class ItemsFile : VersionedFile { public List<ItemDefinition> Items { get; set; } = new(); }
 public sealed class CreaturesFile : VersionedFile { public List<CreatureDefinition> Creatures { get; set; } = new(); }
+
+public sealed class QuestsFile : VersionedFile
+{
+    public QuestSettings Settings { get; set; } = new();
+    public List<QuestBoardDefinition> Boards { get; set; } = new();
+    public List<QuestDefinition> Quests { get; set; } = new();
+}
 
 public sealed class ProgressionFile : VersionedFile { public ProgressionDefinition Progression { get; set; } = new(); }
 

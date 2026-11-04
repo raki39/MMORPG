@@ -74,6 +74,24 @@ public sealed class DailyRecord
 /// Estado autoritativo completo da campanha, em memoria. Somente o motor e os
 /// comandos alteram este estado; a apresentacao le por consultas/snapshots.
 /// </summary>
+/// <summary>Numeros de uma quest na campanha (ficha da quest, D-031).</summary>
+public sealed class QuestStats
+{
+    public int Accepted { get; internal set; }
+    public int Completed { get; internal set; }
+    /// <summary>Personagens diferentes que ja concluiram.</summary>
+    public int UniqueCompleters { get; internal set; }
+    /// <summary>Em andamento agora.</summary>
+    public int Active { get; internal set; }
+    /// <summary>Soma do tempo conectado entre aceitar e entregar (ticks).</summary>
+    public long SumPlayedTicksToComplete { get; internal set; }
+    /// <summary>Soma do nivel ao entregar.</summary>
+    public long SumLevelAtCompletion { get; internal set; }
+    public long LastCompletedTick { get; internal set; } = -1;
+    /// <summary>XP total entregue pela quest.</summary>
+    public long XpGranted { get; internal set; }
+}
+
 public sealed class WorldState
 {
     private readonly List<Person> _persons = new();
@@ -124,6 +142,16 @@ public sealed class WorldState
         Occupancy.TryGetValue(ActivityKey(regionId, activityId), out var n) ? n : 0;
 
     public static string ActivityKey(string regionId, string activityId) => regionId + "/" + activityId;
+
+    /// <summary>Estatisticas por quest (ordenadas por ID).</summary>
+    internal SortedDictionary<string, QuestStats> QuestStatsById { get; } = new(StringComparer.Ordinal);
+    public IReadOnlyDictionary<string, QuestStats> QuestStats => QuestStatsById;
+
+    internal QuestStats StatsOf(string questId)
+    {
+        if (!QuestStatsById.TryGetValue(questId, out var s)) QuestStatsById[questId] = s = new QuestStats();
+        return s;
+    }
 
     internal void AddOccupancy(string regionId, string activityId, int delta)
     {

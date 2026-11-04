@@ -35,6 +35,16 @@
       "rationale": "Em 90 dias um casual joga cerca de 50 h; a maioria deve passar do 10, sem ser regra para todos."
     },
     {
+      "id": "xp_de_quests", "name": "XP vindo de quests", "metric": "quest_xp_share",
+      "min": 15, "max": 35, "unit": "%",
+      "rationale": "D-025: quests guiam e recompensam, mas evoluir não pode depender delas nem das diárias; a caça e o mundo continuam sendo a maior parte."
+    },
+    {
+      "id": "quests_por_personagem", "name": "Quests concluídas por personagem (média)", "metric": "quests_per_character",
+      "min": 4, "max": 30, "unit": "",
+      "rationale": "Em 90 dias, um personagem típico deve concluir várias quests (principais, secundárias e algumas diárias)."
+    },
+    {
       "id": "sessoes_casual", "name": "Sessões por semana — casual", "metric": "sessions_per_week", "profile": "casual",
       "min": 2, "max": 4, "unit": "",
       "rationale": "O perfil casual está configurado com média de 3 dias por semana; a rotina simulada deve respeitar isso."

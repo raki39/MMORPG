@@ -11,7 +11,7 @@ namespace Simulation.Core.World;
 /// </summary>
 public static class StateHasher
 {
-    public const int FormatVersion = 3;
+    public const int FormatVersion = 4;
 
     public static string Compute(WorldState w)
     {
@@ -62,6 +62,20 @@ public static class StateHasher
             foreach (var kv in c.ActivityTicksByType) { h.Str(kv.Key); h.Long(kv.Value); }
             h.Int(c.PlayedTicksAtLevel.Count);
             foreach (var t in c.PlayedTicksAtLevel) h.Long(t);
+            h.Int(c.ActiveQuests.Count);
+            foreach (var q in c.ActiveQuests) { h.Str(q.QuestId); h.Long(q.AcceptedTick); h.Long(q.AcceptedPlayedTicks); h.Int(q.StepIndex); h.Int(q.StepMinutes); }
+            h.Int(c.QuestHistory.Count);
+            foreach (var kv in c.QuestHistory) { h.Str(kv.Key); h.Int(kv.Value.Completions); h.Long(kv.Value.LastCompletedDay); }
+            h.Long(c.DailyDay);
+            foreach (var kv in c.DailyByBoard) { h.Str(kv.Key); h.Int(kv.Value); }
+            h.Long(c.XpFromQuests); h.Long(c.XpFromActivities);
+        }
+        h.Int(w.QuestStats.Count);
+        foreach (var kv in w.QuestStats)
+        {
+            var s = kv.Value;
+            h.Str(kv.Key); h.Int(s.Accepted); h.Int(s.Completed); h.Int(s.UniqueCompleters); h.Int(s.Active);
+            h.Long(s.SumPlayedTicksToComplete); h.Long(s.SumLevelAtCompletion); h.Long(s.LastCompletedTick); h.Long(s.XpGranted);
         }
 
         h.Int(w.OnlineCount);

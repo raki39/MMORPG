@@ -122,6 +122,7 @@ public class ContentTests
         var set = TestSupport.FreshPresetSet();
         set.Regions[1].Activities.Clear();
         set.Regions[1].Areas.Clear();
+        set.Quests.Quests.Clear();   // as quests apontam para atividades da zona esvaziada
         var issues = ContentValidator.Validate(set);
         Assert.Contains(issues, i => i.Severity == IssueSeverity.Warning && i.Path == "regions[1].activities");
         Assert.DoesNotContain(issues, i => i.Severity == IssueSeverity.Error);

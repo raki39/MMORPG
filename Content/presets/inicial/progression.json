@@ -2,21 +2,43 @@
   "schemaVersion": 1,
   "progression": {
     "levelCap": 30,
-    "xpCurve": { "cubic": 0, "quadratic": 30, "linear": 190, "constant": 0 },
+    "xpCurve": {
+      "cubic": 0,
+      "quadratic": 30,
+      "linear": 190,
+      "constant": 0
+    },
     "stages": [
-      { "fromLevel": 1, "ratePermille": 3000 },
-      { "fromLevel": 5, "ratePermille": 2000 },
-      { "fromLevel": 10, "ratePermille": 1400 },
-      { "fromLevel": 15, "ratePermille": 1000 },
-      { "fromLevel": 20, "ratePermille": 800 },
-      { "fromLevel": 25, "ratePermille": 700 }
+      {
+        "fromLevel": 1,
+        "ratePermille": 3000
+      },
+      {
+        "fromLevel": 5,
+        "ratePermille": 2000
+      },
+      {
+        "fromLevel": 10,
+        "ratePermille": 1400
+      },
+      {
+        "fromLevel": 15,
+        "ratePermille": 1000
+      },
+      {
+        "fromLevel": 20,
+        "ratePermille": 800
+      },
+      {
+        "fromLevel": 25,
+        "ratePermille": 700
+      }
     ],
     "activityXpPerMinute": {
       "hunt": 10,
       "boss": 14,
       "patrol": 8,
       "ambush": 8,
-      "quest": 8,
       "explore": 6,
       "gather": 5
     },

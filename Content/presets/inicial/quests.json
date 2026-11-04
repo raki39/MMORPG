@@ -1,0 +1,1041 @@
+{
+  "schemaVersion": 1,
+  "settings": {
+    "maxActivePerCharacter": 3
+  },
+  "boards": [
+    {
+      "id": "quadro_vila_aurora",
+      "version": 1,
+      "name": "Quadro de Missões da Vila",
+      "regionId": "vila_aurora",
+      "areaId": "praca_central",
+      "activityId": "quadro_de_missoes",
+      "dailyLimit": 2
+    },
+    {
+      "id": "quadro_forte_do_vau",
+      "version": 1,
+      "name": "Quadro das Bandeiras",
+      "regionId": "forte_do_vau",
+      "areaId": "praca",
+      "activityId": "quadro_de_missoes",
+      "dailyLimit": 2
+    },
+    {
+      "id": "quadro_cidadela",
+      "version": 1,
+      "name": "Quadro do Juramento",
+      "regionId": "cidadela_de_cinzaforte",
+      "areaId": "praca",
+      "activityId": "quadro_de_missoes",
+      "dailyLimit": 2
+    }
+  ],
+  "quests": [
+    {
+      "id": "vila_principal_1",
+      "version": 1,
+      "name": "Lobos na estrada",
+      "description": "Os lobos atacam quem passa pela floresta. O lenhador pede ajuda antes que alguém se machuque.",
+      "boardId": "quadro_vila_aurora",
+      "category": "main",
+      "recommendedLevel": 2,
+      "minLevel": 1,
+      "steps": [
+        {
+          "type": "activity",
+          "regionId": "floresta_sussurrante",
+          "activityId": "cacar_lobos",
+          "minutes": 30,
+          "text": "Caçar lobos na clareira por 30 minutos"
+        },
+        {
+          "type": "visit",
+          "regionId": "floresta_sussurrante",
+          "activityId": "entrega_lenhador",
+          "minutes": 10,
+          "text": "Avisar o lenhador na cabana"
+        }
+      ],
+      "rewards": {
+        "xpPermille": 450,
+        "goldCopper": 300,
+        "itemIds": []
+      }
+    },
+    {
+      "id": "vila_principal_2",
+      "version": 1,
+      "name": "Rastros nas colinas",
+      "description": "O lenhador viu algo grande voando sobre as colinas. Alguém precisa descobrir o que é.",
+      "boardId": "quadro_vila_aurora",
+      "category": "main",
+      "recommendedLevel": 5,
+      "minLevel": 4,
+      "prerequisiteQuestIds": [
+        "vila_principal_1"
+      ],
+      "steps": [
+        {
+          "type": "activity",
+          "regionId": "colinas_do_vale",
+          "activityId": "explorar_colinas",
+          "minutes": 25,
+          "text": "Explorar as colinas por 25 minutos"
+        },
+        {
+          "type": "visit",
+          "regionId": "colinas_do_vale",
+          "activityId": "examinar_ninhos",
+          "minutes": 10,
+          "text": "Examinar os ninhos no rochedo"
+        }
+      ],
+      "rewards": {
+        "xpPermille": 450,
+        "goldCopper": 600,
+        "itemIds": []
+      }
+    },
+    {
+      "id": "vila_principal_3",
+      "version": 1,
+      "name": "O que dorme na mina",
+      "description": "Os mineiros abandonaram a Mina Velha depois de ouvir ruídos nas galerias.",
+      "boardId": "quadro_vila_aurora",
+      "category": "main",
+      "recommendedLevel": 8,
+      "minLevel": 7,
+      "prerequisiteQuestIds": [
+        "vila_principal_2"
+      ],
+      "steps": [
+        {
+          "type": "activity",
+          "regionId": "mina_velha",
+          "activityId": "cacar_morcegos",
+          "minutes": 30,
+          "text": "Limpar o poço dos morcegos por 30 minutos"
+        },
+        {
+          "type": "visit",
+          "regionId": "mina_velha",
+          "activityId": "investigar_galerias",
+          "minutes": 15,
+          "text": "Investigar as galerias abandonadas"
+        }
+      ],
+      "rewards": {
+        "xpPermille": 450,
+        "goldCopper": 900,
+        "itemIds": []
+      }
+    },
+    {
+      "id": "vila_principal_4",
+      "version": 1,
+      "name": "O acampamento goblin",
+      "description": "As galerias levam a um acampamento goblin que cresce a cada dia. A vila quer saber até onde vai a ameaça.",
+      "boardId": "quadro_vila_aurora",
+      "category": "main",
+      "recommendedLevel": 10,
+      "minLevel": 8,
+      "prerequisiteQuestIds": [
+        "vila_principal_3"
+      ],
+      "steps": [
+        {
+          "type": "activity",
+          "regionId": "mina_velha",
+          "activityId": "cacar_goblins",
+          "minutes": 40,
+          "text": "Enfrentar os goblins do acampamento por 40 minutos"
+        }
+      ],
+      "rewards": {
+        "xpPermille": 500,
+        "goldCopper": 1500,
+        "itemIds": [
+          "pocao_de_vida_menor"
+        ]
+      }
+    },
+    {
+      "id": "vila_secundaria_ervas",
+      "version": 1,
+      "name": "Ervas para a curandeira",
+      "description": "A curandeira da vila precisa de ervas frescas para os feridos.",
+      "boardId": "quadro_vila_aurora",
+      "category": "secondary",
+      "recommendedLevel": 2,
+      "minLevel": 1,
+      "steps": [
+        {
+          "type": "activity",
+          "regionId": "floresta_sussurrante",
+          "activityId": "coletar_ervas",
+          "minutes": 20,
+          "text": "Colher ervas na clareira por 20 minutos"
+        }
+      ],
+      "rewards": {
+        "xpPermille": 150,
+        "goldCopper": 150,
+        "itemIds": [
+          "pocao_de_vida_menor"
+        ]
+      }
+    },
+    {
+      "id": "vila_secundaria_javalis",
+      "version": 1,
+      "name": "Javalis na plantação",
+      "description": "Javalis reviraram a plantação de nabos. O dono paga quem der um jeito.",
+      "boardId": "quadro_vila_aurora",
+      "category": "secondary",
+      "recommendedLevel": 1,
+      "minLevel": 1,
+      "steps": [
+        {
+          "type": "activity",
+          "regionId": "floresta_sussurrante",
+          "activityId": "cacar_javalis",
+          "minutes": 25,
+          "text": "Afastar os javalis por 25 minutos"
+        }
+      ],
+      "rewards": {
+        "xpPermille": 280,
+        "goldCopper": 100,
+        "itemIds": [
+          "pao_de_viagem"
+        ]
+      }
+    },
+    {
+      "id": "vila_secundaria_ursos",
+      "version": 1,
+      "name": "Ursos da encosta",
+      "description": "Um urso pardo tem assustado os pastores nas colinas.",
+      "boardId": "quadro_vila_aurora",
+      "category": "secondary",
+      "recommendedLevel": 6,
+      "minLevel": 4,
+      "steps": [
+        {
+          "type": "activity",
+          "regionId": "colinas_do_vale",
+          "activityId": "cacar_ursos",
+          "minutes": 30,
+          "text": "Caçar ursos na toca por 30 minutos"
+        }
+      ],
+      "rewards": {
+        "xpPermille": 250,
+        "goldCopper": 500,
+        "itemIds": [
+          "armadura_de_couro"
+        ]
+      }
+    },
+    {
+      "id": "vila_secundaria_minerio",
+      "version": 1,
+      "name": "Minério para a forja",
+      "description": "Bram, o ferreiro, está sem ferro desde que a mina fechou.",
+      "boardId": "quadro_vila_aurora",
+      "category": "secondary",
+      "recommendedLevel": 8,
+      "minLevel": 6,
+      "steps": [
+        {
+          "type": "activity",
+          "regionId": "mina_velha",
+          "activityId": "coletar_minerio",
+          "minutes": 25,
+          "text": "Extrair minério no veio por 25 minutos"
+        }
+      ],
+      "rewards": {
+        "xpPermille": 120,
+        "goldCopper": 700,
+        "itemIds": [
+          "espada_de_aco"
+        ]
+      }
+    },
+    {
+      "id": "vila_secundaria_harpias",
+      "version": 1,
+      "name": "Harpias no rochedo",
+      "description": "As harpias roubam ovelhas das colinas.",
+      "boardId": "quadro_vila_aurora",
+      "category": "secondary",
+      "recommendedLevel": 8,
+      "minLevel": 5,
+      "steps": [
+        {
+          "type": "activity",
+          "regionId": "colinas_do_vale",
+          "activityId": "cacar_harpias",
+          "minutes": 30,
+          "text": "Caçar harpias no rochedo por 30 minutos"
+        }
+      ],
+      "rewards": {
+        "xpPermille": 280,
+        "goldCopper": 700,
+        "itemIds": [
+          "pocao_de_mana_menor"
+        ]
+      }
+    },
+    {
+      "id": "vila_diaria_floresta",
+      "version": 1,
+      "name": "Patrulha da floresta",
+      "description": "A guarda da vila paga uma ronda diária pela floresta.",
+      "boardId": "quadro_vila_aurora",
+      "category": "daily",
+      "recommendedLevel": 4,
+      "minLevel": 1,
+      "maxLevel": 8,
+      "scalesWithLevel": true,
+      "steps": [
+        {
+          "type": "activity",
+          "regionId": "floresta_sussurrante",
+          "activityId": "cacar_lobos",
+          "minutes": 20,
+          "text": "Caçar lobos por 20 minutos"
+        }
+      ],
+      "rewards": {
+        "xpPermille": 50,
+        "goldCopper": 60,
+        "itemIds": []
+      }
+    },
+    {
+      "id": "vila_diaria_colheita",
+      "version": 1,
+      "name": "Colheita do dia",
+      "description": "O mercado compra ervas frescas todos os dias.",
+      "boardId": "quadro_vila_aurora",
+      "category": "daily",
+      "recommendedLevel": 5,
+      "minLevel": 1,
+      "maxLevel": 10,
+      "scalesWithLevel": true,
+      "steps": [
+        {
+          "type": "activity",
+          "regionId": "colinas_do_vale",
+          "activityId": "coletar_ervas",
+          "minutes": 15,
+          "text": "Colher ervas nas encostas por 15 minutos"
+        }
+      ],
+      "rewards": {
+        "xpPermille": 50,
+        "goldCopper": 60,
+        "itemIds": []
+      }
+    },
+    {
+      "id": "vila_diaria_ronda",
+      "version": 1,
+      "name": "Ronda nas colinas",
+      "description": "Alguém precisa conferir as estradas das colinas antes do anoitecer.",
+      "boardId": "quadro_vila_aurora",
+      "category": "daily",
+      "recommendedLevel": 7,
+      "minLevel": 3,
+      "maxLevel": 12,
+      "scalesWithLevel": true,
+      "steps": [
+        {
+          "type": "activity",
+          "regionId": "colinas_do_vale",
+          "activityId": "explorar_colinas",
+          "minutes": 20,
+          "text": "Percorrer as colinas por 20 minutos"
+        }
+      ],
+      "rewards": {
+        "xpPermille": 50,
+        "goldCopper": 80,
+        "itemIds": []
+      }
+    },
+    {
+      "id": "forte_principal_1",
+      "version": 1,
+      "name": "Notícias do brejo",
+      "description": "Patrulhas sumiram no Brejo das Brumas. O comandante quer saber o que aconteceu.",
+      "boardId": "quadro_forte_do_vau",
+      "category": "main",
+      "recommendedLevel": 11,
+      "minLevel": 10,
+      "steps": [
+        {
+          "type": "activity",
+          "regionId": "brejo_das_brumas",
+          "activityId": "explorar_brejo",
+          "minutes": 30,
+          "text": "Explorar o brejo por 30 minutos"
+        },
+        {
+          "type": "visit",
+          "regionId": "brejo_das_brumas",
+          "activityId": "procurar_ninho",
+          "minutes": 10,
+          "text": "Procurar o ninho das serpentes"
+        }
+      ],
+      "rewards": {
+        "xpPermille": 450,
+        "goldCopper": 2000,
+        "itemIds": []
+      }
+    },
+    {
+      "id": "forte_principal_2",
+      "version": 1,
+      "name": "Ossos e estandartes",
+      "description": "O estandarte de uma patrulha antiga caiu no ossuário da ravina, terra de saqueadores.",
+      "boardId": "quadro_forte_do_vau",
+      "category": "main",
+      "recommendedLevel": 12,
+      "minLevel": 10,
+      "prerequisiteQuestIds": [
+        "forte_principal_1"
+      ],
+      "steps": [
+        {
+          "type": "activity",
+          "regionId": "ravina_escarlate",
+          "activityId": "cacar_esqueletos",
+          "minutes": 30,
+          "text": "Abrir caminho entre os esqueletos por 30 minutos"
+        },
+        {
+          "type": "visit",
+          "regionId": "ravina_escarlate",
+          "activityId": "recuperar_estandarte",
+          "minutes": 10,
+          "text": "Recuperar o estandarte perdido"
+        }
+      ],
+      "rewards": {
+        "xpPermille": 450,
+        "goldCopper": 2500,
+        "itemIds": []
+      }
+    },
+    {
+      "id": "forte_principal_3",
+      "version": 1,
+      "name": "Trolls na mata",
+      "description": "Árvores arrancadas marcam o avanço dos trolls rumo ao Vau.",
+      "boardId": "quadro_forte_do_vau",
+      "category": "main",
+      "recommendedLevel": 15,
+      "minLevel": 13,
+      "prerequisiteQuestIds": [
+        "forte_principal_2"
+      ],
+      "steps": [
+        {
+          "type": "visit",
+          "regionId": "mata_dos_espinhos",
+          "activityId": "seguir_rastros",
+          "minutes": 10,
+          "text": "Seguir os rastros dos trolls"
+        },
+        {
+          "type": "activity",
+          "regionId": "mata_dos_espinhos",
+          "activityId": "cacar_trolls",
+          "minutes": 40,
+          "text": "Enfrentar os trolls por 40 minutos"
+        }
+      ],
+      "rewards": {
+        "xpPermille": 450,
+        "goldCopper": 3200,
+        "itemIds": []
+      }
+    },
+    {
+      "id": "forte_principal_4",
+      "version": 1,
+      "name": "O altar das ruínas",
+      "description": "Os trolls fugiam de algo. As pistas levam ao altar profanado das Ruínas Sombrias.",
+      "boardId": "quadro_forte_do_vau",
+      "category": "main",
+      "recommendedLevel": 15,
+      "minLevel": 13,
+      "prerequisiteQuestIds": [
+        "forte_principal_3"
+      ],
+      "steps": [
+        {
+          "type": "visit",
+          "regionId": "ruinas_sombrias",
+          "activityId": "examinar_altar",
+          "minutes": 15,
+          "text": "Examinar o altar profanado"
+        }
+      ],
+      "rewards": {
+        "xpPermille": 500,
+        "goldCopper": 4000,
+        "itemIds": [
+          "pergaminho_de_retorno"
+        ]
+      }
+    },
+    {
+      "id": "forte_secundaria_sapos",
+      "version": 1,
+      "name": "Sapos do charco",
+      "description": "Os sapos gigantes estão engolindo as redes dos pescadores.",
+      "boardId": "quadro_forte_do_vau",
+      "category": "secondary",
+      "recommendedLevel": 11,
+      "minLevel": 9,
+      "steps": [
+        {
+          "type": "activity",
+          "regionId": "brejo_das_brumas",
+          "activityId": "cacar_sapos",
+          "minutes": 30,
+          "text": "Caçar sapos no charco por 30 minutos"
+        }
+      ],
+      "rewards": {
+        "xpPermille": 280,
+        "goldCopper": 1200,
+        "itemIds": []
+      }
+    },
+    {
+      "id": "forte_secundaria_juncos",
+      "version": 1,
+      "name": "Juncos para os barqueiros",
+      "description": "Os barqueiros do vau precisam de juncos para remendar as balsas.",
+      "boardId": "quadro_forte_do_vau",
+      "category": "secondary",
+      "recommendedLevel": 11,
+      "minLevel": 9,
+      "steps": [
+        {
+          "type": "activity",
+          "regionId": "brejo_das_brumas",
+          "activityId": "colher_juncos",
+          "minutes": 25,
+          "text": "Colher juncos por 25 minutos"
+        }
+      ],
+      "rewards": {
+        "xpPermille": 120,
+        "goldCopper": 1000,
+        "itemIds": [
+          "pergaminho_de_retorno"
+        ]
+      }
+    },
+    {
+      "id": "forte_secundaria_serpentes",
+      "version": 1,
+      "name": "Veneno de serpente",
+      "description": "O boticário do forte paga bem por veneno fresco.",
+      "boardId": "quadro_forte_do_vau",
+      "category": "secondary",
+      "recommendedLevel": 13,
+      "minLevel": 11,
+      "steps": [
+        {
+          "type": "activity",
+          "regionId": "brejo_das_brumas",
+          "activityId": "cacar_serpentes",
+          "minutes": 30,
+          "text": "Caçar serpentes por 30 minutos"
+        }
+      ],
+      "rewards": {
+        "xpPermille": 250,
+        "goldCopper": 1500,
+        "itemIds": [
+          "pocao_de_vida_menor"
+        ]
+      }
+    },
+    {
+      "id": "forte_secundaria_espinheiro",
+      "version": 1,
+      "name": "Espinheiro para o boticário",
+      "description": "O espinheiro-rubro só cresce na Mata dos Espinhos.",
+      "boardId": "quadro_forte_do_vau",
+      "category": "secondary",
+      "recommendedLevel": 16,
+      "minLevel": 13,
+      "steps": [
+        {
+          "type": "activity",
+          "regionId": "mata_dos_espinhos",
+          "activityId": "colher_espinheiro",
+          "minutes": 25,
+          "text": "Colher espinheiro-rubro por 25 minutos"
+        }
+      ],
+      "rewards": {
+        "xpPermille": 120,
+        "goldCopper": 1800,
+        "itemIds": [
+          "cota_de_malha"
+        ]
+      }
+    },
+    {
+      "id": "forte_secundaria_teias",
+      "version": 1,
+      "name": "Teias antigas",
+      "description": "Aranhas gigantes fecharam a trilha do norte com teias.",
+      "boardId": "quadro_forte_do_vau",
+      "category": "secondary",
+      "recommendedLevel": 17,
+      "minLevel": 14,
+      "steps": [
+        {
+          "type": "activity",
+          "regionId": "mata_dos_espinhos",
+          "activityId": "cacar_aranhas_gigantes",
+          "minutes": 35,
+          "text": "Caçar aranhas gigantes por 35 minutos"
+        }
+      ],
+      "rewards": {
+        "xpPermille": 280,
+        "goldCopper": 2200,
+        "itemIds": [
+          "seda_de_aranha"
+        ]
+      }
+    },
+    {
+      "id": "forte_diaria_vau",
+      "version": 1,
+      "name": "Guarda do vau",
+      "description": "O forte paga a quem ajudar a manter o charco seguro.",
+      "boardId": "quadro_forte_do_vau",
+      "category": "daily",
+      "recommendedLevel": 12,
+      "minLevel": 9,
+      "maxLevel": 16,
+      "scalesWithLevel": true,
+      "steps": [
+        {
+          "type": "activity",
+          "regionId": "brejo_das_brumas",
+          "activityId": "cacar_sapos",
+          "minutes": 20,
+          "text": "Caçar sapos por 20 minutos"
+        }
+      ],
+      "rewards": {
+        "xpPermille": 50,
+        "goldCopper": 200,
+        "itemIds": []
+      }
+    },
+    {
+      "id": "forte_diaria_mata",
+      "version": 1,
+      "name": "Ronda na mata",
+      "description": "Batedores do forte percorrem a mata todos os dias.",
+      "boardId": "quadro_forte_do_vau",
+      "category": "daily",
+      "recommendedLevel": 16,
+      "minLevel": 13,
+      "maxLevel": 20,
+      "scalesWithLevel": true,
+      "steps": [
+        {
+          "type": "activity",
+          "regionId": "mata_dos_espinhos",
+          "activityId": "explorar_mata",
+          "minutes": 20,
+          "text": "Explorar a mata por 20 minutos"
+        }
+      ],
+      "rewards": {
+        "xpPermille": 50,
+        "goldCopper": 250,
+        "itemIds": []
+      }
+    },
+    {
+      "id": "forte_diaria_ravina",
+      "version": 1,
+      "name": "Ronda na ravina",
+      "description": "Alguém precisa patrulhar a garganta da ravina, onde os saqueadores atacam.",
+      "boardId": "quadro_forte_do_vau",
+      "category": "daily",
+      "recommendedLevel": 14,
+      "minLevel": 12,
+      "maxLevel": 16,
+      "scalesWithLevel": true,
+      "steps": [
+        {
+          "type": "activity",
+          "regionId": "ravina_escarlate",
+          "activityId": "patrulhar_ravina",
+          "minutes": 25,
+          "text": "Patrulhar a garganta por 25 minutos"
+        }
+      ],
+      "rewards": {
+        "xpPermille": 50,
+        "goldCopper": 300,
+        "itemIds": []
+      }
+    },
+    {
+      "id": "cidadela_principal_1",
+      "version": 1,
+      "name": "Orcs no planalto",
+      "description": "Saqueadores orcs bloqueiam o caminho das caravanas para a Cidadela.",
+      "boardId": "quadro_cidadela",
+      "category": "main",
+      "recommendedLevel": 18,
+      "minLevel": 16,
+      "steps": [
+        {
+          "type": "visit",
+          "regionId": "planalto_dos_ventos",
+          "activityId": "espiar_acampamento",
+          "minutes": 10,
+          "text": "Espiar o acampamento orc"
+        },
+        {
+          "type": "activity",
+          "regionId": "planalto_dos_ventos",
+          "activityId": "cacar_orcs",
+          "minutes": 40,
+          "text": "Enfrentar os orcs por 40 minutos"
+        }
+      ],
+      "rewards": {
+        "xpPermille": 450,
+        "goldCopper": 5000,
+        "itemIds": []
+      }
+    },
+    {
+      "id": "cidadela_principal_2",
+      "version": 1,
+      "name": "Lobos do gelo",
+      "description": "Os orcs fugiam do norte. Matilhas de lobos do gelo descem dos picos.",
+      "boardId": "quadro_cidadela",
+      "category": "main",
+      "recommendedLevel": 21,
+      "minLevel": 19,
+      "prerequisiteQuestIds": [
+        "cidadela_principal_1"
+      ],
+      "steps": [
+        {
+          "type": "activity",
+          "regionId": "picos_gelados",
+          "activityId": "cacar_lobos_do_gelo",
+          "minutes": 40,
+          "text": "Caçar lobos do gelo por 40 minutos"
+        }
+      ],
+      "rewards": {
+        "xpPermille": 450,
+        "goldCopper": 6000,
+        "itemIds": []
+      }
+    },
+    {
+      "id": "cidadela_principal_3",
+      "version": 1,
+      "name": "O covil do yeti",
+      "description": "Os lobos fogem de um yeti enorme, e algo o enfurece.",
+      "boardId": "quadro_cidadela",
+      "category": "main",
+      "recommendedLevel": 24,
+      "minLevel": 22,
+      "prerequisiteQuestIds": [
+        "cidadela_principal_2"
+      ],
+      "steps": [
+        {
+          "type": "visit",
+          "regionId": "picos_gelados",
+          "activityId": "investigar_covil",
+          "minutes": 15,
+          "text": "Investigar o covil do yeti"
+        },
+        {
+          "type": "activity",
+          "regionId": "picos_gelados",
+          "activityId": "cacar_yetis",
+          "minutes": 40,
+          "text": "Enfrentar os yetis por 40 minutos"
+        }
+      ],
+      "rewards": {
+        "xpPermille": 450,
+        "goldCopper": 8000,
+        "itemIds": []
+      }
+    },
+    {
+      "id": "cidadela_principal_4",
+      "version": 1,
+      "name": "As inscrições da cripta",
+      "description": "No covil havia um símbolo da Fortaleza Sombria. As respostas estão na cripta.",
+      "boardId": "quadro_cidadela",
+      "category": "main",
+      "recommendedLevel": 28,
+      "minLevel": 26,
+      "prerequisiteQuestIds": [
+        "cidadela_principal_3"
+      ],
+      "steps": [
+        {
+          "type": "visit",
+          "regionId": "fortaleza_sombria",
+          "activityId": "ler_inscricoes",
+          "minutes": 15,
+          "text": "Ler as inscrições da cripta"
+        },
+        {
+          "type": "activity",
+          "regionId": "fortaleza_sombria",
+          "activityId": "purgar_a_cripta",
+          "minutes": 45,
+          "text": "Purgar a cripta por 45 minutos"
+        }
+      ],
+      "rewards": {
+        "xpPermille": 500,
+        "goldCopper": 12000,
+        "itemIds": [
+          "coroa_do_rei_goblin"
+        ]
+      }
+    },
+    {
+      "id": "cidadela_secundaria_grifos",
+      "version": 1,
+      "name": "Grifos sobre a Cidadela",
+      "description": "Grifos atacam os carregadores nas escadarias da Cidadela.",
+      "boardId": "quadro_cidadela",
+      "category": "secondary",
+      "recommendedLevel": 20,
+      "minLevel": 17,
+      "steps": [
+        {
+          "type": "activity",
+          "regionId": "planalto_dos_ventos",
+          "activityId": "cacar_grifos",
+          "minutes": 35,
+          "text": "Caçar grifos por 35 minutos"
+        }
+      ],
+      "rewards": {
+        "xpPermille": 280,
+        "goldCopper": 4000,
+        "itemIds": [
+          "pergaminho_de_retorno"
+        ]
+      }
+    },
+    {
+      "id": "cidadela_secundaria_cristais",
+      "version": 1,
+      "name": "Cristais de gelo",
+      "description": "A Forja Rúnica usa cristais de gelo para temperar o aço.",
+      "boardId": "quadro_cidadela",
+      "category": "secondary",
+      "recommendedLevel": 22,
+      "minLevel": 19,
+      "steps": [
+        {
+          "type": "activity",
+          "regionId": "picos_gelados",
+          "activityId": "coletar_cristal_de_gelo",
+          "minutes": 25,
+          "text": "Coletar cristais de gelo por 25 minutos"
+        }
+      ],
+      "rewards": {
+        "xpPermille": 120,
+        "goldCopper": 4500,
+        "itemIds": [
+          "cajado_runico"
+        ]
+      }
+    },
+    {
+      "id": "cidadela_secundaria_salamandras",
+      "version": 1,
+      "name": "Salamandras de fogo",
+      "description": "As salamandras estão cruzando para a estrada das caravanas.",
+      "boardId": "quadro_cidadela",
+      "category": "secondary",
+      "recommendedLevel": 24,
+      "minLevel": 21,
+      "steps": [
+        {
+          "type": "activity",
+          "regionId": "terras_queimadas",
+          "activityId": "cacar_salamandras",
+          "minutes": 35,
+          "text": "Caçar salamandras por 35 minutos"
+        }
+      ],
+      "rewards": {
+        "xpPermille": 280,
+        "goldCopper": 5500,
+        "itemIds": []
+      }
+    },
+    {
+      "id": "cidadela_secundaria_obsidiana",
+      "version": 1,
+      "name": "Obsidiana rúnica",
+      "description": "Os ferreiros rúnicos pagam caro por obsidiana pura.",
+      "boardId": "quadro_cidadela",
+      "category": "secondary",
+      "recommendedLevel": 26,
+      "minLevel": 23,
+      "steps": [
+        {
+          "type": "activity",
+          "regionId": "terras_queimadas",
+          "activityId": "minerar_obsidiana",
+          "minutes": 30,
+          "text": "Minerar obsidiana por 30 minutos"
+        }
+      ],
+      "rewards": {
+        "xpPermille": 120,
+        "goldCopper": 6500,
+        "itemIds": [
+          "manto_runico"
+        ]
+      }
+    },
+    {
+      "id": "cidadela_secundaria_gargulas",
+      "version": 1,
+      "name": "Gárgulas nos portões",
+      "description": "As gárgulas dos portões da fortaleza despertaram de vez.",
+      "boardId": "quadro_cidadela",
+      "category": "secondary",
+      "recommendedLevel": 28,
+      "minLevel": 25,
+      "steps": [
+        {
+          "type": "activity",
+          "regionId": "fortaleza_sombria",
+          "activityId": "enfrentar_gargulas",
+          "minutes": 40,
+          "text": "Enfrentar gárgulas por 40 minutos"
+        }
+      ],
+      "rewards": {
+        "xpPermille": 280,
+        "goldCopper": 8000,
+        "itemIds": [
+          "cetro_da_luz"
+        ]
+      }
+    },
+    {
+      "id": "cidadela_diaria_planalto",
+      "version": 1,
+      "name": "Vigia do planalto",
+      "description": "A Cidadela mantém vigias percorrendo o planalto.",
+      "boardId": "quadro_cidadela",
+      "category": "daily",
+      "recommendedLevel": 20,
+      "minLevel": 17,
+      "maxLevel": 24,
+      "scalesWithLevel": true,
+      "steps": [
+        {
+          "type": "activity",
+          "regionId": "planalto_dos_ventos",
+          "activityId": "explorar_planalto",
+          "minutes": 20,
+          "text": "Percorrer o planalto por 20 minutos"
+        }
+      ],
+      "rewards": {
+        "xpPermille": 50,
+        "goldCopper": 500,
+        "itemIds": []
+      }
+    },
+    {
+      "id": "cidadela_diaria_passo",
+      "version": 1,
+      "name": "Patrulha do passo",
+      "description": "O Passo do Enxofre precisa de patrulha todos os dias.",
+      "boardId": "quadro_cidadela",
+      "category": "daily",
+      "recommendedLevel": 26,
+      "minLevel": 23,
+      "maxLevel": 30,
+      "scalesWithLevel": true,
+      "steps": [
+        {
+          "type": "activity",
+          "regionId": "terras_queimadas",
+          "activityId": "patrulhar_o_passo",
+          "minutes": 25,
+          "text": "Patrulhar o passo por 25 minutos"
+        }
+      ],
+      "rewards": {
+        "xpPermille": 50,
+        "goldCopper": 700,
+        "itemIds": []
+      }
+    },
+    {
+      "id": "cidadela_diaria_picos",
+      "version": 1,
+      "name": "Caça nos picos",
+      "description": "As matilhas dos picos precisam ser mantidas longe da estrada.",
+      "boardId": "quadro_cidadela",
+      "category": "daily",
+      "recommendedLevel": 23,
+      "minLevel": 20,
+      "maxLevel": 28,
+      "scalesWithLevel": true,
+      "steps": [
+        {
+          "type": "activity",
+          "regionId": "picos_gelados",
+          "activityId": "cacar_lobos_do_gelo",
+          "minutes": 25,
+          "text": "Caçar lobos do gelo por 25 minutos"
+        }
+      ],
+      "rewards": {
+        "xpPermille": 50,
+        "goldCopper": 600,
+        "itemIds": []
+      }
+    }
+  ]
+}

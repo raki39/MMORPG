@@ -3,6 +3,7 @@ using Simulation.Core.Behavior;
 using Simulation.Core.Content;
 using Simulation.Core.Population;
 using GodotClient.Map;
+using GodotClient.Sim;
 
 namespace GodotClient.Ui;
 
@@ -26,12 +27,47 @@ public partial class AreaModal : ModalFrame
         _zone = ctx.Content.Regions[zoneId];
         _area = _zone.Areas.First(a => a.Id == areaId);
         BuildHeader();
+        _board = ctx.Content.QuestBoards.Values.FirstOrDefault(b => b.RegionId == zoneId && b.AreaId == areaId);
+        if (_board != null) AddTab($"Missões · {ctx.Content.QuestsByBoard[_board.Id].Count}", BuildQuests, live: true);
         AddTab(_area.Activities.Count > 0 ? $"Tarefas · {_area.Activities.Count}" : "Visão geral", BuildTasks, live: true);
         AddTab("Jogadores", BuildPlayers, live: true);
         AddTab("Sobre o lugar", BuildAbout);
     }
 
     private Color Accent => AreaPalette.Color(_area.Kind);
+    private readonly QuestBoardDefinition? _board;
+    private DataTable<QuestDefinition>? _questTable;
+
+    // ---------------- Missoes (area de quest, D-031) ----------------
+
+    private Control BuildQuests()
+    {
+        var quests = _ctx.Content.QuestsByBoard[_board!.Id];
+        var stats = _ctx.Snapshot().QuestStats;
+        QuestStatsView? S(QuestDefinition q) => stats.TryGetValue(q.Id, out var s) ? s : null;
+        var summary = Row(10,
+            Stat(quests.Count(q => q.Category == QuestCategories.Main).ToString(), "principais", QuestModal.CategoryColor(QuestCategories.Main)),
+            Stat(quests.Count(q => q.Category == QuestCategories.Secondary).ToString(), "secundárias", QuestModal.CategoryColor(QuestCategories.Secondary)),
+            Stat(quests.Count(q => q.Category == QuestCategories.Daily).ToString(), "diárias", QuestModal.CategoryColor(QuestCategories.Daily), $"Limite: {_board.DailyLimit} diárias por dia por personagem"),
+            Stat(PtBr.Int(quests.Sum(q => S(q)?.Completed ?? 0)), "entregas no quadro", UiTokens.Success),
+            Stat(PtBr.Int(quests.Sum(q => S(q)?.Active ?? 0)), "em andamento", UiTokens.Info));
+        _questTable ??= new DataTable<QuestDefinition>(new[]
+        {
+            new Column<QuestDefinition> { Title = "Tipo", Width = 86, Text = q => QuestModal.CategoryName(q.Category), SortKey = q => CategoryOrder(q.Category), Color = q => QuestModal.CategoryColor(q.Category) },
+            new Column<QuestDefinition> { Title = "Missão", Text = q => q.Name, SortKey = q => q.Name, Tooltip = q => q.Name + "\n~" + q.Description },
+            new Column<QuestDefinition> { Title = "Nível", Width = 58, Right = true, Numeric = true, Text = q => q.MaxLevel > 0 ? $"{q.MinLevel}–{q.MaxLevel}" : $"{q.MinLevel}+", SortKey = q => q.MinLevel, Color = _ => UiTokens.Info },
+            new Column<QuestDefinition> { Title = "Etapas", Width = 52, Right = true, Numeric = true, Text = q => (q.Steps.Count + 1).ToString(), SortKey = q => q.Steps.Count },
+            new Column<QuestDefinition> { Title = "Requer", Width = 150, Text = q => q.PrerequisiteQuestIds.Count == 0 ? "—" : string.Join(", ", q.PrerequisiteQuestIds.Select(p => _ctx.Content.Quests.TryGetValue(p, out var pq) ? pq.Name : p)), Color = _ => UiTokens.TextSecondary },
+            new Column<QuestDefinition> { Title = "Concl.", Width = 52, Right = true, Numeric = true, Text = q => PtBr.Int(S(q)?.UniqueCompleters ?? 0), SortKey = q => S(q)?.UniqueCompleters ?? 0, Color = _ => UiTokens.Success, Tooltip = _ => "Personagens que concluíram" },
+            new Column<QuestDefinition> { Title = "Agora", Width = 48, Right = true, Numeric = true, Text = q => PtBr.Int(S(q)?.Active ?? 0), SortKey = q => S(q)?.Active ?? 0, Color = _ => UiTokens.Info, Tooltip = _ => "Fazendo agora" },
+        }, sortColumn: 2, sortDesc: false) { OnClick = q => { Close(); _ctx.OpenQuest(q.Id); } };
+        _questTable.OnSortChanged = () => Rebuild(false);
+        var note = ThemeFactory.Text("Aceitar e entregar são ações rápidas aqui no quadro; as etapas acontecem no mundo. Clique numa missão para ver a ficha completa.", UiTokens.FontCaption, UiTokens.TextSecondary);
+        note.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        return Column(12, summary, Card(_board.Name, _questTable.Build(quests), Accent), note);
+    }
+
+    private static int CategoryOrder(string c) => c == QuestCategories.Main ? 0 : c == QuestCategories.Secondary ? 1 : 2;
 
     private void BuildHeader()
     {

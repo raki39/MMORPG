@@ -78,7 +78,9 @@ Base de conteúdo e progressão (próximo passo; D-025):
 - [x] Terreno que a simulação respeita (D-030): água do Core (rio natural configurável, poças), estradas por A* com pontes, viagem pelo comprimento da estrada
 - [x] Cidades por nível (D-030): muralha, calçamento, casas, prédios dentro; área urbana marcada e com hover; posição da cidade no tile configurável
 - [ ] Recalibrar a curva depois do passo 3: escolha do criador entre (a) ~200 h com desaceleração suave no fim ou (b) desaceleração forte com 220–250 h
-- [ ] Catálogo de quests por cidade (principais, secundárias, diárias) com etapas reais, requisitos e recompensas; pegar no quadro sem XP
+- [x] Quests por área de quest (D-031): quadros nas praças, 36 quests (principais em cadeia, secundárias e diárias com limite), etapas reais (etapas de caça e coleta marcadas como provisórias), recompensas de XP, ouro e itens (estes dois não implementados); aceitar e entregar pontuais; estatísticas por quest; ficha da quest estilo FM
+- [ ] Editor de quests e quadros (texto, etapas, condições, recompensas; quadros em outras áreas)
+- [ ] Etapas de quest por abates e itens quando existirem combate (M3) e inventário (M5); outras recompensas (reputação, desbloqueios)
 - [ ] Medir a progressão até o 30 (horas por nível, XP por fonte, conteúdo esgotado antes da próxima faixa) e ajustar as metas
 
 Objetivos pessoais e continuidade (depois da base; D-026):
@@ -108,7 +110,7 @@ Falta para fechar o M2:
 - [ ] Editor de áreas com posicionamento livre, prévia de tamanho, acesso e conflitos (usa as regras do D-020)
 - [ ] Saque das criaturas novas (loot vazio até o M3)
 - [ ] Quantidade de monstros e recursos por área (M3/M5), independente do tamanho
-- [ ] Ficha de quest e catálogo da cidade (depois do D-025)
+- [x] Ficha de quest (estilo FM) e catálogo do quadro na ficha da área (D-031)
 - [x] HUD de gestão: indicadores com mini-gráfico, painel lateral (visão geral, zonas, jogadores, eventos), tabelas e tooltips estruturados (D-022)
 - [x] Dossiê do jogador estilo FM (atributos 1–20) e dossiê de zona com tabela e gráfico
 - [ ] Dossiê de área no mesmo padrão denso (faixa de dados e tabela de tarefas)

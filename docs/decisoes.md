@@ -491,3 +491,60 @@ Proposta do criador, analisada com o Claude.
 **Medido** (5 seeds): deslocamento em 21,8%; nível 10 em 15,6 h, 20 em 76 h, 30 em 195 h; combate em 37%.
 
 **Desvio do plano:** a seção 9 previa terreno só visual. Aqui, água e estradas passaram a afetar a simulação, porque a lógica do mundo exige: as estradas contornam rios e a viagem é mais longa.
+
+## D-031 — Quests estruturadas por área de quest
+**Data:** 04/11/2026 · **Estado:** aceita (passo 3 do D-025)
+
+**Área de quest** (pedido do criador). As quests pertencem a um **quadro**, ou seja, a uma área (hoje, a praça de cada cidade), e não à cidade inteira.
+- `quests.json` declara os quadros (área, atividade de aceitar e entregar, limite de diárias) e as quests.
+- O editor futuro poderá criar quadros e quests em outras áreas.
+
+**Quest** = conteúdo com:
+- **descrição e categoria:**
+  - **principal:** cadeia com pré-requisitos, uma vez;
+  - **secundária:** uma vez no preset; a repetição é configurável por `repeatCooldownDays`;
+  - **diária:** renova pelo dia simulado, com limite por quadro e por personagem.
+- **requisitos:** nível mínimo e máximo, quests anteriores, classe;
+- **etapas:**
+  - fazer uma atividade do mundo por N minutos;
+  - visitar um ponto de missão (atividade do tipo quest numa área);
+  - a entrega no quadro é sempre a última etapa;
+- **recompensas:** XP (fração do XP do nível de referência), ouro e itens.
+  - Ouro e itens ficam definidos, mas **não implementados (M5)** e marcados assim na ficha.
+  - O XP nem sempre é o foco: em várias secundárias de coleta, o XP é menor e a recompensa principal é o item.
+
+**Regras na simulação:**
+- **Aceitar e entregar são ações pontuais** (5 min) no quadro.
+  - O quadro só vira opção quando há quest elegível ou entrega pendente; senão, não oferece nada. Isso corrige o quadro como atividade repetível.
+  - Numa visita, a pessoa entrega o que estiver pronto e aceita até encher as vagas (máximo de 3 ativas).
+- **As etapas avançam com o que a pessoa realmente faz.**
+  - **Limitação explícita:** etapas de caça, coleta, patrulha e emboscada contam tempo de atividade, marcadas como "provisório".
+  - Abates e itens só no M3/M5. Nada é registrado como "derrotou N" ou "coletou N".
+- **Atividades do tipo quest não rendem XP contínuo.** O XP vem só da entrega.
+- **Pontuação:** termos `quest_offer` (150), `quest_step` (220) e `quest_deliver`.
+  - A entrega pesa 160 com uma quest pronta, mais 90 por quest pronta extra: carregar várias puxa de volta ao quadro.
+- **Estatísticas por quest no Core** (hash v4): aceitaram, entregas, personagens únicos, em andamento, tempo conectado até entregar, nível na entrega, última entrega e XP entregue.
+- **XP por fonte** por personagem (quests × atividades), com metas novas: `quest_xp_share` e `quests_per_character`.
+
+**Conteúdo:**
+- 3 quadros e 36 quests (por quadro: 4 principais em cadeia, 5 secundárias e 3 diárias);
+- 10 pontos de missão novos nas áreas do mundo.
+
+**Interface:**
+- **Ficha da quest (estilo FM)**, com três abas:
+  - Objetivos;
+  - Requisitos e recompensas (quests anteriores e liberadas, clicáveis);
+  - Dados (números da campanha e quem está fazendo agora, clicável).
+- **Ficha da área do quadro:** aba "Missões" com o catálogo em tabela.
+- **Ficha do jogador:** aba "Missões", com as ativas (progresso da etapa) e as concluídas.
+
+**Medido** (5 seeds × 1.000 × 90 dias):
+- 20% do XP vem de quests e há 21 entregas por personagem;
+- nível 10 em 14,9 h, 20 em 73 h, 30 em 192 h;
+- combate em 33%;
+- **tempo andando em 30%** (antes das quests, 22%).
+
+**Troca medida** (os pesos foram escolhidos com o criador em vista):
+- peso de quest alto (oferta 180, entrega 320, etapa 260): 34% do XP de quests e 40% do tempo andando;
+- peso baixo: quase ninguém faz quest e se anda 23%.
+- O ciclo "quadro → etapa → quadro" anda por natureza. Quem deve reduzir isso é o plano da sessão e a continuidade (D-026), sem compensação artificial.

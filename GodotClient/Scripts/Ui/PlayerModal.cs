@@ -24,6 +24,7 @@ public partial class PlayerModal : ModalFrame
         _person = ctx.Persons[personId - 1];
         BuildHeader();
         AddTab("Perfil", BuildProfile, live: true);
+        AddTab("Missões", BuildQuests, live: true);
         AddTab("Histórico", BuildHistory, live: true);
         AddTab("Rotina e finanças", BuildRoutine);
     }
@@ -241,6 +242,51 @@ public partial class PlayerModal : ModalFrame
     };
 
     // ---------------- Historico (tabela) ----------------
+
+    // ---------------- Missoes (D-031) ----------------
+
+    private Control BuildQuests()
+    {
+        var v = View;
+        if (v == null) return ThemeFactory.Text("Ainda sem personagem.", UiTokens.FontBody, UiTokens.TextSecondary);
+        long xpTotal = v.XpFromQuests + v.XpFromActivities;
+        var stats = Row(10,
+            Stat(v.ActiveQuests.Count.ToString(), $"ativas (máx. {_ctx.Content.QuestSettings.MaxActivePerCharacter})", UiTokens.Info),
+            Stat(PtBr.Int(v.CompletedQuests.Sum(c => c.Times)), "entregas", UiTokens.Success),
+            Stat(PtBr.Int(v.CompletedQuests.Count(c => _ctx.Content.Quests.TryGetValue(c.QuestId, out var q) && q.Category == QuestCategories.Main)), "principais concluídas", UiTokens.Accent),
+            Stat(xpTotal == 0 ? "–" : $"{v.XpFromQuests * 100 / xpTotal}%", "do XP veio de quests", UiTokens.AccentSoft));
+
+        var active = Column(8);
+        if (v.ActiveQuests.Count == 0)
+            active.AddChild(ThemeFactory.Text("Nenhuma missão em andamento.", UiTokens.FontBody, UiTokens.TextSecondary));
+        foreach (var p in v.ActiveQuests)
+        {
+            if (!_ctx.Content.Quests.TryGetValue(p.QuestId, out var q)) continue;
+            bool ready = p.StepIndex >= q.Steps.Count;
+            string stepText = ready ? "Pronta para entregar no quadro" : q.Steps[p.StepIndex].Text;
+            float max = ready ? 1 : q.Steps[p.StepIndex].Minutes;
+            float val = ready ? 1 : p.StepMinutes;
+            string qid = q.Id;
+            var line = Column(4,
+                Action($"{QuestModal.CategoryName(q.Category)} · {q.Name}", "Abre a ficha da missão", () => { Close(); _ctx.OpenQuest(qid); }),
+                Bar($"Etapa {Math.Min(p.StepIndex + 1, q.Steps.Count + 1)}/{q.Steps.Count + 1}", val, max, QuestModal.CategoryColor(q.Category),
+                    ready ? "pronta" : $"{p.StepMinutes}/{q.Steps[p.StepIndex].Minutes} min", 110),
+                ThemeFactory.Text(stepText, UiTokens.FontSmall, UiTokens.TextSecondary));
+            active.AddChild(line);
+        }
+
+        var done = new HFlowContainer();
+        done.AddThemeConstantOverride("h_separation", 6);
+        done.AddThemeConstantOverride("v_separation", 6);
+        foreach (var (id, times) in v.CompletedQuests.OrderBy(c => c.QuestId, StringComparer.Ordinal))
+        {
+            if (!_ctx.Content.Quests.TryGetValue(id, out var q)) continue;
+            string qid = id;
+            done.AddChild(Action(times > 1 ? $"{q.Name} ×{times}" : q.Name, QuestModal.CategoryName(q.Category), () => { Close(); _ctx.OpenQuest(qid); }));
+        }
+        if (v.CompletedQuests.Count == 0) done.AddChild(ThemeFactory.Text("Nenhuma missão concluída ainda.", UiTokens.FontBody, UiTokens.TextSecondary));
+        return Column(12, stats, Card("Em andamento", active, UiTokens.Info), Card("Concluídas", done, UiTokens.Success));
+    }
 
     private Control BuildHistory()
     {

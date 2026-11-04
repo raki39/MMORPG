@@ -30,6 +30,7 @@ public sealed class ClientContext
     public string ZoneName(string id) => Content.Regions.TryGetValue(id, out var r) ? r.Name : id;
 
     public Action<string, string> OpenArea { get; init; } = (_, _) => { };
+    public Action<string> OpenQuest { get; init; } = _ => { };
     public Action<string, string> FocusArea { get; init; } = (_, _) => { };
 
     public string ActivityName(string zone, string activity) =>

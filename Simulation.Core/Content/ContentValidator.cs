@@ -43,6 +43,7 @@ public static class ContentValidator
     public const string CreaturesFile = "creatures.json";
     public const string PopulationFile = "population.json";
     public const string ProgressionFile = "progression.json";
+    public const string QuestsFile = "quests.json";
 
     private static readonly Regex IdPattern = new("^[a-z][a-z0-9_]*$", RegexOptions.CultureInvariant);
 
@@ -75,6 +76,7 @@ public static class ContentValidator
         ValidateActivities(set, classIds, itemIds, v);
         ValidatePopulation(set, v);
         ValidateProgression(set, v);
+        ValidateQuests(set, classIds, itemIds, v);
 
         return v.Issues;
     }
@@ -660,6 +662,100 @@ public static class ContentValidator
         bool derived = (act.Type == ActivityTypes.Hunt || act.Type == ActivityTypes.Boss) && act.CreatureIds.Count > 0;
         if (givesXp && act.ChallengeLevel == 0 && !derived)
             v.Error(f, p + ".challengeLevel", $"Atividade do tipo '{act.Type}' dá XP e precisa do nível do desafio.");
+    }
+
+    /// <summary>Catalogo de quests (D-031): quadros, quests, etapas e recompensas.</summary>
+    private static void ValidateQuests(ContentSet set, HashSet<string> classIds, HashSet<string> itemIds, Collector v)
+    {
+        const string f = QuestsFile;
+        var cat = set.Quests;
+        int cap = Math.Max(1, set.Progression.LevelCap);
+        if (cat.Settings.MaxActivePerCharacter is < 1 or > 10)
+            v.Error(f, "settings.maxActivePerCharacter", "Quests ativas por personagem: de 1 a 10.");
+        var boardIds = CheckIds(cat.Boards, f, "boards", v);
+        ActivityDefinition? Find(string region, string activity) =>
+            set.Regions.FirstOrDefault(r => r.Id == region)?.FindActivity(activity);
+        var boardActivities = new HashSet<string>(StringComparer.Ordinal);
+        for (int i = 0; i < cat.Boards.Count; i++)
+        {
+            var b = cat.Boards[i];
+            string p = $"boards[{i}]";
+            v.Require(f, p + ".name", b.Name);
+            var region = set.Regions.FirstOrDefault(r => r.Id == b.RegionId);
+            if (region == null) { v.Error(f, p + ".regionId", $"Zona '{b.RegionId}' não existe."); continue; }
+            var area = region.Areas.FirstOrDefault(a => a.Id == b.AreaId);
+            if (area == null) { v.Error(f, p + ".areaId", $"Área '{b.AreaId}' não existe em '{region.Id}'."); continue; }
+            var act = area.Activities.FirstOrDefault(a => a.Id == b.ActivityId);
+            if (act == null) v.Error(f, p + ".activityId", $"A área '{area.Id}' não tem a atividade '{b.ActivityId}'.");
+            else if (act.Type != ActivityTypes.Quest) v.Error(f, p + ".activityId", "A atividade do quadro precisa ser do tipo quest (aceitar e entregar).");
+            else if (!boardActivities.Add(region.Id + "/" + act.Id)) v.Error(f, p + ".activityId", "Dois quadros usam a mesma atividade.");
+            if (b.DailyLimit is < 0 or > 10) v.Error(f, p + ".dailyLimit", "Diárias por dia de 0 a 10.");
+        }
+
+        var questIds = CheckIds(cat.Quests, f, "quests", v);
+        for (int i = 0; i < cat.Quests.Count; i++)
+        {
+            var q = cat.Quests[i];
+            string p = $"quests[{i}]";
+            v.Require(f, p + ".name", q.Name);
+            v.Require(f, p + ".description", q.Description);
+            if (!boardIds.Contains(q.BoardId)) v.Error(f, p + ".boardId", $"Quadro '{q.BoardId}' não existe.");
+            v.OneOf(f, p + ".category", q.Category, QuestCategories.All);
+            if (q.RecommendedLevel < 1 || q.RecommendedLevel > cap) v.Error(f, p + ".recommendedLevel", $"Nível recomendado de 1 a {cap}.");
+            if (q.MinLevel < 1 || q.MinLevel > cap) v.Error(f, p + ".minLevel", $"Nível mínimo de 1 a {cap}.");
+            if (q.MaxLevel != 0 && q.MaxLevel < q.MinLevel) v.Error(f, p + ".maxLevel", "Nível máximo menor que o mínimo.");
+            if (q.RepeatCooldownDays < 0) v.Error(f, p + ".repeatCooldownDays", "Intervalo de repetição não pode ser negativo.");
+            if (q.Category == QuestCategories.Main && q.RepeatCooldownDays > 0) v.Error(f, p + ".repeatCooldownDays", "Quest principal é concluída uma vez só.");
+            for (int k = 0; k < q.PrerequisiteQuestIds.Count; k++)
+                if (!questIds.Contains(q.PrerequisiteQuestIds[k]) || q.PrerequisiteQuestIds[k] == q.Id)
+                    v.Error(f, $"{p}.prerequisiteQuestIds[{k}]", $"Pré-requisito '{q.PrerequisiteQuestIds[k]}' inválido.");
+            for (int k = 0; k < q.ClassIds.Count; k++)
+                if (!classIds.Contains(q.ClassIds[k])) v.Error(f, $"{p}.classIds[{k}]", $"Classe '{q.ClassIds[k]}' não existe.");
+            if (q.Steps.Count == 0) v.Error(f, p + ".steps", "A quest precisa de ao menos uma etapa.");
+            for (int k = 0; k < q.Steps.Count; k++)
+            {
+                var s = q.Steps[k];
+                string sp = $"{p}.steps[{k}]";
+                v.OneOf(f, sp + ".type", s.Type, QuestStepTypes.All);
+                v.Require(f, sp + ".text", s.Text);
+                var act = Find(s.RegionId, s.ActivityId);
+                if (act == null) { v.Error(f, sp + ".activityId", $"Atividade '{s.RegionId}/{s.ActivityId}' não existe."); continue; }
+                if (s.Type == QuestStepTypes.Activity)
+                {
+                    if (act.Type is ActivityTypes.Quest or ActivityTypes.Trade or ActivityTypes.Repair or ActivityTypes.Socialize or ActivityTypes.Train or ActivityTypes.Recruit)
+                        v.Error(f, sp + ".activityId", $"Etapa de atividade precisa ser algo feito no mundo (caça, coleta, exploração, patrulha...), não '{act.Type}'.");
+                    if (act.MinGroupSize > 1) v.Error(f, sp + ".activityId", "Etapa exige grupo; grupos chegam no M6.");
+                    if (s.Minutes is < 5 or > 600) v.Error(f, sp + ".minutes", "Etapa de atividade: de 5 a 600 minutos.");
+                }
+                else if (s.Type == QuestStepTypes.Visit)
+                {
+                    if (act.Type != ActivityTypes.Quest) v.Error(f, sp + ".activityId", "Etapa de visita precisa de um ponto de missão (atividade do tipo quest).");
+                    else if (boardActivities.Contains(s.RegionId + "/" + s.ActivityId)) v.Error(f, sp + ".activityId", "O quadro não é ponto de visita; a entrega no quadro é automática no fim.");
+                    if (s.Minutes is < 1 or > 120) v.Error(f, sp + ".minutes", "Visita: de 1 a 120 minutos.");
+                }
+                if (act.MinLevel > q.MinLevel)
+                    v.Error(f, sp + ".activityId", $"A etapa exige nível {act.MinLevel}, acima do nível mínimo da quest ({q.MinLevel}).");
+            }
+            if (q.Rewards.XpPermille is < 0 or > 3000) v.Error(f, p + ".rewards.xpPermille", "XP da recompensa de 0 a 3000 permille do nível.");
+            if (q.Rewards.GoldCopper < 0) v.Error(f, p + ".rewards.goldCopper", "Ouro não pode ser negativo.");
+            for (int k = 0; k < q.Rewards.ItemIds.Count; k++)
+                if (!itemIds.Contains(q.Rewards.ItemIds[k])) v.Error(f, $"{p}.rewards.itemIds[{k}]", $"Item '{q.Rewards.ItemIds[k]}' não existe.");
+        }
+
+        // Pre-requisitos sem ciclo.
+        var byId = cat.Quests.Where(q => q.Id.Length > 0).GroupBy(q => q.Id).ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);
+        foreach (var q in cat.Quests)
+        {
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            var stack = new Stack<string>(q.PrerequisiteQuestIds);
+            while (stack.Count > 0)
+            {
+                string id = stack.Pop();
+                if (id == q.Id) { v.Error(f, $"quests[{cat.Quests.IndexOf(q)}].prerequisiteQuestIds", "Pré-requisitos formam um ciclo."); break; }
+                if (!seen.Add(id) || !byId.TryGetValue(id, out var pre)) continue;
+                foreach (var x in pre.PrerequisiteQuestIds) stack.Push(x);
+            }
+        }
     }
 
     private static int AverageCreatureLevel(ContentSet set, ActivityDefinition a)

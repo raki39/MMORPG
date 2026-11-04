@@ -227,6 +227,13 @@ public sealed class ValidationCollector
                 double a = wd.Average(d => (double)d.ActivePlayers);
                 return a == 0 ? (double.NaN, "") : (we.Average(d => (double)d.ActivePlayers) / a, "");
             }
+            case TargetMetrics.QuestXpShare:
+            {
+                long q = chars.Sum(c => c.XpFromQuests), a = chars.Sum(c => c.XpFromActivities);
+                return q + a == 0 ? (double.NaN, "") : (q * 100.0 / (q + a), "");
+            }
+            case TargetMetrics.QuestsPerCharacter:
+                return chars.Count == 0 ? (double.NaN, "") : (chars.Average(c => (double)c.QuestHistory.Values.Sum(r => r.Completions)), "");
             case TargetMetrics.PeakOnlineRatio:
                 return history.Count == 0 ? (double.NaN, "") : (history.Average(d => d.PeakOnline * 100.0 / d.Registered), "");
             default:

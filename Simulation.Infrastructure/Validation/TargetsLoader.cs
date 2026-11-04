@@ -51,10 +51,15 @@ public static class TargetMetrics
     public const string DauRatio = "dau_ratio";
     public const string WeekendLift = "weekend_lift";
     public const string PeakOnlineRatio = "peak_online_ratio";
+    /// <summary>% do XP ganho que veio de quests (o resto vem de atividades).</summary>
+    public const string QuestXpShare = "quest_xp_share";
+    /// <summary>Quests concluidas por personagem (media).</summary>
+    public const string QuestsPerCharacter = "quests_per_character";
 
     public static readonly string[] All =
     {
         HoursToLevel, ReachedLevel, SessionsPerWeek, HoursPerWeek, ActivityShare, DauRatio, WeekendLift, PeakOnlineRatio,
+        QuestXpShare, QuestsPerCharacter,
     };
 
     /// <summary>Pseudo-tipos aceitos em activity_share alem dos tipos de atividade.</summary>

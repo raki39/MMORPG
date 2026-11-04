@@ -107,8 +107,8 @@
             {
               "id": "quadro_de_missoes",
               "type": "quest",
-              "name": "Pegar missões no quadro",
-              "typicalMinutes": 10,
+              "name": "Aceitar e entregar missões",
+              "typicalMinutes": 5,
               "maxGroupSize": 5
             }
           ]
@@ -264,12 +264,12 @@
           "activities": [
             {
               "id": "entrega_lenhador",
-              "challengeLevel": 3,
               "type": "quest",
-              "name": "Entrega para o lenhador",
-              "typicalMinutes": 20,
+              "name": "Falar com o lenhador",
+              "typicalMinutes": 10,
               "maxGroupSize": 3,
-              "baseRiskPermille": 30
+              "baseRiskPermille": 30,
+              "minLevel": 1
             }
           ]
         }
@@ -412,6 +412,15 @@
               "typicalMinutes": 25,
               "maxGroupSize": 3,
               "baseRiskPermille": 130
+            },
+            {
+              "id": "examinar_ninhos",
+              "type": "quest",
+              "name": "Examinar os ninhos das harpias",
+              "minLevel": 1,
+              "typicalMinutes": 10,
+              "maxGroupSize": 3,
+              "baseRiskPermille": 90
             }
           ]
         }
@@ -547,6 +556,15 @@
               "typicalMinutes": 30,
               "maxGroupSize": 5,
               "baseRiskPermille": 180
+            },
+            {
+              "id": "investigar_galerias",
+              "type": "quest",
+              "name": "Investigar as galerias abandonadas",
+              "minLevel": 1,
+              "typicalMinutes": 15,
+              "maxGroupSize": 3,
+              "baseRiskPermille": 120
             }
           ]
         }
@@ -702,6 +720,15 @@
               "typicalMinutes": 25,
               "maxGroupSize": 3,
               "baseRiskPermille": 300
+            },
+            {
+              "id": "recuperar_estandarte",
+              "type": "quest",
+              "name": "Procurar o estandarte perdido",
+              "minLevel": 1,
+              "typicalMinutes": 10,
+              "maxGroupSize": 3,
+              "baseRiskPermille": 160
             }
           ]
         }
@@ -776,6 +803,15 @@
               "typicalMinutes": 30,
               "maxGroupSize": 5,
               "baseRiskPermille": 450
+            },
+            {
+              "id": "examinar_altar",
+              "type": "quest",
+              "name": "Examinar o altar profanado",
+              "minLevel": 1,
+              "typicalMinutes": 15,
+              "maxGroupSize": 3,
+              "baseRiskPermille": 220
             }
           ]
         },
@@ -933,8 +969,8 @@
             {
               "id": "quadro_de_missoes",
               "type": "quest",
-              "name": "Pegar missões no quadro",
-              "typicalMinutes": 10,
+              "name": "Aceitar e entregar missões",
+              "typicalMinutes": 5,
               "maxGroupSize": 1
             }
           ]
@@ -1050,6 +1086,15 @@
               "typicalMinutes": 30,
               "maxGroupSize": 3,
               "baseRiskPermille": 150
+            },
+            {
+              "id": "procurar_ninho",
+              "type": "quest",
+              "name": "Procurar o ninho das serpentes",
+              "minLevel": 1,
+              "typicalMinutes": 10,
+              "maxGroupSize": 3,
+              "baseRiskPermille": 120
             }
           ]
         },
@@ -1145,6 +1190,15 @@
               "typicalMinutes": 30,
               "maxGroupSize": 3,
               "baseRiskPermille": 170
+            },
+            {
+              "id": "seguir_rastros",
+              "type": "quest",
+              "name": "Seguir os rastros dos trolls",
+              "minLevel": 1,
+              "typicalMinutes": 10,
+              "maxGroupSize": 3,
+              "baseRiskPermille": 150
             }
           ]
         },
@@ -1266,6 +1320,15 @@
               "typicalMinutes": 30,
               "maxGroupSize": 3,
               "baseRiskPermille": 190
+            },
+            {
+              "id": "espiar_acampamento",
+              "type": "quest",
+              "name": "Espiar o acampamento orc",
+              "minLevel": 1,
+              "typicalMinutes": 10,
+              "maxGroupSize": 3,
+              "baseRiskPermille": 170
             }
           ]
         },
@@ -1430,8 +1493,8 @@
             {
               "id": "quadro_de_missoes",
               "type": "quest",
-              "name": "Pegar missões no quadro",
-              "typicalMinutes": 10,
+              "name": "Aceitar e entregar missões",
+              "typicalMinutes": 5,
               "maxGroupSize": 1
             }
           ]
@@ -1590,6 +1653,15 @@
               "typicalMinutes": 35,
               "maxGroupSize": 3,
               "baseRiskPermille": 240
+            },
+            {
+              "id": "investigar_covil",
+              "type": "quest",
+              "name": "Investigar o covil do yeti",
+              "minLevel": 1,
+              "typicalMinutes": 15,
+              "maxGroupSize": 3,
+              "baseRiskPermille": 200
             }
           ]
         }
@@ -1684,6 +1756,15 @@
               "typicalMinutes": 35,
               "maxGroupSize": 3,
               "baseRiskPermille": 260
+            },
+            {
+              "id": "observar_forja",
+              "type": "quest",
+              "name": "Observar a forja vulcânica",
+              "minLevel": 1,
+              "typicalMinutes": 10,
+              "maxGroupSize": 3,
+              "baseRiskPermille": 230
             }
           ]
         },
@@ -1857,6 +1938,15 @@
               "typicalMinutes": 40,
               "maxGroupSize": 3,
               "baseRiskPermille": 280
+            },
+            {
+              "id": "ler_inscricoes",
+              "type": "quest",
+              "name": "Ler as inscrições da cripta",
+              "minLevel": 1,
+              "typicalMinutes": 15,
+              "maxGroupSize": 3,
+              "baseRiskPermille": 240
             }
           ]
         },

@@ -35,6 +35,12 @@ public sealed class CharacterView
     public int KnownRegions { get; init; }
     /// <summary>Registro imutavel criado pelo Core; seguro para ler fora da thread da simulacao.</summary>
     public DecisionRecord? LastDecision { get; init; }
+    /// <summary>Quests em andamento (copia).</summary>
+    public IReadOnlyList<QuestProgressView> ActiveQuests { get; init; } = Array.Empty<QuestProgressView>();
+    /// <summary>Quests ja concluidas (ID e vezes).</summary>
+    public IReadOnlyList<(string QuestId, int Times)> CompletedQuests { get; init; } = Array.Empty<(string, int)>();
+    public long XpFromQuests { get; init; }
+    public long XpFromActivities { get; init; }
 
     /// <summary>Posicao no tick informado (mesma regra do Core: interpolacao do trecho).</summary>
     public (float X, float Y) PositionAt(long tick)
@@ -44,6 +50,13 @@ public sealed class CharacterView
         return (Position.X + (MoveTo.X - Position.X) * t, Position.Y + (MoveTo.Y - Position.Y) * t);
     }
 }
+
+/// <summary>Progresso de uma quest ativa (copia imutavel).</summary>
+public sealed record QuestProgressView(string QuestId, int StepIndex, int StepMinutes, long AcceptedTick);
+
+/// <summary>Numeros de uma quest na campanha (copia imutavel para a ficha).</summary>
+public sealed record QuestStatsView(int Accepted, int Completed, int UniqueCompleters, int Active,
+    long SumPlayedTicksToComplete, long SumLevelAtCompletion, long LastCompletedTick, long XpGranted);
 
 /// <summary>Leitura imutavel do estado publicada pela thread da simulacao para a tela.</summary>
 public sealed class SimSnapshot
@@ -58,6 +71,8 @@ public sealed class SimSnapshot
     public int Online { get; init; }
     /// <summary>Personagens por ID de pessoa (null = sem personagem).</summary>
     public CharacterView?[] ByPerson { get; init; } = Array.Empty<CharacterView?>();
+    /// <summary>Estatisticas por quest (ID -> numeros).</summary>
+    public IReadOnlyDictionary<string, QuestStatsView> QuestStats { get; init; } = new Dictionary<string, QuestStatsView>();
 }
 
 /// <summary>Dados estaticos de uma pessoa copiados na criacao.</summary>
@@ -264,6 +279,12 @@ public sealed class SimulationHost : IDisposable
                 SessionEndTick = c.SessionEndTick,
                 KnownRegions = c.KnownRegions.Count,
                 LastDecision = c.LastDecision,
+                ActiveQuests = c.ActiveQuests.Count == 0 ? Array.Empty<QuestProgressView>()
+                    : c.ActiveQuests.Select(a => new QuestProgressView(a.QuestId, a.StepIndex, a.StepMinutes, a.AcceptedTick)).ToArray(),
+                CompletedQuests = c.QuestHistory.Count == 0 ? Array.Empty<(string, int)>()
+                    : c.QuestHistory.Where(kv => kv.Value.Completions > 0).Select(kv => (kv.Key, kv.Value.Completions)).ToArray(),
+                XpFromQuests = c.XpFromQuests,
+                XpFromActivities = c.XpFromActivities,
             };
         }
         return new SimSnapshot
@@ -276,6 +297,9 @@ public sealed class SimulationHost : IDisposable
             Registered = w.Characters.Count,
             Online = w.OnlineCount,
             ByPerson = byPerson,
+            QuestStats = w.QuestStats.ToDictionary(kv => kv.Key, kv => new QuestStatsView(kv.Value.Accepted, kv.Value.Completed,
+                kv.Value.UniqueCompleters, kv.Value.Active, kv.Value.SumPlayedTicksToComplete, kv.Value.SumLevelAtCompletion,
+                kv.Value.LastCompletedTick, kv.Value.XpGranted), StringComparer.Ordinal),
         };
     }
 

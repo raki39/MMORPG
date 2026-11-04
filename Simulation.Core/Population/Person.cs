@@ -160,6 +160,34 @@ public sealed class DecisionRecord
     public string RunnerUpActivityKey { get; }
 }
 
+/// <summary>Quest em andamento de um personagem (D-031).</summary>
+public sealed class ActiveQuest
+{
+    public ActiveQuest(string questId, long acceptedTick, long acceptedPlayedTicks)
+    {
+        QuestId = questId;
+        AcceptedTick = acceptedTick;
+        AcceptedPlayedTicks = acceptedPlayedTicks;
+    }
+
+    public string QuestId { get; }
+    public long AcceptedTick { get; }
+    /// <summary>Tempo conectado do personagem ao aceitar (para medir quanto jogou ate concluir).</summary>
+    public long AcceptedPlayedTicks { get; }
+    /// <summary>Etapa atual; igual ao numero de etapas = pronta para entregar no quadro.</summary>
+    public int StepIndex { get; internal set; }
+    /// <summary>Minutos ja cumpridos na etapa atual.</summary>
+    public int StepMinutes { get; internal set; }
+}
+
+/// <summary>Historico de uma quest para o personagem.</summary>
+public sealed class QuestRecord
+{
+    public int Completions { get; internal set; }
+    /// <summary>Dia (indice do calendario) da ultima conclusao.</summary>
+    public long LastCompletedDay { get; internal set; } = -1;
+}
+
 /// <summary>Personagem jogavel (plano 4.1). Criado no registro; combate e inventario no M3/M5.</summary>
 public sealed class Character
 {
@@ -220,6 +248,18 @@ public sealed class Character
     /// <summary>Tempo conectado (ticks) no instante em que atingiu cada nivel; indice 0 = nivel 2.</summary>
     internal List<long> LevelTicks { get; } = new();
     public IReadOnlyList<long> PlayedTicksAtLevel => LevelTicks;
+
+    // ---- Quests (D-031) ----
+    internal List<ActiveQuest> ActiveQuestList { get; } = new();
+    public IReadOnlyList<ActiveQuest> ActiveQuests => ActiveQuestList;
+    internal SortedDictionary<string, QuestRecord> QuestLog { get; } = new(StringComparer.Ordinal);
+    public IReadOnlyDictionary<string, QuestRecord> QuestHistory => QuestLog;
+    /// <summary>Diarias concluidas hoje por quadro (zera ao mudar o dia).</summary>
+    internal SortedDictionary<string, int> DailyByBoard { get; } = new(StringComparer.Ordinal);
+    public long DailyDay { get; internal set; } = -1;
+    /// <summary>XP vindo de quests e de atividades (medida de XP por fonte).</summary>
+    public long XpFromQuests { get; internal set; }
+    public long XpFromActivities { get; internal set; }
 
     /// <summary>Tempo conectado ate o instante informado, incluindo a sessao em andamento.</summary>
     public long PlayedTicksAt(long now) =>
