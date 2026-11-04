@@ -60,24 +60,14 @@ public partial class QuestModal : ModalFrame
     {
         var color = CategoryColor(_quest.Category);
         var col = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
-        col.AddThemeConstantOverride("separation", 6);
+        col.AddThemeConstantOverride("separation", 2);
         col.AddChild(ThemeFactory.Text(_quest.Name, 24, UiTokens.TextPrimary, UiFonts.Title));
-        var desc = ThemeFactory.Text(_quest.Description, UiTokens.FontBody, UiTokens.TextSecondary);
+        string sub = CategoryName(_quest.Category) + (_board != null ? $" · {_board.Name} · {_ctx.ZoneName(_board.RegionId)}" : "") + " · " + Repetition(_quest);
+        col.AddChild(ThemeFactory.Text(sub, UiTokens.FontBody, UiTokens.TextSecondary));
+        var desc = ThemeFactory.Text(_quest.Description, UiTokens.FontSmall, UiTokens.TextDisabled);
         desc.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        desc.CustomMinimumSize = new Vector2(560, 0);
+        desc.CustomMinimumSize = new Vector2(420, 0);
         col.AddChild(desc);
-        var chips = new HFlowContainer();
-        chips.AddThemeConstantOverride("h_separation", 8);
-        chips.AddThemeConstantOverride("v_separation", 6);
-        chips.AddChild(ThemeFactory.Chip(CategoryName(_quest.Category), color, dot: true));
-        if (_board != null)
-        {
-            chips.AddChild(ThemeFactory.Chip(_board.Name, UiTokens.AccentSoft));
-            chips.AddChild(ThemeFactory.Chip(_ctx.ZoneName(_board.RegionId), UiTokens.TextSecondary));
-        }
-        chips.AddChild(ThemeFactory.Chip(_quest.ScalesWithLevel ? "Recompensa pelo seu nível" : $"Pensada para o nível {_quest.RecommendedLevel}", UiTokens.Info));
-        chips.AddChild(ThemeFactory.Chip(Repetition(_quest), UiTokens.TextSecondary));
-        col.AddChild(chips);
         Header.AddChild(col);
 
         var s = Stats;
@@ -90,7 +80,7 @@ public partial class QuestModal : ModalFrame
 
         if (_board != null)
         {
-            Actions.AddChild(Action("Ver o quadro", $"Abre {_board.Name}", () => { Close(); _ctx.OpenArea(_board.RegionId, _board.AreaId); }, primary: true));
+            Actions.AddChild(Action("Ver o quadro", $"Abre {_board.Name}", () => { _ctx.OpenArea(_board.RegionId, _board.AreaId); }, primary: true));
             Actions.AddChild(Action("Aproximar no mapa", "Centraliza a área do quadro", () => { _ctx.FocusArea(_board.RegionId, _board.AreaId); Close(); }));
         }
         Actions.AddChild(Action("Editar quest", "O editor de quests chega em uma tela própria (conteúdo já configurável)", () => { }, enabled: false));
@@ -150,13 +140,13 @@ public partial class QuestModal : ModalFrame
         {
             var name = _ctx.Content.Quests.TryGetValue(pre, out var pq) ? pq.Name : pre;
             string id = pre;
-            req.AddChild(Action($"Exige: {name}", "Abre a quest anterior", () => { Close(); _ctx.OpenQuest(id); }));
+            req.AddChild(Action($"Exige: {name}", "Abre a quest anterior", () => { _ctx.OpenQuest(id); }));
         }
         var unlocks = _ctx.Content.Quests.Values.Where(x => x.PrerequisiteQuestIds.Contains(_quest.Id)).ToList();
         foreach (var u in unlocks)
         {
             string id = u.Id;
-            req.AddChild(Action($"Libera: {u.Name}", "Abre a quest seguinte", () => { Close(); _ctx.OpenQuest(id); }));
+            req.AddChild(Action($"Libera: {u.Name}", "Abre a quest seguinte", () => { _ctx.OpenQuest(id); }));
         }
 
         var rew = Column(6);
@@ -224,7 +214,7 @@ public partial class QuestModal : ModalFrame
             new Column<(int Id, CharacterView V, QuestProgressView P)> { Title = "Etapa", Width = 260, Text = StepText, SortKey = x => x.P.StepIndex * 1000 + x.P.StepMinutes },
             new Column<(int Id, CharacterView V, QuestProgressView P)> { Title = "Aceitou", Width = 110, Text = x => PtBr.ShortDate(_ctx.Calendar.ToDateTime(x.P.AcceptedTick)), SortKey = x => x.P.AcceptedTick, Color = _ => UiTokens.TextSecondary },
             new Column<(int Id, CharacterView V, QuestProgressView P)> { Title = "Status", Width = 110, Text = x => StatusText.Of(x.V, _ctx.Content), Color = _ => UiTokens.TextSecondary },
-        }, sortColumn: 2) { OnClick = x => { Close(); _ctx.OpenPerson(x.Id); } };
+        }, sortColumn: 2) { OnClick = x => { _ctx.OpenPerson(x.Id); } };
         _doingTable.OnSortChanged = () => Rebuild(false);
 
         var body = doing.Count == 0

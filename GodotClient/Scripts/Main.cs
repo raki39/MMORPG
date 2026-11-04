@@ -34,6 +34,7 @@ public partial class Main : Node
     private void PushHistory(string kind, string id)
     {
         if (_navigating) return;
+        if (_navAt >= 0 && _navHistory[_navAt].Kind == kind && _navHistory[_navAt].Id == id) return;
         if (_navAt >= 0 && _modal != null && IsInstanceValid(_modal))
             _navHistory[_navAt] = (_navHistory[_navAt].Kind, _navHistory[_navAt].Id, _modal.CurrentTab);
         if (_navAt >= 0 && _navHistory[_navAt].Kind == kind && _navHistory[_navAt].Id == id) return;
@@ -54,6 +55,11 @@ public partial class Main : Node
         var (kind, id, tab) = _navHistory[to];
         switch (kind)
         {
+            case "map": ShowMap(); break;
+            case "players": OpenPlayersPage(); break;
+            case "zones": OpenZonesPage(); break;
+            case "quests": OpenQuestsPage(); break;
+            case "settings": OpenSettingsPage(); break;
             case "person": OpenPerson(int.Parse(id, CultureInfo.InvariantCulture)); break;
             case "zone": OpenZone(id); break;
             case "area": { var p = id.Split('#'); OpenArea(p[0], p[1]); break; }
@@ -61,6 +67,7 @@ public partial class Main : Node
         }
         _navigating = false;
         if (_modal != null && IsInstanceValid(_modal) && tab > 0 && tab < _modal.TabCount) _modal.SelectTab(tab);
+        SyncNav();
     }
     private Vector2? _fakeMouse;
 
@@ -70,7 +77,7 @@ public partial class Main : Node
     private WorldMapView _map = null!;
     private Control _ui = null!;
     private Label _clockLabel = null!, _dateLabel = null!, _speedLabel = null!, _fpsLabel = null!, _onlineLabel = null!, _registeredLabel = null!;
-    private Label? _worldNameLabel;
+    private Control? _kpiRow;
     private PanelContainer _serverChip = null!;
     private VBoxContainer _layerLegend = null!;
     private readonly List<Button> _speedButtons = new();
@@ -85,6 +92,15 @@ public partial class Main : Node
     private bool _serverOpenShown;
     private ModalFrame? _modal;
     private ClusterPopover? _popover;
+    private QuickCard? _quick;
+    private ColorRect _terrain = null!;
+    private Control? _layerPanel, _mapControls;
+    private Control _speedSeg = null!;
+    private Button _backButton = null!, _forwardButton = null!, _returnButton = null!;
+    private readonly List<(string Kind, Button Button)> _menu = new();
+    private int _speedBeforePage = 1;
+    private bool _pausedByPage;
+    private bool OnMap => _modal == null || !IsInstanceValid(_modal);
     private readonly Dictionary<int, List<SimEvent>> _history = new();
     private readonly Dictionary<int, int> _characterToPerson = new();
     private readonly MetricsHistory _metrics = new();
@@ -104,7 +120,10 @@ public partial class Main : Node
             _args[kv[0]] = kv.Length > 1 ? kv[1] : "true";
         }
 
+        ClientSettings.Load();
+        ClientSettings.ApplyVideo(GetViewport(), _args.ContainsKey("screenshot") || _args.ContainsKey("measure-seconds"));
         var terrain = new ColorRect { MouseFilter = Control.MouseFilterEnum.Ignore, Color = UiTokens.Background };
+        _terrain = terrain;
         terrain.SetAnchorsPreset(Control.LayoutPreset.FullRect);
         AddChild(terrain);
         _map = new WorldMapView();
@@ -138,22 +157,18 @@ public partial class Main : Node
             PersonHistory = id => _history.TryGetValue(id, out var l) ? l : (IReadOnlyList<SimEvent>)Array.Empty<SimEvent>(),
             FocusPerson = (id, follow) => { _map.SelectPerson(id); _map.FocusPerson(id, follow); },
             FocusZone = id => { _map.SelectRegion(id); _map.FocusRegion(id); },
-            OpenPerson = OpenPerson,
-            OpenZone = OpenZone,
-            OpenArea = OpenArea,
+            OpenPerson = id => { if (OnMap) PeekPerson(id); else OpenPerson(id); },
+            OpenZone = id => { if (OnMap) PeekZone(id); else OpenZone(id); },
+            OpenArea = (z, a) => { if (OnMap) PeekArea(z, a); else OpenArea(z, a); },
             OpenQuest = OpenQuest,
             WatchPerson = id => _host?.WatchPerson(id),
             FocusArea = (z, a) => { _map.SelectArea(z + "#" + a); _map.FocusArea(z, a); },
         };
 
         _map.Setup(content, _host.Layout, _host.Persons, terrain);
-        ModalFrame.CanGoBack = () => _navAt > 0;
-        ModalFrame.CanGoForward = () => _navAt >= 0 && _navAt < _navHistory.Count - 1;
-        ModalFrame.GoBack = () => Navigate(-1);
-        ModalFrame.GoForward = () => Navigate(+1);
-        _map.RegionSelected += id => { if (id.Length > 0) OpenZone(id); };
-        _map.PersonSelected += OpenPerson;
-        _map.AreaSelected += OpenArea;
+        _map.RegionSelected += id => { if (id.Length > 0) PeekZone(id); else CloseOverlays(); };
+        _map.PersonSelected += PeekPerson;
+        _map.AreaSelected += PeekArea;
         _map.ClusterSelected += OpenCluster;
 
         BuildTopBar(content);
@@ -176,11 +191,14 @@ public partial class Main : Node
             _startNote = "Campanha em andamento: 6º dia após o lançamento. Os jogadores seguem a própria rotina (a maioria joga à noite).";
         }
         if (preRoll > 0) _host.AdvanceBeforeStart(preRoll);
-        _host.Speed = int.Parse(Arg("speed", "1"), CultureInfo.InvariantCulture);
+        if (!ClientSettings.CampaignNote) _startNote = "";
+        _host.Speed = int.Parse(Arg("speed", ClientSettings.StartSpeed.ToString(CultureInfo.InvariantCulture)), CultureInfo.InvariantCulture);
         _host.Start();
         CollectEvents();
+        PushHistory("map", "");
 
         SyncSpeedButtons();
+        SyncNav();
         GetViewport().SizeChanged += () => FitMap(false);
         FitMap(true);
         SetLayer(Arg("layer", "normal") switch { "lotacao" => MapLayer.Crowding, "perigo" => MapLayer.Danger, "nivel" => MapLayer.Level, _ => MapLayer.Normal });
@@ -206,6 +224,7 @@ public partial class Main : Node
         {
             // Medicao: sem limite do vsync, com tempo de renderizacao (CPU e GPU) por quadro.
             DisplayServer.WindowSetVsyncMode(DisplayServer.VSyncMode.Disabled);
+            Engine.MaxFps = 0;
             RenderingServer.ViewportSetMeasureRenderTime(GetViewport().GetViewportRid(), true);
         }
         if (_args.TryGetValue("mouse", out var ms) && ms.Split(',', 'x') is { Length: 2 } mp
@@ -218,6 +237,16 @@ public partial class Main : Node
         if (_args.TryGetValue("open-zone", out var z) && _ctx.Content.Regions.ContainsKey(z)) OpenZone(z);
         if (_args.TryGetValue("open-area", out var ar) && ar.Split('#') is { Length: 2 } ap) OpenArea(ap[0], ap[1]);
         if (_args.TryGetValue("open-quest", out var oq)) OpenQuest(oq);
+        if (_args.TryGetValue("page", out var pg)) { if (pg == "players") OpenPlayersPage(); else if (pg == "zones") OpenZonesPage(); else if (pg == "quests") OpenQuestsPage(); else if (pg == "settings") OpenSettingsPage(); }
+        var center = GetViewport().GetVisibleRect().Size / 2f - new Vector2(UiTokens.SidePanelWidth / 2f, 0);
+        if (_args.TryGetValue("peek-person", out var pp))
+        {
+            int id = pp == "auto"
+                ? Enumerable.Range(1, _host.Snapshot.ByPerson.Length - 1).FirstOrDefault(i => _host.Snapshot.ByPerson[i] is { Status: Simulation.Core.Population.CharacterStatus.Doing } v && v.LastDecision != null)
+                : int.TryParse(pp, out var n) ? n : 0;
+            if (id > 0) PeekPerson(id, center);
+        }
+        if (_args.TryGetValue("peek-zone", out var pz) && _ctx.Content.Regions.ContainsKey(pz)) PeekZone(pz, center);
         if (_args.ContainsKey("open-cluster"))
         {
             var snap = _host.Snapshot;
@@ -245,63 +274,160 @@ public partial class Main : Node
     private void FitMap(bool instant)
     {
         var size = GetViewport().GetVisibleRect().Size;
-        if (_worldNameLabel != null) _worldNameLabel.Visible = size.X >= 1600;
+        if (_kpiRow != null) _kpiRow.Visible = size.X >= 1560;
+        _serverChip.Visible = size.X >= 1760;
         var area = new Rect2(UiTokens.S16, UiTokens.TopBarHeight + UiTokens.S8, size.X - UiTokens.SidePanelWidth - UiTokens.S16 * 2, size.Y - UiTokens.TopBarHeight - UiTokens.S16 - 40);
         _map.FitTo(area, instant);
     }
 
-    // ---------- Fichas ----------
+    // ---------- Telas: mapa (tempo corre) e paginas (tempo pausa), D-034 ----------
 
     private void CloseOverlays()
     {
         if (_popover != null && IsInstanceValid(_popover)) _popover.QueueFree();
         _popover = null;
-        if (_modal != null && IsInstanceValid(_modal)) _modal.QueueFree();
-        _modal = null;
+        if (_quick != null && IsInstanceValid(_quick)) _quick.QueueFree();
+        _quick = null;
+    }
+
+    /// <summary>Abre uma pagina: esconde o mapa, pausa o tempo (lembra a velocidade) e registra no historico.</summary>
+    private void ShowPage(string kind, string id, Func<ModalFrame> build)
+    {
+        if (_host == null) return;
+        PushHistory(kind, id);
+        CloseOverlays();
+        bool fromMap = OnMap;
+        if (!fromMap) _modal!.QueueFree();
+        _host.WatchPerson(0);
+        if (fromMap)
+        {
+            _speedBeforePage = _host.Speed;
+            _pausedByPage = ClientSettings.PauseOffMap;
+            if (_pausedByPage) _host.Speed = 0;
+            SetMapVisible(false);
+        }
+        var page = build();
+        _modal = page;
+        page.Closed += () => { if (_modal == page) { _modal = null; ShowMap(); } };
+        _ui.AddChild(page);
+        SyncNav();
+    }
+
+    /// <summary>Volta ao mapa: retoma a velocidade de antes das paginas.</summary>
+    private void ShowMap()
+    {
+        if (_host == null) return;
+        bool wasPage = !OnMap;
+        if (wasPage) { var m = _modal!; _modal = null; m.QueueFree(); }
+        _host.WatchPerson(0);
+        if (wasPage || !_map.Visible)
+        {
+            SetMapVisible(true);
+            if (_pausedByPage) SetSpeed(_speedBeforePage);
+        }
+        PushHistory("map", "");
+        SyncNav();
+    }
+
+    private void SetMapVisible(bool visible)
+    {
+        _map.Visible = visible;
+        _map.ProcessMode = visible ? ProcessModeEnum.Inherit : ProcessModeEnum.Disabled;
+        _terrain.Visible = visible;
+        if (_side != null) _side.Visible = visible;
+        if (_layerPanel != null) _layerPanel.Visible = visible;
+        if (_mapControls != null) _mapControls.Visible = visible;
+        if (_emptyBanner != null && !visible) _emptyBanner.Visible = false;
+        _speedSeg.Visible = visible;
+        _returnButton.Visible = !visible;
+    }
+
+    /// <summary>Estado da barra: voltar/avancar e item do menu ativo.</summary>
+    private void SyncNav()
+    {
+        if (_backButton == null) return;
+        _backButton.Disabled = _navAt <= 0;
+        _forwardButton.Disabled = _navAt < 0 || _navAt >= _navHistory.Count - 1;
+        string current = _navAt >= 0 ? _navHistory[_navAt].Kind : "map";
+        string section = current switch { "person" => "players", "zone" or "area" => "zones", "quest" => "quests", _ => current };
+        foreach (var (kind, b) in _menu) b.SetPressedNoSignal(kind == section);
+    }
+
+    private Rect2 QuickBounds()
+    {
+        var vp = GetViewport().GetVisibleRect().Size;
+        return new Rect2(12, UiTokens.TopBarHeight + 12, vp.X - UiTokens.SidePanelWidth - 24, vp.Y - UiTokens.TopBarHeight - 24);
+    }
+
+    private Vector2 MouseOr(Vector2? at) => at ?? _fakeMouse ?? GetViewport().GetMousePosition();
+
+    private void ShowQuick(QuickCard card)
+    {
+        CloseOverlays();
+        _quick = card;
+        card.Dismissed += () => { _map.SelectPerson(0); _map.SelectRegion(null); _map.SelectArea(null); };
+        _ui.AddChild(card);
+    }
+
+    private void PeekPerson(int personId) => PeekPerson(personId, null);
+    private void PeekPerson(int personId, Vector2? at)
+    {
+        if (_host == null || personId < 1 || personId > _host.Persons.Count) return;
+        _map.SelectPerson(personId);
+        _map.SelectRegion(null);
+        _map.SelectArea(null);
+        ShowQuick(QuickCard.Person(_ctx, personId, MouseOr(at), QuickBounds(), () => OpenPerson(personId)));
+    }
+
+    private void PeekZone(string zoneId) => PeekZone(zoneId, null);
+    private void PeekZone(string zoneId, Vector2? at)
+    {
+        if (_host == null || !_ctx.Content.Regions.ContainsKey(zoneId)) return;
+        _map.SelectRegion(zoneId);
+        _map.SelectArea(null);
+        _map.SelectPerson(0);
+        ShowQuick(QuickCard.Zone(_ctx, _map, zoneId, MouseOr(at), QuickBounds(), () => OpenZone(zoneId)));
+    }
+
+    private void PeekArea(string zoneId, string areaId)
+    {
+        if (_host == null || !_ctx.Content.Regions.TryGetValue(zoneId, out var zr) || zr.Areas.All(a => a.Id != areaId)) return;
+        _map.SelectArea(zoneId + "#" + areaId);
+        _map.SelectPerson(0);
+        ShowQuick(QuickCard.Area(_ctx, _map, zoneId, areaId, MouseOr(null), QuickBounds(), () => OpenArea(zoneId, areaId)));
     }
 
     private void OpenPerson(int personId)
     {
         if (_host == null || personId < 1 || personId > _host.Persons.Count) return;
-        PushHistory("person", personId.ToString(CultureInfo.InvariantCulture));
-        CloseOverlays();
         _map.SelectPerson(personId);
-        _modal = new PlayerModal(_ctx, personId);
-        _modal.Closed += () => _modal = null;
-        _ui.AddChild(_modal);
+        ShowPage("person", personId.ToString(CultureInfo.InvariantCulture), () => new PlayerModal(_ctx, personId));
     }
 
     private void OpenZone(string zoneId)
     {
         if (_host == null || !_ctx.Content.Regions.ContainsKey(zoneId)) return;
-        PushHistory("zone", zoneId);
-        CloseOverlays();
         _map.SelectRegion(zoneId);
-        _modal = new ZoneModal(_ctx, _map, zoneId);
-        _modal.Closed += () => { _modal = null; _map.SelectRegion(null); };
-        _ui.AddChild(_modal);
+        ShowPage("zone", zoneId, () => new ZoneModal(_ctx, _map, zoneId));
     }
 
     private void OpenArea(string zoneId, string areaId)
     {
         if (_host == null || !_ctx.Content.Regions.TryGetValue(zoneId, out var zr) || zr.Areas.All(a => a.Id != areaId)) return;
-        PushHistory("area", zoneId + "#" + areaId);
-        CloseOverlays();
         _map.SelectArea(zoneId + "#" + areaId);
-        _modal = new AreaModal(_ctx, _map, zoneId, areaId);
-        _modal.Closed += () => { _modal = null; _map.SelectArea(null); };
-        _ui.AddChild(_modal);
+        ShowPage("area", zoneId + "#" + areaId, () => new AreaModal(_ctx, _map, zoneId, areaId));
     }
 
     private void OpenQuest(string questId)
     {
         if (_host == null || !_ctx.Content.Quests.ContainsKey(questId)) return;
-        PushHistory("quest", questId);
-        CloseOverlays();
-        _modal = new QuestModal(_ctx, questId);
-        _modal.Closed += () => _modal = null;
-        _ui.AddChild(_modal);
+        ShowPage("quest", questId, () => new QuestModal(_ctx, questId));
     }
+
+    private void OpenPlayersPage() => ShowPage("players", "", () => new PlayersPage(_ctx));
+    private void OpenZonesPage() => ShowPage("zones", "", () => new ZonesPage(_ctx, _map));
+    private void OpenQuestsPage() => ShowPage("quests", "", () => new QuestsPage(_ctx));
+    private void OpenSettingsPage() => ShowPage("settings", "", () => new SettingsPage(GetViewport(), () => _fpsLabel.Visible = ClientSettings.ShowFps));
 
     private void OpenCluster(string placeKey, Vector2 at)
     {
@@ -458,13 +584,38 @@ public partial class Main : Node
         row.AddThemeConstantOverride("separation", UiTokens.S16);
         bar.AddChild(row);
 
-        var brand = new HBoxContainer();
+        var nav = new HBoxContainer { SizeFlagsVertical = Control.SizeFlags.ShrinkCenter };
+        nav.AddThemeConstantOverride("separation", 2);
+        _backButton = NavButton("‹", "Voltar (Alt+← ou botão lateral do mouse)", () => Navigate(-1));
+        _forwardButton = NavButton("›", "Avançar (Alt+→)", () => Navigate(+1));
+        nav.AddChild(_backButton);
+        nav.AddChild(_forwardButton);
+        row.AddChild(nav);
+
+        var brand = new HBoxContainer { TooltipText = content.World.Name, MouseFilter = Control.MouseFilterEnum.Pass };
         brand.AddThemeConstantOverride("separation", UiTokens.S8);
-        brand.AddChild(ThemeFactory.Text("◆", 16, UiTokens.Accent));
-        brand.AddChild(ThemeFactory.Text("MMORPG TYCOON", UiTokens.FontTitle, UiTokens.AccentSoft, UiFonts.Display));
+        brand.AddChild(ThemeFactory.Text("◆", 14, UiTokens.Accent));
+        brand.AddChild(ThemeFactory.Text("MMORPG TYCOON", 14, UiTokens.AccentSoft, UiFonts.Display));
         row.AddChild(brand);
-        _worldNameLabel = ThemeFactory.Text("· " + content.World.Name, UiTokens.FontBody, UiTokens.TextSecondary, UiFonts.Medium);
-        row.AddChild(_worldNameLabel);
+
+        // Menu principal: o mapa e a unica tela em que o tempo passa.
+        var menu = new HBoxContainer();
+        menu.AddThemeConstantOverride("separation", 0);
+        foreach (var (kind, name, tip) in new[]
+        {
+            ("map", "Mapa", "Mapa do mundo ao vivo (M)\n~Única tela em que o tempo passa."),
+            ("players", "Jogadores", "Todos os personagens (J)\n~O tempo pausa fora do mapa."),
+            ("zones", "Zonas", "Zonas e áreas do mundo (Z)\n~O tempo pausa fora do mapa."),
+            ("quests", "Missões", "Catálogo de missões (Q)\n~O tempo pausa fora do mapa."),
+        })
+        {
+            var b = MenuButton(name, tip);
+            string k = kind;
+            b.Pressed += () => OpenSection(k);
+            _menu.Add((kind, b));
+            menu.AddChild(b);
+        }
+        row.AddChild(menu);
         row.AddChild(new Control { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill });
 
         _serverChip = ThemeFactory.Chip("Servidor fechado", UiTokens.TextSecondary, dot: true);
@@ -476,6 +627,7 @@ public partial class Main : Node
         Kpi(kpis, "registered", "Cadastrados", UiTokens.Success, "Contas criadas\n~Registro progressivo durante o lançamento.");
         Kpi(kpis, "level", "Nível médio", UiTokens.AccentSoft, "Nível médio dos personagens\n~Curva provisória até o combate (M3).");
         row.AddChild(kpis);
+        _kpiRow = kpis;
         _onlineLabel = new Label();
         _registeredLabel = new Label();
 
@@ -499,14 +651,75 @@ public partial class Main : Node
             _speedButtons.Add(b);
             segRow.AddChild(b);
         }
+        _speedSeg = seg;
         row.AddChild(seg);
+        _returnButton = ModalFrame.Action("▶  Voltar ao mapa", "Voltar ao mapa (Esc ou M)\n~O tempo volta a correr na velocidade de antes.", () => ShowMap(), primary: true);
+        _returnButton.Visible = false;
+        _returnButton.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
+        row.AddChild(_returnButton);
 
         _speedLabel = ThemeFactory.Text("", UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Numbers);
         _speedLabel.CustomMinimumSize = new Vector2(84, 0);
         row.AddChild(_speedLabel);
         _fpsLabel = ThemeFactory.Text("", UiTokens.FontCaption, UiTokens.TextDisabled, UiFonts.Numbers);
         _fpsLabel.CustomMinimumSize = new Vector2(46, 0);
+        _fpsLabel.Visible = ClientSettings.ShowFps;
         row.AddChild(_fpsLabel);
+        var gear = NavButton("", "Configurações\n~Vídeo e gráficos, tela cheia, jogo e atalhos.", () => OpenSection("settings"));
+        gear.CustomMinimumSize = new Vector2(30, 30);
+        gear.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
+        var icon = new GearIcon { MouseFilter = Control.MouseFilterEnum.Ignore };
+        icon.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+        gear.AddChild(icon);
+        row.AddChild(gear);
+    }
+
+    private void OpenSection(string kind)
+    {
+        switch (kind)
+        {
+            case "map": ShowMap(); break;
+            case "players": OpenPlayersPage(); break;
+            case "zones": OpenZonesPage(); break;
+            case "quests": OpenQuestsPage(); break;
+            case "settings": OpenSettingsPage(); break;
+        }
+    }
+
+    private static Button MenuButton(string text, string tip)
+    {
+        var b = new TipButton { Text = text, TooltipText = tip, ToggleMode = true, FocusMode = Control.FocusModeEnum.None, CustomMinimumSize = new Vector2(0, UiTokens.TopBarHeight - 2) };
+        b.AddThemeFontOverride("font", UiFonts.Medium);
+        b.AddThemeFontSizeOverride("font_size", 13);
+        StyleBoxFlat S(bool on, bool hover) => new()
+        {
+            BgColor = hover ? new Color(1, 1, 1, 0.03f) : new Color(0, 0, 0, 0), BorderColor = on ? UiTokens.Accent : new Color(0, 0, 0, 0), BorderWidthBottom = 2,
+            ContentMarginLeft = 14, ContentMarginRight = 14,
+        };
+        b.AddThemeStyleboxOverride("normal", S(false, false));
+        b.AddThemeStyleboxOverride("hover", S(false, true));
+        b.AddThemeStyleboxOverride("pressed", S(true, false));
+        b.AddThemeStyleboxOverride("hover_pressed", S(true, true));
+        b.AddThemeColorOverride("font_color", UiTokens.TextSecondary);
+        b.AddThemeColorOverride("font_hover_color", UiTokens.TextPrimary);
+        b.AddThemeColorOverride("font_pressed_color", UiTokens.TextPrimary);
+        b.AddThemeColorOverride("font_hover_pressed_color", UiTokens.TextPrimary);
+        return b;
+    }
+
+    private static Button NavButton(string glyph, string tip, Action press)
+    {
+        var b = new TipButton { Text = glyph, TooltipText = tip, FocusMode = Control.FocusModeEnum.None, CustomMinimumSize = new Vector2(28, 28) };
+        b.AddThemeFontOverride("font", UiFonts.Bold);
+        b.AddThemeFontSizeOverride("font_size", 17);
+        b.AddThemeStyleboxOverride("normal", ThemeFactory.Box(UiTokens.SurfaceRaised, 4, border: UiTokens.Border, radius: 3));
+        b.AddThemeStyleboxOverride("hover", ThemeFactory.Box(UiTokens.SurfaceHover, 4, border: UiTokens.BorderStrong, radius: 3));
+        b.AddThemeStyleboxOverride("pressed", ThemeFactory.Box(UiTokens.SurfaceHover, 4, border: UiTokens.Accent, radius: 3));
+        b.AddThemeStyleboxOverride("disabled", ThemeFactory.Box(new Color(0, 0, 0, 0), 4, border: new Color(UiTokens.Border, 0.6f), radius: 3));
+        b.AddThemeColorOverride("font_color", UiTokens.TextPrimary);
+        b.AddThemeColorOverride("font_disabled_color", UiTokens.TextDisabled);
+        b.Pressed += press;
+        return b;
     }
 
     private static PanelContainer Segmented(out HBoxContainer row)
@@ -567,6 +780,7 @@ public partial class Main : Node
         panel.AddThemeStyleboxOverride("panel", ThemeFactory.Glass(12, 12));
         panel.Position = new Vector2(UiTokens.S16, UiTokens.TopBarHeight + UiTokens.S16);
         _ui.AddChild(panel);
+        _layerPanel = panel;
         var col = new VBoxContainer();
         col.AddThemeConstantOverride("separation", 8);
         panel.AddChild(col);
@@ -661,6 +875,7 @@ public partial class Main : Node
         panel.OffsetRight = -(UiTokens.SidePanelWidth + UiTokens.S12);
         panel.OffsetBottom = -UiTokens.S12;
         _ui.AddChild(panel);
+        _mapControls = panel;
         var col = new VBoxContainer();
         col.AddThemeConstantOverride("separation", 2);
         panel.AddChild(col);
@@ -714,18 +929,19 @@ public partial class Main : Node
             _uiTimer = 0;
             _clockLabel.Text = $"{now.Hour:00}:{now.Minute:00}";
             _dateLabel.Text = $"{PtBr.Date(now)} · {PtBr.DayKind(_host.Calendar.KindOf(now.Date))}";
-            _speedLabel.Text = snap.RequestedSpeed == 0 ? "pausado" : snap.EffectiveSpeed < 0 ? "medindo…" : $"efetiva {PtBr.Decimal(snap.EffectiveSpeed)}×";
+            _speedLabel.Text = !OnMap ? "pausado fora do mapa" : snap.RequestedSpeed == 0 ? "pausado" : snap.EffectiveSpeed < 0 ? "medindo…" : $"efetiva {PtBr.Decimal(snap.EffectiveSpeed)}×";
             UpdateKpis(snap);
-            UpdateEmptyBanner(snap);
+            if (OnMap) UpdateEmptyBanner(snap);
             _fpsLabel.Text = $"{Engine.GetFramesPerSecond():0} fps";
             UpdateServerChip(snap.ServerOpen);
         }
         _modalTimer += delta;
-        if (_modalTimer >= 0.5)
+        if (_modalTimer >= 1.0)
         {
             _modalTimer = 0;
             if (_modal != null && IsInstanceValid(_modal)) _modal.RefreshLive();
-            _side?.Refresh();
+            else _side?.Refresh();
+            if (_quick != null && IsInstanceValid(_quick) && !_quick.GetGlobalRect().HasPoint(GetViewport().GetMousePosition())) _quick.Refresh();
         }
         HandleAutomation(delta);
     }
@@ -790,6 +1006,15 @@ public partial class Main : Node
     public override void _UnhandledKeyInput(InputEvent e)
     {
         if (e is not InputEventKey k || !k.Pressed || k.Echo) return;
+        if (k.Keycode == Key.F11 || (k.AltPressed && k.Keycode is Key.Enter or Key.KpEnter)) { ClientSettings.ToggleFullscreen(); GetViewport().SetInputAsHandled(); return; }
+        if (k.AltPressed && k.Keycode is Key.Left or Key.Right) { Navigate(k.Keycode == Key.Left ? -1 : +1); GetViewport().SetInputAsHandled(); return; }
+        if (k.Keycode is Key.M or Key.J or Key.Z or Key.Q && !k.CtrlPressed && GetViewport().GuiGetFocusOwner() is not LineEdit)
+        {
+            OpenSection(k.Keycode switch { Key.J => "players", Key.Z => "zones", Key.Q => "quests", _ => "map" });
+            GetViewport().SetInputAsHandled();
+            return;
+        }
+        if (!OnMap) return;
         switch (k.Keycode)
         {
             case Key.Space: SetSpeed(_host?.Speed == 0 ? _lastNonZeroSpeed : 0); break;
@@ -806,5 +1031,32 @@ public partial class Main : Node
         GetViewport().SetInputAsHandled();
     }
 
+    public override void _Input(InputEvent e)
+    {
+        // Botoes laterais do mouse: voltar e avancar (em qualquer tela).
+        if (e is InputEventMouseButton { Pressed: true } mb && mb.ButtonIndex is MouseButton.Xbutton1 or MouseButton.Xbutton2)
+        {
+            Navigate(mb.ButtonIndex == MouseButton.Xbutton1 ? -1 : +1);
+            GetViewport().SetInputAsHandled();
+        }
+    }
+
     public override void _ExitTree() => _host?.Dispose();
+}
+
+/// <summary>Icone de engrenagem desenhado (sem depender de glifo da fonte).</summary>
+public partial class GearIcon : Control
+{
+    public override void _Draw()
+    {
+        var c = Size / 2f;
+        var col = UiTokens.TextSecondary;
+        for (int i = 0; i < 8; i++)
+        {
+            float a = i * Mathf.Tau / 8f;
+            var d = new Vector2(Mathf.Cos(a), Mathf.Sin(a));
+            DrawLine(c + d * 4.5f, c + d * 7.5f, col, 2.6f, true);
+        }
+        DrawArc(c, 4.6f, 0, Mathf.Tau, 24, col, 2.2f, true);
+    }
 }

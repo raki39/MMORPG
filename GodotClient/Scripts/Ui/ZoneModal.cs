@@ -46,20 +46,13 @@ public partial class ZoneModal : ModalFrame
         var emblem = new ZoneEmblem(_zone) { CustomMinimumSize = new Vector2(52, 52), SizeFlagsVertical = SizeFlags.ShrinkCenter };
         row.AddChild(emblem);
         var col = new VBoxContainer { Alignment = BoxContainer.AlignmentMode.Center, SizeFlagsHorizontal = SizeFlags.ExpandFill };
-        col.AddThemeConstantOverride("separation", 6);
+        col.AddThemeConstantOverride("separation", 2);
         col.AddChild(ThemeFactory.Text(_zone.Name, 24, UiTokens.TextPrimary, UiFonts.Title));
-        var chips = new HFlowContainer();
-        chips.AddThemeConstantOverride("h_separation", 8);
-        chips.AddThemeConstantOverride("v_separation", 6);
-        chips.AddChild(ThemeFactory.Chip(PtBr.Function(_zone.Function), ZoneAccent(_zone), dot: true));
-        chips.AddChild(ThemeFactory.Chip(_zone.IsCity ? "Todos os níveis" : $"Níveis {_zone.LevelMin}–{_zone.LevelMax}", UiTokens.Info));
-        chips.AddChild(ThemeFactory.Chip(PtBr.Pvp(_zone.Pvp), _zone.Pvp == PvpRules.Open ? UiTokens.Danger : UiTokens.Success));
-        chips.AddChild(ThemeFactory.Chip(PtBr.Death(_zone.DeathRule), _zone.DeathRule == DeathRules.None ? UiTokens.TextSecondary : UiTokens.Warning));
-        chips.AddChild(ThemeFactory.Chip(PtBr.Control(_zone.Control), _zone.Control == ControlRules.Contestable ? UiTokens.Warning : UiTokens.TextSecondary));
-        chips.AddChild(ThemeFactory.Chip(PtBr.Biome(_zone.Biome), UiTokens.BiomeColor(_zone.Biome).Lightened(0.35f)));
+        string sub = _zone.IsCity ? $"{PtBr.Function(_zone.Function)} nível {_zone.CityLevel} · {PtBr.Biome(_zone.Biome)} · todos os níveis"
+            : $"{PtBr.Function(_zone.Function)} · {PtBr.Biome(_zone.Biome)} · níveis {_zone.LevelMin}–{_zone.LevelMax}";
+        col.AddChild(ThemeFactory.Text(sub, UiTokens.FontBody, UiTokens.TextSecondary));
         if (_ctx.Drafts.TryGetValue(_zone.Id, out var d) && d.Saved && d.DiffersFrom(_zone))
-            chips.AddChild(ThemeFactory.Chip("Rascunho não publicado", UiTokens.Warning, dot: true));
-        col.AddChild(chips);
+            col.AddChild(ThemeFactory.Chip("Rascunho não publicado", UiTokens.Warning, dot: true));
         row.AddChild(col);
         Header.AddChild(row);
 
@@ -92,7 +85,7 @@ public partial class ZoneModal : ModalFrame
                 Tooltip = a => a.Activities.Count == 0 ? "" : a.Name + "\n" + string.Join("\n", a.Activities.Select(x => $"{x.Name}|{_map.PeopleAtSpot(_zone.Id, x.Id)} agora")) },
             new Column<AreaDefinition> { Title = "Jog.", Width = 40, Right = true, Numeric = true, Text = a => _map.PeopleInArea(_zone.Id, a.Id).Count.ToString(), SortKey = a => _map.PeopleInArea(_zone.Id, a.Id).Count,
                 Color = a => _map.PeopleInArea(_zone.Id, a.Id).Count > 0 ? UiTokens.Info : UiTokens.TextDisabled },
-        }, sortColumn: 3) { OnClick = a => { Close(); _ctx.OpenArea(_zone.Id, a.Id); } };
+        }, sortColumn: 3) { OnClick = a => { _ctx.OpenArea(_zone.Id, a.Id); } };
         _areaTable.OnSortChanged = () => Rebuild(false);
 
         var left = Column(10, Card($"Áreas · {_zone.Areas.Count}", _areaTable.Build(_zone.Areas), ZoneAccent(_zone)));
@@ -122,7 +115,7 @@ public partial class ZoneModal : ModalFrame
             var b = new TipButton { Text = $"→  {other.Name}", Alignment = HorizontalAlignment.Left, FocusMode = FocusModeEnum.None, CustomMinimumSize = new Vector2(0, 26),
                 TooltipText = $"Saída para {other.Name}\nCaminhada até o centro de lá|~{minutes} min\nDistância|{dist * 10} m pela estrada\nJogadores lá|{_map.PeopleInZone(c.To)}\nCombate|{PtBr.Pvp(other.Pvp)}\n~Clique para abrir o dossiê." };
             string target = c.To;
-            b.Pressed += () => { Close(); _ctx.OpenZone(target); };
+            b.Pressed += () => { _ctx.OpenZone(target); };
             exits.AddChild(Row(8, b, ThemeFactory.Text($"~{minutes} min", UiTokens.FontSmall, UiTokens.TextSecondary, UiFonts.Numbers)));
             b.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         }
@@ -176,7 +169,7 @@ public partial class ZoneModal : ModalFrame
         b.AddChild(row);
         b.CustomMinimumSize = new Vector2(0, 74);
         string zid = _zone.Id, aid = area.Id;
-        b.Pressed += () => { Close(); _ctx.OpenArea(zid, aid); };
+        b.Pressed += () => { _ctx.OpenArea(zid, aid); };
         return b;
     }
 
@@ -205,7 +198,7 @@ public partial class ZoneModal : ModalFrame
         var col = Column(6);
         col.AddChild(ThemeFactory.Text($"{here.Count} jogadores conectados nesta zona", UiTokens.FontBody, UiTokens.TextSecondary));
         foreach (var (id, v) in here.OrderByDescending(x => x.V.Level).ThenBy(x => x.V.Name, StringComparer.Ordinal))
-            col.AddChild(PlayerRow.Build(_ctx, id, v, () => { Close(); _ctx.OpenPerson(id); }));
+            col.AddChild(PlayerRow.Build(_ctx, id, v, () => { _ctx.OpenPerson(id); }));
         return col;
     }
 

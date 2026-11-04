@@ -42,7 +42,7 @@ public sealed class DataTable<T>
         col.AddThemeConstantOverride("separation", 0);
 
         var head = new PanelContainer();
-        head.AddThemeStyleboxOverride("panel", new StyleBoxFlat { BgColor = UiTokens.SurfaceHeader, BorderColor = UiTokens.Border, BorderWidthBottom = 1, ContentMarginLeft = 6, ContentMarginRight = 6, ContentMarginTop = 3, ContentMarginBottom = 3 });
+        head.AddThemeStyleboxOverride("panel", new StyleBoxFlat { BgColor = new Color(0, 0, 0, 0), BorderColor = UiTokens.BorderStrong, BorderWidthBottom = 1, ContentMarginLeft = 6, ContentMarginRight = 6, ContentMarginTop = 2, ContentMarginBottom = 4 });
         var hrow = new HBoxContainer();
         hrow.AddThemeConstantOverride("separation", 6);
         for (int i = 0; i < _columns.Count; i++)
@@ -50,9 +50,9 @@ public sealed class DataTable<T>
             var c = _columns[i];
             int index = i;
             string arrow = i == _sortColumn ? (_sortDesc ? " ▼" : " ▲") : "";
-            var b = new Button { Text = c.Title.ToUpperInvariant() + arrow, Flat = true, FocusMode = Control.FocusModeEnum.None, Alignment = c.Right ? HorizontalAlignment.Right : HorizontalAlignment.Left, ClipText = true };
-            b.AddThemeFontOverride("font", UiFonts.CondensedBold);
-            b.AddThemeFontSizeOverride("font_size", 10);
+            var b = new Button { Text = c.Title + arrow, Flat = true, FocusMode = Control.FocusModeEnum.None, Alignment = c.Right ? HorizontalAlignment.Right : HorizontalAlignment.Left, ClipText = true };
+            b.AddThemeFontOverride("font", UiFonts.Medium);
+            b.AddThemeFontSizeOverride("font_size", 11);
             b.AddThemeColorOverride("font_color", i == _sortColumn ? UiTokens.AccentSoft : UiTokens.TextSecondary);
             b.AddThemeColorOverride("font_hover_color", UiTokens.TextPrimary);
             foreach (var s in new[] { "normal", "hover", "pressed", "hover_pressed" }) b.AddThemeStyleboxOverride(s, new StyleBoxEmpty());
@@ -81,7 +81,7 @@ public sealed class DataTable<T>
         int r = 0;
         foreach (var item in list)
         {
-            var row = new Button { FocusMode = Control.FocusModeEnum.None, CustomMinimumSize = new Vector2(0, 24), SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+            var row = new Button { FocusMode = Control.FocusModeEnum.None, CustomMinimumSize = new Vector2(0, 26), SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
             var n = new StyleBoxFlat { BgColor = r++ % 2 == 1 ? UiTokens.RowAlt : new Color(0, 0, 0, 0) };
             var h = new StyleBoxFlat { BgColor = new Color(UiTokens.Accent, 0.10f), BorderColor = UiTokens.Accent, BorderWidthLeft = 2 };
             row.AddThemeStyleboxOverride("normal", n);

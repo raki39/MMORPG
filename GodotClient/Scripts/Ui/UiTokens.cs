@@ -20,6 +20,13 @@ public static class UiTokens
     public static readonly Color BorderStrong = new("#313944");
     public static readonly Color Shadow = new(0, 0, 0, 0.45f);
 
+    // Cards e graficos (D-034)
+    public static readonly Color CardTop = new("#151920");
+    public static readonly Color CardBottom = new("#101318");
+    public static readonly Color Track = new("#1E242C");
+    public static readonly Color Grid = new("#1A1F26");
+    public static readonly Color AxisText = new("#6C7581");
+
     // Texto
     public static readonly Color TextPrimary = new("#ECEEF1");
     public static readonly Color TextSecondary = new("#8B94A1");
@@ -40,10 +47,11 @@ public static class UiTokens
     public const int S4 = 4, S8 = 8, S12 = 12, S16 = 16, S24 = 24, S32 = 32;
 
     // Tipografia (px) — densa
-    public const int FontCaption = 10;
-    public const int FontSmall = 11;
-    public const int FontBody = 12;
-    public const int FontTitle = 15;
+    // Tamanhos legiveis em 1080p (D-034): legenda 11, dado 12, corpo 13.
+    public const int FontCaption = 11;
+    public const int FontSmall = 12;
+    public const int FontBody = 13;
+    public const int FontTitle = 16;
     public const int FontHeading = 20;
 
     // Forma

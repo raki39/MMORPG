@@ -61,7 +61,7 @@ public partial class AreaModal : ModalFrame
             new Column<QuestDefinition> { Title = "Requer", Width = 150, Text = q => q.PrerequisiteQuestIds.Count == 0 ? "—" : string.Join(", ", q.PrerequisiteQuestIds.Select(p => _ctx.Content.Quests.TryGetValue(p, out var pq) ? pq.Name : p)), Color = _ => UiTokens.TextSecondary },
             new Column<QuestDefinition> { Title = "Concl.", Width = 52, Right = true, Numeric = true, Text = q => PtBr.Int(S(q)?.UniqueCompleters ?? 0), SortKey = q => S(q)?.UniqueCompleters ?? 0, Color = _ => UiTokens.Success, Tooltip = _ => "Personagens que concluíram" },
             new Column<QuestDefinition> { Title = "Agora", Width = 48, Right = true, Numeric = true, Text = q => PtBr.Int(S(q)?.Active ?? 0), SortKey = q => S(q)?.Active ?? 0, Color = _ => UiTokens.Info, Tooltip = _ => "Fazendo agora" },
-        }, sortColumn: 2, sortDesc: false) { OnClick = q => { Close(); _ctx.OpenQuest(q.Id); } };
+        }, sortColumn: 2, sortDesc: false) { OnClick = q => { _ctx.OpenQuest(q.Id); } };
         _questTable.OnSortChanged = () => Rebuild(false);
         var note = ThemeFactory.Text("Aceitar e entregar são ações rápidas aqui no quadro; as etapas acontecem no mundo. Clique numa missão para ver a ficha completa.", UiTokens.FontCaption, UiTokens.TextSecondary);
         note.AutowrapMode = TextServer.AutowrapMode.WordSmart;
@@ -76,24 +76,15 @@ public partial class AreaModal : ModalFrame
         row.AddThemeConstantOverride("separation", 20);
         row.AddChild(new KindEmblem(_area.Kind) { CustomMinimumSize = new Vector2(52, 52), SizeFlagsVertical = SizeFlags.ShrinkCenter });
         var col = new VBoxContainer { Alignment = BoxContainer.AlignmentMode.Center, SizeFlagsHorizontal = SizeFlags.ExpandFill };
-        col.AddThemeConstantOverride("separation", 6);
+        col.AddThemeConstantOverride("separation", 2);
         col.AddChild(ThemeFactory.Text(_area.Name, 24, UiTokens.TextPrimary, UiFonts.Title));
-        var desc = ThemeFactory.Text(_area.Description, UiTokens.FontBody, UiTokens.TextSecondary);
+        string sub = $"{AreaPalette.Name(_area.Kind)} · {_zone.Name} · {PtBr.Pvp(_zone.Pvp)}" + (_zone.DeathRule != DeathRules.None ? $" · {PtBr.Death(_zone.DeathRule)}" : "")
+            + (AreaKinds.IsPortal(_area.Kind) && _area.LeadsTo.Length > 0 ? $" · leva a {_area.LeadsTo}" : "");
+        col.AddChild(ThemeFactory.Text(sub, UiTokens.FontBody, UiTokens.TextSecondary));
+        var desc = ThemeFactory.Text(_area.Description, UiTokens.FontSmall, UiTokens.TextDisabled);
         desc.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        desc.CustomMinimumSize = new Vector2(520, 0);
+        desc.CustomMinimumSize = new Vector2(420, 0);
         col.AddChild(desc);
-        var chips = new HFlowContainer();
-        chips.AddThemeConstantOverride("h_separation", 8);
-        chips.AddThemeConstantOverride("v_separation", 6);
-        chips.AddChild(ThemeFactory.Chip(AreaPalette.Name(_area.Kind), Accent, dot: true));
-        chips.AddChild(ThemeFactory.Chip(_zone.Name, UiTokens.TextSecondary));
-        chips.AddChild(ThemeFactory.Chip($"{_area.Radius * 20} m de diâmetro", UiTokens.Info));
-        chips.AddChild(ThemeFactory.Chip(PtBr.Pvp(_zone.Pvp), _zone.Pvp == PvpRules.Open ? UiTokens.Danger : UiTokens.Success));
-        if (_zone.DeathRule != DeathRules.None)
-            chips.AddChild(ThemeFactory.Chip(_zone.DeathRule == DeathRules.FullLoot ? "☠ Full loot" : "Perda parcial", _zone.DeathRule == DeathRules.FullLoot ? UiTokens.Danger : UiTokens.Warning, dot: true));
-        if (AreaKinds.IsPortal(_area.Kind) && _area.LeadsTo.Length > 0)
-            chips.AddChild(ThemeFactory.Chip($"Leva a: {_area.LeadsTo}", Accent, dot: true));
-        col.AddChild(chips);
         row.AddChild(col);
         Header.AddChild(row);
 
@@ -105,7 +96,7 @@ public partial class AreaModal : ModalFrame
         Fact("Tarefas", _area.Activities.Count.ToString(), UiTokens.AccentSoft);
         Fact("Tamanho", $"{_area.Radius * 20} m", UiTokens.TextSecondary, "Diâmetro da área\n~Configurável no conteúdo (editor de áreas futuro).");
         Actions.AddChild(Action("Aproximar no mapa", "Centraliza a área", () => { _ctx.FocusArea(_zone.Id, _area.Id); Close(); }, primary: true));
-        Actions.AddChild(Action("Ficha da zona", $"Abre {_zone.Name}", () => { Close(); _ctx.OpenZone(_zone.Id); }));
+        Actions.AddChild(Action("Ficha da zona", $"Abre {_zone.Name}", () => { _ctx.OpenZone(_zone.Id); }));
         if (AreaKinds.IsPortal(_area.Kind))
             Actions.AddChild(Action(_area.Kind == AreaKinds.Dungeon ? "Entrar na masmorra" : "Entrar no esconderijo",
                 "Instâncias e esconderijos chegam em um marco futuro", () => { }, enabled: false));
@@ -231,7 +222,7 @@ public partial class AreaModal : ModalFrame
             if (snap.ByPerson[id] is { } v)
             {
                 int pid = id;
-                col.AddChild(PlayerRow.Build(_ctx, id, v, () => { Close(); _ctx.OpenPerson(pid); }));
+                col.AddChild(PlayerRow.Build(_ctx, id, v, () => { _ctx.OpenPerson(pid); }));
             }
         return col;
     }

@@ -71,7 +71,7 @@ public partial class LineChart : Control
         var grid = new Color(UiTokens.Border, 0.9f);
         for (int g = 0; g <= div; g++)
         {
-            float y = plot.End.Y - plot.Size.Y * g / div;
+            float y = Mathf.Floor(plot.End.Y - plot.Size.Y * g / div) + 0.5f;
             if (g == 0) DrawLine(new Vector2(plot.Position.X, y), new Vector2(plot.End.X, y), UiTokens.BorderStrong, 1);
             else DrawDashedLine(new Vector2(plot.Position.X, y), new Vector2(plot.End.X, y), grid, 1, 3);
             string lbl = Compact(max * g / div);
@@ -103,23 +103,24 @@ public partial class LineChart : Control
             // Area em degrade (opaca junto da linha, transparente no eixo).
             var poly = new Vector2[pts.Length + 2];
             var cols = new Color[pts.Length + 2];
-            for (int i = 0; i < pts.Length; i++) { poly[i] = pts[i]; cols[i] = new Color(s.Color, 0.16f); }
+            for (int i = 0; i < pts.Length; i++) { poly[i] = pts[i]; cols[i] = new Color(s.Color, 0.10f); }
             poly[^2] = new Vector2(pts[^1].X, plot.End.Y); cols[^2] = new Color(s.Color, 0.0f);
             poly[^1] = new Vector2(pts[0].X, plot.End.Y); cols[^1] = new Color(s.Color, 0.0f);
             DrawPolygon(poly, cols);
-            DrawPolyline(pts, s.Color, 1.5f, true);
+            DrawPolyline(pts, s.Color, 2f, true);
             DrawCircle(pts[^1], 2.5f, s.Color);
             DrawString(font, new Vector2(pts[^1].X + 6, pts[^1].Y + 3), Compact(s.Values[^1]), HorizontalAlignment.Left, -1, 10, s.Color);
         }
         if (_hoverX >= plot.Position.X && _hoverX <= plot.End.X)
         {
             int i = Mathf.Clamp(Mathf.RoundToInt((_hoverX - plot.Position.X) / plot.Size.X * (n - 1)), 0, n - 1);
-            DrawLine(new Vector2(X(i), plot.Position.Y), new Vector2(X(i), plot.End.Y), new Color(UiTokens.TextSecondary, 0.5f), 1);
+            float hx = Mathf.Floor(X(i)) + 0.5f;
+            DrawLine(new Vector2(hx, plot.Position.Y), new Vector2(hx, plot.End.Y), new Color(UiTokens.TextSecondary, 0.5f), 1);
             var lines = new List<(string, Color)> { (i < XLabels.Count ? XLabels[i] : "", UiTokens.TextPrimary) };
             foreach (var s in Series) if (i < s.Values.Count) lines.Add(($"{s.Name}: {Compact(s.Values[i])}", s.Color));
             float w = lines.Max(l => UiFonts.Medium.GetStringSize(l.Item1, HorizontalAlignment.Left, -1, 11).X) + 18;
             float bx = X(i) + 10 + w > Size.X ? X(i) - w - 10 : X(i) + 10;
-            var box = new Rect2(bx, plot.Position.Y + 4, w, lines.Count * 15 + 10);
+            var box = new Rect2(Mathf.Round(bx), Mathf.Round(plot.Position.Y + 4), Mathf.Round(w), lines.Count * 15 + 10);
             DrawStyleBox(ThemeFactory.Box(new Color("#0B0E12"), 0, border: UiTokens.BorderStrong, radius: 2), box);
             for (int k = 0; k < lines.Count; k++)
                 DrawString(k == 0 ? UiFonts.SemiBold : UiFonts.Medium, new Vector2(box.Position.X + 9, box.Position.Y + 17 + k * 15), lines[k].Item1, HorizontalAlignment.Left, -1, 11, lines[k].Item2);

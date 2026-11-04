@@ -30,9 +30,35 @@ public static class UiFonts
     private static Font Load(string file, bool tabular = false)
     {
         var f = GD.Load<FontFile>("res://Assets/Fonts/" + file);
+        Crisp(f);
         if (!tabular) return f;
         var ts = TextServerManager.GetPrimaryInterface();
         return new FontVariation { BaseFont = f, OpentypeFeatures = new Godot.Collections.Dictionary { { ts.NameToTag("tnum"), 1 } } };
+    }
+
+    private static readonly List<FontFile> Loaded = new();
+
+    /// <summary>
+    /// Texto nitido nas telas de dados (D-034): glifos presos ao pixel (o posicionamento de
+    /// subpixel deixa o texto pequeno "borrado"), hinting leve pelo autohinter (traços
+    /// horizontais firmes sem deformar a largura das letras) e suavizacao LCD, como o
+    /// ClearType do Windows. "Suave" usa tons de cinza (monitores BGR ou preferencia).
+    /// O mapa usa Cinzel e nao passa por aqui.
+    /// </summary>
+    private static void Crisp(FontFile f)
+    {
+        if (!Loaded.Contains(f)) Loaded.Add(f);
+        f.SubpixelPositioning = TextServer.SubpixelPositioning.Disabled;
+        f.Hinting = TextServer.Hinting.Light;
+        f.ForceAutohinter = true;
+        f.KeepRoundingRemainders = false;
+        f.Antialiasing = Ui.ClientSettings.TextLcd ? TextServer.FontAntialiasing.Lcd : TextServer.FontAntialiasing.Gray;
+    }
+
+    /// <summary>Reaplica a suavizacao do texto (mudanca nas configuracoes).</summary>
+    public static void ApplyRendering()
+    {
+        foreach (var f in Loaded) Crisp(f);
     }
 
     private static Font Variable(string file, int weight)

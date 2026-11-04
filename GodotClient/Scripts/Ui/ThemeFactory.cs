@@ -126,22 +126,25 @@ public static class ThemeFactory
     /// <summary>Compatibilidade: paineis antigos usam Glass; agora e o painel plano.</summary>
     public static StyleBoxFlat Glass(int padding, int radius = UiTokens.PanelRadius) => Panel(padding, radius);
 
-    /// <summary>Etiqueta reta (tag): caixa alta condensada, fundo tingido, filete a esquerda.</summary>
+    /// <summary>Etiqueta neutra (tag): fundo escuro, borda fina, texto claro; cor so no ponto.</summary>
     public static PanelContainer Chip(string text, Color color, bool dot = false)
     {
         var chip = new PanelContainer { SizeFlagsVertical = Control.SizeFlags.ShrinkCenter };
-        // Etiqueta de dado (estilo jogo de gestao): retangulo escuro, borda fina, texto na cor.
         var sb = new StyleBoxFlat
         {
-            BgColor = new Color(color, 0.07f), BorderColor = new Color(color, 0.35f),
-            ContentMarginLeft = 6, ContentMarginRight = 6, ContentMarginTop = 0, ContentMarginBottom = 0,
+            BgColor = UiTokens.SurfaceRaised, BorderColor = UiTokens.Border,
+            ContentMarginLeft = 8, ContentMarginRight = 8, ContentMarginTop = 2, ContentMarginBottom = 2,
         };
         sb.SetBorderWidthAll(1);
-        sb.SetCornerRadiusAll(2);
+        sb.SetCornerRadiusAll(3);
         chip.AddThemeStyleboxOverride("panel", sb);
-        var label = Text(text.ToUpperInvariant(), 10, color.Lightened(0.1f), UiFonts.CondensedSemiBold);
+        var row = new HBoxContainer();
+        row.AddThemeConstantOverride("separation", 6);
+        row.AddChild(new ColorRect { Color = color, CustomMinimumSize = new Vector2(6, 6), SizeFlagsVertical = Control.SizeFlags.ShrinkCenter, MouseFilter = Control.MouseFilterEnum.Ignore });
+        var label = Text(text, UiTokens.FontSmall, UiTokens.TextPrimary, UiFonts.Medium);
         label.VerticalAlignment = VerticalAlignment.Center;
-        chip.AddChild(label);
+        row.AddChild(label);
+        chip.AddChild(row);
         return chip;
     }
 
