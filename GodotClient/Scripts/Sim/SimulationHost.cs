@@ -90,6 +90,31 @@ public sealed class SimulationHost : IDisposable
     private volatile bool _running = true;
     private volatile int _speed = 1;
     private SimSnapshot _snapshot;
+    private readonly MetricsHistory _metrics = new();
+    private readonly object _metricsLock = new();
+
+    /// <summary>Amostra metricas na thread da simulacao (nenhuma amostra se perde em velocidade alta).</summary>
+    private void SampleMetrics()
+    {
+        lock (_metricsLock) _metrics.Sample(BuildSnapshot(-1), Content.Regions.Keys);
+    }
+
+    /// <summary>Copia as series para a tela.</summary>
+    public void CopyMetricsInto(MetricsHistory target)
+    {
+        lock (_metricsLock) _metrics.CopyTo(target);
+    }
+
+    /// <summary>Avanca em blocos de 1 minuto, amostrando metricas ao cruzar cada janela.</summary>
+    private void AdvanceSampled(long target, Stopwatch? budget, double budgetSeconds)
+    {
+        var w = _engine.World;
+        while (w.Clock.Tick < target && (budget == null || budget.Elapsed.TotalSeconds < budgetSeconds))
+        {
+            _engine.AdvanceTo(Math.Min(target, w.Clock.Tick + SimTime.TicksPerMinute));
+            if (w.Clock.Tick % (MetricsHistory.SampleMinutes * SimTime.TicksPerMinute) == 0) SampleMetrics();
+        }
+    }
 
     public SimulationHost(ContentDatabase content, ulong seed, int population)
     {
@@ -125,7 +150,8 @@ public sealed class SimulationHost : IDisposable
     {
         if (_thread.IsAlive) throw new InvalidOperationException("A thread da simulação já está rodando.");
         while (_commands.TryDequeue(out var cmd)) _engine.Submit(cmd);
-        _engine.AdvanceTo(_engine.World.Clock.Tick + ticks);
+        SampleMetrics();
+        AdvanceSampled(_engine.World.Clock.Tick + ticks, null, 0);
         foreach (var e in _engine.World.Events.Drain()) _events.Enqueue(e);
         Volatile.Write(ref _snapshot, BuildSnapshot(-1));
     }
@@ -169,8 +195,7 @@ public sealed class SimulationHost : IDisposable
                 {
                     long target = world.Clock.Tick + whole;
                     var budget = Stopwatch.StartNew();
-                    while (world.Clock.Tick < target && budget.Elapsed.TotalSeconds < budgetSeconds)
-                        _engine.AdvanceTo(Math.Min(target, world.Clock.Tick + SimTime.TicksPerMinute));
+                    AdvanceSampled(target, budget, budgetSeconds);
                     pendingTicks -= whole;
                 }
             }

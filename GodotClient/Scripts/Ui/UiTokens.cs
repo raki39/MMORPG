@@ -3,70 +3,83 @@ using Godot;
 namespace GodotClient.Ui;
 
 /// <summary>
-/// Tokens visuais do cliente — paleta propria "Atlas" (D-012; substitui a paleta da secao 12.1
-/// do plano a pedido do criador). Tinta escura azulada + dourado como acao principal, texto
-/// levemente quente. Toda tela usa estes valores; nada de cores soltas.
+/// Tokens visuais — paleta "Atlas" (D-012) em versao densa de jogo de gestao (D-022):
+/// superficies planas, bordas finas, cantos pequenos, texto compacto. Cor so com significado.
 /// </summary>
 public static class UiTokens
 {
-    // Superficies
-    public static readonly Color Background = new("#0B0F14");
-    public static readonly Color Surface = new("#121921");
-    public static readonly Color SurfaceGlass = new(0.071f, 0.098f, 0.129f, 0.90f);
-    public static readonly Color SurfaceRaised = new("#1A2330");
-    public static readonly Color SurfaceHover = new("#233042");
-    public static readonly Color Border = new("#263243");
-    public static readonly Color BorderStrong = new("#3A4A5F");
+    // Superficies (do fundo para cima)
+    public static readonly Color Background = new("#0A0E13");
+    public static readonly Color Surface = new("#10161E");
+    public static readonly Color SurfaceGlass = new(0.063f, 0.086f, 0.118f, 0.96f);
+    public static readonly Color SurfaceRaised = new("#161E29");
+    public static readonly Color SurfaceHeader = new("#1A2330");
+    public static readonly Color SurfaceHover = new("#1F2A39");
+    public static readonly Color RowAlt = new(1, 1, 1, 0.025f);
+    public static readonly Color Border = new("#232D3A");
+    public static readonly Color BorderStrong = new("#34414F");
     public static readonly Color Shadow = new(0, 0, 0, 0.45f);
 
     // Texto
-    public static readonly Color TextPrimary = new("#EDE7DA");
-    public static readonly Color TextSecondary = new("#98A3B0");
-    public static readonly Color TextDisabled = new("#5B6673");
+    public static readonly Color TextPrimary = new("#E6E1D6");
+    public static readonly Color TextSecondary = new("#8C97A3");
+    public static readonly Color TextDisabled = new("#56606B");
 
     // Acao e estado
-    public static readonly Color Accent = new("#E8B44E");      // dourado: selecao e acao principal
-    public static readonly Color AccentSoft = new("#F3D08A");
-    public static readonly Color Info = new("#5CC8E8");
-    public static readonly Color Success = new("#5FD08F");
-    public static readonly Color Warning = new("#F29D52");
-    public static readonly Color Danger = new("#F0625D");
+    public static readonly Color Accent = new("#D9A441");
+    public static readonly Color AccentSoft = new("#EAC67A");
+    public static readonly Color Info = new("#4FB3D9");
+    public static readonly Color Success = new("#55C08A");
+    public static readonly Color Warning = new("#E8954A");
+    public static readonly Color Danger = new("#E45A55");
 
     // Mapa
     public static readonly Color Road = new("#C9A86A");
-    public static readonly Color NightTint = new("#2B3D6B");
 
     // Espacamento (px)
     public const int S4 = 4, S8 = 8, S12 = 12, S16 = 16, S24 = 24, S32 = 32;
 
-    // Tipografia (px)
-    public const int FontCaption = 12;
-    public const int FontSmall = 13;
-    public const int FontBody = 15;
-    public const int FontTitle = 18;
-    public const int FontHeading = 24;
+    // Tipografia (px) — densa
+    public const int FontCaption = 11;
+    public const int FontSmall = 12;
+    public const int FontBody = 13;
+    public const int FontTitle = 15;
+    public const int FontHeading = 20;
 
     // Forma
-    public const int ControlHeight = 36;
-    public const int CornerRadius = 8;
-    public const int PanelRadius = 12;
+    public const int ControlHeight = 28;
+    public const int CornerRadius = 3;
+    public const int PanelRadius = 4;
 
-    public const int TopBarHeight = 56;
+    public const int TopBarHeight = 50;
+    public const int SidePanelWidth = 430;
     public const int InspectorWidth = 380;
 
-    /// <summary>Cores por perfil de populacao: vivas para destacar sobre o terreno.</summary>
     public static Color ProfileColor(string profileId) => profileId switch
     {
-        "casual" => new Color("#8EC9FF"),
-        "competitivo" => new Color("#FF6B6B"),
-        "social" => new Color("#FFB86B"),
-        "comerciante" => new Color("#FFE066"),
-        "explorador" => new Color("#7CF29A"),
-        "hardcore" => new Color("#C49BFF"),
+        "casual" => new Color("#7FB8EE"),
+        "competitivo" => new Color("#EE6A63"),
+        "social" => new Color("#F2A85E"),
+        "comerciante" => new Color("#E9CF5A"),
+        "explorador" => new Color("#6FDB93"),
+        "hardcore" => new Color("#B48CF2"),
         _ => TextSecondary,
     };
 
-    /// <summary>Indice de bioma usado pelo shader de terreno.</summary>
+    /// <summary>Escala de atributo 1–20 (estilo FM): vermelho -> laranja -> verde -> ciano.</summary>
+    public static Color AttributeColor(int v20) => v20 switch
+    {
+        <= 5 => new Color("#C9584F"),
+        <= 9 => new Color("#D9893F"),
+        <= 12 => new Color("#D9C25A"),
+        <= 15 => new Color("#8CCB5E"),
+        <= 17 => new Color("#4FC27E"),
+        _ => new Color("#3FC9C0"),
+    };
+
+    /// <summary>Converte permille (0..1000) para a escala 1..20.</summary>
+    public static int To20(int permille) => Math.Clamp((int)Math.Round(permille / 1000.0 * 19.0) + 1, 1, 20);
+
     public static int BiomeIndex(string biome) => biome switch
     {
         "planicie" => 0,

@@ -45,6 +45,10 @@ public partial class Main : Node
     private ClusterPopover? _popover;
     private readonly Dictionary<int, List<SimEvent>> _history = new();
     private readonly Dictionary<int, int> _characterToPerson = new();
+    private readonly MetricsHistory _metrics = new();
+    private readonly List<(SimEvent Event, int PersonId)> _feed = new();
+    private SidePanel? _side;
+    private readonly List<(string Key, Label Value, Label Delta, Sparkline Spark)> _kpis = new();
 
     public override void _Ready()
     {
@@ -84,6 +88,7 @@ public partial class Main : Node
             Layout = _host.Layout,
             Persons = _host.Persons,
             Snapshot = () => _host.Snapshot,
+            Metrics = _metrics,
             PersonHistory = id => _history.TryGetValue(id, out var l) ? l : (IReadOnlyList<SimEvent>)Array.Empty<SimEvent>(),
             FocusPerson = (id, follow) => { _map.SelectPerson(id); _map.FocusPerson(id, follow); },
             FocusZone = id => { _map.SelectRegion(id); _map.FocusRegion(id); },
@@ -101,7 +106,7 @@ public partial class Main : Node
 
         BuildTopBar(content);
         BuildLayerPanel();
-        BuildLegend(content);
+        BuildSidePanel();
         BuildMapControls();
 
         _host.Submit(new SetServerOpenCommand(true));
@@ -164,7 +169,7 @@ public partial class Main : Node
     {
         var size = GetViewport().GetVisibleRect().Size;
         if (_worldNameLabel != null) _worldNameLabel.Visible = size.X >= 1600;
-        var area = new Rect2(UiTokens.S24, UiTokens.TopBarHeight + UiTokens.S16, size.X - UiTokens.S24 * 2, size.Y - UiTokens.TopBarHeight - UiTokens.S16 - 96);
+        var area = new Rect2(UiTokens.S16, UiTokens.TopBarHeight + UiTokens.S8, size.X - UiTokens.SidePanelWidth - UiTokens.S16 * 2, size.Y - UiTokens.TopBarHeight - UiTokens.S16 - 40);
         _map.FitTo(area, instant);
     }
 
@@ -228,15 +233,69 @@ public partial class Main : Node
         foreach (var v in snap.ByPerson) if (v != null) _characterToPerson[v.CharacterId] = v.PersonId;
         foreach (var e in _host.DrainEvents())
         {
+            int pid = 0;
             foreach (var ent in e.Entities)
             {
-                int pid = ent.Kind == "person" ? (int)ent.Id : ent.Kind == "character" && _characterToPerson.TryGetValue((int)ent.Id, out var p) ? p : 0;
-                if (pid == 0) continue;
-                if (!_history.TryGetValue(pid, out var list)) _history[pid] = list = new List<SimEvent>();
-                list.Insert(0, e);
-                if (list.Count > 120) list.RemoveAt(list.Count - 1);
-                break;
+                pid = ent.Kind == "person" ? (int)ent.Id : ent.Kind == "character" && _characterToPerson.TryGetValue((int)ent.Id, out var p) ? p : 0;
+                if (pid != 0) break;
             }
+            _feed.Insert(0, (e, pid));
+            if (_feed.Count > 400) _feed.RemoveAt(_feed.Count - 1);
+            if (pid == 0) continue;
+            if (!_history.TryGetValue(pid, out var list)) _history[pid] = list = new List<SimEvent>();
+            list.Insert(0, e);
+            if (list.Count > 120) list.RemoveAt(list.Count - 1);
+        }
+    }
+
+    private void BuildSidePanel()
+    {
+        _side = new SidePanel(_ctx, _map, _metrics, () => _feed);
+        _side.SetAnchorsPreset(Control.LayoutPreset.RightWide);
+        _side.OffsetLeft = -UiTokens.SidePanelWidth;
+        _side.OffsetTop = UiTokens.TopBarHeight;
+        _ui.AddChild(_side);
+        _side.Refresh(true);
+    }
+
+    /// <summary>Indicador da barra superior: rotulo, valor, variacao e mini grafico, com tooltip.</summary>
+    private void Kpi(HBoxContainer row, string key, string label, Color color, string tooltip)
+    {
+        var cell = new TipPanel { TooltipText = tooltip, MouseFilter = Control.MouseFilterEnum.Stop };
+        cell.AddThemeStyleboxOverride("panel", new StyleBoxFlat { BgColor = new Color(0, 0, 0, 0), BorderColor = UiTokens.Border, BorderWidthLeft = 1, ContentMarginLeft = 10, ContentMarginRight = 10 });
+        var h = new HBoxContainer();
+        h.AddThemeConstantOverride("separation", 8);
+        var col = new VBoxContainer { Alignment = BoxContainer.AlignmentMode.Center };
+        col.AddThemeConstantOverride("separation", -3);
+        col.AddChild(ThemeFactory.Text(label.ToUpperInvariant(), 10, UiTokens.TextSecondary, UiFonts.CondensedSemiBold));
+        var valRow = new HBoxContainer();
+        valRow.AddThemeConstantOverride("separation", 5);
+        var value = ThemeFactory.Text("0", 16, UiTokens.TextPrimary, UiFonts.Numbers);
+        var delta = ThemeFactory.Text("", 10, UiTokens.TextSecondary, UiFonts.Numbers);
+        delta.VerticalAlignment = VerticalAlignment.Bottom;
+        valRow.AddChild(value);
+        valRow.AddChild(delta);
+        col.AddChild(valRow);
+        h.AddChild(col);
+        var spark = new Sparkline { CustomMinimumSize = new Vector2(64, 24), LineColor = color, SizeFlagsVertical = Control.SizeFlags.ShrinkCenter };
+        h.AddChild(spark);
+        cell.AddChild(h);
+        row.AddChild(cell);
+        _kpis.Add((key, value, delta, spark));
+    }
+
+    private void UpdateKpis(SimSnapshot snap)
+    {
+        foreach (var (key, value, delta, spark) in _kpis)
+        {
+            List<float> series = key switch { "online" => _metrics.Online, "registered" => _metrics.Registered, _ => _metrics.AvgLevel };
+            float current = key switch { "online" => snap.Online, "registered" => snap.Registered, _ => series.Count > 0 ? series[^1] : 0 };
+            value.Text = key == "level" ? PtBr.Decimal(current, 1) : PtBr.Int((long)current);
+            float d = _metrics.DeltaOf(series);
+            delta.Text = series.Count > 6 ? (d > 0 ? $"▲{PtBr.Decimal(d, key == "level" ? 1 : 0)}" : d < 0 ? $"▼{PtBr.Decimal(-d, key == "level" ? 1 : 0)}" : "=") : "";
+            delta.AddThemeColorOverride("font_color", d > 0 ? UiTokens.Success : d < 0 ? UiTokens.Danger : UiTokens.TextDisabled);
+            spark.Values = series.TakeLast(72).ToList();
+            spark.QueueRedraw();
         }
     }
 
@@ -271,13 +330,14 @@ public partial class Main : Node
         _serverChip = ThemeFactory.Chip("Servidor fechado", UiTokens.TextSecondary, dot: true);
         row.AddChild(_serverChip);
 
-        var players = new VBoxContainer { Alignment = BoxContainer.AlignmentMode.Center };
-        players.AddThemeConstantOverride("separation", -2);
-        _onlineLabel = ThemeFactory.Text("", UiTokens.FontSmall, UiTokens.TextPrimary, UiFonts.Numbers);
-        _registeredLabel = ThemeFactory.Text("", UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Numbers);
-        players.AddChild(_onlineLabel);
-        players.AddChild(_registeredLabel);
-        row.AddChild(players);
+        var kpis = new HBoxContainer();
+        kpis.AddThemeConstantOverride("separation", 0);
+        Kpi(kpis, "online", "Conectados", UiTokens.Info, "Conectados agora\n~Pessoas com sessão aberta. Mini gráfico: últimas 12 h (amostras de 10 min).\n~Variação: última hora.");
+        Kpi(kpis, "registered", "Cadastrados", UiTokens.Success, "Contas criadas\n~Registro progressivo durante o lançamento.");
+        Kpi(kpis, "level", "Nível médio", UiTokens.AccentSoft, "Nível médio dos personagens\n~Curva provisória até o combate (M3).");
+        row.AddChild(kpis);
+        _onlineLabel = new Label();
+        _registeredLabel = new Label();
 
         var clock = new VBoxContainer { Alignment = BoxContainer.AlignmentMode.Center };
         clock.AddThemeConstantOverride("separation", -2);
@@ -329,7 +389,10 @@ public partial class Main : Node
         b.AddThemeStyleboxOverride("normal", ThemeFactory.Box(new Color(0, 0, 0, 0), 10, radius: 7));
         b.AddThemeStyleboxOverride("hover", ThemeFactory.Box(UiTokens.SurfaceHover, 10, radius: 7));
         b.AddThemeStyleboxOverride("pressed", ThemeFactory.Box(UiTokens.Accent, 10, radius: 7));
-        b.AddThemeStyleboxOverride("hover_pressed", ThemeFactory.Box(UiTokens.AccentSoft, 10, radius: 7));
+        b.AddThemeStyleboxOverride("hover_pressed", ThemeFactory.Box(UiTokens.AccentSoft, 10, radius: 3));
+        b.AddThemeStyleboxOverride("pressed", ThemeFactory.Box(UiTokens.Accent, 10, radius: 3));
+        b.AddThemeColorOverride("font_pressed_color", UiTokens.Background);
+        b.AddThemeColorOverride("font_hover_pressed_color", UiTokens.Background);
         return b;
     }
 
@@ -455,8 +518,8 @@ public partial class Main : Node
         panel.SetAnchorsPreset(Control.LayoutPreset.BottomRight);
         panel.GrowHorizontal = Control.GrowDirection.Begin;
         panel.GrowVertical = Control.GrowDirection.Begin;
-        panel.OffsetRight = -UiTokens.S16;
-        panel.OffsetBottom = -UiTokens.S16;
+        panel.OffsetRight = -(UiTokens.SidePanelWidth + UiTokens.S12);
+        panel.OffsetBottom = -UiTokens.S12;
         _ui.AddChild(panel);
         var col = new VBoxContainer();
         col.AddThemeConstantOverride("separation", 2);
@@ -501,6 +564,7 @@ public partial class Main : Node
         var snap = _host.Snapshot;
         _map.SetSnapshot(snap);
         CollectEvents();
+        _host.CopyMetricsInto(_metrics);
         var now = _host.Calendar.ToDateTime(snap.Tick);
         _map.SetHour(now.Hour + now.Minute / 60.0 + now.Second / 3600.0);
 
@@ -511,8 +575,7 @@ public partial class Main : Node
             _clockLabel.Text = $"{now.Hour:00}:{now.Minute:00}";
             _dateLabel.Text = $"{PtBr.Date(now)} · {PtBr.DayKind(_host.Calendar.KindOf(now.Date))}";
             _speedLabel.Text = snap.RequestedSpeed == 0 ? "pausado" : snap.EffectiveSpeed < 0 ? "medindo…" : $"efetiva {PtBr.Decimal(snap.EffectiveSpeed)}×";
-            _onlineLabel.Text = $"● {PtBr.Int(snap.Online)} conectados";
-            _registeredLabel.Text = $"{PtBr.Int(snap.Registered)} cadastrados · {PtBr.Int(snap.PersonsTotal)} interessados";
+            UpdateKpis(snap);
             _fpsLabel.Text = $"{Engine.GetFramesPerSecond():0} fps";
             UpdateServerChip(snap.ServerOpen);
         }
@@ -521,6 +584,7 @@ public partial class Main : Node
         {
             _modalTimer = 0;
             if (_modal != null && IsInstanceValid(_modal)) _modal.RefreshLive();
+            _side?.Refresh();
         }
         HandleAutomation(delta);
     }

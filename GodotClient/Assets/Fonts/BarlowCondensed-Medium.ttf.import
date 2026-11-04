@@ -2,13 +2,13 @@
 
 importer="font_data_dynamic"
 type="FontFile"
-uid="uid://bee3xn2iaohf0"
-path="res://.godot/imported/Inter.ttf-05f1e531905d36c9230b634f9adfcc3f.fontdata"
+uid="uid://fmmd21tkhmfu"
+path="res://.godot/imported/BarlowCondensed-Medium.ttf-485ef52a4d1618898678d2fc9c4bc7d5.fontdata"
 
 [deps]
 
-source_file="res://Assets/Fonts/Inter.ttf"
-dest_files=["res://.godot/imported/Inter.ttf-05f1e531905d36c9230b634f9adfcc3f.fontdata"]
+source_file="res://Assets/Fonts/BarlowCondensed-Medium.ttf"
+dest_files=["res://.godot/imported/BarlowCondensed-Medium.ttf-485ef52a4d1618898678d2fc9c4bc7d5.fontdata"]
 
 [params]
 

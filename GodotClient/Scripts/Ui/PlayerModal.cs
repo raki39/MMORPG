@@ -9,8 +9,8 @@ using GodotClient.Sim;
 namespace GodotClient.Ui;
 
 /// <summary>
-/// Ficha completa do jogador simulado: identidade, o que faz agora e por que, progresso,
-/// atributos, rotina, financas e historico. Tudo vem do Core (snapshot e eventos).
+/// Dossie do jogador simulado (estilo FM): faixa de dados-chave, atributos 1–20, o que faz
+/// agora, por que decidiu, progresso, rotina, financas e historico. Dados reais do Core.
 /// </summary>
 public partial class PlayerModal : ModalFrame
 {
@@ -23,14 +23,12 @@ public partial class PlayerModal : ModalFrame
         _ctx = ctx;
         _person = ctx.Persons[personId - 1];
         BuildHeader();
-        AddTab("Visão geral", BuildOverview, live: true);
-        AddTab("Atributos", BuildTraits);
-        AddTab("Rotina e finanças", BuildRoutine);
+        AddTab("Perfil", BuildProfile, live: true);
         AddTab("Histórico", BuildHistory, live: true);
+        AddTab("Rotina e finanças", BuildRoutine);
     }
 
     private CharacterView? View => _ctx.Snapshot().ByPerson is { } a && _person.Id < a.Length ? a[_person.Id] : null;
-
     private string ProfileName => _ctx.Content.Profiles.TryGetValue(_person.ProfileId, out var p) ? p.Name : _person.ProfileId;
 
     private void BuildHeader()
@@ -38,43 +36,42 @@ public partial class PlayerModal : ModalFrame
         var v = View;
         var color = UiTokens.ProfileColor(_person.ProfileId);
         var row = new HBoxContainer();
-        row.AddThemeConstantOverride("separation", 20);
-        row.AddChild(new PortraitBadge(_person.AppearanceSeed, color) { CustomMinimumSize = new Vector2(92, 92) });
-
+        row.AddThemeConstantOverride("separation", 14);
+        row.AddChild(new PortraitBadge(_person.AppearanceSeed, color) { CustomMinimumSize = new Vector2(62, 62) });
         var names = new VBoxContainer { Alignment = BoxContainer.AlignmentMode.Center, SizeFlagsHorizontal = SizeFlags.ExpandFill };
-        names.AddThemeConstantOverride("separation", 4);
-        names.AddChild(ThemeFactory.Text(v?.Name ?? _person.Name, 30, UiTokens.TextPrimary, UiFonts.Display));
-        names.AddChild(ThemeFactory.Text($"{_person.Name}  ·  Pessoa #{_person.Id}", UiTokens.FontBody, UiTokens.TextSecondary));
-        var chips = new HFlowContainer();
-        chips.AddThemeConstantOverride("h_separation", 8);
-        chips.AddThemeConstantOverride("v_separation", 6);
-        if (v != null)
-        {
-            var cls = _ctx.Content.Classes.TryGetValue(v.ClassId, out var c) ? c : null;
-            chips.AddChild(ThemeFactory.Chip($"{cls?.Name ?? v.ClassId} · {RolePt(cls?.Role)}", RoleColor(cls?.Role), dot: true));
-            chips.AddChild(ThemeFactory.Chip($"Nível {v.Level}", UiTokens.Info));
-            chips.AddChild(ThemeFactory.Chip(v.Status == CharacterStatus.Offline ? "Desconectado" : "Conectado",
-                v.Status == CharacterStatus.Offline ? UiTokens.TextSecondary : UiTokens.Success, dot: true));
-        }
-        else chips.AddChild(ThemeFactory.Chip("Ainda não se registrou", UiTokens.Warning, dot: true));
-        chips.AddChild(ThemeFactory.Chip($"Perfil {ProfileName}", color));
-        names.AddChild(chips);
+        names.AddThemeConstantOverride("separation", 0);
+        names.AddChild(ThemeFactory.Text(v?.Name ?? _person.Name, 24, UiTokens.TextPrimary, UiFonts.Display));
+        var cls = v != null && _ctx.Content.Classes.TryGetValue(v.ClassId, out var c) ? c : null;
+        string line = v == null ? $"{_person.Name} · ainda sem conta" : $"{_person.Name} · {cls?.Name} ({RolePt(cls?.Role)}) · Pessoa #{_person.Id}";
+        names.AddChild(ThemeFactory.Text(line, UiTokens.FontBody, UiTokens.TextSecondary));
         row.AddChild(names);
         Header.AddChild(row);
 
-        bool online = v != null && v.Status != CharacterStatus.Offline;
-        Actions.AddChild(Action("Seguir no mapa", "Centraliza e acompanha este jogador", () => { _ctx.FocusPerson(_person.Id, true); Close(); }, primary: true, enabled: online));
-        Actions.AddChild(Action("Localizar", "Centraliza o mapa no jogador", () => { _ctx.FocusPerson(_person.Id, false); Close(); }, enabled: online));
-        _favorite = Action(FavText(), "Acompanhar este jogador (favoritos desta sessão)", ToggleFavorite);
+        if (v != null)
+        {
+            bool online = v.Status != CharacterStatus.Offline;
+            Fact("Nível", v.Level.ToString(), UiTokens.Info, $"Nível {v.Level}\nXP|{v.Experience} / {BehaviorTuning.XpToNextLevel(v.Level)}\n~Curva provisória até o combate (M3).");
+            Fact("Classe", cls?.Name ?? v.ClassId, RoleColor(cls?.Role));
+            Fact("Perfil", ProfileName, color, $"Perfil {ProfileName}\n~Tendência de origem; a pessoa não é um clone do perfil.");
+            Fact("Status", online ? "Conectado" : "Desconectado", online ? UiTokens.Success : UiTokens.TextSecondary);
+            Fact("Zona", _ctx.ZoneName(v.RegionId));
+            Fact("Conhece", $"{v.KnownRegions}/{_ctx.Content.Regions.Count} zonas", null, "Zonas conhecidas\n~Só zonas conhecidas entram nas decisões. Viajar e explorar revelam mais.");
+            if (online) Fact("Sessão", $"até {_ctx.Clock(v.SessionEndTick)}", UiTokens.AccentSoft);
+        }
+        else Fact("Status", "Interessado (sem conta)", UiTokens.Warning);
+
+        bool on = v != null && v.Status != CharacterStatus.Offline;
+        Actions.AddChild(Action("Seguir no mapa", "Seguir no mapa\n~Centraliza e acompanha este jogador.", () => { _ctx.FocusPerson(_person.Id, true); Close(); }, primary: true, enabled: on));
+        Actions.AddChild(Action("Localizar", "Localizar\n~Centraliza o mapa no jogador.", () => { _ctx.FocusPerson(_person.Id, false); Close(); }, enabled: on));
+        _favorite = Action(FavText(), "Favoritar\n~Acompanha este jogador (favoritos desta sessão).", ToggleFavorite);
         Actions.AddChild(_favorite);
         if (v != null && v.Status == CharacterStatus.Doing && v.ActivityId.Length > 0
             && _ctx.Content.Regions[v.TargetRegionId].AreaOfActivity(v.ActivityId) is { } area)
         {
             string z = v.TargetRegionId, a = area.Id;
-            Actions.AddChild(Action(area.Name, "Abre a ficha da área onde está", () => { Close(); _ctx.OpenArea(z, a); }));
+            Actions.AddChild(Action("Ver área", $"{area.Name}\n~Abre a ficha da área onde está.", () => { Close(); _ctx.OpenArea(z, a); }));
         }
-        else if (v != null) Actions.AddChild(Action("Zona atual", "Abre a ficha da zona", () => { Close(); _ctx.OpenZone(v.RegionId); }));
-        Actions.AddChild(Action("Observar em 3D", "Disponível a partir do M4", () => { }, enabled: false));
+        else if (v != null) Actions.AddChild(Action("Ver zona", "Ver zona\n~Abre a ficha da zona atual.", () => { Close(); _ctx.OpenZone(v.RegionId); }));
     }
 
     private string FavText() => _ctx.Favorites.Contains(_person.Id) ? "★ Favorito" : "☆ Favoritar";
@@ -85,188 +82,204 @@ public partial class PlayerModal : ModalFrame
         _favorite.Text = FavText();
     }
 
-    // ---------------- Visao geral ----------------
+    // ---------------- Perfil (3 colunas) ----------------
 
-    private Control BuildOverview()
+    private Control BuildProfile()
     {
+        var left = Column(10, Card("Atributos", AttributeGrid(), UiTokens.Accent));
+        left.CustomMinimumSize = new Vector2(380, 0);
         var v = View;
         if (v == null)
-            return Column(14, Card("Situação", ThemeFactory.Text(
-                "Esta pessoa ainda não criou conta no MMORPG. Ela conhece o jogo e pode se registrar nos próximos dias do lançamento.",
-                UiTokens.FontBody, UiTokens.TextSecondary)));
+            return Row(12, left, Column(10, Card("Situação", Wrap("Ainda não criou conta no MMORPG; pode se registrar nos próximos dias do lançamento."))));
+        var middle = Column(10, Card("Agora", NowBody(v), UiTokens.Info), Card("Progresso", ProgressBody(v)));
+        var right = Column(10, Card("Por que escolheu isso", DecisionBody(v), UiTokens.Success), Card("Recente", RecentBody()));
+        return Row(12, left, middle, right);
+    }
 
-        var snap = _ctx.Snapshot();
-        long now = snap.Tick;
+    private Control AttributeGrid()
+    {
+        var t = _person.Traits;
+        Control Group(string title, (string Name, int Value, string Hint)[] items)
+        {
+            var col = Column(1);
+            col.AddChild(ThemeFactory.Text(title.ToUpperInvariant(), 10, UiTokens.AccentSoft, UiFonts.CondensedBold));
+            foreach (var (name, value, hint) in items)
+            {
+                int v20 = UiTokens.To20(value);
+                var row = new TipPanel { TooltipText = $"{name}\nValor|{v20} / 20\nBruto|{value} / 1000\n~{hint}", MouseFilter = MouseFilterEnum.Stop };
+                row.AddThemeStyleboxOverride("panel", new StyleBoxEmpty { ContentMarginTop = 1, ContentMarginBottom = 1 });
+                var r = new HBoxContainer();
+                var l = ThemeFactory.Text(name, UiTokens.FontSmall, UiTokens.TextPrimary);
+                l.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+                r.AddChild(l);
+                var num = ThemeFactory.Text(v20.ToString(CultureInfo.InvariantCulture), 13, UiTokens.AttributeColor(v20), UiFonts.Numbers);
+                num.CustomMinimumSize = new Vector2(22, 0);
+                num.HorizontalAlignment = HorizontalAlignment.Right;
+                r.AddChild(num);
+                row.AddChild(r);
+                col.AddChild(row);
+            }
+            return col;
+        }
+        var g1 = Column(10,
+            Group("Estilo de jogo", new[] { ("PvE", t.Pve, "Gosto por caçar e enfrentar criaturas."), ("PvP", t.Pvp, "Gosto por combate contra jogadores."), ("Comércio", t.Trade, "Gosto por comprar, vender e coletar."), ("Exploração", t.Exploration, "Gosto por descobrir lugares."), ("Socializar", t.Socializing, "Gosto por conversar e estar em grupo.") }),
+            Group("Capacidade", new[] { ("Mecânica", t.MechanicalSkill, "Execução e reflexo em combate."), ("Conhecimento", t.GameKnowledge, "Entende sistemas e rotas."), ("Coordenação", t.Coordination, "Joga bem em grupo.") }));
+        var g2 = Column(10,
+            Group("Personalidade", new[] { ("Sociabilidade", t.Sociability, "Facilidade de criar vínculos."), ("Agressividade", t.Aggressiveness, "Tendência a confrontar."), ("Paciência", t.Patience, "Tolera repetição e espera."), ("Lealdade", t.Loyalty, "Fica com grupos e guildas."), ("Aversão a risco", t.RiskAversion, "Evita PvP, perdas e perigo.") }),
+            Group("Conduta", new[] { ("Trapaça", t.CheatPropensity, "Propensão a trapacear (incidentes no M9)."), ("Oportunismo", t.Opportunism, "Aproveita vantagens sobre outros.") }));
+        return Row(18, g1, g2);
+    }
 
-        // Agora
-        var nowCol = Column(10);
-        var status = ThemeFactory.Text(StatusText.Of(v, _ctx.Content), 19, UiTokens.TextPrimary, UiFonts.SemiBold);
-        status.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        nowCol.AddChild(status);
-        nowCol.AddChild(ThemeFactory.Text($"Zona: {_ctx.ZoneName(v.RegionId)}", UiTokens.FontSmall, UiTokens.TextSecondary));
+    private Control NowBody(CharacterView v)
+    {
+        long now = _ctx.Snapshot().Tick;
+        var col = Column(6);
+        col.AddChild(Wrap(StatusText.Of(v, _ctx.Content), 15, UiTokens.TextPrimary, UiFonts.SemiBold));
         if (v.Status == CharacterStatus.Doing && v.ActivityEndTick > v.ActivityStartTick)
         {
-            float total = v.ActivityEndTick - v.ActivityStartTick;
-            float done = Math.Clamp(now - v.ActivityStartTick, 0, (long)total);
-            nowCol.AddChild(Bar("Atividade", done, total, UiTokens.Accent, $"{(int)(done * 100 / total)}%", 110));
-            nowCol.AddChild(ThemeFactory.Text($"Termina por volta de {_ctx.Clock(v.ActivityEndTick)}", UiTokens.FontSmall, UiTokens.TextSecondary));
+            float total = v.ActivityEndTick - v.ActivityStartTick, done = Math.Clamp(now - v.ActivityStartTick, 0, (long)total);
+            col.AddChild(Bar("Atividade", done, total, UiTokens.Accent, $"{(int)(done * 100 / total)}%", 90));
+            col.AddChild(KeyValue("Termina às", _ctx.Clock(v.ActivityEndTick)));
         }
         else if (v.Status == CharacterStatus.Traveling && v.MoveEndTick > v.MoveStartTick)
         {
-            float total = v.MoveEndTick - v.MoveStartTick;
-            float done = Math.Clamp(now - v.MoveStartTick, 0, (long)total);
-            nowCol.AddChild(Bar("Trecho atual", done, total, UiTokens.Info, $"{(int)(done * 100 / total)}%", 110));
-            nowCol.AddChild(ThemeFactory.Text($"Zona atual: {_ctx.ZoneName(v.RegionId)} · andando pela estrada", UiTokens.FontSmall, UiTokens.TextSecondary));
+            float total = v.MoveEndTick - v.MoveStartTick, done = Math.Clamp(now - v.MoveStartTick, 0, (long)total);
+            col.AddChild(Bar("Trecho", done, total, UiTokens.Info, $"{(int)(done * 100 / total)}%", 90));
         }
-
-
-        // Sessao
-        Control session;
-        if (v.Status == CharacterStatus.Offline)
-            session = ThemeFactory.Text("Desconectado. A próxima sessão depende da rotina dele (veja Rotina e finanças).", UiTokens.FontBody, UiTokens.TextSecondary);
-        else
+        col.AddChild(KeyValue("Zona atual", _ctx.ZoneName(v.RegionId)));
+        if (v.Status != CharacterStatus.Offline)
         {
-            long minutesLeft = Math.Max(0, (v.SessionEndTick - now) / Simulation.Core.Time.SimTime.TicksPerMinute);
-            session = Row(10, Stat(_ctx.Clock(v.SessionStartTick), "conectou às"), Stat(_ctx.Clock(v.SessionEndTick), "deve sair às"), Stat($"{minutesLeft} min", "restantes"));
+            col.AddChild(KeyValue("Conectou às", _ctx.Clock(v.SessionStartTick)));
+            col.AddChild(KeyValue("Sai às (previsto)", _ctx.Clock(v.SessionEndTick)));
+            col.AddChild(KeyValue("Restante", $"{Math.Max(0, (v.SessionEndTick - now) / Simulation.Core.Time.SimTime.TicksPerMinute)} min", UiTokens.AccentSoft));
         }
+        return col;
+    }
 
-        // Progresso
+    private Control ProgressBody(CharacterView v)
+    {
         long need = BehaviorTuning.XpToNextLevel(v.Level);
-        var progress = Column(10,
-            Bar($"Nível {v.Level} → {v.Level + 1}", v.Experience, need, UiTokens.Success, $"{v.Experience}/{need} XP", 150),
-            Bar("Locais conhecidos", v.KnownRegions, _ctx.Content.Regions.Count, UiTokens.Info, $"{v.KnownRegions} de {_ctx.Content.Regions.Count}", 150));
-
-        var left = Column(14, Card("Agora", nowCol, UiTokens.Accent), Card("Sessão", session), Card("Progresso", progress));
-        var right = Column(14, Card("Por que escolheu isso", DecisionBody(v), UiTokens.Info));
-        return Row(16, left, right);
+        return Column(6,
+            Bar($"Nível {v.Level} → {v.Level + 1}", v.Experience, need, UiTokens.Success, $"{v.Experience}/{need}", 110),
+            Bar("Zonas conhecidas", v.KnownRegions, _ctx.Content.Regions.Count, UiTokens.Info, $"{v.KnownRegions}/{_ctx.Content.Regions.Count}", 110));
     }
 
     private Control DecisionBody(CharacterView v)
     {
         var d = v.LastDecision;
-        if (d == null) return ThemeFactory.Text("Nenhuma decisão registrada ainda.", UiTokens.FontBody, UiTokens.TextSecondary);
-        var col = Column(10);
-        var title = ThemeFactory.Text($"{_ctx.ActivityName(d.RegionId, d.ActivityId)}", 17, UiTokens.TextPrimary, UiFonts.SemiBold);
-        title.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        col.AddChild(title);
+        if (d == null) return Wrap("Nenhuma decisão registrada ainda.");
+        var col = Column(5);
+        col.AddChild(Wrap(_ctx.ActivityName(d.RegionId, d.ActivityId), 15, UiTokens.TextPrimary, UiFonts.SemiBold));
         string place = _ctx.PlaceName(d.RegionId, d.ActivityId) == _ctx.ZoneName(d.RegionId) ? _ctx.ZoneName(d.RegionId) : $"{_ctx.PlaceName(d.RegionId, d.ActivityId)} · {_ctx.ZoneName(d.RegionId)}";
-        col.AddChild(ThemeFactory.Text($"{place} · decidido às {_ctx.Clock(d.Tick)} · {d.OptionsConsidered} opções avaliadas",
-            UiTokens.FontSmall, UiTokens.TextSecondary));
-
+        col.AddChild(Wrap($"{place} · às {_ctx.Clock(d.Tick)} · {d.OptionsConsidered} opções", UiTokens.FontCaption));
         var factors = d.Factors.Where(f => f.Contribution != 0).OrderByDescending(f => Math.Abs(f.Contribution)).ToList();
         int max = Math.Max(1, factors.Count == 0 ? 1 : factors.Max(f => Math.Abs(f.Contribution)));
         foreach (var f in factors)
         {
-            bool pos = f.Contribution > 0;
-            col.AddChild(DivergingBar(FactorPt(f.Key), f.Contribution, max, pos ? UiTokens.Success : UiTokens.Danger));
+            var row = new TipPanel { TooltipText = $"{FactorPt(f.Key)}\nPeso|{(f.Contribution > 0 ? "+" : "")}{f.Contribution}\n~{FactorHint(f.Key)}", MouseFilter = MouseFilterEnum.Stop };
+            row.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
+            var r = new HBoxContainer();
+            r.AddThemeConstantOverride("separation", 8);
+            var l = ThemeFactory.Text(FactorPt(f.Key), UiTokens.FontSmall, UiTokens.TextPrimary);
+            l.CustomMinimumSize = new Vector2(150, 0);
+            r.AddChild(l);
+            r.AddChild(new DivergingTrack(f.Contribution / (float)max, f.Contribution > 0 ? UiTokens.Success : UiTokens.Danger) { SizeFlagsHorizontal = SizeFlags.ExpandFill, CustomMinimumSize = new Vector2(0, 12) });
+            var n = ThemeFactory.Text((f.Contribution > 0 ? "+" : "") + f.Contribution, UiTokens.FontSmall, f.Contribution > 0 ? UiTokens.Success : UiTokens.Danger, UiFonts.Numbers);
+            n.CustomMinimumSize = new Vector2(36, 0);
+            n.HorizontalAlignment = HorizontalAlignment.Right;
+            r.AddChild(n);
+            row.AddChild(r);
+            col.AddChild(row);
         }
-        col.AddChild(ThemeFactory.Text($"Nota final: {d.Utility}", UiTokens.FontSmall, UiTokens.TextSecondary, UiFonts.Numbers));
+        col.AddChild(KeyValue("Nota final", d.Utility.ToString()));
         if (d.RunnerUpActivityKey.Length > 0)
         {
-            var parts = d.RunnerUpActivityKey.Split('/');
-            col.AddChild(ThemeFactory.Text($"Segunda opção: {_ctx.ActivityName(parts[0], parts[1])} · {_ctx.ZoneName(parts[0])}", UiTokens.FontSmall, UiTokens.TextSecondary));
+            var p = d.RunnerUpActivityKey.Split('/');
+            col.AddChild(KeyValue("2ª opção", _ctx.ActivityName(p[0], p[1]), UiTokens.TextSecondary));
         }
-        var hint = ThemeFactory.Text("Pesos calculados pela simulação a partir dos traços da pessoa, do nível, da distância, da lotação e do risco no momento da decisão.",
-            UiTokens.FontCaption, UiTokens.TextDisabled);
-        hint.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        col.AddChild(hint);
         return col;
     }
 
-    private static Control DivergingBar(string label, int value, int max, Color color)
+    private Control RecentBody()
     {
-        var row = new HBoxContainer();
-        row.AddThemeConstantOverride("separation", 10);
-        var l = ThemeFactory.Text(label, UiTokens.FontSmall, UiTokens.TextPrimary);
-        l.CustomMinimumSize = new Vector2(190, 0);
-        row.AddChild(l);
-        var track = new DivergingTrack(value / (float)max, color) { SizeFlagsHorizontal = SizeFlags.ExpandFill, CustomMinimumSize = new Vector2(0, 14) };
-        row.AddChild(track);
-        var v = ThemeFactory.Text((value > 0 ? "+" : "") + value.ToString(CultureInfo.InvariantCulture), UiTokens.FontCaption, color, UiFonts.Numbers);
-        v.CustomMinimumSize = new Vector2(44, 0);
-        v.HorizontalAlignment = HorizontalAlignment.Right;
-        row.AddChild(v);
-        return row;
+        var col = Column(3);
+        var events = _ctx.PersonHistory(_person.Id);
+        if (events.Count == 0) { col.AddChild(Wrap("Nada desde que o jogo foi aberto.")); return col; }
+        foreach (var e in events.Take(7)) col.AddChild(EventRow(e, compact: true));
+        return col;
     }
 
     public static string FactorPt(string key) => key switch
     {
-        "affinity" => "Gosta desse tipo de atividade",
-        "level_fit" => "Conteúdo adequado ao nível",
-        "company" => "Companhia de outros jogadores",
-        "crowding" => "Local disputado (lotação)",
+        "affinity" => "Gosto pela atividade",
+        "level_fit" => "Adequada ao nível",
+        "company" => "Companhia",
+        "crowding" => "Lotação",
         "risk" => "Risco percebido",
-        "travel" => "Distância até lá",
-        "time_budget" => "Não cabe no tempo da sessão",
+        "travel" => "Distância",
+        "time_budget" => "Tempo de sessão",
         "repetition" => "Cansaço de repetir",
-        "noise" => "Variação pessoal do momento",
+        "noise" => "Variação do momento",
         _ => key,
     };
 
-    // ---------------- Atributos ----------------
-
-    private Control BuildTraits()
+    private static string FactorHint(string key) => key switch
     {
-        var t = _person.Traits;
-        Control Group(string title, (string, int)[] items)
-        {
-            var c = Column(8);
-            foreach (var (n, val) in items) c.AddChild(Bar(n, val, 1000, TraitColor(val), $"{val / 10}", 170));
-            return Card(title, c);
-        }
-        var left = Column(14,
-            Group("Estilo de jogo", new[] { ("PvE", t.Pve), ("PvP", t.Pvp), ("Comércio", t.Trade), ("Exploração", t.Exploration), ("Socializar", t.Socializing) }),
-            Group("Capacidade", new[] { ("Habilidade mecânica", t.MechanicalSkill), ("Conhecimento do jogo", t.GameKnowledge), ("Coordenação", t.Coordination) }));
-        var right = Column(14,
-            Group("Personalidade", new[] { ("Sociabilidade", t.Sociability), ("Agressividade", t.Aggressiveness), ("Paciência", t.Patience), ("Lealdade", t.Loyalty), ("Aversão a risco", t.RiskAversion) }),
-            Group("Conduta", new[] { ("Propensão a trapacear", t.CheatPropensity), ("Oportunismo", t.Opportunism) }));
-        return Row(16, left, right);
-    }
+        "affinity" => "Traços da pessoa combinados com o tipo de atividade.",
+        "level_fit" => "Conteúdo dentro da faixa de nível da zona rende mais.",
+        "company" => "Outros jogadores no lugar (sociabilidade).",
+        "crowding" => "Caça e coleta disputadas rendem menos.",
+        "risk" => "Risco da atividade, PvP e nível × aversão a risco.",
+        "travel" => "Tempo andando até lá em relação ao tempo de sessão.",
+        "time_budget" => "Viagem + atividade não cabem no tempo restante.",
+        "repetition" => "Repetir a mesma coisa cansa (menos para os pacientes).",
+        _ => "Pequena aleatoriedade reproduzível.",
+    };
 
-    private static Color TraitColor(int v) => v >= 700 ? UiTokens.Accent : v >= 400 ? UiTokens.Info : new Color(UiTokens.TextSecondary, 0.8f);
-
-    // ---------------- Rotina ----------------
-
-    private Control BuildRoutine()
-    {
-        var t = _person.Traits;
-        var routine = Row(10, Stat($"{t.PreferredStartHour:00}h", "horário preferido"), Stat($"{t.SessionMinutes} min", "sessão típica"),
-            Stat($"{t.DaysPerWeek}/7", "dias por semana"), Stat($"+{t.WeekendBoost / 10}%", "a mais no fim de semana"));
-        var money = Row(10, Stat($"R$ {PtBr.Decimal(t.LeisureBudgetCentsPerMonth / 100.0, 0)}", "orçamento de lazer/mês"),
-            Stat($"{t.WillingnessToPay / 10}%", "disposição a pagar"), Stat($"{t.PaidAdvantageSensitivity / 10}%", "aversão a vantagem paga"));
-        var note = ThemeFactory.Text("Dinheiro real fictício do tycoon (separado do ouro do MMORPG). A monetização usa estes valores a partir do M7.",
-            UiTokens.FontCaption, UiTokens.TextDisabled);
-        note.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        return Column(14, Card("Rotina", routine), Card("Finanças", Column(10, money, note)));
-    }
-
-    // ---------------- Historico ----------------
+    // ---------------- Historico (tabela) ----------------
 
     private Control BuildHistory()
     {
         var events = _ctx.PersonHistory(_person.Id);
-        var col = Column(4);
-        if (events.Count == 0)
+        var col = Column(0);
+        var head = new HBoxContainer();
+        head.AddChild(ColHead("Quando", 110));
+        head.AddChild(ColHead("Acontecimento", 0));
+        col.AddChild(head);
+        if (events.Count == 0) col.AddChild(Wrap("Nada registrado desde que o jogo foi aberto."));
+        int i = 0;
+        foreach (var e in events.Take(150))
         {
-            col.AddChild(ThemeFactory.Text("Nada registrado desde que você abriu o jogo.", UiTokens.FontBody, UiTokens.TextSecondary));
-            return col;
-        }
-        foreach (var e in events.Take(80))
-        {
-            var (text, color) = Describe(e);
-            var row = new HBoxContainer();
-            row.AddThemeConstantOverride("separation", 12);
-            var when = ThemeFactory.Text($"{PtBr.ShortDate(_ctx.Calendar.ToDateTime(e.Tick))} {_ctx.Clock(e.Tick)}", UiTokens.FontCaption, UiTokens.TextDisabled, UiFonts.Numbers);
-            when.CustomMinimumSize = new Vector2(120, 0);
-            row.AddChild(when);
-            row.AddChild(new DotIcon(color) { CustomMinimumSize = new Vector2(9, 9), SizeFlagsVertical = SizeFlags.ShrinkCenter });
-            var l = ThemeFactory.Text(text, UiTokens.FontSmall, UiTokens.TextPrimary);
-            l.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-            l.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-            row.AddChild(l);
-            col.AddChild(row);
+            var bg = new PanelContainer();
+            bg.AddThemeStyleboxOverride("panel", new StyleBoxFlat { BgColor = i++ % 2 == 1 ? UiTokens.RowAlt : new Color(0, 0, 0, 0), ContentMarginLeft = 4 });
+            bg.AddChild(EventRow(e, compact: false));
+            col.AddChild(bg);
         }
         return col;
+    }
+
+    private static Label ColHead(string text, float width)
+    {
+        var l = ThemeFactory.Text(text.ToUpperInvariant(), 10, UiTokens.TextSecondary, UiFonts.CondensedBold);
+        if (width > 0) l.CustomMinimumSize = new Vector2(width, 22);
+        else l.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        return l;
+    }
+
+    private Control EventRow(SimEvent e, bool compact)
+    {
+        var (text, color) = Describe(e);
+        var row = new HBoxContainer();
+        row.AddThemeConstantOverride("separation", 8);
+        var when = ThemeFactory.Text(compact ? _ctx.Clock(e.Tick) : $"{PtBr.ShortDate(_ctx.Calendar.ToDateTime(e.Tick))} {_ctx.Clock(e.Tick)}", UiTokens.FontCaption, UiTokens.TextDisabled, UiFonts.Numbers);
+        when.CustomMinimumSize = new Vector2(compact ? 38 : 106, 20);
+        row.AddChild(when);
+        row.AddChild(new ColorRect { Color = color, CustomMinimumSize = new Vector2(3, 12), SizeFlagsVertical = SizeFlags.ShrinkCenter });
+        var l = ThemeFactory.Text(text, UiTokens.FontSmall, UiTokens.TextPrimary);
+        l.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        l.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+        row.AddChild(l);
+        return row;
     }
 
     private (string, Color) Describe(SimEvent e)
@@ -279,16 +292,39 @@ public partial class PlayerModal : ModalFrame
             case "level_up": return ($"Subiu para o {e.Detail}", UiTokens.Accent);
             case "region_discovered": return ($"Descobriu {_ctx.ZoneName(e.Detail ?? "")}", UiTokens.Info);
             case "activity_chosen":
-                var parts = (e.Detail ?? "/").Split('/');
+                var p = (e.Detail ?? "/").Split('/');
                 string why = e.Causes.Count > 0 ? " — " + string.Join(", ", e.Causes.Take(2).Select(c => FactorPt(c.Factor).ToLowerInvariant())) : "";
-                return ($"Decidiu: {_ctx.ActivityName(parts[0], parts[1])} em {_ctx.ZoneName(parts[0])}{why}", ActivityColorFor(parts[0], parts[1]));
+                return ($"{_ctx.ActivityName(p[0], p[1])} · {_ctx.PlaceName(p[0], p[1])}{why}", UiTokens.Info);
             default: return (e.Type, UiTokens.TextSecondary);
         }
     }
 
-    private Color ActivityColorFor(string zone, string activity) =>
-        _ctx.Content.Regions.TryGetValue(zone, out var r) && r.Activities.FirstOrDefault(a => a.Id == activity) is { } a
-            ? ActivityPalette.Color(a.Type) : UiTokens.TextSecondary;
+    // ---------------- Rotina ----------------
+
+    private Control BuildRoutine()
+    {
+        var t = _person.Traits;
+        var routine = Column(4,
+            KeyValue("Horário preferido", $"{t.PreferredStartHour:00}h"),
+            KeyValue("Sessão típica", $"{t.SessionMinutes} min"),
+            KeyValue("Dias por semana", $"{t.DaysPerWeek}/7"),
+            KeyValue("A mais no fim de semana", $"+{t.WeekendBoost / 10}%"));
+        int pay = UiTokens.To20(t.WillingnessToPay), adv = UiTokens.To20(t.PaidAdvantageSensitivity);
+        var money = Column(4,
+            KeyValue("Orçamento de lazer", $"R$ {PtBr.Decimal(t.LeisureBudgetCentsPerMonth / 100.0, 0)}/mês"),
+            KeyValue("Disposição a pagar", $"{pay}/20", UiTokens.AttributeColor(pay)),
+            KeyValue("Aversão a vantagem paga", $"{adv}/20", UiTokens.AttributeColor(adv)),
+            Wrap("Dinheiro real fictício do tycoon, separado do ouro do MMORPG. Usado pela monetização no M7.", UiTokens.FontCaption, UiTokens.TextDisabled));
+        return Row(12, Card("Rotina", routine, UiTokens.Info), Card("Finanças", money, UiTokens.Accent));
+    }
+
+    private static Label Wrap(string text, int size = UiTokens.FontSmall, Color? color = null, Font? font = null)
+    {
+        var l = ThemeFactory.Text(text, size, color ?? UiTokens.TextSecondary, font);
+        l.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        l.CustomMinimumSize = new Vector2(200, 0);
+        return l;
+    }
 
     public static string RolePt(string? role) => role switch
     {
@@ -300,14 +336,14 @@ public partial class PlayerModal : ModalFrame
 
     public static Color RoleColor(string? role) => role switch
     {
-        ClassRoles.Tank => new Color("#8EC9FF"),
-        ClassRoles.Damage => new Color("#F0796F"),
-        ClassRoles.Support => new Color("#7FD8A6"),
+        ClassRoles.Tank => new Color("#7FB8EE"),
+        ClassRoles.Damage => new Color("#EE6A63"),
+        ClassRoles.Support => new Color("#6FDB93"),
         _ => UiTokens.TextSecondary,
     };
 }
 
-/// <summary>Barra divergente: positivo para a direita (verde), negativo para a esquerda (vermelho).</summary>
+/// <summary>Barra divergente: positivo para a direita, negativo para a esquerda.</summary>
 public partial class DivergingTrack : Control
 {
     private readonly float _value;
@@ -317,14 +353,14 @@ public partial class DivergingTrack : Control
     {
         _value = Mathf.Clamp(value, -1, 1);
         _color = color;
+        MouseFilter = MouseFilterEnum.Ignore;
     }
 
     public override void _Draw()
     {
-        float mid = Size.X / 2f;
-        float h = 8, y = (Size.Y - h) / 2f;
+        float mid = Size.X / 2f, h = 5, y = (Size.Y - h) / 2f;
         DrawRect(new Rect2(0, y, Size.X, h), new Color(UiTokens.Background, 0.9f));
-        DrawLine(new Vector2(mid, 0), new Vector2(mid, Size.Y), UiTokens.BorderStrong, 1);
+        DrawLine(new Vector2(mid, y - 2), new Vector2(mid, y + h + 2), UiTokens.BorderStrong, 1);
         float w = mid * Mathf.Abs(_value);
         DrawRect(_value >= 0 ? new Rect2(mid, y, w, h) : new Rect2(mid - w, y, w, h), _color);
     }

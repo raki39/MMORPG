@@ -62,54 +62,71 @@ public partial class ZoneModal : ModalFrame
         row.AddChild(col);
         Header.AddChild(row);
 
+        int people = _map.PeopleInZone(_zone.Id);
+        Fact("Jogadores", people.ToString(), UiTokens.Info, "Jogadores na zona agora\n~Inclui quem está andando pelas estradas da zona.");
+        Fact("Lotação", $"{people * 100 / Math.Max(1, _zone.Capacity)}%", WorldMapView.Ramp(Mathf.Clamp(people / (float)Math.Max(1, _zone.Capacity) * 4f, 0, 1)), $"Lotação\nJogadores|{people}\nCapacidade|{_zone.Capacity}");
+        Fact("Níveis", _zone.IsCity ? "Todos" : $"{_zone.LevelMin}–{_zone.LevelMax}", UiTokens.AccentSoft);
+        Fact("Combate", PtBr.Pvp(_zone.Pvp), _zone.Pvp == PvpRules.Open ? UiTokens.Danger : UiTokens.Success);
+        Fact("Morte", PtBr.Death(_zone.DeathRule), _zone.DeathRule == DeathRules.FullLoot ? UiTokens.Danger : _zone.DeathRule == DeathRules.Partial ? UiTokens.Warning : UiTokens.TextSecondary);
+        Fact("Controle", PtBr.Control(_zone.Control));
+        Fact("Perigo", ((int)(WorldMapView.DangerOf(_zone) * 100)).ToString(), WorldMapView.Ramp(WorldMapView.DangerOf(_zone)), "Índice de perigo\n~Risco das atividades, PvP e regra de morte.");
+        Fact("Áreas", _zone.Areas.Count.ToString());
+
         Actions.AddChild(Action("Aproximar no mapa", "Centraliza e aproxima a zona", () => { _ctx.FocusZone(_zone.Id); Close(); }, primary: true));
         Actions.AddChild(Action("Observar em 3D", "Disponível a partir do M4", () => { }, enabled: false));
     }
 
     // ---------------- Visao geral ----------------
 
+    private DataTable<AreaDefinition>? _areaTable;
+
     private Control BuildOverview()
     {
-        int people = _map.PeopleInZone(_zone.Id);
-        var stats = Row(10,
-            Stat(people.ToString(), "jogadores agora"),
-            Stat(_zone.Capacity.ToString(), "capacidade nominal"),
-            Stat($"{people * 100 / Math.Max(1, _zone.Capacity)}%", "lotação", WorldMapView.Ramp(Mathf.Clamp(people / (float)Math.Max(1, _zone.Capacity) * 4f, 0, 1))),
-            Stat($"{(int)(WorldMapView.DangerOf(_zone) * 100)}", "índice de perigo", WorldMapView.Ramp(WorldMapView.DangerOf(_zone))));
+        _areaTable ??= new DataTable<AreaDefinition>(new[]
+        {
+            new Column<AreaDefinition> { Title = "Área", Text = a => a.Name, SortKey = a => a.Name, Color = a => AreaPalette.Color(a.Kind).Lightened(0.2f),
+                Tooltip = a => $"{a.Name}\nTipo|{AreaPalette.Name(a.Kind)}\nTamanho|{a.Radius * 20} m\n~{a.Description}" },
+            new Column<AreaDefinition> { Title = "Tipo", Width = 110, Text = a => AreaPalette.Name(a.Kind), SortKey = a => a.Kind, Color = _ => UiTokens.TextSecondary },
+            new Column<AreaDefinition> { Title = "Tarefas", Width = 230, Text = a => a.Activities.Count == 0 ? (AreaKinds.IsPortal(a.Kind) ? $"→ {a.LeadsTo} (em breve)" : "—") : string.Join(" · ", a.Activities.Select(x => x.Name)), Color = _ => UiTokens.TextSecondary,
+                Tooltip = a => a.Activities.Count == 0 ? "" : a.Name + "\n" + string.Join("\n", a.Activities.Select(x => $"{x.Name}|{_map.PeopleAtSpot(_zone.Id, x.Id)} agora")) },
+            new Column<AreaDefinition> { Title = "Jog.", Width = 40, Right = true, Numeric = true, Text = a => _map.PeopleInArea(_zone.Id, a.Id).Count.ToString(), SortKey = a => _map.PeopleInArea(_zone.Id, a.Id).Count,
+                Color = a => _map.PeopleInArea(_zone.Id, a.Id).Count > 0 ? UiTokens.Info : UiTokens.TextDisabled },
+        }, sortColumn: 3) { OnClick = a => { Close(); _ctx.OpenArea(_zone.Id, a.Id); } };
+        _areaTable.OnSortChanged = () => Rebuild(false);
 
-        var areas = Column(10);
-        if (_zone.Areas.Count == 0)
-            areas.AddChild(ThemeFactory.Text("Esta zona ainda não tem áreas.", UiTokens.FontBody, UiTokens.Warning));
-        foreach (var area in _zone.Areas) areas.AddChild(AreaCard(area));
+        var left = Column(10, Card($"Áreas · {_zone.Areas.Count}", _areaTable.Build(_zone.Areas), ZoneAccent(_zone)));
         if (_zone.Activities.Count > 0)
         {
-            var whole = Column(6);
-            foreach (var a in _zone.Activities)
-                whole.AddChild(TaskLine(a));
-            areas.AddChild(Card("Na zona inteira (sem lugar fixo)", whole));
+            var whole = Column(4);
+            foreach (var a in _zone.Activities) whole.AddChild(TaskLine(a));
+            left.AddChild(Card("Na zona inteira (sem lugar fixo)", whole));
         }
 
-        var exits = Column(8);
+        var series = _ctx.Metrics.OnlineByZone.TryGetValue(_zone.Id, out var zs) ? zs.ToList() : new List<float>();
+        var chart = new LineChart
+        {
+            CustomMinimumSize = new Vector2(0, 160),
+            XLabels = _ctx.Metrics.Ticks.Select(t => _ctx.Clock(t)).ToList(),
+            Series = new[] { new ChartSeries { Name = "Jogadores na zona", Color = UiTokens.Info, Values = series } },
+        };
+        var exits = Column(3);
         foreach (var c in _zone.Connections)
         {
             var other = _ctx.Content.Regions[c.To];
             int dist = _ctx.Layout.Hub(_zone.Id).DistanceTo(_ctx.Layout.Gate(_zone.Id, c.To)) + _ctx.Layout.Gate(_zone.Id, c.To).DistanceTo(_ctx.Layout.Gate(c.To, _zone.Id));
             int minutes = (dist + Simulation.Core.Behavior.BehaviorTuning.WalkSpeed - 1) / Simulation.Core.Behavior.BehaviorTuning.WalkSpeed;
-            var b = new Button
-            {
-                Text = $"→  {other.Name}     ·  ~{minutes} min do centro até a fronteira  ·  {_map.PeopleInZone(c.To)} jogadores lá",
-                Alignment = HorizontalAlignment.Left, FocusMode = FocusModeEnum.None, CustomMinimumSize = new Vector2(0, 38),
-            };
+            var b = new TipButton { Text = $"→  {other.Name}", Alignment = HorizontalAlignment.Left, FocusMode = FocusModeEnum.None, CustomMinimumSize = new Vector2(0, 26),
+                TooltipText = $"Saída para {other.Name}\nDo centro à fronteira|~{minutes} min\nJogadores lá|{_map.PeopleInZone(c.To)}\nCombate|{PtBr.Pvp(other.Pvp)}\n~Clique para abrir o dossiê." };
             string target = c.To;
             b.Pressed += () => { Close(); _ctx.OpenZone(target); };
-            exits.AddChild(b);
+            exits.AddChild(Row(8, b, ThemeFactory.Text($"~{minutes} min", UiTokens.FontSmall, UiTokens.TextSecondary, UiFonts.Numbers)));
+            b.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         }
-        var note = ThemeFactory.Text("Zonas vizinhas sem saída declarada não se ligam: o caminho passa por outras zonas.", UiTokens.FontCaption, UiTokens.TextDisabled);
-        exits.AddChild(note);
-
-        return Column(16, stats, Card($"Áreas · {_zone.Areas.Count}", areas, ZoneAccent(_zone)), Card("Saídas", exits));
+        exits.AddChild(ThemeFactory.Text("Zonas vizinhas sem saída declarada não se ligam.", UiTokens.FontCaption, UiTokens.TextDisabled));
+        var right = Column(10, Card("Jogadores na zona — últimas 24 h", chart, UiTokens.Info), Card("Saídas", exits));
+        right.CustomMinimumSize = new Vector2(420, 0);
+        return Row(12, left, right);
     }
-
 
     /// <summary>Cartao clicavel de area: emblema, nome, tipo, tarefas e quem esta la.</summary>
     private Control AreaCard(AreaDefinition area)

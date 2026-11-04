@@ -178,3 +178,19 @@ FPS médio medido em 1920×1080, RTX 3060, velocidade 10×, 6 s, mapa com movime
 **Data:** 04/11/2026 · **Estado:** aceita
 
 Moldura comum (`ModalFrame`): banner com gradiente na cor do contexto, feixes e pontilhado, sombra profunda tingida, botão de fechar redondo, abas com indicador deslizante animado, transição do conteúdo, cartões com sombra e faixa de destaque, indicadores com barra lateral e ações primárias com brilho. Fichas: jogador, zona (áreas como cartões clicáveis), área (tarefas, criaturas, saque, portais) e lista de aglomeração.
+
+## D-022 — Direção de interface "jogo de gestão" (FM com alma de MMORPG)
+**Data:** 04/11/2026 · **Estado:** aceita (pedido do criador: tirar a cara de mobile/bootstrap)
+
+- **Tipografia:** Barlow (interface), Barlow Condensed (rótulos, colunas e abas em caixa alta) e números tabulares. Cinzel fica só em nomes de zona e títulos de dossiê. Texto de 11 a 13 px.
+- **Componentes:** cantos de 2 a 4 px, bordas finas, controles de 28 px, etiquetas retas com filete no lugar das pílulas, seções com faixa de título escura e cor apenas onde tem significado.
+- **HUD:**
+  - barra superior com indicadores (valor, variação da última hora e mini-gráfico das últimas 12 h);
+  - painel lateral fixo com Visão geral (indicadores, gráfico de 24 h, "fazendo agora", perfis), Zonas (tabela ordenável), Jogadores (tabela com busca) e Eventos (feed com filtros);
+  - tudo clicável, levando ao dossiê.
+- **Dossiês:**
+  - faixa de dados-chave no topo, abas planas e conteúdo em colunas;
+  - jogador: atributos em escala de 1 a 20 com cor no estilo FM (valor bruto no tooltip), "Agora", decisão com fatores e histórico em tabela;
+  - zona: tabela de áreas e gráfico de 24 h.
+- **Tooltips estruturados (`RichTip`):** título, pares rótulo/valor e nota.
+- **Métricas para gráficos:** amostradas na thread da simulação a cada 10 minutos simulados (inclusive no avanço inicial), sem perder amostras em velocidade alta. A tela recebe uma cópia.

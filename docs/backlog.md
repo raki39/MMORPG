@@ -68,7 +68,11 @@ Objetivo (plano v1.4): provar na prática que o projeto Godot é criado e mantid
 - [ ] Editor de áreas com posicionamento livre, prévia de tamanho, acesso e conflitos (usa as regras do D-020)
 - [ ] Quantidade de monstros e recursos por área (M3/M5), independente do tamanho
 - [ ] Quests como objetivos com recompensa, separadas das atividades
-- [ ] Faixa de eventos (notícias do servidor) e navegação com histórico (voltar)
+- [x] HUD de gestão: indicadores com mini-gráfico, painel lateral (visão geral, zonas, jogadores, eventos), tabelas e tooltips estruturados (D-022)
+- [x] Dossiê do jogador estilo FM (atributos 1–20) e dossiê de zona com tabela e gráfico
+- [ ] Dossiê de área no mesmo padrão denso (faixa de dados e tabela de tarefas)
+- [ ] Ícones de áreas mais detalhados no mapa
+- [ ] Navegação com histórico (voltar) entre dossiês
 - [ ] Tabelas de Comunidade/Economia com virtualização
 - [ ] Revisão visual completa em 1366×768 das fichas
 

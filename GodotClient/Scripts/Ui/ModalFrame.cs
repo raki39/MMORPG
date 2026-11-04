@@ -3,23 +3,23 @@ using Godot;
 namespace GodotClient.Ui;
 
 /// <summary>
-/// Modal grande (ficha) com acabamento de jogo: fundo escurecido, painel com brilho na cor do
-/// contexto, banner de cabecalho com arte procedural, abas com indicador deslizante e corpo
-/// rolavel com transicao. Esc ou clique fora fecha. Abas "ao vivo" se atualizam sem perder a rolagem.
+/// Ficha em estilo "dossie" de jogo de gestao (D-022): painel largo e denso, cabecalho
+/// compacto com faixa de dados-chave, acoes compactas, abas planas e secoes com faixa de
+/// titulo. Esc ou clique fora fecha. Abas "ao vivo" se atualizam sem perder a rolagem.
 /// </summary>
 public partial class ModalFrame : Control
 {
     public event Action? Closed;
 
-    private readonly Color _accent;
     private readonly Control _root;
     private readonly PanelContainer _panel;
     private readonly List<(string Name, Func<Control> Build, bool Live)> _tabs = new();
     private readonly List<Button> _tabButtons = new();
     private readonly HBoxContainer _tabBar;
-    private readonly ColorRect _indicator;
     private readonly ScrollContainer _scroll;
+    private readonly HBoxContainer _facts;
     private int _current = -1;
+    private int _settleFrames = 4;
 
     public VBoxContainer Header { get; }
     public HBoxContainer Actions { get; }
@@ -27,29 +27,26 @@ public partial class ModalFrame : Control
 
     public ModalFrame(Color accent)
     {
-        _accent = accent;
         SetAnchorsPreset(LayoutPreset.FullRect);
         MouseFilter = MouseFilterEnum.Stop;
-
-        var dim = new ColorRect { Color = new Color(0.01f, 0.015f, 0.02f, 0.70f), MouseFilter = MouseFilterEnum.Stop };
+        var dim = new ColorRect { Color = new Color(0.01f, 0.015f, 0.02f, 0.72f), MouseFilter = MouseFilterEnum.Stop };
         dim.SetAnchorsPreset(LayoutPreset.FullRect);
         dim.GuiInput += e => { if (e is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left }) Close(); };
         AddChild(dim);
 
         _root = new Control { MouseFilter = MouseFilterEnum.Ignore };
         AddChild(_root);
-
         _panel = new PanelContainer { MouseFilter = MouseFilterEnum.Stop };
-        // Sombra profunda levemente tingida pela cor do contexto (brilho sutil e arredondado).
         var sb = new StyleBoxFlat
         {
-            BgColor = new Color("#10161E"), BorderColor = new Color(accent, 0.42f),
-            ShadowColor = new Color(0, 0, 0, 0.7f).Lerp(new Color(accent, 0.7f), 0.18f), ShadowSize = 40, ShadowOffset = new Vector2(0, 12), AntiAliasing = true,
+            BgColor = UiTokens.Surface, BorderColor = UiTokens.BorderStrong,
+            ShadowColor = new Color(0, 0, 0, 0.6f), ShadowSize = 24, ShadowOffset = new Vector2(0, 8),
         };
         sb.SetBorderWidthAll(1);
-        sb.SetCornerRadiusAll(18);
+        sb.BorderWidthTop = 3;
+        sb.BorderColor = UiTokens.BorderStrong;
+        sb.SetCornerRadiusAll(4);
         _panel.AddThemeStyleboxOverride("panel", sb);
-        // Recorta o conteudo (banner) pelos cantos arredondados do painel.
         _panel.ClipChildren = ClipChildrenMode.AndDraw;
         _root.AddChild(_panel);
 
@@ -57,56 +54,77 @@ public partial class ModalFrame : Control
         col.AddThemeConstantOverride("separation", 0);
         _panel.AddChild(col);
 
-        // Banner do cabecalho: arte procedural atras do conteudo.
+        // Faixa de cor do contexto no topo.
+        col.AddChild(new ColorRect { Color = accent, CustomMinimumSize = new Vector2(0, 3) });
+
+        // Cabecalho: identidade a esquerda, acoes a direita.
         var head = new PanelContainer();
-        head.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
+        var hsb = new StyleBoxFlat { BgColor = UiTokens.SurfaceHeader, ContentMarginLeft = 20, ContentMarginRight = 14, ContentMarginTop = 14, ContentMarginBottom = 12 };
+        head.AddThemeStyleboxOverride("panel", hsb);
         col.AddChild(head);
-        head.AddChild(new HeaderArt(accent) { MouseFilter = MouseFilterEnum.Ignore });
         var headRow = new HBoxContainer();
-        headRow.AddThemeConstantOverride("separation", 18);
-        head.AddChild(Margin(headRow, 30, 22, 24, 18));
-        Header = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill, CustomMinimumSize = new Vector2(560, 0) };
-        Header.AddThemeConstantOverride("separation", 6);
+        headRow.AddThemeConstantOverride("separation", 16);
+        head.AddChild(headRow);
+        Header = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill, CustomMinimumSize = new Vector2(480, 0) };
+        Header.AddThemeConstantOverride("separation", 4);
         headRow.AddChild(Header);
-        var close = new Button { Text = "✕", TooltipText = "Fechar (Esc)", CustomMinimumSize = new Vector2(38, 38), FocusMode = FocusModeEnum.None, SizeFlagsVertical = SizeFlags.ShrinkBegin };
-        var cn = ThemeFactory.Box(new Color(UiTokens.Background, 0.55f), 0, border: UiTokens.BorderStrong, radius: 19);
-        var ch = ThemeFactory.Box(new Color(UiTokens.Danger, 0.85f), 0, border: UiTokens.Danger, radius: 19);
-        close.AddThemeStyleboxOverride("normal", cn);
-        close.AddThemeStyleboxOverride("hover", ch);
-        close.AddThemeStyleboxOverride("pressed", ch);
+        var right = new VBoxContainer();
+        right.AddThemeConstantOverride("separation", 8);
+        headRow.AddChild(right);
+        var closeRow = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.End };
+        var close = new Button { Text = "✕  FECHAR", TooltipText = "Fechar (Esc)", FocusMode = FocusModeEnum.None, CustomMinimumSize = new Vector2(0, 24) };
+        close.AddThemeFontOverride("font", UiFonts.CondensedBold);
+        close.AddThemeFontSizeOverride("font_size", 11);
+        close.AddThemeStyleboxOverride("normal", ThemeFactory.Box(new Color(0, 0, 0, 0), 8, radius: 2));
+        close.AddThemeStyleboxOverride("hover", ThemeFactory.Box(new Color(UiTokens.Danger, 0.25f), 8, border: UiTokens.Danger, radius: 2));
+        close.AddThemeColorOverride("font_color", UiTokens.TextSecondary);
         close.Pressed += Close;
-        headRow.AddChild(close);
+        closeRow.AddChild(close);
+        right.AddChild(closeRow);
+        Actions = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.End };
+        Actions.AddThemeConstantOverride("separation", 6);
+        right.AddChild(Actions);
 
-        Actions = new HBoxContainer();
-        Actions.AddThemeConstantOverride("separation", 8);
-        col.AddChild(Margin(Actions, 30, 22, 14, 0));
+        // Faixa de dados-chave (estilo barra de informacoes).
+        var factsBar = new PanelContainer();
+        var fsb = new StyleBoxFlat { BgColor = UiTokens.SurfaceRaised, BorderColor = UiTokens.Border, BorderWidthTop = 1, BorderWidthBottom = 1, ContentMarginLeft = 20, ContentMarginRight = 20, ContentMarginTop = 6, ContentMarginBottom = 6 };
+        factsBar.AddThemeStyleboxOverride("panel", fsb);
+        _facts = new HBoxContainer();
+        _facts.AddThemeConstantOverride("separation", 0);
+        factsBar.AddChild(_facts);
+        col.AddChild(factsBar);
 
-        // Abas com indicador deslizante.
-        var tabsHolder = new Control { CustomMinimumSize = new Vector2(0, 44) };
+        // Abas planas.
+        var tabsBg = new PanelContainer();
+        tabsBg.AddThemeStyleboxOverride("panel", new StyleBoxFlat { BgColor = UiTokens.Surface, BorderColor = UiTokens.Border, BorderWidthBottom = 1, ContentMarginLeft = 14, ContentMarginRight = 14 });
         _tabBar = new HBoxContainer();
-        _tabBar.AddThemeConstantOverride("separation", 6);
-        _tabBar.SetAnchorsPreset(LayoutPreset.FullRect);
-        tabsHolder.AddChild(_tabBar);
-        _indicator = new ColorRect { Color = accent.Lerp(UiTokens.Accent, 0.5f), Size = new Vector2(0, 3), MouseFilter = MouseFilterEnum.Ignore };
-        tabsHolder.AddChild(_indicator);
-        col.AddChild(Margin(tabsHolder, 24, 22, 12, 0));
-        col.AddChild(new ColorRect { Color = UiTokens.Border, CustomMinimumSize = new Vector2(0, 1) });
+        _tabBar.AddThemeConstantOverride("separation", 2);
+        tabsBg.AddChild(_tabBar);
+        col.AddChild(tabsBg);
 
         _scroll = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, SizeFlagsVertical = SizeFlags.ExpandFill };
-        var body = Margin(_scroll, 30, 22, 20, 24);
-        body.SizeFlagsVertical = SizeFlags.ExpandFill;
+        var body = new MarginContainer { SizeFlagsVertical = SizeFlags.ExpandFill };
+        body.AddThemeConstantOverride("margin_left", 16);
+        body.AddThemeConstantOverride("margin_right", 14);
+        body.AddThemeConstantOverride("margin_top", 14);
+        body.AddThemeConstantOverride("margin_bottom", 14);
+        body.AddChild(_scroll);
         col.AddChild(body);
     }
 
-    private static MarginContainer Margin(Control child, int l, int r, int t, int b)
+    /// <summary>Celula da faixa de dados-chave (rotulo pequeno + valor). Tooltip estruturado opcional.</summary>
+    public void Fact(string label, string value, Color? color = null, string tooltip = "")
     {
-        var m = new MarginContainer();
-        m.AddThemeConstantOverride("margin_left", l);
-        m.AddThemeConstantOverride("margin_right", r);
-        m.AddThemeConstantOverride("margin_top", t);
-        m.AddThemeConstantOverride("margin_bottom", b);
-        m.AddChild(child);
-        return m;
+        if (_facts.GetChildCount() > 0)
+            _facts.AddChild(new ColorRect { Color = UiTokens.Border, CustomMinimumSize = new Vector2(1, 0), SizeFlagsVertical = SizeFlags.Fill });
+        var cell = new TipPanel { TooltipText = tooltip, MouseFilter = tooltip.Length > 0 ? MouseFilterEnum.Stop : MouseFilterEnum.Ignore };
+        cell.AddThemeStyleboxOverride("panel", new StyleBoxEmpty { ContentMarginLeft = 12, ContentMarginRight = 14 });
+        var c = new VBoxContainer();
+        c.AddThemeConstantOverride("separation", -1);
+        c.AddChild(ThemeFactory.Text(label.ToUpperInvariant(), 10, UiTokens.TextSecondary, UiFonts.CondensedSemiBold));
+        c.AddChild(ThemeFactory.Text(value, 14, color ?? UiTokens.TextPrimary, UiFonts.Numbers));
+        cell.AddChild(c);
+        _facts.AddChild(cell);
     }
 
     public override void _Ready()
@@ -114,54 +132,47 @@ public partial class ModalFrame : Control
         Layout();
         GetViewport().SizeChanged += Layout;
         _root.Modulate = new Color(1, 1, 1, 0);
-        _root.Scale = new Vector2(0.965f, 0.965f);
-        _root.Position += new Vector2(0, 10);
-        var tw = CreateTween().SetParallel().SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Cubic);
-        tw.TweenProperty(_root, "modulate:a", 1f, 0.18f);
-        tw.TweenProperty(_root, "scale", Vector2.One, 0.22f);
-        tw.TweenProperty(_root, "position:y", _root.Position.Y - 10, 0.22f);
+        var tw = CreateTween().SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Cubic);
+        tw.TweenProperty(_root, "modulate:a", 1f, 0.14f);
     }
 
     private void Layout()
     {
         var vp = GetViewportRect().Size;
-        var size = new Vector2(Mathf.Min(1100, vp.X - 64), Mathf.Min(760, vp.Y - 56));
+        var size = new Vector2(Mathf.Min(1240, vp.X - 48), Mathf.Min(800, vp.Y - 48));
         _root.Size = size;
         _root.Position = (vp - size) / 2f;
-        _root.PivotOffset = size / 2f;
         _panel.Size = size;
     }
-
-    // Textos com quebra calculam a altura minima so depois de ter largura: reaplica o
-    // tamanho nos primeiros quadros para o painel nao crescer alem da tela.
-    private int _settleFrames = 4;
 
     public override void _Process(double delta)
     {
         if (_settleFrames <= 0) return;
         _settleFrames--;
         Layout();
-        CallDeferred(nameof(MoveIndicator), false);
     }
 
     public void AddTab(string name, Func<Control> build, bool live = false)
     {
         int index = _tabs.Count;
         _tabs.Add((name, build, live));
-        var b = new Button { Text = name, ToggleMode = true, FocusMode = FocusModeEnum.None, CustomMinimumSize = new Vector2(0, 40) };
-        b.AddThemeFontOverride("font", UiFonts.SemiBold);
-        b.AddThemeFontSizeOverride("font_size", 14);
-        var clear = new StyleBoxFlat { BgColor = new Color(0, 0, 0, 0), ContentMarginLeft = 16, ContentMarginRight = 16, ContentMarginTop = 6, ContentMarginBottom = 10 };
-        var hover = new StyleBoxFlat { BgColor = new Color(UiTokens.SurfaceHover, 0.55f), ContentMarginLeft = 16, ContentMarginRight = 16, ContentMarginTop = 6, ContentMarginBottom = 10 };
-        hover.SetCornerRadiusAll(8);
-        b.AddThemeStyleboxOverride("normal", clear);
-        b.AddThemeStyleboxOverride("hover", hover);
-        b.AddThemeStyleboxOverride("pressed", clear);
-        b.AddThemeStyleboxOverride("hover_pressed", hover);
+        var b = new Button { Text = name.ToUpperInvariant(), ToggleMode = true, FocusMode = FocusModeEnum.None, CustomMinimumSize = new Vector2(0, 34) };
+        b.AddThemeFontOverride("font", UiFonts.CondensedBold);
+        b.AddThemeFontSizeOverride("font_size", 13);
+        StyleBoxFlat Tab(bool active, bool hover) => new()
+        {
+            BgColor = hover ? UiTokens.SurfaceHover : new Color(0, 0, 0, 0),
+            BorderColor = UiTokens.Accent, BorderWidthBottom = active ? 2 : 0,
+            ContentMarginLeft = 14, ContentMarginRight = 14, ContentMarginTop = 6, ContentMarginBottom = 6,
+        };
+        b.AddThemeStyleboxOverride("normal", Tab(false, false));
+        b.AddThemeStyleboxOverride("hover", Tab(false, true));
+        b.AddThemeStyleboxOverride("pressed", Tab(true, false));
+        b.AddThemeStyleboxOverride("hover_pressed", Tab(true, true));
         b.AddThemeColorOverride("font_color", UiTokens.TextSecondary);
         b.AddThemeColorOverride("font_hover_color", UiTokens.TextPrimary);
-        b.AddThemeColorOverride("font_pressed_color", UiTokens.TextPrimary);
-        b.AddThemeColorOverride("font_hover_pressed_color", UiTokens.TextPrimary);
+        b.AddThemeColorOverride("font_pressed_color", UiTokens.AccentSoft);
+        b.AddThemeColorOverride("font_hover_pressed_color", UiTokens.AccentSoft);
         b.Pressed += () => SelectTab(index);
         _tabButtons.Add(b);
         _tabBar.AddChild(b);
@@ -173,24 +184,6 @@ public partial class ModalFrame : Control
         _current = index;
         for (int i = 0; i < _tabButtons.Count; i++) _tabButtons[i].SetPressedNoSignal(i == index);
         Rebuild(resetScroll: true);
-        CallDeferred(nameof(MoveIndicator), true);
-    }
-
-    private void MoveIndicator(bool animate)
-    {
-        if (_current < 0 || _current >= _tabButtons.Count) return;
-        var b = _tabButtons[_current];
-        var target = new Vector2(b.Position.X + 12, b.Size.Y + 1);
-        var size = new Vector2(Mathf.Max(0, b.Size.X - 24), 3);
-        if (!animate || _indicator.Size.X < 1)
-        {
-            _indicator.Position = target;
-            _indicator.Size = size;
-            return;
-        }
-        var tw = CreateTween().SetParallel().SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Cubic);
-        tw.TweenProperty(_indicator, "position", target, 0.22f);
-        tw.TweenProperty(_indicator, "size", size, 0.22f);
     }
 
     public void RefreshLive()
@@ -205,13 +198,7 @@ public partial class ModalFrame : Control
         var content = _tabs[_current].Build();
         content.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         _scroll.AddChild(content);
-        if (resetScroll)
-        {
-            content.Modulate = new Color(1, 1, 1, 0);
-            var tw = CreateTween().SetEase(Tween.EaseType.Out).SetTrans(Tween.TransitionType.Cubic);
-            tw.TweenProperty(content, "modulate:a", 1f, 0.2f);
-        }
-        else CallDeferred(nameof(RestoreScroll), scroll);
+        if (!resetScroll) CallDeferred(nameof(RestoreScroll), scroll);
     }
 
     private void RestoreScroll(int value) => _scroll.ScrollVertical = value;
@@ -231,71 +218,59 @@ public partial class ModalFrame : Control
         }
     }
 
-    // ---------- Blocos reutilizaveis ----------
+    // ---------- Blocos reutilizaveis (densos) ----------
 
-    /// <summary>Titulo de secao com losango na cor de destaque.</summary>
-    public static Control SectionTitle(string title, Color? accent = null)
-    {
-        var row = new HBoxContainer();
-        row.AddThemeConstantOverride("separation", 8);
-        row.AddChild(ThemeFactory.Text("◆", 10, accent ?? UiTokens.Accent));
-        row.AddChild(ThemeFactory.Section(title));
-        return row;
-    }
-
+    /// <summary>Secao com faixa de titulo escura (estilo painel de dados).</summary>
     public static PanelContainer Card(string title, Control body, Color? accent = null)
     {
         var card = new PanelContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
-        var sb = new StyleBoxFlat
-        {
-            BgColor = new Color("#151D28"), BorderColor = UiTokens.Border,
-            ShadowColor = new Color(0, 0, 0, 0.32f), ShadowSize = 10, ShadowOffset = new Vector2(0, 4),
-            ContentMarginLeft = 18, ContentMarginRight = 18, ContentMarginTop = 16, ContentMarginBottom = 16, AntiAliasing = true,
-        };
+        var sb = new StyleBoxFlat { BgColor = UiTokens.SurfaceRaised, BorderColor = UiTokens.Border };
         sb.SetBorderWidthAll(1);
-        sb.SetCornerRadiusAll(12);
-        if (accent.HasValue) { sb.BorderWidthTop = 3; sb.BorderColor = new Color(accent.Value, 0.75f); }
+        sb.SetCornerRadiusAll(3);
         card.AddThemeStyleboxOverride("panel", sb);
         var col = new VBoxContainer();
-        col.AddThemeConstantOverride("separation", 12);
-        col.AddChild(SectionTitle(title, accent));
-        col.AddChild(body);
+        col.AddThemeConstantOverride("separation", 0);
+        var bar = new PanelContainer();
+        var bsb = new StyleBoxFlat
+        {
+            BgColor = UiTokens.SurfaceHeader, BorderColor = accent ?? UiTokens.Border, BorderWidthLeft = accent.HasValue ? 3 : 0, BorderWidthBottom = 0,
+            ContentMarginLeft = 10, ContentMarginRight = 10, ContentMarginTop = 5, ContentMarginBottom = 5,
+        };
+        bsb.CornerRadiusTopLeft = 3; bsb.CornerRadiusTopRight = 3;
+        bar.AddThemeStyleboxOverride("panel", bsb);
+        bar.AddChild(ThemeFactory.Section(title));
+        col.AddChild(bar);
+        var m = new MarginContainer();
+        m.AddThemeConstantOverride("margin_left", 10);
+        m.AddThemeConstantOverride("margin_right", 10);
+        m.AddThemeConstantOverride("margin_top", 8);
+        m.AddThemeConstantOverride("margin_bottom", 10);
+        m.AddChild(body);
+        col.AddChild(m);
         card.AddChild(col);
         return card;
     }
 
     public static Button Action(string text, string tip, Action onPress, bool primary = false, bool enabled = true)
     {
-        var b = new Button { Text = text, TooltipText = tip, Disabled = !enabled, FocusMode = FocusModeEnum.None, CustomMinimumSize = new Vector2(0, 38) };
-        b.AddThemeFontOverride("font", UiFonts.SemiBold);
+        var b = new TipButton { Text = text, TooltipText = tip, Disabled = !enabled, FocusMode = FocusModeEnum.None, CustomMinimumSize = new Vector2(0, 26) };
+        b.AddThemeFontSizeOverride("font_size", 12);
         if (primary)
         {
-            var n = ThemeFactory.Box(UiTokens.Accent, 16, border: UiTokens.AccentSoft, radius: 9);
-            n.ShadowColor = new Color(UiTokens.Accent, 0.35f);
-            n.ShadowSize = 8;
-            var h = ThemeFactory.Box(UiTokens.AccentSoft, 16, border: UiTokens.AccentSoft, radius: 9);
-            h.ShadowColor = new Color(UiTokens.Accent, 0.5f);
-            h.ShadowSize = 12;
-            b.AddThemeStyleboxOverride("normal", n);
-            b.AddThemeStyleboxOverride("hover", h);
-            b.AddThemeStyleboxOverride("pressed", h);
+            b.AddThemeStyleboxOverride("normal", ThemeFactory.Box(new Color(UiTokens.Accent, 0.9f), 10, border: UiTokens.AccentSoft, radius: 3));
+            b.AddThemeStyleboxOverride("hover", ThemeFactory.Box(UiTokens.AccentSoft, 10, border: UiTokens.AccentSoft, radius: 3));
             b.AddThemeColorOverride("font_color", UiTokens.Background);
             b.AddThemeColorOverride("font_hover_color", UiTokens.Background);
-            b.AddThemeColorOverride("font_pressed_color", UiTokens.Background);
-        }
-        else
-        {
-            b.AddThemeStyleboxOverride("normal", ThemeFactory.Box(new Color(UiTokens.SurfaceRaised, 0.75f), 16, border: UiTokens.BorderStrong, radius: 9));
-            b.AddThemeStyleboxOverride("hover", ThemeFactory.Box(UiTokens.SurfaceHover, 16, border: UiTokens.AccentSoft, radius: 9));
         }
         b.Pressed += onPress;
         return b;
     }
 
-    public static HBoxContainer Bar(string label, float value, float max, Color color, string valueText, float labelWidth = 170)
+    /// <summary>Linha rotulo / barra fina / valor.</summary>
+    public static HBoxContainer Bar(string label, float value, float max, Color color, string valueText, float labelWidth = 150)
     {
         var row = new HBoxContainer();
-        row.AddThemeConstantOverride("separation", 10);
+        row.AddThemeConstantOverride("separation", 8);
         if (labelWidth > 0)
         {
             var l = ThemeFactory.Text(label, UiTokens.FontSmall, UiTokens.TextPrimary);
@@ -305,41 +280,52 @@ public partial class ModalFrame : Control
         var bar = new ProgressBar
         {
             MinValue = 0, MaxValue = Math.Max(1, max), Value = Math.Clamp(value, 0, max), ShowPercentage = false,
-            SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsVertical = SizeFlags.ShrinkCenter, CustomMinimumSize = new Vector2(0, 8),
+            SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsVertical = SizeFlags.ShrinkCenter, CustomMinimumSize = new Vector2(0, 5),
         };
-        var fill = ThemeFactory.Box(color, 0, radius: 4);
+        var fill = ThemeFactory.Box(color, 0, radius: 1);
         fill.ContentMarginTop = fill.ContentMarginBottom = 0;
         bar.AddThemeStyleboxOverride("fill", fill);
         row.AddChild(bar);
-        var v = ThemeFactory.Text(valueText, UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Numbers);
-        v.CustomMinimumSize = new Vector2(70, 0);
+        var v = ThemeFactory.Text(valueText, UiTokens.FontSmall, UiTokens.TextPrimary, UiFonts.Numbers);
+        v.CustomMinimumSize = new Vector2(64, 0);
         v.HorizontalAlignment = HorizontalAlignment.Right;
         row.AddChild(v);
         return row;
     }
 
-    /// <summary>Indicador numerico com barra lateral colorida.</summary>
-    public static PanelContainer Stat(string value, string caption, Color? color = null)
+    /// <summary>Indicador compacto: rotulo condensado em cima, numero grande, cor opcional.</summary>
+    public static PanelContainer Stat(string value, string caption, Color? color = null, string tooltip = "")
     {
-        var tile = new PanelContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
-        var c = color ?? UiTokens.Info;
+        var tile = new TipPanel { SizeFlagsHorizontal = SizeFlags.ExpandFill, TooltipText = tooltip };
         var sb = new StyleBoxFlat
         {
-            BgColor = new Color("#121A24"), BorderColor = new Color(c, 0.85f), BorderWidthLeft = 3,
-            ContentMarginLeft = 14, ContentMarginRight = 12, ContentMarginTop = 10, ContentMarginBottom = 10,
-            ShadowColor = new Color(0, 0, 0, 0.25f), ShadowSize = 6, ShadowOffset = new Vector2(0, 2), AntiAliasing = true,
+            BgColor = UiTokens.SurfaceRaised, BorderColor = UiTokens.Border,
+            ContentMarginLeft = 10, ContentMarginRight = 10, ContentMarginTop = 6, ContentMarginBottom = 7,
         };
-        sb.SetCornerRadiusAll(9);
+        sb.BorderWidthTop = 2;
+        sb.BorderColor = color ?? UiTokens.BorderStrong;
+        sb.SetCornerRadiusAll(3);
         tile.AddThemeStyleboxOverride("panel", sb);
         var col = new VBoxContainer();
-        col.AddThemeConstantOverride("separation", 0);
-        col.AddChild(ThemeFactory.Text(value, 22, color ?? UiTokens.TextPrimary, UiFonts.Numbers));
-        col.AddChild(ThemeFactory.Text(caption, UiTokens.FontCaption, UiTokens.TextSecondary));
+        col.AddThemeConstantOverride("separation", -1);
+        col.AddChild(ThemeFactory.Text(caption.ToUpperInvariant(), 10, UiTokens.TextSecondary, UiFonts.CondensedSemiBold));
+        col.AddChild(ThemeFactory.Text(value, 18, color ?? UiTokens.TextPrimary, UiFonts.Numbers));
         tile.AddChild(col);
         return tile;
     }
 
-    public static HBoxContainer Row(int separation = 14, params Control[] items)
+    /// <summary>Linha de dado: rotulo a esquerda, valor a direita (tabela de 2 colunas).</summary>
+    public static Control KeyValue(string key, string value, Color? color = null)
+    {
+        var row = new HBoxContainer();
+        var k = ThemeFactory.Text(key, UiTokens.FontSmall, UiTokens.TextSecondary);
+        k.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        row.AddChild(k);
+        row.AddChild(ThemeFactory.Text(value, UiTokens.FontSmall, color ?? UiTokens.TextPrimary, UiFonts.Numbers));
+        return row;
+    }
+
+    public static HBoxContainer Row(int separation = 10, params Control[] items)
     {
         var r = new HBoxContainer();
         r.AddThemeConstantOverride("separation", separation);
@@ -347,48 +333,11 @@ public partial class ModalFrame : Control
         return r;
     }
 
-    public static VBoxContainer Column(int separation = 14, params Control[] items)
+    public static VBoxContainer Column(int separation = 10, params Control[] items)
     {
         var c = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
         c.AddThemeConstantOverride("separation", separation);
         foreach (var i in items) c.AddChild(i);
         return c;
-    }
-}
-
-/// <summary>Arte do banner: gradiente na cor do contexto, feixes de luz, pontilhado e filete inferior.</summary>
-public partial class HeaderArt : Control
-{
-    private readonly Color _accent;
-
-    public HeaderArt(Color accent)
-    {
-        _accent = accent;
-        SetAnchorsPreset(LayoutPreset.FullRect);
-    }
-
-    public override void _Draw()
-    {
-        var s = Size;
-        // Gradiente horizontal suave (cores por vertice, sem faixas).
-        var a0 = new Color(_accent, 0.30f);
-        var a1 = new Color(_accent, 0.10f);
-        var a2 = new Color(_accent, 0.02f);
-        DrawPolygon(new[] { new Vector2(0, 0), new Vector2(s.X * 0.45f, 0), new Vector2(s.X * 0.45f, s.Y), new Vector2(0, s.Y) }, new[] { a0, a1, a1, a0 });
-        DrawPolygon(new[] { new Vector2(s.X * 0.45f, 0), new Vector2(s.X, 0), new Vector2(s.X, s.Y), new Vector2(s.X * 0.45f, s.Y) }, new[] { a1, a2, a2, a1 });
-        // Feixes diagonais.
-        for (int i = 0; i < 5; i++)
-        {
-            float x = s.X * (0.18f + i * 0.17f);
-            var pts = new[] { new Vector2(x, 0), new Vector2(x + 60, 0), new Vector2(x - 40, s.Y), new Vector2(x - 100, s.Y) };
-            DrawColoredPolygon(pts, new Color(1, 1, 1, 0.018f + 0.01f * (i % 2)));
-        }
-        // Pontilhado discreto.
-        for (float y = 10; y < s.Y; y += 14)
-            for (float x = s.X * 0.55f + (y % 28 == 10 ? 0 : 7); x < s.X; x += 14)
-                DrawCircle(new Vector2(x, y), 1f, new Color(1, 1, 1, 0.035f));
-        // Cantos superiores arredondados nao sao recortados pelo pai: mascara simples nas bordas.
-        DrawLine(new Vector2(0, s.Y - 1), new Vector2(s.X, s.Y - 1), new Color(_accent, 0.45f), 1f);
-        DrawLine(new Vector2(0, s.Y), new Vector2(s.X * 0.35f, s.Y), new Color(_accent, 0.9f), 2f);
     }
 }

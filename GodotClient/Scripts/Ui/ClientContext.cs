@@ -14,6 +14,8 @@ public sealed class ClientContext
     public ZoneLayout Layout { get; init; } = null!;
     public IReadOnlyList<PersonInfo> Persons { get; init; } = Array.Empty<PersonInfo>();
     public Func<SimSnapshot> Snapshot { get; init; } = null!;
+    /// <summary>Series amostradas (ultimas 24 h) para graficos.</summary>
+    public MetricsHistory Metrics { get; init; } = new();
     /// <summary>Eventos recentes ligados a pessoa (mais novos primeiro).</summary>
     public Func<int, IReadOnlyList<SimEvent>> PersonHistory { get; init; } = _ => Array.Empty<SimEvent>();
     public Action<int, bool> FocusPerson { get; init; } = (_, _) => { };
