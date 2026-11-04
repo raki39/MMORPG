@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "description": "Cenário M0: 100 pessoas geradas; o servidor abre na primeira manhã; o segundo comando idêntico é proposital e deve ser rejeitado e registrado. Sem sessões ainda (M2).",
+  "populationSize": 100,
+  "commands": [
+    { "at": "D0 08:00", "type": "set_server_open", "args": { "open": true } },
+    { "at": "D0 08:00", "type": "set_server_open", "args": { "open": true } }
+  ]
+}

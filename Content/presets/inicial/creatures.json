@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "creatures": [
+    {
+      "id": "lobo_cinzento", "version": 1, "name": "Lobo Cinzento", "kind": "melee", "level": 3,
+      "health": 90, "damage": 9, "armor": 6, "attackIntervalMs": 2000, "rangeMeters": 2, "respawnSeconds": 60,
+      "recommendedGroupSize": 1, "experience": 40, "goldMinCopper": 1, "goldMaxCopper": 5,
+      "regionIds": [ "floresta_sussurrante" ],
+      "loot": [
+        { "itemId": "couro_de_lobo", "chancePermille": 600, "min": 1, "max": 2 },
+        { "itemId": "presa_de_lobo", "chancePermille": 400, "min": 1, "max": 1 }
+      ]
+    },
+    {
+      "id": "aranha_tecela", "version": 1, "name": "Aranha Tecelã", "kind": "ranged", "level": 5,
+      "health": 110, "damage": 12, "armor": 4, "attackIntervalMs": 2500, "rangeMeters": 15, "respawnSeconds": 90,
+      "recommendedGroupSize": 1, "experience": 65, "goldMinCopper": 2, "goldMaxCopper": 8,
+      "regionIds": [ "floresta_sussurrante" ],
+      "loot": [
+        { "itemId": "seda_de_aranha", "chancePermille": 450, "min": 1, "max": 2 },
+        { "itemId": "pocao_de_vida_menor", "chancePermille": 60, "min": 1, "max": 1 }
+      ]
+    },
+    {
+      "id": "goblin_mineiro", "version": 1, "name": "Goblin Mineiro", "kind": "melee", "level": 8,
+      "health": 170, "damage": 18, "armor": 14, "attackIntervalMs": 2000, "rangeMeters": 2, "respawnSeconds": 120,
+      "recommendedGroupSize": 1, "experience": 120, "goldMinCopper": 6, "goldMaxCopper": 18,
+      "regionIds": [ "mina_velha" ],
+      "loot": [
+        { "itemId": "minerio_ferro", "chancePermille": 350, "min": 1, "max": 3 },
+        { "itemId": "espada_de_aco", "chancePermille": 8, "min": 1, "max": 1 }
+      ]
+    },
+    {
+      "id": "goblin_xama", "version": 1, "name": "Goblin Xamã", "kind": "support", "level": 10,
+      "health": 140, "damage": 14, "armor": 8, "attackIntervalMs": 2500, "rangeMeters": 20, "respawnSeconds": 150,
+      "recommendedGroupSize": 2, "experience": 160, "goldMinCopper": 8, "goldMaxCopper": 24,
+      "regionIds": [ "mina_velha" ],
+      "loot": [
+        { "itemId": "pocao_de_mana_menor", "chancePermille": 150, "min": 1, "max": 1 },
+        { "itemId": "minerio_prata", "chancePermille": 200, "min": 1, "max": 1 }
+      ]
+    },
+    {
+      "id": "esqueleto_guardiao", "version": 1, "name": "Esqueleto Guardião", "kind": "melee", "level": 12,
+      "health": 260, "damage": 24, "armor": 22, "attackIntervalMs": 2200, "rangeMeters": 2, "respawnSeconds": 150,
+      "recommendedGroupSize": 2, "experience": 220, "goldMinCopper": 12, "goldMaxCopper": 35,
+      "regionIds": [ "ruinas_sombrias" ],
+      "loot": [
+        { "itemId": "osso_antigo", "chancePermille": 550, "min": 1, "max": 3 },
+        { "itemId": "cetro_da_luz", "chancePermille": 6, "min": 1, "max": 1 },
+        { "itemId": "manto_runico", "chancePermille": 6, "min": 1, "max": 1 }
+      ]
+    },
+    {
+      "id": "espectro_arqueiro", "version": 1, "name": "Espectro Arqueiro", "kind": "ranged", "level": 14,
+      "health": 210, "damage": 28, "armor": 10, "attackIntervalMs": 2800, "rangeMeters": 25, "respawnSeconds": 180,
+      "recommendedGroupSize": 2, "experience": 260, "goldMinCopper": 15, "goldMaxCopper": 40,
+      "regionIds": [ "ruinas_sombrias" ],
+      "loot": [
+        { "itemId": "cristal_sombrio", "chancePermille": 120, "min": 1, "max": 1 },
+        { "itemId": "cajado_runico", "chancePermille": 6, "min": 1, "max": 1 }
+      ]
+    },
+    {
+      "id": "rei_goblin", "version": 1, "name": "Rei Goblin", "kind": "boss", "level": 15,
+      "health": 6000, "damage": 70, "armor": 40, "attackIntervalMs": 2000, "rangeMeters": 3, "respawnSeconds": 3600,
+      "recommendedGroupSize": 5, "experience": 2500, "goldMinCopper": 400, "goldMaxCopper": 900,
+      "regionIds": [ "covil_do_rei_goblin" ],
+      "loot": [
+        { "itemId": "coroa_do_rei_goblin", "chancePermille": 150, "min": 1, "max": 1 },
+        { "itemId": "minerio_prata", "chancePermille": 1000, "min": 3, "max": 6 },
+        { "itemId": "pergaminho_de_retorno", "chancePermille": 500, "min": 1, "max": 2 }
+      ]
+    }
+  ]
+}

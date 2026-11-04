@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    { "id": "espada_curta", "version": 1, "name": "Espada Curta", "category": "weapon", "rarity": "common", "levelRequirement": 1, "maxStack": 1, "baseValueCopper": 120, "stats": { "power": 4 }, "classIds": [ "guerreiro" ] },
+    { "id": "espada_de_aco", "version": 1, "name": "Espada de Aço", "category": "weapon", "rarity": "uncommon", "levelRequirement": 8, "maxStack": 1, "baseValueCopper": 1500, "stats": { "power": 12 }, "classIds": [ "guerreiro" ] },
+    { "id": "cajado_aprendiz", "version": 1, "name": "Cajado do Aprendiz", "category": "weapon", "rarity": "common", "levelRequirement": 1, "maxStack": 1, "baseValueCopper": 120, "stats": { "intelligence": 4 }, "classIds": [ "mago" ] },
+    { "id": "cajado_runico", "version": 1, "name": "Cajado Rúnico", "category": "weapon", "rarity": "rare", "levelRequirement": 12, "maxStack": 1, "baseValueCopper": 4200, "stats": { "intelligence": 18, "resource": 40 }, "classIds": [ "mago" ] },
+    { "id": "maca_sagrada", "version": 1, "name": "Maça Sagrada", "category": "weapon", "rarity": "common", "levelRequirement": 1, "maxStack": 1, "baseValueCopper": 120, "stats": { "intelligence": 3, "power": 2 }, "classIds": [ "sacerdote" ] },
+    { "id": "cetro_da_luz", "version": 1, "name": "Cetro da Luz", "category": "weapon", "rarity": "rare", "levelRequirement": 12, "maxStack": 1, "baseValueCopper": 4200, "stats": { "intelligence": 15, "resource": 60 }, "classIds": [ "sacerdote" ] },
+    { "id": "armadura_de_couro", "version": 1, "name": "Armadura de Couro", "category": "armor", "rarity": "common", "levelRequirement": 1, "maxStack": 1, "baseValueCopper": 150, "stats": { "armor": 8 } },
+    { "id": "cota_de_malha", "version": 1, "name": "Cota de Malha", "category": "armor", "rarity": "uncommon", "levelRequirement": 8, "maxStack": 1, "baseValueCopper": 1800, "stats": { "armor": 22, "health": 30 }, "classIds": [ "guerreiro" ] },
+    { "id": "manto_do_aprendiz", "version": 1, "name": "Manto do Aprendiz", "category": "armor", "rarity": "common", "levelRequirement": 1, "maxStack": 1, "baseValueCopper": 140, "stats": { "armor": 3, "resource": 20 }, "classIds": [ "mago", "sacerdote" ] },
+    { "id": "manto_runico", "version": 1, "name": "Manto Rúnico", "category": "armor", "rarity": "rare", "levelRequirement": 12, "maxStack": 1, "baseValueCopper": 3900, "stats": { "armor": 10, "intelligence": 8, "resource": 50 }, "classIds": [ "mago", "sacerdote" ] },
+    { "id": "coroa_do_rei_goblin", "version": 1, "name": "Coroa do Rei Goblin", "category": "armor", "rarity": "epic", "levelRequirement": 15, "maxStack": 1, "baseValueCopper": 12000, "stats": { "armor": 18, "health": 60, "power": 6, "intelligence": 6 } },
+    { "id": "couro_de_lobo", "version": 1, "name": "Couro de Lobo", "category": "material", "rarity": "common", "levelRequirement": 0, "maxStack": 50, "baseValueCopper": 8 },
+    { "id": "presa_de_lobo", "version": 1, "name": "Presa de Lobo", "category": "material", "rarity": "common", "levelRequirement": 0, "maxStack": 50, "baseValueCopper": 5 },
+    { "id": "seda_de_aranha", "version": 1, "name": "Seda de Aranha", "category": "material", "rarity": "uncommon", "levelRequirement": 0, "maxStack": 50, "baseValueCopper": 18 },
+    { "id": "erva_curativa", "version": 1, "name": "Erva Curativa", "category": "material", "rarity": "common", "levelRequirement": 0, "maxStack": 50, "baseValueCopper": 6 },
+    { "id": "minerio_ferro", "version": 1, "name": "Minério de Ferro", "category": "material", "rarity": "common", "levelRequirement": 0, "maxStack": 50, "baseValueCopper": 12 },
+    { "id": "minerio_prata", "version": 1, "name": "Minério de Prata", "category": "material", "rarity": "uncommon", "levelRequirement": 0, "maxStack": 50, "baseValueCopper": 35 },
+    { "id": "cristal_sombrio", "version": 1, "name": "Cristal Sombrio", "category": "material", "rarity": "rare", "levelRequirement": 0, "maxStack": 20, "baseValueCopper": 90 },
+    { "id": "osso_antigo", "version": 1, "name": "Osso Antigo", "category": "material", "rarity": "common", "levelRequirement": 0, "maxStack": 50, "baseValueCopper": 10 },
+    { "id": "pocao_de_vida_menor", "version": 1, "name": "Poção de Vida Menor", "category": "consumable", "rarity": "common", "levelRequirement": 1, "maxStack": 20, "baseValueCopper": 25, "stats": { "health": 80 } },
+    { "id": "pocao_de_mana_menor", "version": 1, "name": "Poção de Mana Menor", "category": "consumable", "rarity": "common", "levelRequirement": 1, "maxStack": 20, "baseValueCopper": 25, "stats": { "resource": 80 } },
+    { "id": "pao_de_viagem", "version": 1, "name": "Pão de Viagem", "category": "consumable", "rarity": "common", "levelRequirement": 1, "maxStack": 20, "baseValueCopper": 4 },
+    { "id": "pergaminho_de_retorno", "version": 1, "name": "Pergaminho de Retorno", "category": "consumable", "rarity": "uncommon", "levelRequirement": 5, "maxStack": 5, "baseValueCopper": 60 }
+  ]
+}

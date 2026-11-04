@@ -1,0 +1,24 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+.idea/
+TestResults/
+
+# Relatorios gerados pelo runner (reproduziveis a partir de seed + conteudo).
+# Ancorado na raiz: no Windows o git ignora maiusculas e pegaria Simulation.Infrastructure/Reports/.
+/reports/
+
+# Godot
+.godot/
+*.translation
+GameClient/export/
+GameClient/builds/
+mono_crash.*
+
+# Sistema
+Thumbs.db
+desktop.ini
+.DS_Store

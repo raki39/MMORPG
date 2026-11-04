@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Dominio e simulacao em C# puro. PROIBIDO referenciar o Godot (GodotSharp) ou
+    qualquer pacote externo: o Core compila e roda identico no runner, nos testes e no jogo.
+  -->
+  <PropertyGroup>
+    <RootNamespace>Simulation.Core</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Simulation.Tests" />
+  </ItemGroup>
+
+</Project>

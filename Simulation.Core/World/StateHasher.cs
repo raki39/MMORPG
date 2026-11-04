@@ -1,0 +1,107 @@
+using System.Security.Cryptography;
+using System.Text;
+using Simulation.Core.Population;
+
+namespace Simulation.Core.World;
+
+/// <summary>
+/// Hash canonico do estado de dominio (SHA-256, campos em ordem fixa, little-endian).
+/// Usado para detectar divergencias em replays, saves e na comparacao com/sem 3D.
+/// Ao adicionar estado novo ao dominio, inclua-o aqui (e incremente FormatVersion).
+/// </summary>
+public static class StateHasher
+{
+    public const int FormatVersion = 1;
+
+    public static string Compute(WorldState w)
+    {
+        using var h = new Writer();
+        h.Int(FormatVersion);
+        h.Str(w.Content.SourceHash);
+        h.ULong(w.Seed);
+        h.Long(w.Clock.Tick);
+
+        foreach (var kv in w.Rng.States())
+        {
+            h.Str(kv.Key);
+            h.ULong(kv.Value.S0); h.ULong(kv.Value.S1); h.ULong(kv.Value.S2); h.ULong(kv.Value.S3);
+        }
+
+        h.Bool(w.Server.IsOpen);
+        h.Long(w.Server.LastOpenedTick);
+
+        h.Int(w.Persons.Count);
+        foreach (var p in w.Persons) HashPerson(h, p);
+
+        h.Int(w.Accounts.Count);
+        foreach (var a in w.Accounts) { h.Int(a.Id); h.Int(a.PersonId); h.Long(a.CreatedTick); h.Int(a.ActiveCharacterId); }
+
+        h.Int(w.Characters.Count);
+        foreach (var c in w.Characters)
+        {
+            h.Int(c.Id); h.Int(c.AccountId); h.Str(c.Name); h.Str(c.ClassId);
+            h.Int(c.Level); h.Long(c.Experience); h.Long(c.GoldCopper); h.Str(c.RegionId);
+        }
+
+        h.Long(w.Scheduler.NextSequence);
+        foreach (var ev in w.Scheduler.SnapshotOrdered())
+        {
+            h.Long(ev.Tick); h.Long(ev.Sequence); h.Str(ev.Type); h.Long(ev.TargetId); h.Long(ev.Payload);
+        }
+
+        h.Long(w.Commands.NextSequence);
+        foreach (var env in w.Commands.History)
+        {
+            h.Long(env.Sequence); h.Long(env.ScheduledTick); h.Str(env.Command.Type); h.Str(env.Command.Describe());
+            h.Int((int)env.Status); h.Long(env.AppliedTick);
+        }
+
+        h.Long(w.Events.NextEventId);
+        h.Int(w.Today.CommandsApplied); h.Int(w.Today.CommandsRejected); h.Int(w.Today.EventsEmitted);
+        h.Int(w.History.Count);
+
+        return h.Finish();
+    }
+
+    private static void HashPerson(Writer h, Person p)
+    {
+        h.Int(p.Id); h.Str(p.Name); h.Str(p.ProfileId); h.ULong(p.AppearanceSeed);
+        h.Int((int)p.State); h.Int(p.AccountId);
+        var t = p.Traits;
+        h.Int(t.Pve); h.Int(t.Pvp); h.Int(t.Trade); h.Int(t.Exploration); h.Int(t.Socializing);
+        h.Int(t.Sociability); h.Int(t.Aggressiveness); h.Int(t.Patience); h.Int(t.Loyalty); h.Int(t.RiskAversion);
+        h.Int(t.MechanicalSkill); h.Int(t.GameKnowledge); h.Int(t.Coordination);
+        h.Int(t.CheatPropensity); h.Int(t.Opportunism);
+        h.Int(t.LeisureBudgetCentsPerMonth); h.Int(t.WillingnessToPay); h.Int(t.PaidAdvantageSensitivity);
+        h.Int(t.PreferredStartHour); h.Int(t.SessionMinutes); h.Int(t.DaysPerWeek); h.Int(t.WeekendBoost);
+        var m = p.Mood;
+        h.Int(m.Satisfaction); h.Int(m.Fatigue); h.Int(m.Frustration); h.Int(m.Engagement); h.Int(m.ReturnIntention);
+    }
+
+    private sealed class Writer : IDisposable
+    {
+        private readonly IncrementalHash _hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        private readonly byte[] _buf = new byte[8];
+
+        public void Long(long v) { BitConverterLE(unchecked((ulong)v)); _hash.AppendData(_buf, 0, 8); }
+        public void ULong(ulong v) { BitConverterLE(v); _hash.AppendData(_buf, 0, 8); }
+        public void Int(int v) => Long(v);
+        public void Bool(bool v) => Long(v ? 1 : 0);
+
+        public void Str(string s)
+        {
+            var bytes = Encoding.UTF8.GetBytes(s);
+            Long(bytes.Length);
+            _hash.AppendData(bytes);
+        }
+
+        private void BitConverterLE(ulong v)
+        {
+            for (int i = 0; i < 8; i++) _buf[i] = (byte)(v >> (8 * i));
+        }
+
+        public string Finish() => Convert.ToHexString(_hash.GetHashAndReset()).ToLowerInvariant();
+
+        public void Dispose() => _hash.Dispose();
+    }
+}

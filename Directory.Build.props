@@ -1,0 +1,16 @@
+<Project>
+  <!--
+    Configuracoes comuns a todos os projetos .NET do repositorio.
+    .NET 10 (LTS) em todos os projetos, inclusive o cliente Godot 4.7.2 (D-002).
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Deterministic>true</Deterministic>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningsNotAsErrors>NU1901;NU1902;NU1903;NU1904</WarningsNotAsErrors>
+    <SimulatorVersion>0.1.0</SimulatorVersion>
+    <Version>$(SimulatorVersion)</Version>
+  </PropertyGroup>
+</Project>

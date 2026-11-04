@@ -1,0 +1,482 @@
+using System.Globalization;
+using System.Text.RegularExpressions;
+
+namespace Simulation.Core.Content;
+
+public enum IssueSeverity
+{
+    Warning = 0,
+    Error = 1,
+}
+
+/// <summary>Problema de conteudo apontando arquivo e campo exato (ex.: abilities[3].effects[0].type).</summary>
+public sealed class ValidationIssue
+{
+    public ValidationIssue(IssueSeverity severity, string file, string path, string message)
+    {
+        Severity = severity;
+        File = file;
+        Path = path;
+        Message = message;
+    }
+
+    public IssueSeverity Severity { get; }
+    public string File { get; }
+    public string Path { get; }
+    public string Message { get; }
+
+    public override string ToString() =>
+        $"[{(Severity == IssueSeverity.Error ? "ERRO" : "AVISO")}] {File} :: {Path} — {Message}";
+}
+
+/// <summary>
+/// Regras de validacao de conteudo (dominio puro). Conteudo com erro nao pode ser
+/// publicado nem usado para criar mundo. Mensagens em pt-BR para o editor.
+/// </summary>
+public static class ContentValidator
+{
+    public const string WorldFile = "world.json";
+    public const string RegionsFile = "regions.json";
+    public const string ClassesFile = "classes.json";
+    public const string AbilitiesFile = "abilities.json";
+    public const string ItemsFile = "items.json";
+    public const string CreaturesFile = "creatures.json";
+    public const string PopulationFile = "population.json";
+
+    private static readonly Regex IdPattern = new("^[a-z][a-z0-9_]*$", RegexOptions.CultureInvariant);
+
+    public static List<ValidationIssue> Validate(ContentSet set)
+    {
+        var v = new Collector();
+
+        ValidateWorld(set, v);
+        var regionIds = CheckIds(set.Regions, RegionsFile, "regions", v);
+        var classIds = CheckIds(set.Classes, ClassesFile, "classes", v);
+        var abilityIds = CheckIds(set.Abilities, AbilitiesFile, "abilities", v);
+        var itemIds = CheckIds(set.Items, ItemsFile, "items", v);
+        CheckIds(set.Creatures, CreaturesFile, "creatures", v);
+        CheckIds(set.Population.Profiles, PopulationFile, "profiles", v);
+
+        if (!string.IsNullOrEmpty(set.World.StartingRegionId))
+        {
+            var start = set.Regions.FirstOrDefault(r => r.Id == set.World.StartingRegionId);
+            if (start == null)
+                v.Error(WorldFile, "startingRegionId", $"Região '{set.World.StartingRegionId}' não existe.");
+            else if (start.Kind != RegionKinds.City)
+                v.Error(WorldFile, "startingRegionId", "A região inicial precisa ser uma cidade (zona segura).");
+        }
+
+        ValidateRegions(set, regionIds, itemIds, v);
+        ValidateClasses(set, abilityIds, v);
+        ValidateAbilities(set, classIds, v);
+        ValidateItems(set, classIds, v);
+        ValidateCreatures(set, regionIds, itemIds, v);
+        ValidateActivities(set, classIds, itemIds, v);
+        ValidatePopulation(set, v);
+
+        return v.Issues;
+    }
+
+    private static void ValidateWorld(ContentSet set, Collector v)
+    {
+        var w = set.World;
+        if (string.IsNullOrWhiteSpace(w.Id) || !IdPattern.IsMatch(w.Id))
+            v.Error(WorldFile, "id", "ID do mundo inválido (use minúsculas, números e _).");
+        if (w.Version < 1) v.Error(WorldFile, "version", "Versão deve ser >= 1.");
+        if (string.IsNullOrWhiteSpace(w.Name)) v.Error(WorldFile, "name", "Nome do mundo obrigatório.");
+        if (!DateTime.TryParseExact(w.StartDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out _))
+            v.Error(WorldFile, "startDate", $"Data '{w.StartDate}' inválida; use yyyy-MM-dd.");
+        if (string.IsNullOrWhiteSpace(w.StartingRegionId))
+            v.Error(WorldFile, "startingRegionId", "Região inicial obrigatória.");
+        for (int i = 0; i < w.Holidays.Count; i++)
+        {
+            if (TryParseHoliday(w.Holidays[i].Date, out _, out _, out _) == false)
+                v.Error(WorldFile, $"holidays[{i}].date", $"Data '{w.Holidays[i].Date}' inválida; use MM-dd ou yyyy-MM-dd.");
+            if (string.IsNullOrWhiteSpace(w.Holidays[i].Name))
+                v.Error(WorldFile, $"holidays[{i}].name", "Nome do feriado obrigatório.");
+        }
+    }
+
+    /// <summary>Interpreta "MM-dd" (recorrente) ou "yyyy-MM-dd".</summary>
+    public static bool TryParseHoliday(string text, out int month, out int day, out int? year)
+    {
+        month = 0; day = 0; year = null;
+        if (DateTime.TryParseExact(text, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var full))
+        {
+            month = full.Month; day = full.Day; year = full.Year;
+            return true;
+        }
+        // Ano bissexto como referencia para aceitar 02-29 recorrente.
+        if (DateTime.TryParseExact("2000-" + text, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var md))
+        {
+            month = md.Month; day = md.Day;
+            return true;
+        }
+        return false;
+    }
+
+    private static HashSet<string> CheckIds<T>(List<T> items, string file, string root, Collector v) where T : IContentDefinition
+    {
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        for (int i = 0; i < items.Count; i++)
+        {
+            var item = items[i];
+            if (string.IsNullOrWhiteSpace(item.Id) || !IdPattern.IsMatch(item.Id))
+                v.Error(file, $"{root}[{i}].id", $"ID '{item.Id}' inválido (use minúsculas, números e _, iniciando por letra).");
+            else if (!seen.Add(item.Id))
+                v.Error(file, $"{root}[{i}].id", $"ID '{item.Id}' duplicado.");
+            if (item.Version < 1)
+                v.Error(file, $"{root}[{i}].version", "Versão deve ser >= 1.");
+        }
+        return seen;
+    }
+
+    private static void ValidateRegions(ContentSet set, HashSet<string> regionIds, HashSet<string> itemIds, Collector v)
+    {
+        for (int i = 0; i < set.Regions.Count; i++)
+        {
+            var r = set.Regions[i];
+            string p = $"regions[{i}]";
+            v.Require(RegionsFile, p + ".name", r.Name);
+            v.OneOf(RegionsFile, p + ".kind", r.Kind, RegionKinds.All);
+            v.OneOf(RegionsFile, p + ".pvp", r.Pvp, PvpRules.All);
+            if (r.Kind == RegionKinds.City && r.Pvp != PvpRules.None)
+                v.Error(RegionsFile, p + ".pvp", "Cidades são sempre zonas sem PvP.");
+            if (r.LevelMin < 1) v.Error(RegionsFile, p + ".levelMin", "Nível mínimo deve ser >= 1.");
+            if (r.LevelMax < r.LevelMin) v.Error(RegionsFile, p + ".levelMax", "Nível máximo menor que o mínimo.");
+            if (r.Capacity <= 0) v.Error(RegionsFile, p + ".capacity", "Capacidade deve ser > 0.");
+            if (r.Connections.Count == 0 && set.Regions.Count > 1)
+                v.Warning(RegionsFile, p + ".connections", "Região sem conexões fica inacessível.");
+            for (int c = 0; c < r.Connections.Count; c++)
+            {
+                var con = r.Connections[c];
+                string cp = $"{p}.connections[{c}]";
+                if (!regionIds.Contains(con.To))
+                    v.Error(RegionsFile, cp + ".to", $"Região '{con.To}' não existe.");
+                else if (con.To == r.Id)
+                    v.Error(RegionsFile, cp + ".to", "Região não pode se conectar a si mesma.");
+                else
+                {
+                    var other = set.Regions.First(x => x.Id == con.To);
+                    if (!other.Connections.Any(x => x.To == r.Id))
+                        v.Warning(RegionsFile, cp + ".to", $"Conexão de mão única: '{con.To}' não volta para '{r.Id}'.");
+                }
+                if (con.TravelMinutes <= 0) v.Error(RegionsFile, cp + ".travelMinutes", "Tempo de viagem deve ser > 0 min.");
+            }
+            for (int k = 0; k < r.ResourceItemIds.Count; k++)
+                if (!itemIds.Contains(r.ResourceItemIds[k]))
+                    v.Error(RegionsFile, $"{p}.resourceItemIds[{k}]", $"Item '{r.ResourceItemIds[k]}' não existe.");
+        }
+    }
+
+    private static void ValidateClasses(ContentSet set, HashSet<string> abilityIds, Collector v)
+    {
+        for (int i = 0; i < set.Classes.Count; i++)
+        {
+            var c = set.Classes[i];
+            string p = $"classes[{i}]";
+            v.Require(ClassesFile, p + ".name", c.Name);
+            v.Require(ClassesFile, p + ".resourceName", c.ResourceName);
+            v.OneOf(ClassesFile, p + ".role", c.Role, ClassRoles.All);
+            if (c.BaseStats.Health <= 0) v.Error(ClassesFile, p + ".baseStats.health", "Vida base deve ser > 0.");
+            NonNegativeStats(ClassesFile, p + ".baseStats", c.BaseStats, v);
+            NonNegativeStats(ClassesFile, p + ".perLevel", c.PerLevel, v);
+            if (c.AbilityIds.Count == 0) v.Error(ClassesFile, p + ".abilityIds", "Classe precisa de ao menos uma habilidade utilizável.");
+            for (int k = 0; k < c.AbilityIds.Count; k++)
+            {
+                string id = c.AbilityIds[k];
+                if (!abilityIds.Contains(id))
+                    v.Error(ClassesFile, $"{p}.abilityIds[{k}]", $"Habilidade '{id}' não existe.");
+                else
+                {
+                    var a = set.Abilities.First(x => x.Id == id);
+                    if (a.ClassId != c.Id)
+                        v.Error(ClassesFile, $"{p}.abilityIds[{k}]", $"Habilidade '{id}' pertence a classe '{a.ClassId}'.");
+                }
+            }
+        }
+    }
+
+    private static void NonNegativeStats(string file, string p, CombatStats s, Collector v)
+    {
+        if (s.Health < 0) v.Error(file, p + ".health", "Valor negativo.");
+        if (s.Resource < 0) v.Error(file, p + ".resource", "Valor negativo.");
+        if (s.Armor < 0) v.Error(file, p + ".armor", "Valor negativo.");
+        if (s.Power < 0) v.Error(file, p + ".power", "Valor negativo.");
+        if (s.Intelligence < 0) v.Error(file, p + ".intelligence", "Valor negativo.");
+    }
+
+    private static readonly string[] ScaleAttributes = { "", "power", "intelligence" };
+    private static readonly string[] BuffAttributes = { "health", "resource", "armor", "power", "intelligence", "speed", "damageTaken", "healingTaken" };
+
+    private static void ValidateAbilities(ContentSet set, HashSet<string> classIds, Collector v)
+    {
+        for (int i = 0; i < set.Abilities.Count; i++)
+        {
+            var a = set.Abilities[i];
+            string p = $"abilities[{i}]";
+            v.Require(AbilitiesFile, p + ".name", a.Name);
+            if (!classIds.Contains(a.ClassId)) v.Error(AbilitiesFile, p + ".classId", $"Classe '{a.ClassId}' não existe.");
+            if (a.ResourceCost < 0) v.Error(AbilitiesFile, p + ".resourceCost", "Custo não pode ser negativo.");
+            if (a.RangeMeters < 0 || a.RangeMeters > 100) v.Error(AbilitiesFile, p + ".rangeMeters", "Alcance deve estar entre 0 e 100 m.");
+            if (a.CastTimeMs < 0 || a.CastTimeMs > 10_000) v.Error(AbilitiesFile, p + ".castTimeMs", "Tempo de lançamento deve estar entre 0 e 10000 ms.");
+            if (a.CooldownMs < 0 || a.CooldownMs > 600_000) v.Error(AbilitiesFile, p + ".cooldownMs", "Recarga deve estar entre 0 e 600000 ms.");
+            if (a.Effects.Count == 0) v.Error(AbilitiesFile, p + ".effects", "Habilidade precisa de ao menos um efeito.");
+            for (int e = 0; e < a.Effects.Count; e++)
+                ValidateEffect(a.Effects[e], $"{p}.effects[{e}]", v);
+        }
+    }
+
+    private static void ValidateEffect(EffectDefinition fx, string p, Collector v)
+    {
+        const string f = AbilitiesFile;
+        if (!EffectTypes.All.Contains(fx.Type))
+        {
+            v.Error(f, p + ".type", $"Tipo de efeito '{fx.Type}' desconhecido. Válidos: {string.Join(", ", EffectTypes.All)}.");
+            return;
+        }
+        v.OneOf(f, p + ".scaleAttribute", fx.ScaleAttribute, ScaleAttributes);
+        if (fx.ScalePermille < 0 || fx.ScalePermille > 5000) v.Error(f, p + ".scalePermille", "Escala deve estar entre 0 e 5000 permille.");
+        if (fx.ScalePermille > 0 && fx.ScaleAttribute.Length == 0) v.Error(f, p + ".scaleAttribute", "Informe o atributo de escala.");
+        if (fx.RadiusMeters < 0 || fx.RadiusMeters > 50) v.Error(f, p + ".radiusMeters", "Raio deve estar entre 0 e 50 m.");
+        if (fx.MaxTargets < 0) v.Error(f, p + ".maxTargets", "Máximo de alvos não pode ser negativo.");
+        if (fx.RadiusMeters > 0 && fx.MaxTargets == 0) v.Error(f, p + ".maxTargets", "Efeito em área precisa de máximo de alvos.");
+
+        switch (fx.Type)
+        {
+            case EffectTypes.Damage:
+            case EffectTypes.Heal:
+            case EffectTypes.Shield:
+            case EffectTypes.Threat:
+                if (fx.Value <= 0) v.Error(f, p + ".value", "Valor deve ser > 0.");
+                if (fx.Type == EffectTypes.Shield && fx.DurationMs <= 0) v.Error(f, p + ".durationMs", "Escudo precisa de duração > 0.");
+                break;
+            case EffectTypes.DamageOverTime:
+            case EffectTypes.HealOverTime:
+                if (fx.ValuePerPulse <= 0) v.Error(f, p + ".valuePerPulse", "Valor por pulso deve ser > 0.");
+                if (fx.IntervalMs < 100) v.Error(f, p + ".intervalMs", "Intervalo deve ser >= 100 ms (1 tick).");
+                if (fx.DurationMs < fx.IntervalMs) v.Error(f, p + ".durationMs", "Duração deve ser >= intervalo.");
+                break;
+            case EffectTypes.Stun:
+            case EffectTypes.Silence:
+            case EffectTypes.Root:
+                if (fx.DurationMs <= 0 || fx.DurationMs > 30_000) v.Error(f, p + ".durationMs", "Duração de controle deve estar entre 1 e 30000 ms.");
+                break;
+            case EffectTypes.Buff:
+            case EffectTypes.Debuff:
+                v.OneOf(f, p + ".attribute", fx.Attribute, BuffAttributes);
+                if (fx.MagnitudePermille <= 0 || fx.MagnitudePermille > 1000) v.Error(f, p + ".magnitudePermille", "Magnitude deve estar entre 1 e 1000 permille.");
+                if (fx.DurationMs <= 0) v.Error(f, p + ".durationMs", "Duração deve ser > 0.");
+                if (fx.MaxStacks < 1) v.Error(f, p + ".maxStacks", "Acúmulo máximo deve ser >= 1.");
+                break;
+        }
+    }
+
+    private static void ValidateItems(ContentSet set, HashSet<string> classIds, Collector v)
+    {
+        for (int i = 0; i < set.Items.Count; i++)
+        {
+            var it = set.Items[i];
+            string p = $"items[{i}]";
+            v.Require(ItemsFile, p + ".name", it.Name);
+            v.OneOf(ItemsFile, p + ".category", it.Category, ItemCategories.All);
+            v.OneOf(ItemsFile, p + ".rarity", it.Rarity, Rarities.All);
+            if (it.LevelRequirement < 0) v.Error(ItemsFile, p + ".levelRequirement", "Nível requerido não pode ser negativo.");
+            if (it.MaxStack < 1) v.Error(ItemsFile, p + ".maxStack", "Pilha máxima deve ser >= 1.");
+            if ((it.Category == ItemCategories.Weapon || it.Category == ItemCategories.Armor) && it.MaxStack != 1)
+                v.Error(ItemsFile, p + ".maxStack", "Armas e armaduras são itens individuais (maxStack = 1).");
+            if (it.BaseValueCopper < 0) v.Error(ItemsFile, p + ".baseValueCopper", "Valor não pode ser negativo.");
+            NonNegativeStats(ItemsFile, p + ".stats", it.Stats, v);
+            for (int k = 0; k < it.ClassIds.Count; k++)
+                if (!classIds.Contains(it.ClassIds[k]))
+                    v.Error(ItemsFile, $"{p}.classIds[{k}]", $"Classe '{it.ClassIds[k]}' não existe.");
+        }
+    }
+
+    private static void ValidateCreatures(ContentSet set, HashSet<string> regionIds, HashSet<string> itemIds, Collector v)
+    {
+        for (int i = 0; i < set.Creatures.Count; i++)
+        {
+            var c = set.Creatures[i];
+            string p = $"creatures[{i}]";
+            v.Require(CreaturesFile, p + ".name", c.Name);
+            v.OneOf(CreaturesFile, p + ".kind", c.Kind, CreatureKinds.All);
+            if (c.Level < 1) v.Error(CreaturesFile, p + ".level", "Nível deve ser >= 1.");
+            if (c.Health <= 0) v.Error(CreaturesFile, p + ".health", "Vida deve ser > 0.");
+            if (c.Damage < 0) v.Error(CreaturesFile, p + ".damage", "Dano não pode ser negativo.");
+            if (c.Armor < 0) v.Error(CreaturesFile, p + ".armor", "Armadura não pode ser negativa.");
+            if (c.AttackIntervalMs < 100) v.Error(CreaturesFile, p + ".attackIntervalMs", "Intervalo de ataque deve ser >= 100 ms.");
+            if (c.RespawnSeconds < 1) v.Error(CreaturesFile, p + ".respawnSeconds", "Reaparecimento deve ser >= 1 s.");
+            if (c.RecommendedGroupSize < 1 || c.RecommendedGroupSize > 40) v.Error(CreaturesFile, p + ".recommendedGroupSize", "Grupo recomendado deve estar entre 1 e 40.");
+            if (c.GoldMinCopper < 0 || c.GoldMaxCopper < c.GoldMinCopper) v.Error(CreaturesFile, p + ".goldMaxCopper", "Faixa de ouro inválida.");
+            if (c.RegionIds.Count == 0) v.Warning(CreaturesFile, p + ".regionIds", "Criatura não aparece em nenhuma região.");
+            for (int k = 0; k < c.RegionIds.Count; k++)
+            {
+                string rid = c.RegionIds[k];
+                var region = set.Regions.FirstOrDefault(r => r.Id == rid);
+                if (region == null)
+                    v.Error(CreaturesFile, $"{p}.regionIds[{k}]", $"Região '{rid}' não existe.");
+                else if (region.Kind == RegionKinds.City)
+                    v.Error(CreaturesFile, $"{p}.regionIds[{k}]", $"Criaturas hostis não podem aparecer na cidade '{rid}'.");
+            }
+            for (int k = 0; k < c.Loot.Count; k++)
+            {
+                var l = c.Loot[k];
+                string lp = $"{p}.loot[{k}]";
+                if (!itemIds.Contains(l.ItemId)) v.Error(CreaturesFile, lp + ".itemId", $"Item '{l.ItemId}' não existe.");
+                if (l.ChancePermille < 1 || l.ChancePermille > 1000) v.Error(CreaturesFile, lp + ".chancePermille", "Chance deve estar entre 1 e 1000 permille.");
+                if (l.Min < 1 || l.Max < l.Min) v.Error(CreaturesFile, lp + ".max", "Quantidade inválida (min >= 1 e max >= min).");
+            }
+        }
+    }
+
+    private static void ValidateActivities(ContentSet set, HashSet<string> classIds, HashSet<string> itemIds, Collector v)
+    {
+        const string f = RegionsFile;
+        for (int i = 0; i < set.Regions.Count; i++)
+        {
+            var r = set.Regions[i];
+            string rp = $"regions[{i}]";
+            bool isCity = r.Kind == RegionKinds.City;
+            if (r.Activities.Count == 0)
+                v.Warning(f, rp + ".activities", "Local não oferece nenhuma atividade; jogadores simulados não terão motivo para visitá-lo.");
+
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            for (int a = 0; a < r.Activities.Count; a++)
+            {
+                var act = r.Activities[a];
+                string p = $"{rp}.activities[{a}]";
+                if (string.IsNullOrWhiteSpace(act.Id) || !IdPattern.IsMatch(act.Id))
+                    v.Error(f, p + ".id", $"ID '{act.Id}' inválido (use minúsculas, números e _, iniciando por letra).");
+                else if (!seen.Add(act.Id))
+                    v.Error(f, p + ".id", $"ID '{act.Id}' duplicado neste local.");
+                v.Require(f, p + ".name", act.Name);
+                if (!ActivityTypes.All.Contains(act.Type))
+                {
+                    v.Error(f, p + ".type", $"Tipo de atividade '{act.Type}' desconhecido. Válidos: {string.Join(", ", ActivityTypes.All)}.");
+                    continue;
+                }
+                if (isCity && ActivityTypes.NotInCity.Contains(act.Type))
+                    v.Error(f, p + ".type", $"Atividade '{act.Type}' envolve combate e não pode existir em cidade.");
+                if (!isCity && ActivityTypes.CityOnly.Contains(act.Type))
+                    v.Error(f, p + ".type", $"Atividade '{act.Type}' é um serviço de cidade.");
+                if (act.Type == ActivityTypes.Ambush && r.Pvp != PvpRules.Open)
+                    v.Error(f, p + ".type", "Emboscada exige área com PvP aberto.");
+                if (act.MinLevel < 1) v.Error(f, p + ".minLevel", "Nível mínimo deve ser >= 1.");
+                if (act.MinGroupSize < 1) v.Error(f, p + ".minGroupSize", "Grupo mínimo deve ser >= 1.");
+                if (act.MaxGroupSize < act.MinGroupSize || act.MaxGroupSize > 40)
+                    v.Error(f, p + ".maxGroupSize", "Grupo máximo deve estar entre o mínimo e 40.");
+                if (act.TypicalMinutes < 1 || act.TypicalMinutes > 600)
+                    v.Error(f, p + ".typicalMinutes", "Duração típica deve estar entre 1 e 600 min.");
+                if (act.BaseRiskPermille < 0 || act.BaseRiskPermille > 1000)
+                    v.Error(f, p + ".baseRiskPermille", "Risco base deve estar entre 0 e 1000 permille.");
+                for (int k = 0; k < act.ClassIds.Count; k++)
+                    if (!classIds.Contains(act.ClassIds[k]))
+                        v.Error(f, $"{p}.classIds[{k}]", $"Classe '{act.ClassIds[k]}' não existe.");
+                for (int k = 0; k < act.RequiredItemIds.Count; k++)
+                    if (!itemIds.Contains(act.RequiredItemIds[k]))
+                        v.Error(f, $"{p}.requiredItemIds[{k}]", $"Item '{act.RequiredItemIds[k]}' não existe.");
+                for (int k = 0; k < act.ItemIds.Count; k++)
+                    if (!itemIds.Contains(act.ItemIds[k]))
+                        v.Error(f, $"{p}.itemIds[{k}]", $"Item '{act.ItemIds[k]}' não existe.");
+
+                bool needsCreatures = act.Type == ActivityTypes.Hunt || act.Type == ActivityTypes.Boss;
+                if (needsCreatures && act.CreatureIds.Count == 0)
+                    v.Error(f, p + ".creatureIds", "Caça e boss precisam de ao menos uma criatura.");
+                for (int k = 0; k < act.CreatureIds.Count; k++)
+                {
+                    string cid = act.CreatureIds[k];
+                    var creature = set.Creatures.FirstOrDefault(c => c.Id == cid);
+                    string cp = $"{p}.creatureIds[{k}]";
+                    if (creature == null)
+                        v.Error(f, cp, $"Criatura '{cid}' não existe.");
+                    else
+                    {
+                        if (!creature.RegionIds.Contains(r.Id))
+                            v.Error(f, cp, $"Criatura '{cid}' não aparece em '{r.Id}' (ver creatures.json regionIds).");
+                        if (act.Type == ActivityTypes.Boss && creature.Kind != CreatureKinds.Boss)
+                            v.Error(f, cp, $"Criatura '{cid}' não é um boss.");
+                        if (act.Type == ActivityTypes.Hunt && creature.Kind == CreatureKinds.Boss)
+                            v.Error(f, cp, $"Boss '{cid}' deve ser oferecido como atividade 'boss', não 'hunt'.");
+                        if (act.Type == ActivityTypes.Boss && act.MinGroupSize < creature.RecommendedGroupSize)
+                            v.Warning(f, p + ".minGroupSize", $"Grupo mínimo menor que o recomendado para '{cid}' ({creature.RecommendedGroupSize}).");
+                    }
+                }
+                if (act.Type == ActivityTypes.Gather)
+                {
+                    if (act.ItemIds.Count == 0)
+                        v.Error(f, p + ".itemIds", "Coleta precisa de ao menos um item.");
+                    for (int k = 0; k < act.ItemIds.Count; k++)
+                        if (!r.ResourceItemIds.Contains(act.ItemIds[k]))
+                            v.Error(f, $"{p}.itemIds[{k}]", $"Item '{act.ItemIds[k]}' não está em resourceItemIds deste local.");
+                }
+            }
+        }
+    }
+
+    private static void ValidatePopulation(ContentSet set, Collector v)
+    {
+        var pop = set.Population;
+        if (pop.Profiles.Count == 0) v.Error(PopulationFile, "profiles", "Defina ao menos um perfil de população.");
+        if (pop.Names.FirstNames.Count == 0) v.Error(PopulationFile, "names.firstNames", "Lista de nomes vazia.");
+        if (pop.Names.LastNames.Count == 0) v.Error(PopulationFile, "names.lastNames", "Lista de sobrenomes vazia.");
+        for (int i = 0; i < pop.Profiles.Count; i++)
+        {
+            var pr = pop.Profiles[i];
+            string p = $"profiles[{i}]";
+            v.Require(PopulationFile, p + ".name", pr.Name);
+            if (pr.Weight <= 0) v.Error(PopulationFile, p + ".weight", "Peso deve ser > 0.");
+            Permille(p, "pve", pr.Pve, v);
+            Permille(p, "pvp", pr.Pvp, v);
+            Permille(p, "trade", pr.Trade, v);
+            Permille(p, "exploration", pr.Exploration, v);
+            Permille(p, "socializing", pr.Socializing, v);
+            Permille(p, "sociability", pr.Sociability, v);
+            Permille(p, "aggressiveness", pr.Aggressiveness, v);
+            Permille(p, "patience", pr.Patience, v);
+            Permille(p, "loyalty", pr.Loyalty, v);
+            Permille(p, "riskAversion", pr.RiskAversion, v);
+            Permille(p, "mechanicalSkill", pr.MechanicalSkill, v);
+            Permille(p, "gameKnowledge", pr.GameKnowledge, v);
+            Permille(p, "coordination", pr.Coordination, v);
+            Permille(p, "cheatPropensity", pr.CheatPropensity, v);
+            Permille(p, "opportunism", pr.Opportunism, v);
+            Permille(p, "willingnessToPay", pr.WillingnessToPay, v);
+            Permille(p, "paidAdvantageSensitivity", pr.PaidAdvantageSensitivity, v);
+            Permille(p, "weekendBoost", pr.WeekendBoost, v);
+            Range(p, "preferredStartHour", pr.PreferredStartHour, 0, 23, v);
+            Range(p, "sessionMinutes", pr.SessionMinutes, 10, 720, v);
+            Range(p, "daysPerWeek", pr.DaysPerWeek, 0, 7, v);
+            Range(p, "leisureBudgetCentsPerMonth", pr.LeisureBudgetCentsPerMonth, 0, 1_000_000, v);
+        }
+    }
+
+    private static void Permille(string p, string name, TraitRange t, Collector v) => Range(p, name, t, 0, 1000, v);
+
+    private static void Range(string p, string name, TraitRange t, int min, int max, Collector v)
+    {
+        if (t.Mean < min || t.Mean > max)
+            v.Error(PopulationFile, $"{p}.{name}.mean", $"Média deve estar entre {min} e {max}.");
+        if (t.Spread < 0 || t.Spread > (max - min))
+            v.Error(PopulationFile, $"{p}.{name}.spread", $"Dispersão deve estar entre 0 e {max - min}.");
+    }
+
+    private sealed class Collector
+    {
+        public List<ValidationIssue> Issues { get; } = new();
+
+        public void Error(string file, string path, string msg) => Issues.Add(new ValidationIssue(IssueSeverity.Error, file, path, msg));
+        public void Warning(string file, string path, string msg) => Issues.Add(new ValidationIssue(IssueSeverity.Warning, file, path, msg));
+
+        public void Require(string file, string path, string value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) Error(file, path, "Campo obrigatório.");
+        }
+
+        public void OneOf(string file, string path, string value, string[] allowed)
+        {
+            if (!allowed.Contains(value))
+                Error(file, path, $"Valor '{value}' inválido. Válidos: {string.Join(", ", allowed.Where(a => a.Length > 0))}.");
+        }
+    }
+}

@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "classes": [
+    {
+      "id": "guerreiro",
+      "version": 1,
+      "name": "Guerreiro",
+      "role": "tank",
+      "resourceName": "Fúria",
+      "baseStats": { "health": 220, "resource": 100, "armor": 40, "power": 18, "intelligence": 4 },
+      "perLevel": { "health": 24, "resource": 0, "armor": 4, "power": 3, "intelligence": 0 },
+      "abilityIds": [ "golpe_heroico", "provocar", "grito_de_guerra", "muralha_de_escudo" ]
+    },
+    {
+      "id": "mago",
+      "version": 1,
+      "name": "Mago",
+      "role": "damage",
+      "resourceName": "Mana",
+      "baseStats": { "health": 130, "resource": 200, "armor": 10, "power": 4, "intelligence": 22 },
+      "perLevel": { "health": 12, "resource": 18, "armor": 1, "power": 0, "intelligence": 4 },
+      "abilityIds": [ "bola_de_fogo", "lanca_de_gelo", "explosao_arcana", "barreira_arcana" ]
+    },
+    {
+      "id": "sacerdote",
+      "version": 1,
+      "name": "Sacerdote",
+      "role": "support",
+      "resourceName": "Mana",
+      "baseStats": { "health": 150, "resource": 220, "armor": 14, "power": 5, "intelligence": 20 },
+      "perLevel": { "health": 14, "resource": 20, "armor": 2, "power": 0, "intelligence": 3 },
+      "abilityIds": [ "cura", "renovar", "escudo_sagrado", "punicao" ]
+    }
+  ]
+}

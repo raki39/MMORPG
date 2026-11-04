@@ -1,0 +1,83 @@
+{
+  "schemaVersion": 1,
+  "abilities": [
+    {
+      "id": "golpe_heroico", "version": 1, "name": "Golpe Heroico", "classId": "guerreiro",
+      "resourceCost": 15, "rangeMeters": 3, "castTimeMs": 0, "cooldownMs": 3000,
+      "effects": [ { "type": "damage", "value": 30, "element": "physical", "scaleAttribute": "power", "scalePermille": 1000 } ],
+      "visualId": "vfx_golpe"
+    },
+    {
+      "id": "provocar", "version": 1, "name": "Provocar", "classId": "guerreiro",
+      "resourceCost": 0, "rangeMeters": 20, "castTimeMs": 0, "cooldownMs": 8000,
+      "effects": [ { "type": "threat", "value": 500 } ],
+      "visualId": "vfx_provocar"
+    },
+    {
+      "id": "grito_de_guerra", "version": 1, "name": "Grito de Guerra", "classId": "guerreiro",
+      "resourceCost": 10, "rangeMeters": 0, "castTimeMs": 0, "cooldownMs": 60000,
+      "effects": [ { "type": "buff", "attribute": "power", "magnitudePermille": 150, "durationMs": 20000, "maxStacks": 1, "radiusMeters": 15, "maxTargets": 5 } ],
+      "visualId": "vfx_grito"
+    },
+    {
+      "id": "muralha_de_escudo", "version": 1, "name": "Muralha de Escudo", "classId": "guerreiro",
+      "resourceCost": 20, "rangeMeters": 0, "castTimeMs": 0, "cooldownMs": 120000,
+      "effects": [ { "type": "buff", "attribute": "damageTaken", "magnitudePermille": 400, "durationMs": 10000, "maxStacks": 1 } ],
+      "visualId": "vfx_muralha"
+    },
+    {
+      "id": "bola_de_fogo", "version": 1, "name": "Bola de Fogo", "classId": "mago",
+      "resourceCost": 30, "rangeMeters": 30, "castTimeMs": 2000, "cooldownMs": 6000,
+      "effects": [
+        { "type": "damage", "value": 120, "element": "fire", "scaleAttribute": "intelligence", "scalePermille": 1200 },
+        { "type": "damageOverTime", "valuePerPulse": 10, "intervalMs": 1000, "durationMs": 6000, "element": "fire" }
+      ],
+      "visualId": "vfx_fireball"
+    },
+    {
+      "id": "lanca_de_gelo", "version": 1, "name": "Lança de Gelo", "classId": "mago",
+      "resourceCost": 25, "rangeMeters": 30, "castTimeMs": 1500, "cooldownMs": 10000,
+      "effects": [
+        { "type": "damage", "value": 80, "element": "frost", "scaleAttribute": "intelligence", "scalePermille": 900 },
+        { "type": "root", "durationMs": 3000 }
+      ],
+      "visualId": "vfx_gelo"
+    },
+    {
+      "id": "explosao_arcana", "version": 1, "name": "Explosão Arcana", "classId": "mago",
+      "resourceCost": 45, "rangeMeters": 0, "castTimeMs": 0, "cooldownMs": 12000,
+      "effects": [ { "type": "damage", "value": 60, "element": "arcane", "scaleAttribute": "intelligence", "scalePermille": 600, "radiusMeters": 8, "maxTargets": 5 } ],
+      "visualId": "vfx_arcana"
+    },
+    {
+      "id": "barreira_arcana", "version": 1, "name": "Barreira Arcana", "classId": "mago",
+      "resourceCost": 35, "rangeMeters": 0, "castTimeMs": 0, "cooldownMs": 30000,
+      "effects": [ { "type": "shield", "value": 150, "durationMs": 10000, "scaleAttribute": "intelligence", "scalePermille": 500 } ],
+      "visualId": "vfx_barreira"
+    },
+    {
+      "id": "cura", "version": 1, "name": "Cura", "classId": "sacerdote",
+      "resourceCost": 35, "rangeMeters": 30, "castTimeMs": 2500, "cooldownMs": 0,
+      "effects": [ { "type": "heal", "value": 140, "scaleAttribute": "intelligence", "scalePermille": 1300 } ],
+      "visualId": "vfx_cura"
+    },
+    {
+      "id": "renovar", "version": 1, "name": "Renovar", "classId": "sacerdote",
+      "resourceCost": 20, "rangeMeters": 30, "castTimeMs": 0, "cooldownMs": 0,
+      "effects": [ { "type": "healOverTime", "valuePerPulse": 18, "intervalMs": 3000, "durationMs": 15000 } ],
+      "visualId": "vfx_renovar"
+    },
+    {
+      "id": "escudo_sagrado", "version": 1, "name": "Escudo Sagrado", "classId": "sacerdote",
+      "resourceCost": 30, "rangeMeters": 30, "castTimeMs": 0, "cooldownMs": 8000,
+      "effects": [ { "type": "shield", "value": 120, "durationMs": 15000, "scaleAttribute": "intelligence", "scalePermille": 800 } ],
+      "visualId": "vfx_escudo_sagrado"
+    },
+    {
+      "id": "punicao", "version": 1, "name": "Punição", "classId": "sacerdote",
+      "resourceCost": 20, "rangeMeters": 30, "castTimeMs": 1500, "cooldownMs": 6000,
+      "effects": [ { "type": "damage", "value": 55, "element": "holy", "scaleAttribute": "intelligence", "scalePermille": 700 } ],
+      "visualId": "vfx_punicao"
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Simulation.Runner</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Simulation.Core\Simulation.Core.csproj" />
+    <ProjectReference Include="..\Simulation.Infrastructure\Simulation.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

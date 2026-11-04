@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "regions": [
+    {
+      "id": "vila_aurora",
+      "version": 1,
+      "name": "Vila Aurora",
+      "kind": "city",
+      "biome": "planicie",
+      "levelMin": 1,
+      "levelMax": 60,
+      "pvp": "none",
+      "capacity": 400,
+      "mapPosition": { "x": 500, "y": 500 },
+      "connections": [
+        { "to": "floresta_sussurrante", "travelMinutes": 10 },
+        { "to": "mina_velha", "travelMinutes": 15 },
+        { "to": "ruinas_sombrias", "travelMinutes": 20 }
+      ],
+      "resourceItemIds": [],
+      "activities": [
+        { "id": "mercado", "type": "trade", "name": "Comprar e vender no mercado", "typicalMinutes": 15, "maxGroupSize": 1 },
+        { "id": "ferreiro", "type": "repair", "name": "Consertar equipamento", "typicalMinutes": 5, "maxGroupSize": 1 },
+        { "id": "quadro_de_missoes", "type": "quest", "name": "Pegar missões no quadro", "typicalMinutes": 10, "maxGroupSize": 5 },
+        { "id": "treinador", "type": "train", "name": "Treinar habilidades", "typicalMinutes": 10, "maxGroupSize": 1 },
+        { "id": "taverna", "type": "socialize", "name": "Socializar na taverna", "typicalMinutes": 30, "maxGroupSize": 10 },
+        { "id": "recrutamento", "type": "recruit", "name": "Recrutar para grupo", "typicalMinutes": 10, "maxGroupSize": 5 }
+      ]
+    },
+    {
+      "id": "floresta_sussurrante",
+      "version": 1,
+      "name": "Floresta Sussurrante",
+      "kind": "area",
+      "biome": "floresta",
+      "levelMin": 1,
+      "levelMax": 8,
+      "pvp": "none",
+      "capacity": 150,
+      "mapPosition": { "x": 300, "y": 420 },
+      "connections": [
+        { "to": "vila_aurora", "travelMinutes": 10 },
+        { "to": "ruinas_sombrias", "travelMinutes": 18 }
+      ],
+      "resourceItemIds": [ "erva_curativa" ],
+      "activities": [
+        { "id": "cacar_lobos", "type": "hunt", "name": "Caçar lobos", "creatureIds": [ "lobo_cinzento" ], "typicalMinutes": 20, "maxGroupSize": 3, "baseRiskPermille": 80 },
+        { "id": "cacar_aranhas", "type": "hunt", "name": "Caçar aranhas tecelãs", "creatureIds": [ "aranha_tecela" ], "minLevel": 3, "typicalMinutes": 25, "maxGroupSize": 3, "baseRiskPermille": 150 },
+        { "id": "coletar_ervas", "type": "gather", "name": "Coletar ervas curativas", "itemIds": [ "erva_curativa" ], "typicalMinutes": 15, "maxGroupSize": 2, "baseRiskPermille": 40 },
+        { "id": "entrega_lenhador", "type": "quest", "name": "Entrega para o lenhador", "typicalMinutes": 20, "maxGroupSize": 3, "baseRiskPermille": 30 },
+        { "id": "explorar_floresta", "type": "explore", "name": "Explorar trilhas da floresta", "typicalMinutes": 30, "maxGroupSize": 5, "baseRiskPermille": 60 }
+      ]
+    },
+    {
+      "id": "mina_velha",
+      "version": 1,
+      "name": "Mina Velha",
+      "kind": "area",
+      "biome": "caverna",
+      "levelMin": 6,
+      "levelMax": 12,
+      "pvp": "none",
+      "capacity": 100,
+      "mapPosition": { "x": 650, "y": 300 },
+      "connections": [
+        { "to": "vila_aurora", "travelMinutes": 15 },
+        { "to": "covil_do_rei_goblin", "travelMinutes": 12 }
+      ],
+      "resourceItemIds": [ "minerio_ferro", "minerio_prata" ],
+      "activities": [
+        { "id": "coletar_minerio", "type": "gather", "name": "Minerar ferro e prata", "itemIds": [ "minerio_ferro", "minerio_prata" ], "minLevel": 6, "typicalMinutes": 25, "maxGroupSize": 2, "baseRiskPermille": 120 },
+        { "id": "cacar_goblins", "type": "hunt", "name": "Caçar goblins", "creatureIds": [ "goblin_mineiro", "goblin_xama" ], "minLevel": 7, "typicalMinutes": 30, "maxGroupSize": 5, "baseRiskPermille": 200 },
+        { "id": "explorar_galerias", "type": "explore", "name": "Explorar galerias profundas", "minLevel": 8, "typicalMinutes": 30, "maxGroupSize": 5, "baseRiskPermille": 180 }
+      ]
+    },
+    {
+      "id": "covil_do_rei_goblin",
+      "version": 1,
+      "name": "Covil do Rei Goblin",
+      "kind": "area",
+      "biome": "caverna",
+      "levelMin": 15,
+      "levelMax": 18,
+      "pvp": "none",
+      "capacity": 40,
+      "mapPosition": { "x": 720, "y": 180 },
+      "connections": [
+        { "to": "mina_velha", "travelMinutes": 12 }
+      ],
+      "resourceItemIds": [],
+      "activities": [
+        { "id": "enfrentar_rei", "type": "boss", "name": "Enfrentar o Rei Goblin", "creatureIds": [ "rei_goblin" ], "minLevel": 15, "minGroupSize": 5, "maxGroupSize": 5, "typicalMinutes": 45, "baseRiskPermille": 450 }
+      ]
+    },
+    {
+      "id": "ruinas_sombrias",
+      "version": 1,
+      "name": "Ruínas Sombrias",
+      "kind": "area",
+      "biome": "ruinas",
+      "levelMin": 10,
+      "levelMax": 16,
+      "pvp": "open",
+      "capacity": 120,
+      "mapPosition": { "x": 800, "y": 520 },
+      "connections": [
+        { "to": "vila_aurora", "travelMinutes": 20 },
+        { "to": "floresta_sussurrante", "travelMinutes": 18 }
+      ],
+      "resourceItemIds": [ "cristal_sombrio" ],
+      "activities": [
+        { "id": "cacar_mortos_vivos", "type": "hunt", "name": "Caçar mortos-vivos", "creatureIds": [ "esqueleto_guardiao", "espectro_arqueiro" ], "minLevel": 10, "typicalMinutes": 30, "maxGroupSize": 5, "baseRiskPermille": 350 },
+        { "id": "coletar_cristais", "type": "gather", "name": "Coletar cristais sombrios", "itemIds": [ "cristal_sombrio" ], "minLevel": 10, "typicalMinutes": 20, "maxGroupSize": 2, "baseRiskPermille": 400 },
+        { "id": "patrulhar_ruinas", "type": "patrol", "name": "Patrulhar contra PKs", "minLevel": 12, "typicalMinutes": 30, "maxGroupSize": 5, "baseRiskPermille": 450 },
+        { "id": "emboscar_viajantes", "type": "ambush", "name": "Emboscar outros jogadores", "minLevel": 10, "typicalMinutes": 20, "maxGroupSize": 3, "baseRiskPermille": 600 }
+      ]
+    }
+  ]
+}

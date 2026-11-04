@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Adaptadores: carregamento de conteudo JSON e exportacao de relatorios (M0);
+    SQLite e saves nos marcos seguintes. JSON via System.Text.Json (nativo do .NET, D-003).
+  -->
+  <PropertyGroup>
+    <RootNamespace>Simulation.Infrastructure</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Simulation.Core\Simulation.Core.csproj" />
+  </ItemGroup>
+
+</Project>
