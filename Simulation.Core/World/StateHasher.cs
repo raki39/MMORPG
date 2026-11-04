@@ -11,7 +11,7 @@ namespace Simulation.Core.World;
 /// </summary>
 public static class StateHasher
 {
-    public const int FormatVersion = 7;
+    public const int FormatVersion = 8;
 
     public static string Compute(WorldState w)
     {
@@ -86,6 +86,9 @@ public static class StateHasher
             h.Str(c.PlanReviewReason); h.Int(c.PlansFormed); h.Int(c.PlanChanges);
             h.Int(c.BoredomByType.Count);
             foreach (var kv in c.BoredomByType) { h.Str(kv.Key); h.Int(kv.Value); }
+            var led = c.SessionLedger;
+            h.Long(led.XpAtStart); h.Int(led.LevelAtStart); h.Int(led.Minutes); h.Int(led.Points);
+            foreach (var kv in led.ComponentSums) { h.Str(kv.Key); h.Long(kv.Value); }
         }
         h.Int(w.QuestStats.Count);
         foreach (var kv in w.QuestStats)
@@ -137,7 +140,15 @@ public static class StateHasher
         h.Int(p.PracticeProgress.Count);
         foreach (var kv in p.PracticeProgress) { h.Str(kv.Key); h.Int(kv.Value); }
         var m = p.Mood;
-        h.Int(m.Satisfaction); h.Int(m.Fatigue); h.Int(m.Frustration); h.Int(m.Engagement); h.Int(m.ReturnIntention);
+        h.Int(m.Satisfaction); h.Int(m.Frustration); h.Int(m.Novelty); h.Int(m.Engagement); h.Int(m.ReturnIntention);
+        h.Int(m.ProgressExpectation); h.Int(m.LastProgressRatio); h.Int(m.LastSessionScore); h.Int(m.SessionsRated);
+        // Memoria (D-038).
+        h.Int(p.Memories.Count);
+        foreach (var mem in p.Memories) { h.Str(mem.Kind); h.Str(mem.Subject); h.Int(mem.Valence); h.Int(mem.Intensity); h.Long(mem.Tick); h.Int(mem.Count); }
+        h.Int(p.PlaceImpressions.Count);
+        foreach (var kv in p.PlaceImpressions) { h.Str(kv.Key); h.Int(kv.Value); }
+        h.Int(p.MoodDrivers.Count);
+        foreach (var kv in p.MoodDrivers) { h.Str(kv.Key); h.Int(kv.Value); }
     }
 
     private sealed class Writer : IDisposable

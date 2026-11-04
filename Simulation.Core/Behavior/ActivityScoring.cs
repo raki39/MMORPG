@@ -40,7 +40,8 @@ public static class ActivityScoring
     private static readonly string[] NeedsGroupSystem = { ActivityTypes.Recruit };
 
     public static List<ScoredOption> Evaluate(Character ch, PersonTraits t, ContentDatabase content, RouteFinder routes,
-        Func<string, string, int> occupancy, long now, DeterministicRng rng, QuestSystem? quests = null, GoalSystem? goals = null)
+        Func<string, string, int> occupancy, long now, DeterministicRng rng, QuestSystem? quests = null, GoalSystem? goals = null,
+        IReadOnlyDictionary<string, int>? impressions = null)
     {
         var options = new List<ScoredOption>();
         int remaining = (int)Math.Max(0, (ch.SessionEndTick - now) / Time.SimTime.TicksPerMinute);
@@ -150,6 +151,11 @@ public static class ActivityScoring
                 // (exploracao alta) sente menos essa atracao.
                 if (FamiliarityPull(ch, region.Id, t, content.Dynamics) is > 0 and var pull)
                     f.Add(new DecisionFactor("familiarity", pull * content.Dynamics.FamiliarityWeight / 1000));
+
+                // Memoria (D-038): a impressao deixada pelo lugar atrai ou afasta.
+                if (impressions != null && impressions.TryGetValue(region.Id + "/" + a.Id, out int imp)
+                    && Math.Abs(imp) >= content.Memory.ImpressionMinAbs)
+                    f.Add(new DecisionFactor("memory", imp * content.Memory.DecisionWeight / 1000));
 
                 // Objetivos pessoais: influenciam com o peso do comprometimento, sem obrigar (D-036).
                 bool delivers = questTerm is { Key: "quest_deliver" };

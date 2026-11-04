@@ -62,6 +62,10 @@ public sealed class ContentDatabase
     public GoalSettingsDefinition GoalSettings => Set.Population.Goals;
     /// <summary>Plano da sessao e tedio (D-037).</summary>
     public SessionSettingsDefinition Session => Set.Population.Session;
+    /// <summary>Experiencia e humor (D-038).</summary>
+    public MoodSettingsDefinition Mood => Set.Population.Mood;
+    /// <summary>Memoria (D-038).</summary>
+    public MemorySettingsDefinition Memory => Set.Population.Memory;
     public ProgressionDefinition Progression => Set.Progression;
 
     public IReadOnlyDictionary<string, RegionDefinition> Regions { get; }

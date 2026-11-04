@@ -28,6 +28,12 @@ public sealed class RunMetrics
     public SortedDictionary<string, double> Continuity { get; } = new(StringComparer.Ordinal);
     /// <summary>Motivos das trocas de plano (fator principal), contagem.</summary>
     public SortedDictionary<string, long> SwitchReasons { get; } = new(StringComparer.Ordinal);
+    /// <summary>O que mais incomoda cada pessoa registrada (motivo mais negativo), contagem (D-038).</summary>
+    public SortedDictionary<string, long> TopComplaints { get; } = new(StringComparer.Ordinal);
+    /// <summary>Notas das sessoes (D-038): sessoes otimas e ruins na janela.</summary>
+    public long GreatSessions { get; set; }
+    public long BadSessions { get; set; }
+    public long RatedSessions { get; set; }
 }
 
 public sealed class ProfileStats
@@ -43,6 +49,8 @@ public sealed class ProfileStats
     public Dictionary<string, double> TraitDelta { get; init; } = new(StringComparer.Ordinal);
     public double GoalsCompleted { get; init; }
     public double GoalsAbandoned { get; init; }
+    /// <summary>Humor medio no fim (D-038): satisfacao, frustracao, novidade, engajamento etc.</summary>
+    public Dictionary<string, double> Mood { get; init; } = new(StringComparer.Ordinal);
     /// <summary>% das sessoes em dia util que comecam no horario nobre (18h-23h).</summary>
     public double PrimeTimeStartPct { get; init; }
 }
@@ -66,6 +74,7 @@ public sealed class ValidationCollector
     private long _sessionsWithChoice, _continued, _switched, _zoneSwitched;
     private readonly List<int> _runs = new();
     private readonly SortedDictionary<string, long> _switchReasons = new(StringComparer.Ordinal);
+    private long _great, _bad, _rated;
 
     public ValidationCollector(ContentDatabase content, int warmupDays)
     {
@@ -112,6 +121,7 @@ public sealed class ValidationCollector
                 {
                     long pid = e.Entities[0].Id;
                     if (_openSession.Remove(pid, out long start)) AddPlayed(pid, start, e.Tick);
+                    if (e.Tick >= _windowStart) _rated++;
                     break;
                 }
                 case "activity_chosen":
@@ -139,6 +149,12 @@ public sealed class ValidationCollector
                     }
                     break;
                 }
+                case "session_great":
+                    if (e.Tick >= _windowStart) _great++;
+                    break;
+                case "session_bad":
+                    if (e.Tick >= _windowStart) _bad++;
+                    break;
                 case "plan_changed":
                     if (e.Tick >= _windowStart && e.Causes.Count > 0)
                         _switchReasons[e.Causes[0].Factor] = _switchReasons.GetValueOrDefault(e.Causes[0].Factor) + 1;
@@ -148,6 +164,24 @@ public sealed class ValidationCollector
     }
 
     private static string Zone(string key) => key.Split('/')[0];
+
+    private static Dictionary<string, double> MoodOf(List<Simulation.Core.Population.Person> ps)
+    {
+        double Avg(Func<Simulation.Core.Population.Person, int> f) => ps.Count == 0 ? double.NaN : ps.Average(p => (double)f(p));
+        return new Dictionary<string, double>(StringComparer.Ordinal)
+        {
+            ["satisfaction"] = Avg(p => p.Mood.Satisfaction),
+            ["frustration"] = Avg(p => p.Mood.Frustration),
+            ["novelty"] = Avg(p => p.Mood.Novelty),
+            ["engagement"] = Avg(p => p.Mood.Engagement),
+            ["return_intention"] = Avg(p => p.Mood.ReturnIntention),
+            ["expectation"] = Avg(p => p.Mood.ProgressExpectation),
+            ["progress_ratio"] = Avg(p => p.Mood.LastProgressRatio),
+            ["last_score"] = Avg(p => p.Mood.LastSessionScore),
+            ["memories"] = Avg(p => p.Memories.Count),
+            ["unhappy_pct"] = ps.Count == 0 ? double.NaN : ps.Count(p => p.Mood.Satisfaction < 400) * 100.0 / ps.Count,
+        };
+    }
 
     private void AddPlayed(long pid, long start, long end)
     {
@@ -214,8 +248,20 @@ public sealed class ValidationCollector
                     .ToDictionary(k => k, k => group.Count == 0 ? 0 : group.Average(c => (double)(w.GetPerson(c.PersonId).Traits.Get(k) - w.GetPerson(c.PersonId).BaseTraits.Get(k))), StringComparer.Ordinal),
                 GoalsCompleted = group.Count == 0 ? 0 : group.Average(c => (double)c.GoalsCompleted),
                 GoalsAbandoned = group.Count == 0 ? 0 : group.Average(c => (double)c.GoalsAbandoned),
+                Mood = MoodOf(group.Select(c => w.GetPerson(c.PersonId)).ToList()),
             });
         }
+
+        foreach (var c in chars)
+        {
+            var p = w.GetPerson(c.PersonId);
+            var worst = p.MoodDrivers.Where(kv => kv.Value < 0).OrderBy(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.Ordinal).FirstOrDefault();
+            string key = worst.Key ?? "nenhum";
+            m.TopComplaints[key] = m.TopComplaints.GetValueOrDefault(key) + 1;
+        }
+        m.GreatSessions = _great;
+        m.BadSessions = _bad;
+        m.RatedSessions = _rated;
 
         foreach (var t in targets)
         {

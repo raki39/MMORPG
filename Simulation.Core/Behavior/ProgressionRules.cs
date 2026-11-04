@@ -71,6 +71,19 @@ public static class ProgressionRules
         return baseRate * growth * Efficiency(p, level, challenge) / 1000 * StageRate(p, level) / 1000;
     }
 
+    /// <summary>
+    /// XP de referencia do nivel (milesimos por minuto): caca no desafio do proprio nivel com
+    /// rendimento pleno. Base da expectativa de progresso (D-038).
+    /// </summary>
+    public static long ReferenceMilliXpPerMinute(ContentDatabase content, int level)
+    {
+        var p = content.Progression;
+        int baseRate = BaseXpPerMinute(p, ActivityTypes.Hunt);
+        if (baseRate == 0 || level >= p.LevelCap) return 0;
+        long growth = 1000L + (long)p.ChallengeGrowthPermille * (level - 1);
+        return baseRate * growth * StageRate(p, level) / 1000;
+    }
+
     /// <summary>XP inteiro de uma atividade com a duracao dada.</summary>
     public static long XpFor(ContentDatabase content, ActivityDefinition a, int level, int minutes) =>
         minutes <= 0 ? 0 : MilliXpPerMinute(content, a, level) * minutes / 1000;

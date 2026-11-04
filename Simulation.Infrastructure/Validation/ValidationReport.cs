@@ -146,6 +146,26 @@ public static class ValidationReport
             sb.Append($"| {days} | {(-mech).ToString("0.00;-0.00;0.00", PtBr)} | {(-know).ToString("0.00;-0.00;0.00", PtBr)} |\n");
         }
 
+        // ---- Humor e memoria (D-038) ----
+        sb.Append("\n## Humor e memória (média das seeds, no fim)\n\n");
+        sb.Append("Satisfação, frustração, novidade e engajamento em permille (0–1000); progresso em permille do XP de referência do nível.\n\n");
+        sb.Append("| Perfil | Satisfação | Insatisfeitos (< 400) | Frustração | Novidade | Engajamento | Intenção de continuar | Expectativa | Progresso da última sessão | Memórias |\n|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n");
+        foreach (var id in runs[0].Profiles.Select(p => p.Id))
+        {
+            var ps = runs.Select(r => r.Profiles.First(p => p.Id == id)).ToList();
+            string Mv(string k) => Fmt(ps.Average(p => p.Mood.TryGetValue(k, out var v) ? v : double.NaN));
+            sb.Append($"| {ps[0].Name} | {Mv("satisfaction")} | {Mv("unhappy_pct")}% | {Mv("frustration")} | {Mv("novelty")} | {Mv("engagement")} | {Mv("return_intention")} | {Mv("expectation")} | {Mv("progress_ratio")} | {Mv("memories")} |\n");
+        }
+        long rated = runs.Sum(r => r.RatedSessions);
+        if (rated > 0)
+            sb.Append($"\nSessões ótimas: {Pct(runs.Sum(r => r.GreatSessions), rated)} · ruins: {Pct(runs.Sum(r => r.BadSessions), rated)} (após a semana de lançamento).\n");
+        var complaints = new SortedDictionary<string, long>(StringComparer.Ordinal);
+        foreach (var r in runs) foreach (var kv in r.TopComplaints) complaints[kv.Key] = complaints.GetValueOrDefault(kv.Key) + kv.Value;
+        long allC = Math.Max(1, complaints.Values.Sum());
+        sb.Append("\nO que mais incomoda cada pessoa (motivo mais negativo acumulado):\n\n| Motivo | Pessoas |\n|---|---:|\n");
+        foreach (var kv in complaints.OrderByDescending(k => k.Value).ThenBy(k => k.Key, StringComparer.Ordinal))
+            sb.Append($"| {kv.Key} | {Pct(kv.Value, allC)} |\n");
+
         // ---- Uso do tempo ----
         sb.Append("\n## Uso do tempo conectado (todas as seeds)\n\n");
         var time = new SortedDictionary<string, long>(StringComparer.Ordinal);

@@ -81,6 +81,10 @@ public sealed class PopulationDefinition
     public GoalSettingsDefinition Goals { get; set; } = new();
     /// <summary>Plano da sessao, continuidade e tedio (D-037).</summary>
     public SessionSettingsDefinition Session { get; set; } = new();
+    /// <summary>Experiencia e humor: satisfacao, frustracao, novidade, engajamento (D-038).</summary>
+    public MoodSettingsDefinition Mood { get; set; } = new();
+    /// <summary>Memoria: impressoes por lugar e acontecimentos marcantes (D-038).</summary>
+    public MemorySettingsDefinition Memory { get; set; } = new();
 }
 
 /// <summary>
@@ -184,4 +188,154 @@ public sealed class SessionSettingsDefinition
     public int EnjoymentRelief { get; set; } = 500;
     /// <summary>Explorar onde nao ha mais nada a descobrir: perde esta parte do gosto (permille).</summary>
     public int ExploreKnownPenalty { get; set; } = 500;
+}
+
+/// <summary>Experiencia e humor da pessoa (D-038). Pontos da nota da sessao (0–1000, neutro 500) e permille.</summary>
+public sealed class MoodSettingsDefinition
+{
+    /// <summary>Satisfacao ao entrar no jogo (permille).</summary>
+    public int InitialSatisfaction { get; set; } = 600;
+    /// <summary>Novidade ao entrar: tudo e novo.</summary>
+    public int InitialNovelty { get; set; } = 1000;
+    /// <summary>Gosto pelo tipo da atividade (gosto - 500) na experiencia.</summary>
+    public int FunWeight { get; set; } = 300;
+    /// <summary>Encaixe de nivel (rendimento - 600) nas atividades que dao XP.</summary>
+    public int FitWeight { get; set; } = 200;
+    /// <summary>Lotacao na caca e na coleta (aliviada pela coordenacao).</summary>
+    public int CrowdingWeight { get; set; } = 200;
+    /// <summary>Companhia: sociabilidade na taverna; gosto por socializar no resto.</summary>
+    public int CompanyWeight { get; set; } = 150;
+    /// <summary>Tedio do tipo no fim da atividade.</summary>
+    public int BoredomWeight { get; set; } = 250;
+    /// <summary>Risco: emociona quem tem pouca aversao, incomoda quem tem muita.</summary>
+    public int RiskWeight { get; set; } = 150;
+    /// <summary>Progresso da sessao contra a expectativa.</summary>
+    public int ProgressWeight { get; set; } = 400;
+    /// <summary>Quanto liga para evoluir: parcelas de PvE, competitividade e PvP (permille; somam 1000).</summary>
+    public int ProgressCarePve { get; set; } = 500;
+    public int ProgressCareAggressiveness { get; set; } = 300;
+    public int ProgressCarePvp { get; set; } = 200;
+    /// <summary>Quanto precisa de novidade: base + exploracao e impaciencia (permille).</summary>
+    public int NoveltyCareBase { get; set; } = 200;
+    public int NoveltyCareExploration { get; set; } = 500;
+    public int NoveltyCareImpatience { get; set; } = 300;
+    /// <summary>Limite (+-) do termo de progresso.</summary>
+    public int ProgressClamp { get; set; } = 200;
+    /// <summary>Teto da razao de progresso (permille da referencia).</summary>
+    public int ProgressRatioCap { get; set; } = 2000;
+    /// <summary>Expectativa inicial de progresso (permille da referencia).</summary>
+    public int ExpectationBase { get; set; } = 550;
+    /// <summary>Competitivos esperam mais: + agressividade * isto / 1000.</summary>
+    public int ExpectationPerAggressiveness { get; set; } = 300;
+    /// <summary>Quanto a expectativa se aproxima do progresso real por sessao (permille).</summary>
+    public int ExpectationAdapt { get; set; } = 100;
+    /// <summary>Piso da expectativa: progredir mal por dias nao vira satisfatorio.</summary>
+    public int ExpectationFloor { get; set; } = 450;
+    /// <summary>Teto da expectativa.</summary>
+    public int ExpectationCeiling { get; set; } = 1100;
+    /// <summary>Novidade (novidade - 500) na nota da sessao.</summary>
+    public int NoveltyWeight { get; set; } = 300;
+    /// <summary>Novidade gasta por hora de jogo.</summary>
+    public int NoveltyDecayPerHour { get; set; } = 20;
+    /// <summary>Novidade por zona descoberta.</summary>
+    public int NoveltyPerDiscovery { get; set; } = 60;
+    /// <summary>Novidade na primeira vez num tipo de atividade.</summary>
+    public int NoveltyNewActivityType { get; set; } = 80;
+    /// <summary>Novidade na primeira vez numa atividade (lugar).</summary>
+    public int NoveltyNewActivity { get; set; } = 25;
+    /// <summary>Novidade por nivel novo (conteudo novo liberado).</summary>
+    public int NoveltyPerLevel { get; set; } = 30;
+    /// <summary>Novidade na primeira conclusao de uma missao.</summary>
+    public int NoveltyNewQuest { get; set; } = 40;
+    /// <summary>Limite (+-) dos acontecimentos na nota da sessao.</summary>
+    public int EventClamp { get; set; } = 300;
+    /// <summary>Pontos de um nivel novo.</summary>
+    public int LevelUpPoints { get; set; } = 60;
+    /// <summary>Pontos de uma missao concluida.</summary>
+    public int QuestPoints { get; set; } = 40;
+    /// <summary>Pontos de uma missao principal concluida.</summary>
+    public int MainQuestPoints { get; set; } = 100;
+    /// <summary>Pontos de uma meta concluida.</summary>
+    public int GoalCompletedPoints { get; set; } = 80;
+    /// <summary>Pontos de uma zona descoberta (escala com a exploracao).</summary>
+    public int DiscoveryPoints { get; set; } = 40;
+    /// <summary>Pontos perdidos ao desistir de uma meta.</summary>
+    public int GoalAbandonedPoints { get; set; } = 80;
+    /// <summary>Pontos perdidos ao ficar sem nada para fazer.</summary>
+    public int NothingToDoPoints { get; set; } = 60;
+    /// <summary>Frustracao imediata ao desistir de uma meta.</summary>
+    public int GoalAbandonedFrustration { get; set; } = 80;
+    /// <summary>Frustracao imediata ao ficar sem nada para fazer.</summary>
+    public int NothingToDoFrustration { get; set; } = 40;
+    /// <summary>Peso de uma sessao longa na satisfacao (permille).</summary>
+    public int SatisfactionAdapt { get; set; } = 250;
+    /// <summary>Sessoes mais curtas pesam proporcionalmente menos.</summary>
+    public int FullWeightSessionMinutes { get; set; } = 120;
+    /// <summary>Nota abaixo disto aumenta a frustracao.</summary>
+    public int BadSessionBelow { get; set; } = 400;
+    /// <summary>Frustracao por ponto abaixo do limite (permille).</summary>
+    public int FrustrationFromBadSession { get; set; } = 600;
+    /// <summary>Nota acima disto alivia a frustracao.</summary>
+    public int GoodSessionAbove { get; set; } = 600;
+    /// <summary>Alivio por ponto acima do limite (permille).</summary>
+    public int FrustrationReliefFromGoodSession { get; set; } = 500;
+    /// <summary>Frustracao que passa por dia.</summary>
+    public int FrustrationDecayPerDay { get; set; } = 40;
+    /// <summary>Os motivos acumulados perdem esta fracao por dia (permille).</summary>
+    public int DriverDecayPerDay { get; set; } = 50;
+    /// <summary>Peso da satisfacao no engajamento.</summary>
+    public int EngagementSatisfaction { get; set; } = 6;
+    /// <summary>Peso da calma (1000 - frustracao) no engajamento.</summary>
+    public int EngagementCalm { get; set; } = 3;
+    /// <summary>Peso da novidade no engajamento.</summary>
+    public int EngagementNovelty { get; set; } = 1;
+    /// <summary>Lealdade segura a intencao de continuar: (lealdade - 500) * isto / 1000.</summary>
+    public int LoyaltyWeight { get; set; } = 200;
+    /// <summary>Investimento: cada nivel segura a intencao de continuar.</summary>
+    public int InvestmentPerLevel { get; set; } = 5;
+    /// <summary>Teto do investimento.</summary>
+    public int InvestmentCap { get; set; } = 150;
+}
+
+/// <summary>Memoria da pessoa (D-038): impressoes por lugar e acontecimentos marcantes.</summary>
+public sealed class MemorySettingsDefinition
+{
+    /// <summary>Quanto uma experiencia muda a impressao do lugar (permille).</summary>
+    public int ImpressionLearn { get; set; } = 300;
+    /// <summary>Boas impressoes esmaecem por dia (permille).</summary>
+    public int ImpressionDecayPositivePerDay { get; set; } = 15;
+    /// <summary>Mas impressoes esmaecem mais rapido (permille).</summary>
+    public int ImpressionDecayNegativePerDay { get; set; } = 40;
+    /// <summary>Peso da impressao do lugar na decisao (impressao 1000).</summary>
+    public int DecisionWeight { get; set; } = 150;
+    /// <summary>Impressoes menores que isto nao pesam na decisao.</summary>
+    public int ImpressionMinAbs { get; set; } = 50;
+    /// <summary>Acontecimentos marcantes guardados por pessoa.</summary>
+    public int MaxMemories { get; set; } = 12;
+    /// <summary>Experiencia a partir desta intensidade vira memoria.</summary>
+    public int NotableValence { get; set; } = 350;
+    /// <summary>Conquistas perdem intensidade por dia.</summary>
+    public int PositiveDecayPerDay { get; set; } = 10;
+    /// <summary>Frustracoes perdem intensidade por dia.</summary>
+    public int NegativeDecayPerDay { get; set; } = 25;
+    /// <summary>Niveis multiplos disto viram memoria.</summary>
+    public int LevelMilestoneEvery { get; set; } = 5;
+    /// <summary>Intensidade da memoria de um nivel marcante.</summary>
+    public int LevelMilestoneIntensity { get; set; } = 700;
+    /// <summary>Intensidade da memoria de uma missao principal.</summary>
+    public int MainQuestIntensity { get; set; } = 650;
+    /// <summary>Intensidade da memoria de uma meta concluida.</summary>
+    public int GoalCompletedIntensity { get; set; } = 500;
+    /// <summary>Intensidade da memoria de uma meta abandonada.</summary>
+    public int GoalAbandonedIntensity { get; set; } = 450;
+    /// <summary>Intensidade da memoria de uma zona descoberta (escala com a exploracao).</summary>
+    public int DiscoveryIntensity { get; set; } = 300;
+    /// <summary>Intensidade da memoria de ficar sem nada para fazer.</summary>
+    public int NothingToDoIntensity { get; set; } = 300;
+    /// <summary>Sessao com nota a partir disto vira memoria boa.</summary>
+    public int GreatSessionScore { get; set; } = 780;
+    /// <summary>Sessao com nota ate isto vira memoria ruim.</summary>
+    public int BadSessionScore { get; set; } = 260;
+    /// <summary>Intensidade da memoria de uma sessao marcante.</summary>
+    public int SessionIntensity { get; set; } = 500;
 }

@@ -35,6 +35,11 @@ public sealed class ValidationIssue
 /// </summary>
 public static class ContentValidator
 {
+    private static readonly HashSet<string> PermilleMoodFields = new(StringComparer.Ordinal)
+    {
+        "badSessionBelow", "badSessionScore", "driverDecayPerDay", "expectationAdapt", "frustrationFromBadSession", "frustrationReliefFromGoodSession", "goodSessionAbove", "greatSessionScore", "impressionDecayNegativePerDay", "impressionDecayPositivePerDay", "impressionLearn", "initialNovelty", "initialSatisfaction", "notableValence", "satisfactionAdapt",
+    };
+
     public const string WorldFile = "world.json";
     public const string RegionsFile = "regions.json";
     public const string ClassesFile = "classes.json";
@@ -633,6 +638,97 @@ public static class ContentValidator
         if (ss.PatienceRelief is < 0 or > 1000) v.Error(PopulationFile, "session.patienceRelief", "Use um valor de 0 a 1000.");
         if (ss.ExploreKnownPenalty is < 0 or > 1000) v.Error(PopulationFile, "session.exploreKnownPenalty", "Use um valor de 0 a 1000.");
         if (ss.EnjoymentRelief is < 0 or > 1000) v.Error(PopulationFile, "session.enjoymentRelief", "Use um valor de 0 a 1000.");
+        // Humor e memoria (D-038): nada negativo; fracoes em permille.
+        foreach (var (section, list) in new (string, (string, int)[])[]
+        {
+            ("mood", new (string, int)[]
+            {
+            ("initialSatisfaction", pop.Mood.InitialSatisfaction),
+            ("initialNovelty", pop.Mood.InitialNovelty),
+            ("funWeight", pop.Mood.FunWeight),
+            ("fitWeight", pop.Mood.FitWeight),
+            ("crowdingWeight", pop.Mood.CrowdingWeight),
+            ("companyWeight", pop.Mood.CompanyWeight),
+            ("boredomWeight", pop.Mood.BoredomWeight),
+            ("riskWeight", pop.Mood.RiskWeight),
+            ("progressWeight", pop.Mood.ProgressWeight),
+            ("progressClamp", pop.Mood.ProgressClamp),
+            ("progressRatioCap", pop.Mood.ProgressRatioCap),
+            ("expectationBase", pop.Mood.ExpectationBase),
+            ("expectationPerAggressiveness", pop.Mood.ExpectationPerAggressiveness),
+            ("expectationAdapt", pop.Mood.ExpectationAdapt),
+            ("expectationFloor", pop.Mood.ExpectationFloor),
+            ("expectationCeiling", pop.Mood.ExpectationCeiling),
+            ("noveltyWeight", pop.Mood.NoveltyWeight),
+            ("noveltyDecayPerHour", pop.Mood.NoveltyDecayPerHour),
+            ("noveltyPerDiscovery", pop.Mood.NoveltyPerDiscovery),
+            ("noveltyNewActivityType", pop.Mood.NoveltyNewActivityType),
+            ("noveltyNewActivity", pop.Mood.NoveltyNewActivity),
+            ("noveltyPerLevel", pop.Mood.NoveltyPerLevel),
+            ("noveltyNewQuest", pop.Mood.NoveltyNewQuest),
+            ("eventClamp", pop.Mood.EventClamp),
+            ("levelUpPoints", pop.Mood.LevelUpPoints),
+            ("questPoints", pop.Mood.QuestPoints),
+            ("mainQuestPoints", pop.Mood.MainQuestPoints),
+            ("goalCompletedPoints", pop.Mood.GoalCompletedPoints),
+            ("discoveryPoints", pop.Mood.DiscoveryPoints),
+            ("goalAbandonedPoints", pop.Mood.GoalAbandonedPoints),
+            ("nothingToDoPoints", pop.Mood.NothingToDoPoints),
+            ("goalAbandonedFrustration", pop.Mood.GoalAbandonedFrustration),
+            ("nothingToDoFrustration", pop.Mood.NothingToDoFrustration),
+            ("satisfactionAdapt", pop.Mood.SatisfactionAdapt),
+            ("fullWeightSessionMinutes", pop.Mood.FullWeightSessionMinutes),
+            ("badSessionBelow", pop.Mood.BadSessionBelow),
+            ("frustrationFromBadSession", pop.Mood.FrustrationFromBadSession),
+            ("goodSessionAbove", pop.Mood.GoodSessionAbove),
+            ("frustrationReliefFromGoodSession", pop.Mood.FrustrationReliefFromGoodSession),
+            ("frustrationDecayPerDay", pop.Mood.FrustrationDecayPerDay),
+            ("driverDecayPerDay", pop.Mood.DriverDecayPerDay),
+            ("engagementSatisfaction", pop.Mood.EngagementSatisfaction),
+            ("engagementCalm", pop.Mood.EngagementCalm),
+            ("engagementNovelty", pop.Mood.EngagementNovelty),
+            ("loyaltyWeight", pop.Mood.LoyaltyWeight),
+            ("investmentPerLevel", pop.Mood.InvestmentPerLevel),
+            ("investmentCap", pop.Mood.InvestmentCap)
+            }),
+            ("memory", new (string, int)[]
+            {
+            ("impressionLearn", pop.Memory.ImpressionLearn),
+            ("impressionDecayPositivePerDay", pop.Memory.ImpressionDecayPositivePerDay),
+            ("impressionDecayNegativePerDay", pop.Memory.ImpressionDecayNegativePerDay),
+            ("decisionWeight", pop.Memory.DecisionWeight),
+            ("impressionMinAbs", pop.Memory.ImpressionMinAbs),
+            ("maxMemories", pop.Memory.MaxMemories),
+            ("notableValence", pop.Memory.NotableValence),
+            ("positiveDecayPerDay", pop.Memory.PositiveDecayPerDay),
+            ("negativeDecayPerDay", pop.Memory.NegativeDecayPerDay),
+            ("levelMilestoneEvery", pop.Memory.LevelMilestoneEvery),
+            ("levelMilestoneIntensity", pop.Memory.LevelMilestoneIntensity),
+            ("mainQuestIntensity", pop.Memory.MainQuestIntensity),
+            ("goalCompletedIntensity", pop.Memory.GoalCompletedIntensity),
+            ("goalAbandonedIntensity", pop.Memory.GoalAbandonedIntensity),
+            ("discoveryIntensity", pop.Memory.DiscoveryIntensity),
+            ("nothingToDoIntensity", pop.Memory.NothingToDoIntensity),
+            ("greatSessionScore", pop.Memory.GreatSessionScore),
+            ("badSessionScore", pop.Memory.BadSessionScore),
+            ("sessionIntensity", pop.Memory.SessionIntensity)
+            }),
+        })
+            foreach (var (name, value) in list)
+            {
+                if (value < 0) v.Error(PopulationFile, section + "." + name, "O valor não pode ser negativo.");
+                else if (PermilleMoodFields.Contains(name) && value > 1000) v.Error(PopulationFile, section + "." + name, "Use um valor de 0 a 1000.");
+            }
+        foreach (var (name, value) in new (string, int)[]
+        {
+            ("progressCarePve", pop.Mood.ProgressCarePve), ("progressCareAggressiveness", pop.Mood.ProgressCareAggressiveness),
+            ("progressCarePvp", pop.Mood.ProgressCarePvp), ("noveltyCareBase", pop.Mood.NoveltyCareBase),
+            ("noveltyCareExploration", pop.Mood.NoveltyCareExploration), ("noveltyCareImpatience", pop.Mood.NoveltyCareImpatience),
+        })
+            if (value is < 0 or > 1000) v.Error(PopulationFile, "mood." + name, "Use um valor de 0 a 1000.");
+        if (pop.Mood.ExpectationFloor > pop.Mood.ExpectationCeiling) v.Error(PopulationFile, "mood.expectationFloor", "O piso da expectativa não pode passar do teto.");
+        if (pop.Memory.MaxMemories < 1) v.Error(PopulationFile, "memory.maxMemories", "Guarde ao menos uma memória.");
+        if (pop.Memory.LevelMilestoneEvery < 1) v.Error(PopulationFile, "memory.levelMilestoneEvery", "Use 1 ou mais.");
         if (ss.CommitMargin < ss.SwitchMargin) v.Warning(PopulationFile, "session.commitMargin", "A margem do compromisso costuma ser maior que a margem de troca.");
         if (pop.Names.FirstNames.Count == 0) v.Error(PopulationFile, "names.firstNames", "Lista de nomes vazia.");
         if (pop.Names.LastNames.Count == 0) v.Error(PopulationFile, "names.lastNames", "Lista de sobrenomes vazia.");

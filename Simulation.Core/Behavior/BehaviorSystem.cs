@@ -29,9 +29,11 @@ public sealed class BehaviorSystem
     private readonly QuestSystem _quests;
     private readonly TraitDynamics _traits;
     private readonly GoalSystem _goals;
+    private readonly ExperienceSystem _exp;
 
     public BehaviorSystem(WorldState world)
     {
+        _exp = new ExperienceSystem(world);
         _w = world;
         _routes = new RouteFinder(world.Content, new ZoneLayout(world.Content));
         _quests = new QuestSystem(world, GainExperience);
@@ -46,16 +48,30 @@ public sealed class BehaviorSystem
         {
             var p = _w.GetPerson(ch.PersonId);
             RequestPlanReview(ch, "quest_completed");
+            var md = _w.Content.Mood;
+            bool main = _w.Content.Quests.TryGetValue(questId, out var qd) && qd.Category == QuestCategories.Main;
+            bool first = ch.QuestHistory.TryGetValue(questId, out var rec) && rec.Completions == 1;
+            _exp.OnAchievement(p, ch, main ? "main_quest" : "quest", questId, main ? md.MainQuestPoints : md.QuestPoints,
+                first ? md.NoveltyNewQuest : 0, main ? _w.Content.Memory.MainQuestIntensity : 0);
             _traits.OnQuestCompleted(p);
             _goals.OnQuestCompleted(p, ch, questId);
         };
-        _goals.Ended = (ch, g, completed, reason) => RequestPlanReview(ch, completed ? "goal_completed" : "goal_abandoned");
+        _goals.Ended = (ch, g, completed, reason) =>
+        {
+            RequestPlanReview(ch, completed ? "goal_completed" : "goal_abandoned");
+            var p = _w.GetPerson(ch.PersonId);
+            var md = _w.Content.Mood;
+            string subject = g.Type + "|" + g.Target + "|" + g.TargetValue;
+            if (completed) _exp.OnAchievement(p, ch, "goal_completed", subject, md.GoalCompletedPoints, 0, _w.Content.Memory.GoalCompletedIntensity);
+            else _exp.OnSetback(p, ch, "goal_abandoned", subject, md.GoalAbandonedPoints, md.GoalAbandonedFrustration, _w.Content.Memory.GoalAbandonedIntensity);
+        };
     }
 
     public RouteFinder Routes => _routes;
     public QuestSystem Quests => _quests;
     public TraitDynamics Traits => _traits;
     public GoalSystem Goals => _goals;
+    public ExperienceSystem Experience => _exp;
 
     public IEnumerable<(string Type, Action<ScheduledEvent> Handler)> Handlers()
     {
@@ -117,6 +133,12 @@ public sealed class BehaviorSystem
         p.AccountId = account.Id;
         p.CharacterId = ch.Id;
         p.State = LifecycleState.Registered;
+        // Humor inicial (D-038): boa vontade, tudo novo, expectativa pelo perfil.
+        var md = _w.Content.Mood;
+        p.Mood.Satisfaction = md.InitialSatisfaction;
+        p.Mood.Novelty = md.InitialNovelty;
+        p.Mood.ProgressExpectation = ExperienceSystem.InitialExpectation(p.Traits, md);
+        _exp.UpdateEngagement(p, ch);
         // Conhece a cidade inicial e as zonas ligadas a ela (as saidas mostram para onde levam).
         ch.Known.Add(start);
         foreach (var c in _w.Content.Regions[start].Connections) ch.Known.Add(c.To);
@@ -161,6 +183,7 @@ public sealed class BehaviorSystem
         {
             if (p.State != LifecycleState.Registered && p.State != LifecycleState.Offline && p.State != LifecycleState.Online) continue;
             _traits.OnDaily(p, day);   // inatividade (D-036), antes de decidir se joga hoje
+            _exp.OnDaily(p, p.CharacterId > 0 ? _w.GetCharacter(p.CharacterId) : null);   // humor e memoria (D-038)
             var rng = Rng("behavior.session", p.Id * 100_000L + day);
             int chance = p.Traits.DaysPerWeek * 1000 / 7;
             chance = kind == DayKind.Weekday
@@ -227,6 +250,7 @@ public sealed class BehaviorSystem
         ch.Plan = null;
         ch.PlanReviewReason = "";
         SessionRules.FadeBoredomBetweenSessions(ch, _w.Content.Session);
+        _exp.OnSessionStart(ch);
         _w.Scheduler.Schedule(end, EvSessionEnd, p.Id);
         _w.Emit("session_started", EventImportance.Low, new[] { new EntityRef("person", p.Id) }, detail: $"{minutes} min");
         // Objetivos pessoais (D-036): revisa ao conectar, antes da primeira decisao.
@@ -266,6 +290,7 @@ public sealed class BehaviorSystem
         }
         // Atividade interrompida pela saida: o tempo gasto conta (sem recompensa).
         if (ch.Status == CharacterStatus.Doing) AddActivityTime(ch, ActivityTypeOf(ch), Now - ch.ActivityStartTick);
+        _exp.OnSessionEnd(p, ch, Now);   // nota da sessao, satisfacao e frustracao (D-038)
         _w.Today.PlayMinutes += (Now - ch.SessionStartTick) / SimTime.TicksPerMinute;
         ch.PlayedTicks += Now - ch.SessionStartTick;
         ch.Status = CharacterStatus.Offline;
@@ -286,10 +311,12 @@ public sealed class BehaviorSystem
     {
         var rng = Rng("behavior.decision", ch.Id * 1_000_000L + ch.DecisionCount);
         ch.DecisionCount++;
-        var options = ActivityScoring.Evaluate(ch, p.Traits, _w.Content, _routes, _w.OccupancyOf, Now, rng, _quests, _goals);
+        var options = ActivityScoring.Evaluate(ch, p.Traits, _w.Content, _routes, _w.OccupancyOf, Now, rng, _quests, _goals, p.PlaceImpressions);
 
         if (options.Count == 0)
         {
+            var md = _w.Content.Mood;
+            _exp.OnSetback(p, ch, "nothing_to_do", ch.RegionId, md.NothingToDoPoints, md.NothingToDoFrustration, _w.Content.Memory.NothingToDoIntensity);
             // Nada viavel: espera e repensa.
             ch.Status = CharacterStatus.Doing;
             ch.TargetRegionId = ch.RegionId;
@@ -453,6 +480,7 @@ public sealed class BehaviorSystem
             _goals.OnActivity(p, ch, a, minutes);
             ch.ZoneMinutes[region.Id] = (ch.ZoneMinutes.TryGetValue(region.Id, out int zm) ? zm : 0) + minutes;
             SessionRules.AccrueBoredom(ch, p.Traits, a.Type, minutes, _w.Content.Session);
+            _exp.OnActivity(p, ch, region, a, minutes, fit, fit > 0, ActivityScoring.RiskOf(region, a, challenge, levelBefore), firstTimeType);
             // Explorar revela mais longe: as zonas ligadas as vizinhas.
             if (a.Type == ActivityTypes.Explore)
                 foreach (var c in region.Connections)
@@ -478,6 +506,10 @@ public sealed class BehaviorSystem
     {
         var p = _w.GetPerson(ch.PersonId);
         RequestPlanReview(ch, "zone_discovered");
+        var md = _w.Content.Mood;
+        int curiosity = 500 + p.Traits.Exploration;   // exploradores valorizam mais a descoberta
+        _exp.OnAchievement(p, ch, "discovery", zoneId, md.DiscoveryPoints * curiosity / 1000, md.NoveltyPerDiscovery,
+            _w.Content.Memory.DiscoveryIntensity * curiosity / 1000);
         _traits.OnRegionDiscovered(p);
         _goals.OnDiscovered(p, ch, zoneId);
     }
@@ -516,6 +548,10 @@ public sealed class BehaviorSystem
             ch.Level++;
             ch.LevelTicks.Add(ch.PlayedTicksAt(Now));
             _w.Today.LevelUps++;
+            var md = _w.Content.Mood;
+            var mm = _w.Content.Memory;
+            _exp.OnAchievement(_w.GetPerson(ch.PersonId), ch, "level_milestone", ch.Level.ToString(), md.LevelUpPoints, md.NoveltyPerLevel,
+                ch.Level % mm.LevelMilestoneEvery == 0 ? mm.LevelMilestoneIntensity : 0);
             _w.Emit("level_up", EventImportance.Normal, new[] { new EntityRef("character", ch.Id) },
                 new[] { new EventCause(source, 1000) }, $"nível {ch.Level}");
         }

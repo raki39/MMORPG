@@ -99,14 +99,51 @@ public sealed class PersonTraits
     public PersonTraits Clone() => (PersonTraits)MemberwiseClone();
 }
 
-/// <summary>Estado emocional/engajamento, variavel ao longo da campanha (permille).</summary>
+/// <summary>
+/// Estado da pessoa em relacao ao jogo (D-038), em permille. Satisfacao: media movel das
+/// notas das sessoes. Frustracao: reveses e sessoes ruins, passa com o tempo. Novidade: gasta
+/// com o tempo de jogo, renovada por descobertas. Engajamento e intencao de continuar derivam
+/// deles (com lealdade e investimento).
+/// </summary>
 public sealed class PersonMood
 {
     public int Satisfaction = 500;
-    public int Fatigue;
     public int Frustration;
+    public int Novelty = 1000;
     public int Engagement = 500;
     public int ReturnIntention = 500;
+    /// <summary>Progresso esperado, em permille do XP de referencia do nivel.</summary>
+    public int ProgressExpectation = 550;
+    /// <summary>Progresso da ultima sessao (permille da referencia).</summary>
+    public int LastProgressRatio;
+    public int LastSessionScore = 500;
+    public int SessionsRated;
+}
+
+/// <summary>Acontecimento marcante na memoria da pessoa (D-038; plano 4.5).</summary>
+public sealed class Memory
+{
+    public Memory(string kind, string subject, int valence, int intensity, long tick)
+    {
+        Kind = kind;
+        Subject = subject;
+        Valence = valence;
+        Intensity = intensity;
+        Tick = tick;
+        Count = 1;
+    }
+
+    /// <summary>Tipo (ex.: level_milestone, main_quest, goal_abandoned, great_session).</summary>
+    public string Kind { get; }
+    /// <summary>Do que se trata (nivel, missao, "zona/atividade"); "" quando geral.</summary>
+    public string Subject { get; }
+    /// <summary>Bom (+) ou ruim (-).</summary>
+    public int Valence { get; internal set; }
+    /// <summary>Forca atual da lembranca (cai por dia; frustracoes caem mais rapido).</summary>
+    public int Intensity { get; internal set; }
+    public long Tick { get; internal set; }
+    /// <summary>Quantas vezes se repetiu.</summary>
+    public int Count { get; internal set; }
 }
 
 /// <summary>
@@ -139,6 +176,15 @@ public sealed class Person
     internal SortedDictionary<string, int> Practice { get; } = new(StringComparer.Ordinal);
     public IReadOnlyDictionary<string, int> PracticeProgress => Practice;
     public PersonMood Mood { get; } = new();
+    /// <summary>Acontecimentos marcantes (limitados; os mais fracos saem), D-038.</summary>
+    internal List<Memory> MemoryList { get; } = new();
+    public IReadOnlyList<Memory> Memories => MemoryList;
+    /// <summary>Impressao de cada lugar ("zona/atividade"), -1000..1000; pesa nas escolhas.</summary>
+    internal SortedDictionary<string, int> Impressions { get; } = new(StringComparer.Ordinal);
+    public IReadOnlyDictionary<string, int> PlaceImpressions => Impressions;
+    /// <summary>O que tem agradado (+) ou incomodado (-): componentes das sessoes, esmaecendo.</summary>
+    internal SortedDictionary<string, int> Drivers { get; } = new(StringComparer.Ordinal);
+    public IReadOnlyDictionary<string, int> MoodDrivers => Drivers;
     public LifecycleState State { get; internal set; } = LifecycleState.PotentialInterested;
     /// <summary>Conta no MMORPG (0 = ainda nao registrada).</summary>
     public int AccountId { get; internal set; }
@@ -263,6 +309,29 @@ public sealed class SessionPlan
     public long CommitUntilTick { get; }
     /// <summary>Ciclos seguidos no foco desde que o plano foi formado.</summary>
     public int Cycles { get; internal set; }
+}
+
+/// <summary>Experiencia acumulada da sessao em andamento (D-038).</summary>
+public sealed class SessionLedger
+{
+    public long XpAtStart { get; private set; }
+    public int LevelAtStart { get; private set; }
+    /// <summary>Minutos em atividade (a viagem fica de fora; ela pesa no progresso).</summary>
+    public int Minutes { get; internal set; }
+    /// <summary>Conquistas menos reveses da sessao.</summary>
+    public int Points { get; internal set; }
+    /// <summary>Soma de cada componente da experiencia ponderada pelos minutos.</summary>
+    internal SortedDictionary<string, long> Sums { get; } = new(StringComparer.Ordinal);
+    public IReadOnlyDictionary<string, long> ComponentSums => Sums;
+
+    internal void Reset(long xpAtStart, int levelAtStart)
+    {
+        XpAtStart = xpAtStart;
+        LevelAtStart = levelAtStart;
+        Minutes = 0;
+        Points = 0;
+        Sums.Clear();
+    }
 }
 
 /// <summary>Tipos de objetivo pessoal (D-036).</summary>
@@ -396,6 +465,9 @@ public sealed class Character
     /// <summary>Minutos em atividade por zona (familiaridade, D-036a).</summary>
     internal SortedDictionary<string, int> ZoneMinutes { get; } = new(StringComparer.Ordinal);
     public IReadOnlyDictionary<string, int> ZoneMinutesSpent => ZoneMinutes;
+
+    // ---- Experiencia da sessao em andamento (D-038) ----
+    public SessionLedger SessionLedger { get; } = new();
 
     // ---- Plano da sessao e tedio (D-037) ----
     public SessionPlan? Plan { get; internal set; }

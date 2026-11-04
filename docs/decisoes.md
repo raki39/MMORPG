@@ -893,3 +893,55 @@ Proposta do criador, analisada com o Claude.
 - **Horas até o 30 abaixo da faixa:** com menos tempo andando, todos sobem mais rápido. A recalibração da curva (escolha a ou b do D-028) fica para depois do combate, porque o XP de caça vai mudar com abates reais.
 
 **Testes:** 8 novos (tédio, variedade, gosto, paciência, motivo da troca, margem e revisão por acontecimentos, explorar sem novidade, determinismo e hash, validação do conteúdo). `StateHasher` v7.
+
+## D-038 — Experiência, memória e humor (fechamento do M2, parte 2)
+**Data:** 04/11/2026 · **Estado:** aceita (calibração a revisar)
+
+**Pedido:** satisfação, frustração e memória de experiências antes da Etapa 1 (plano 4.2 "Estado" e 4.5 "Memória").
+
+**Decisões** (parâmetros em `population.json`, seções `mood` e `memory`):
+- **Experiência de cada atividade** (componentes explicáveis, em pontos):
+  - gosto pelo tipo;
+  - encaixe de nível;
+  - lotação, aliviada pela Coordenação;
+  - companhia;
+  - tédio;
+  - risco: emociona quem tem pouca aversão e incomoda quem tem muita.
+- **Nota da sessão** (0–1000, neutro 500): média dos componentes, progresso contra a expectativa, novidade e acontecimentos.
+  - Conquistas: nível, missão, meta, zona descoberta.
+  - Reveses: meta abandonada, ficar sem nada para fazer.
+- **Pesos pessoais** (plano 4.4: "os pesos pertencem ao perfil individual"):
+  - o progresso pesa pelo quanto a pessoa liga para evoluir (PvE 50%, competitividade 30%, PvP 20%);
+  - a novidade pesa pelo quanto ela precisa de coisas novas (Exploração e impaciência).
+  - Sem isso, quem joga para socializar ou negociar ficava 80% insatisfeito por falta de XP, o que não faz sentido.
+- **Expectativa de progresso** (D-026):
+  - começa pela competitividade;
+  - aproxima-se do progresso real aos poucos;
+  - tem piso: progredir mal por dias não vira "satisfatório".
+  - A referência é a caça no próprio nível. No teto de nível o termo é neutro e a novidade decide (conteúdo esgotado).
+- **Humor:**
+  - **satisfação:** média móvel das notas, com sessões curtas pesando menos;
+  - **frustração:** sobe com reveses e sessões ruins, cai com sessões boas e com o tempo;
+  - **novidade:** gasta 20 por hora de jogo e é renovada por descobertas, atividades novas, níveis e missões;
+  - **engajamento e intenção de continuar:** derivam dos três; a Lealdade e o investimento (nível) seguram quem está insatisfeito;
+  - **motivos acumulados:** o que agrada ou incomoda, esmaecendo com o tempo; explicam a satisfação na ficha.
+- **Memória:**
+  - **impressão de cada lugar** (zona/atividade): aprende com cada experiência e vira o fator "lembrança" na decisão (até ±150). Más impressões esmaecem mais rápido que as boas.
+  - **acontecimentos marcantes:** até 12 por pessoa (níveis múltiplos de 5, missão principal, meta concluída ou abandonada, zona descoberta, atividade ou sessão muito boa ou muito ruim). Conquistas duram mais que frustrações; o mesmo fato se reforça; com a memória cheia, sai o mais fraco.
+- **Eventos:** `session_great` e `session_bad`, com os três componentes que mais pesaram.
+
+**Validação** (90 dias × 1.000 pessoas × 5 seeds): 15 de 21 metas, igual ao D-037; o humor ainda não muda o comportamento.
+
+| Perfil | Satisfação | Insatisfeitos | Novidade no fim |
+|---|---:|---:|---:|
+| Casual | 625 | 0% | 863 |
+| Explorador | 597 | 1% | 474 |
+| Social | 515 | 2% | 146 |
+| Comerciante | 504 | 2% | 224 |
+| Competitivo | 489 | 3% | 69 |
+| Hardcore | 481 | 0% | 1 |
+
+- Hardcore e competitivos esgotam a novidade (nível 30 e mundo conhecido): é o sinal de que o servidor precisa de atualizações (M7).
+- 13% das sessões são ótimas e 0,1% são ruins.
+
+**Testes:** 9 novos (componentes, pesos pessoais, limite e reforço da memória, esmaecimento, impressão na decisão, sessão boa e ruim, piso da expectativa, determinismo e hash, validação). `StateHasher` v8.
