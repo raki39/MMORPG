@@ -37,11 +37,17 @@ public sealed class ZoneLayout
     private readonly Dictionary<string, MapPos> _centers = new(StringComparer.Ordinal);
     private readonly Dictionary<string, MapPos> _gates = new(StringComparer.Ordinal);
     private readonly Dictionary<string, MapPos> _spots = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, MapPos> _areas = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, int> _areaRadius = new(StringComparer.Ordinal);
 
-    public ZoneLayout(ContentDatabase content)
+    public ZoneLayout(ContentDatabase content) : this(content.World, content.Regions.Values) { }
+
+    public ZoneLayout(WorldDefinition world, IEnumerable<RegionDefinition> regions)
     {
-        ZoneRadius = content.World.ZoneRadius;
-        foreach (var r in content.Regions.Values)
+        var byId = regions.ToDictionary(r => r.Id, StringComparer.Ordinal);
+        var content = (World: world, Regions: byId);
+        ZoneRadius = world.ZoneRadius;
+        foreach (var r in byId.Values.OrderBy(x => x.Id, StringComparer.Ordinal))
         {
             var c = new MapPos(r.MapPosition.X, r.MapPosition.Y);
             _centers[r.Id] = c;
@@ -55,39 +61,41 @@ public sealed class ZoneLayout
                 _gates[GateKey(r.Id, con.To)] = new MapPos(c.X + (int)Math.Round(dx * k), c.Y + (int)Math.Round(dy * k));
             }
 
-            // Atividades: posicao do conteudo (relativa ao centro) ou distribuicao automatica
-            // num anel de 24 direcoes, evitando o setor do nome da zona (topo) e as estradas
-            // ate as saidas; ordenada por ID para ser estavel.
-            var auto = r.Activities.Where(a => a.Spot == null).OrderBy(a => a.Id, StringComparer.Ordinal).ToList();
+            // Areas: posicao do conteudo (relativa ao centro) ou distribuicao automatica num
+            // anel de 24 direcoes, evitando o setor do nome da zona (topo) e as estradas ate
+            // as saidas; ordem por ID para ser estavel. Atividades de area ficam na area;
+            // atividades da zona inteira usam a encruzilhada.
+            var auto = r.Areas.Where(a => a.Position == null).OrderBy(a => a.Id, StringComparer.Ordinal).ToList();
             var gateAngles = r.Connections
                 .Select(con => Math.Atan2(content.Regions[con.To].MapPosition.Y - c.Y, content.Regions[con.To].MapPosition.X - c.X))
                 .ToList();
             var candidates = new List<double>();
             for (int k = 0; k < 24; k++)
             {
-                double ang = k * Math.PI / 12 - Math.PI;   // -180..165 graus
-                double fromTop = Math.Abs(AngleDiff(ang, -Math.PI / 2));
-                if (fromTop < Math.PI * 50 / 180) continue;                                   // nome da zona
-                if (gateAngles.Any(g => Math.Abs(AngleDiff(ang, g)) < Math.PI * 22 / 180)) continue; // estradas
+                double ang = k * Math.PI / 12 - Math.PI;
+                if (Math.Abs(AngleDiff(ang, -Math.PI / 2)) < Math.PI * 50 / 180) continue;
+                if (gateAngles.Any(g => Math.Abs(AngleDiff(ang, g)) < Math.PI * 22 / 180)) continue;
                 candidates.Add(ang);
             }
             if (candidates.Count == 0) candidates.Add(Math.PI / 2);
-            for (int i = 0; i < r.Activities.Count; i++)
+            foreach (var area in r.Areas)
             {
-                var a = r.Activities[i];
                 MapPos p;
-                if (a.Spot != null)
-                    p = new MapPos(c.X + a.Spot.X, c.Y + a.Spot.Y);
+                if (area.Position != null)
+                    p = new MapPos(c.X + area.Position.X, c.Y + area.Position.Y);
                 else
                 {
-                    int idx = auto.IndexOf(a);
+                    int idx = auto.IndexOf(area);
                     int pick = (int)((idx + 0.5) * candidates.Count / Math.Max(1, auto.Count));
                     double angle = candidates[Math.Min(pick, candidates.Count - 1)];
-                    double radius = content.World.ZoneRadius * (r.IsCity ? 0.50 : 0.56);
+                    double radius = Math.Min(content.World.ZoneRadius * 0.58, content.World.ZoneRadius * 0.9 - area.Radius);
                     p = new MapPos(c.X + (int)Math.Round(Math.Cos(angle) * radius), c.Y + (int)Math.Round(Math.Sin(angle) * radius));
                 }
-                _spots[SpotKey(r.Id, a.Id)] = p;
+                _areas[AreaKey(r.Id, area.Id)] = p;
+                _areaRadius[AreaKey(r.Id, area.Id)] = area.Radius;
+                foreach (var a in area.Activities) _spots[SpotKey(r.Id, a.Id)] = p;
             }
+            foreach (var a in r.Activities) _spots[SpotKey(r.Id, a.Id)] = c;
         }
     }
 
@@ -101,6 +109,12 @@ public sealed class ZoneLayout
 
     private static string GateKey(string from, string to) => from + ">" + to;
     private static string SpotKey(string region, string activity) => region + "/" + activity;
+    private static string AreaKey(string region, string area) => region + "#" + area;
+
+    /// <summary>Centro da area.</summary>
+    public MapPos AreaCenter(string regionId, string areaId) => _areas[AreaKey(regionId, areaId)];
+
+    public int AreaRadius(string regionId, string areaId) => _areaRadius[AreaKey(regionId, areaId)];
 
     public MapPos Center(string regionId) => _centers[regionId];
 
@@ -112,7 +126,7 @@ public sealed class ZoneLayout
     /// <summary>Portao da zona "from" que leva a zona "to".</summary>
     public MapPos Gate(string from, string to) => _gates[GateKey(from, to)];
 
-    /// <summary>Ponto da atividade; atividade vazia = centro da zona.</summary>
+    /// <summary>Onde a atividade acontece: centro da area que a oferece, ou a encruzilhada (zona inteira / vazia).</summary>
     public MapPos Spot(string regionId, string activityId) =>
         activityId.Length == 0 ? _centers[regionId] : _spots[SpotKey(regionId, activityId)];
 }

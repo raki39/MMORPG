@@ -1,6 +1,6 @@
 # Plano de desenvolvimento — MMORPG Tycoon + simulação de comunidade
 
-**Versão:** 1.5 · **Data:** 04/11/2026 · **Engine decidida:** Godot 4 (.NET) / C#
+**Versão:** 1.6 · **Data:** 04/11/2026 · **Engine decidida:** Godot 4 (.NET) / C#
 
 **Finalidade:** documento inicial de produto, simulação, arquitetura, interface e execução para desenvolver o jogo com Claude CLI. O nome comercial permanece em aberto.
 
@@ -284,6 +284,36 @@ Exemplo ilustrativo, sujeito ao esquema definitivo:
 ```
 
 Tempos autorais convertem para unidades inteiras da simulação com política explícita de arredondamento. O identificador visual referencia recursos do cliente e não controla a resolução da magia. Invocação e teleporte só aparecem no editor após existir suporte testado no Core. Presets, conteúdo importado e rascunhos usam o mesmo esquema e passam pelas mesmas validações, venham de arquivo JSON ou do save.
+
+### 6.5 Zonas, áreas e atividades
+
+O mundo é formado por **zonas** de escala padronizada, ao estilo de Albion. Cada zona tem fronteira clara, estradas que ligam o centro às saídas e conexões explícitas com outras zonas: duas zonas vizinhas podem não ter passagem entre si. A **função** da zona (cidade, caça) é separada das **regras** (combate, perda por morte, controle territorial). Cidades são sempre seguras.
+
+Dentro da zona ficam as **áreas**: lugares com posição e tamanho que oferecem atividades.
+
+| Conceito | Exemplo | O que representa |
+|---|---|---|
+| Zona | Floresta Sussurrante | Mapa com regras gerais |
+| Área | Clareira dos Lobos | Lugar dentro da zona |
+| Atividade | Caçar lobos | O que pode ser feito ali |
+| Objetivo do personagem | Conseguir couro para uma armadura | Por que ele escolheu fazer isso |
+| Quest | "Mate 10 lobos" | Objetivo com recompensa, separado da atividade |
+
+Tipos de área conforme a função da zona:
+
+- **Cidade:** loja, forja, taverna, praça e campo de treino.
+- **Natureza:** área de caça, veio de minério, campo de ervas, veio de cristal e marco.
+- **Especiais:** entrada de masmorra e esconderijo de guilda (portais para outros espaços), covil de boss e passagem estreita.
+
+Para fazer uma atividade, o personagem sai da estrada e vai até a área. O tempo de deslocamento vem da distância e da velocidade.
+
+**Regras de construção:**
+
+- A área precisa ter tipo compatível com a zona.
+- O tamanho fica dentro da faixa do tipo; aumentar a área não cria monstros nem recursos.
+- A área cabe na zona, não bloqueia saídas nem a encruzilhada e não ocupa o espaço de outra área.
+- Não há limite fixo de áreas por zona: vale o espaço disponível.
+- O preset traz tudo posicionado, e o editor permite reposicionar com prévia.
 
 ## 7. Combate e observação 3D
 
@@ -932,6 +962,8 @@ Pedir tarefas com comportamento mensurável. Exemplo: implementar calendário de
 > Não implemente todos os sistemas agora. Não prometa capacidade populacional sem benchmark. Não use um Update completo por pessoa nem chamadas de IA por jogador. Documente hipóteses numéricas e mantenha testes relevantes de regras. Ao terminar, informe mudanças, instruções para executar, verificações realizadas e pendências que exigem que eu rode o jogo. Continue seguindo os critérios de conclusão deste plano.
 
 ### 20.1 Registro desta revisão
+
+**v1.6 — 04/11/2026:** adicionada a seção 6.5: zonas de escala padronizada com estradas e conexões explícitas; áreas como lugares com tipo, posição e tamanho; atividades ligadas às áreas; quest separada de atividade; regras de construção. Detalhes em `docs/decisoes.md` (D-015 a D-021).
 
 **v1.5 — 04/11/2026:** papéis de JSON, SQLite e memória esclarecidos (seções 6.4 e 14, CLAUDE.md e prompt inicial): JSON para presets, importação e exportação; save SQLite como fonte da verdade da campanha, incluindo conteúdo ativo, criações e rascunhos; execução em memória. Ciclo do conteúdo descrito em cinco etapas.
 

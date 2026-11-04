@@ -27,8 +27,15 @@ public sealed class ClientContext
 
     public string ZoneName(string id) => Content.Regions.TryGetValue(id, out var r) ? r.Name : id;
 
+    public Action<string, string> OpenArea { get; init; } = (_, _) => { };
+    public Action<string, string> FocusArea { get; init; } = (_, _) => { };
+
     public string ActivityName(string zone, string activity) =>
-        Content.Regions.TryGetValue(zone, out var r) ? r.Activities.FirstOrDefault(a => a.Id == activity)?.Name ?? activity : activity;
+        Content.Regions.TryGetValue(zone, out var r) ? r.FindActivity(activity)?.Name ?? activity : activity;
+
+    /// <summary>Nome da area onde a atividade acontece (ou da zona, se for da zona inteira).</summary>
+    public string PlaceName(string zone, string activity) =>
+        Content.Regions.TryGetValue(zone, out var r) && r.AreaOfActivity(activity) is { } a ? a.Name : ZoneName(zone);
 
     public string Clock(long tick)
     {
@@ -59,12 +66,12 @@ public sealed class ZoneDraft
             Name = r.Name, Biome = r.Biome, Function = r.Function, Pvp = r.Pvp, DeathRule = r.DeathRule, Control = r.Control,
             LevelMin = r.LevelMin, LevelMax = r.LevelMax, Capacity = r.Capacity,
         };
-        foreach (var a in r.Activities) d.Offered.Add(a.Id);
+        foreach (var a in r.AllActivities()) d.Offered.Add(a.Id);
         return d;
     }
 
     public bool DiffersFrom(RegionDefinition r) =>
         Name != r.Name || Biome != r.Biome || Function != r.Function || Pvp != r.Pvp || DeathRule != r.DeathRule ||
         Control != r.Control || LevelMin != r.LevelMin || LevelMax != r.LevelMax || Capacity != r.Capacity ||
-        Offered.Count != r.Activities.Count || r.Activities.Any(a => !Offered.Contains(a.Id));
+        Offered.Count != r.AllActivities().Count() || r.AllActivities().Any(a => !Offered.Contains(a.Id));
 }

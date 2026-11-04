@@ -102,7 +102,7 @@ public class BehaviorTests
             foreach (var c in w.Characters.Where(x => x.LastDecision != null && x.LastDecision.Tick > w.Clock.Tick - SimTime.TicksPerHour))
             {
                 var d = c.LastDecision!;
-                var a = w.Content.Regions[d.RegionId].Activities.First(x => x.Id == d.ActivityId);
+                var a = w.Content.Regions[d.RegionId].FindActivity(d.ActivityId)!;
                 Assert.Contains(d.RegionId, c.KnownRegions);
                 Assert.True(a.MinLevel <= c.Level);
                 Assert.Equal(1, a.MinGroupSize);
@@ -122,7 +122,7 @@ public class BehaviorTests
             int expected = w.Characters.Count(c => (c.Status == CharacterStatus.Doing || c.Status == CharacterStatus.Traveling) && c.ActivityId.Length > 0);
             int counted = 0;
             foreach (var r in w.Content.Regions.Values)
-                foreach (var a in r.Activities)
+                foreach (var a in r.AllActivities())
                     counted += w.OccupancyOf(r.Id, a.Id);
             Assert.Equal(expected, counted);
             Assert.Equal(w.Persons.Count(p => p.IsOnline), w.OnlineCount);
@@ -168,7 +168,7 @@ public class BehaviorTests
         Assert.Equal((sum + BehaviorTuning.WalkSpeed - 1) / BehaviorTuning.WalkSpeed, plan.Minutes);
         // Pontos de atividade ficam dentro da zona.
         foreach (var r in TestSupport.Preset.Regions.Values)
-            foreach (var a in r.Activities)
+            foreach (var a in r.AllActivities())
                 Assert.True(layout.Spot(r.Id, a.Id).DistanceTo(layout.Center(r.Id)) < layout.ZoneRadius, $"{r.Id}/{a.Id} fora da zona");
     }
 

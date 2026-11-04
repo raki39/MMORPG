@@ -209,7 +209,7 @@ public static class RunReportWriter
         {
             var parts = g.Key.Split('/');
             var region = world.Content.Regions.TryGetValue(parts[0], out var r) ? r : null;
-            var act = region?.Activities.FirstOrDefault(a => a.Id == parts[1]);
+            var act = region?.FindActivity(parts[1]);
             sb.AppendLine($"| {region?.Name ?? parts[0]} | {act?.Name ?? parts[1]} | `{act?.Type}` | {N(g.Count())} | {Pct(g.Count(), chosen.Count)} |");
         }
         sb.AppendLine();
@@ -234,7 +234,7 @@ public static class RunReportWriter
         {
             var d = c.LastDecision!;
             var region = world.Content.Regions[d.RegionId];
-            var act = region.Activities.First(a => a.Id == d.ActivityId);
+            var act = region.FindActivity(d.ActivityId)!;
             string factors = string.Join(", ", d.Factors.Where(f => f.Key != "noise").OrderByDescending(f => Math.Abs(f.Contribution))
                 .Select(f => $"{f.Key} {(f.Contribution >= 0 ? "+" : "")}{f.Contribution}"));
             sb.AppendLine($"- **{c.Name}** (nível {c.Level}) escolheu *{act.Name}* em {region.Name} entre {d.OptionsConsidered} opções: {factors}.");

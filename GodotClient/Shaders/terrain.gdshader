@@ -10,6 +10,7 @@ uniform float zoom = 1.0;
 uniform int zone_count = 0;
 uniform vec4 zones[16];        // x, y, raio, bioma
 uniform vec4 zone_tint[16];    // rgb da camada, a = intensidade
+uniform vec4 zone_rules[16];   // x = pvp (0 nao, 1 consensual, 2 aberto), y = morte (0 sem, 1 parcial, 2 full loot)
 uniform int selected_zone = -1;
 uniform int hovered_zone = -1;
 uniform float daylight : hint_range(0.0, 1.0) = 1.0;
@@ -111,8 +112,22 @@ void fragment() {
     // Camada ativa (lotacao, perigo, nivel...).
     if (zi >= 0) land = mix(land, zone_tint[zi].rgb * (0.55 + 0.45 * shade), zone_tint[zi].a);
 
-    // Fronteiras entre zonas: faixa escura com filete claro, e sombra interna.
+    // Regra de morte: hachura diagonal (tela) — full loot vermelho forte, parcial laranja sutil.
     float edge = d2 - d1;
+    if (zi >= 0) {
+        float diag = fract((px.x + px.y) / 15.0);
+        float hatch = smoothstep(0.30, 0.42, diag) * (1.0 - smoothstep(0.58, 0.70, diag));
+        float death = zone_rules[zi].y;
+        if (death > 1.5) {
+            land = mix(land, vec3(0.80, 0.14, 0.14), hatch * 0.32);
+            land = mix(land, vec3(0.85, 0.15, 0.15), (1.0 - smoothstep(0.0, 0.16, edge)) * 0.45);
+        } else if (death > 0.5) {
+            land = mix(land, vec3(0.93, 0.55, 0.18), hatch * 0.15);
+            land = mix(land, vec3(0.93, 0.55, 0.18), (1.0 - smoothstep(0.0, 0.10, edge)) * 0.22);
+        }
+    }
+
+    // Fronteiras entre zonas: faixa escura com filete claro, e sombra interna.
     float ew = fwidth(edge);
     float border = 1.0 - smoothstep(0.0, ew * 2.2, edge);
     float inner = 1.0 - smoothstep(0.0, 0.10, edge);

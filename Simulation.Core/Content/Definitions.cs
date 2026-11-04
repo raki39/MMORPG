@@ -96,10 +96,101 @@ public sealed class RegionDefinition : IContentDefinition
     /// <summary>Itens coletaveis na regiao (ex.: minerio).</summary>
     public List<string> ResourceItemIds { get; set; } = new();
     /// <summary>
-    /// Atividades que o local oferece ("objetos inteligentes", plano 4.4.1). A decisao por
-    /// utilidade so pontua atividades de locais que a pessoa conhece. Conteudo novo se
-    /// integra sozinho: publicar uma area publica suas atividades.
+    /// Atividades da zona inteira, sem lugar especifico (ex.: explorar). As demais ficam
+    /// nas areas. A decisao por utilidade so pontua atividades de zonas conhecidas.
     /// </summary>
+    public List<ActivityDefinition> Activities { get; set; } = new();
+
+    /// <summary>Lugares dentro da zona (clareira, praca, veio, entrada de masmorra, hideout...).</summary>
+    public List<AreaDefinition> Areas { get; set; } = new();
+
+    /// <summary>Todas as atividades da zona: as da zona inteira e as de cada area.</summary>
+    public IEnumerable<ActivityDefinition> AllActivities()
+    {
+        foreach (var a in Activities) yield return a;
+        foreach (var area in Areas)
+            foreach (var a in area.Activities) yield return a;
+    }
+
+    public ActivityDefinition? FindActivity(string activityId) => AllActivities().FirstOrDefault(a => a.Id == activityId);
+
+    /// <summary>Area que oferece a atividade (nulo = atividade da zona inteira).</summary>
+    public AreaDefinition? AreaOfActivity(string activityId) =>
+        Areas.FirstOrDefault(ar => ar.Activities.Any(a => a.Id == activityId));
+}
+
+/// <summary>Tipo de area: define o que o lugar e (o icone no mapa vem daqui, nao das tarefas).</summary>
+public static class AreaKinds
+{
+    // Cidade
+    public const string Shop = "shop";
+    public const string Forge = "forge";
+    public const string Tavern = "tavern";
+    public const string TownSquare = "town_square";
+    public const string TrainingGround = "training_ground";
+    // Natureza
+    public const string HuntingGround = "hunting_ground";
+    public const string OreVein = "ore_vein";
+    public const string HerbPatch = "herb_patch";
+    public const string CrystalNode = "crystal_node";
+    public const string Landmark = "landmark";
+    // Especiais
+    /// <summary>Entrada de masmorra: leva a uma instancia separada (instancias em marco futuro).</summary>
+    public const string Dungeon = "dungeon";
+    public const string BossLair = "boss_lair";
+    /// <summary>Passagem estreita, ponto natural de emboscada.</summary>
+    public const string Chokepoint = "chokepoint";
+    /// <summary>Esconderijo de guilda: leva a um hideout seguro (territorios no M9).</summary>
+    public const string Hideout = "hideout";
+
+    public static readonly string[] CityOnly = { Shop, Forge, Tavern, TownSquare, TrainingGround };
+    public static readonly string[] All =
+        { Shop, Forge, Tavern, TownSquare, TrainingGround, HuntingGround, OreVein, HerbPatch, CrystalNode, Landmark, Dungeon, BossLair, Chokepoint, Hideout };
+
+    /// <summary>Areas que sao portais para outro espaco.</summary>
+    public static bool IsPortal(string kind) => kind == Dungeon || kind == Hideout;
+
+    /// <summary>Tipos de area permitidos pela funcao da zona (regra de construcao).</summary>
+    public static string[] AllowedIn(string zoneFunction) => zoneFunction switch
+    {
+        ZoneFunctions.City => new[] { Shop, Forge, Tavern, TownSquare, TrainingGround, Landmark, Dungeon },
+        _ => new[] { HuntingGround, OreVein, HerbPatch, CrystalNode, Landmark, Dungeon, BossLair, Chokepoint, Hideout },
+    };
+
+    /// <summary>Faixa de raio permitida por tipo (unidades de mapa). Tamanho nao cria monstros nem recursos.</summary>
+    public static (int Min, int Max) RadiusRange(string kind) => kind switch
+    {
+        Shop or Tavern or TrainingGround => (10, 20),
+        Forge => (8, 16),
+        TownSquare => (12, 24),
+        HuntingGround => (16, 40),
+        OreVein => (10, 24),
+        HerbPatch => (10, 26),
+        CrystalNode => (8, 20),
+        Landmark => (8, 16),
+        Dungeon or Hideout => (10, 18),
+        BossLair => (16, 32),
+        Chokepoint => (12, 24),
+        _ => (8, 60),
+    };
+}
+
+/// <summary>
+/// Area: lugar com posicao e tamanho dentro da zona. Oferece atividades; para fazer uma
+/// delas o personagem precisa ir ate a area.
+/// </summary>
+public sealed class AreaDefinition
+{
+    public string Id { get; set; } = "";
+    public string Name { get; set; } = "";
+    public string Kind { get; set; } = "";
+    public string Description { get; set; } = "";
+    /// <summary>Raio da area (unidades de mapa).</summary>
+    public int Radius { get; set; } = 18;
+    /// <summary>Posicao relativa ao centro da zona (opcional; senao automatica).</summary>
+    public MapPoint? Position { get; set; }
+    /// <summary>Para masmorras e hideouts: nome do espaco ao qual a area leva (instancias futuras).</summary>
+    public string LeadsTo { get; set; } = "";
     public List<ActivityDefinition> Activities { get; set; } = new();
 }
 
@@ -154,8 +245,6 @@ public sealed class ActivityDefinition
     public int TypicalMinutes { get; set; }
     /// <summary>Risco base declarado pelo autor (permille); o risco percebido varia com o mundo.</summary>
     public int BaseRiskPermille { get; set; }
-    /// <summary>Posicao do ponto da atividade relativa ao centro da zona (opcional; senao automatica).</summary>
-    public MapPoint? Spot { get; set; }
 }
 
 public sealed class MapPoint

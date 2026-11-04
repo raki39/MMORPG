@@ -67,7 +67,13 @@ public partial class PlayerModal : ModalFrame
         Actions.AddChild(Action("Localizar", "Centraliza o mapa no jogador", () => { _ctx.FocusPerson(_person.Id, false); Close(); }, enabled: online));
         _favorite = Action(FavText(), "Acompanhar este jogador (favoritos desta sessão)", ToggleFavorite);
         Actions.AddChild(_favorite);
-        if (v != null) Actions.AddChild(Action("Zona atual", "Abre a ficha da zona", () => { Close(); _ctx.OpenZone(v.RegionId); }));
+        if (v != null && v.Status == CharacterStatus.Doing && v.ActivityId.Length > 0
+            && _ctx.Content.Regions[v.TargetRegionId].AreaOfActivity(v.ActivityId) is { } area)
+        {
+            string z = v.TargetRegionId, a = area.Id;
+            Actions.AddChild(Action(area.Name, "Abre a ficha da área onde está", () => { Close(); _ctx.OpenArea(z, a); }));
+        }
+        else if (v != null) Actions.AddChild(Action("Zona atual", "Abre a ficha da zona", () => { Close(); _ctx.OpenZone(v.RegionId); }));
         Actions.AddChild(Action("Observar em 3D", "Disponível a partir do M4", () => { }, enabled: false));
     }
 
@@ -97,6 +103,7 @@ public partial class PlayerModal : ModalFrame
         var status = ThemeFactory.Text(StatusText.Of(v, _ctx.Content), 19, UiTokens.TextPrimary, UiFonts.SemiBold);
         status.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         nowCol.AddChild(status);
+        nowCol.AddChild(ThemeFactory.Text($"Zona: {_ctx.ZoneName(v.RegionId)}", UiTokens.FontSmall, UiTokens.TextSecondary));
         if (v.Status == CharacterStatus.Doing && v.ActivityEndTick > v.ActivityStartTick)
         {
             float total = v.ActivityEndTick - v.ActivityStartTick;
@@ -111,7 +118,7 @@ public partial class PlayerModal : ModalFrame
             nowCol.AddChild(Bar("Trecho atual", done, total, UiTokens.Info, $"{(int)(done * 100 / total)}%", 110));
             nowCol.AddChild(ThemeFactory.Text($"Zona atual: {_ctx.ZoneName(v.RegionId)} · andando pela estrada", UiTokens.FontSmall, UiTokens.TextSecondary));
         }
-        else nowCol.AddChild(ThemeFactory.Text($"Zona: {_ctx.ZoneName(v.RegionId)}", UiTokens.FontSmall, UiTokens.TextSecondary));
+
 
         // Sessao
         Control session;
@@ -142,7 +149,8 @@ public partial class PlayerModal : ModalFrame
         var title = ThemeFactory.Text($"{_ctx.ActivityName(d.RegionId, d.ActivityId)}", 17, UiTokens.TextPrimary, UiFonts.SemiBold);
         title.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         col.AddChild(title);
-        col.AddChild(ThemeFactory.Text($"{_ctx.ZoneName(d.RegionId)} · decidido às {_ctx.Clock(d.Tick)} · {d.OptionsConsidered} opções avaliadas",
+        string place = _ctx.PlaceName(d.RegionId, d.ActivityId) == _ctx.ZoneName(d.RegionId) ? _ctx.ZoneName(d.RegionId) : $"{_ctx.PlaceName(d.RegionId, d.ActivityId)} · {_ctx.ZoneName(d.RegionId)}";
+        col.AddChild(ThemeFactory.Text($"{place} · decidido às {_ctx.Clock(d.Tick)} · {d.OptionsConsidered} opções avaliadas",
             UiTokens.FontSmall, UiTokens.TextSecondary));
 
         var factors = d.Factors.Where(f => f.Contribution != 0).OrderByDescending(f => Math.Abs(f.Contribution)).ToList();

@@ -62,6 +62,12 @@ Objetivo (plano v1.4): provar na prática que o projeto Godot é criado e mantid
 - [x] Mapa de zonas: células, fronteiras, estradas, saídas, pontos de atividade, camadas (lotação, perigo, nível)
 - [x] Fichas em modal de jogador e zona; bolhas de aglomeração com lista e busca
 - [x] Rascunho de configuração de zona com validação do Core (publicação no M7)
+- [x] Áreas dentro das zonas (tipos lógicos, portais de masmorra e esconderijo) e ficha da área (D-019)
+- [x] Regras de construção de áreas no validador (D-020)
+- [x] Selos e hachura de perda por morte; contagem de jogadores por zona em destaque
+- [ ] Editor de áreas com posicionamento livre, prévia de tamanho, acesso e conflitos (usa as regras do D-020)
+- [ ] Quantidade de monstros e recursos por área (M3/M5), independente do tamanho
+- [ ] Quests como objetivos com recompensa, separadas das atividades
 - [ ] Faixa de eventos (notícias do servidor) e navegação com histórico (voltar)
 - [ ] Tabelas de Comunidade/Economia com virtualização
 - [ ] Revisão visual completa em 1366×768 das fichas

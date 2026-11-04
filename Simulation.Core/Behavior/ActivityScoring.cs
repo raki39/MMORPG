@@ -49,9 +49,9 @@ public static class ActivityScoring
         {
             var region = content.Regions[regionId];
             if (routes.ZonePath(ch.RegionId, regionId) == null) continue;
-            int perActivityCapacity = Math.Max(5, region.Capacity / Math.Max(1, region.Activities.Count));
+            int perActivityCapacity = Math.Max(5, region.Capacity / Math.Max(1, region.AllActivities().Count()));
 
-            foreach (var a in region.Activities)
+            foreach (var a in region.AllActivities())
             {
                 if (a.MinGroupSize > 1 || NeedsGroupSystem.Contains(a.Type)) continue;
                 if (a.MinLevel > ch.Level) continue;

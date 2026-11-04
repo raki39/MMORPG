@@ -328,7 +328,7 @@ public sealed class BehaviorSystem
 
     private void StartActivity(Character ch)
     {
-        var a = _w.Content.Regions[ch.TargetRegionId].Activities.First(x => x.Id == ch.ActivityId);
+        var a = _w.Content.Regions[ch.TargetRegionId].FindActivity(ch.ActivityId)!;
         var rng = Rng("behavior.duration", ch.Id * 1_000_000L + ch.DecisionCount);
         int minutes = Math.Max(1, a.TypicalMinutes * rng.NextIntInclusive(BehaviorTuning.ActivityDurationMin, BehaviorTuning.ActivityDurationMax) / 1000);
         ch.Status = CharacterStatus.Doing;
@@ -346,7 +346,7 @@ public sealed class BehaviorSystem
         if (ch.ActivityId.Length > 0)
         {
             var region = _w.Content.Regions[ch.TargetRegionId];
-            var a = region.Activities.First(x => x.Id == ch.ActivityId);
+            var a = region.FindActivity(ch.ActivityId)!;
             _w.AddOccupancy(region.Id, a.Id, -1);
             AwardExperience(ch, a, region, (int)((ev.Tick - ch.ActivityStartTick) / SimTime.TicksPerMinute));
             // Explorar revela mais longe: as zonas ligadas as vizinhas.

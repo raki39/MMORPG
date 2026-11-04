@@ -346,84 +346,155 @@ public static class ContentValidator
     private static void ValidateActivities(ContentSet set, HashSet<string> classIds, HashSet<string> itemIds, Collector v)
     {
         const string f = RegionsFile;
+        // Geometria derivada (posicoes automaticas ou do conteudo) para as regras de construcao.
+        World.ZoneLayout? layout = null;
+        try { layout = new World.ZoneLayout(set.World, set.Regions); }
+        catch (Exception) { /* referencias quebradas ja geram erros proprios */ }
+
         for (int i = 0; i < set.Regions.Count; i++)
         {
             var r = set.Regions[i];
             string rp = $"regions[{i}]";
-            bool isCity = r.IsCity;
-            if (r.Activities.Count == 0)
-                v.Warning(f, rp + ".activities", "Local não oferece nenhuma atividade; jogadores simulados não terão motivo para visitá-lo.");
+            if (layout != null) ValidateAreaPlacement(set, r, rp, layout, v);
+            if (!r.AllActivities().Any())
+                v.Warning(f, rp + ".activities", "Zona não oferece nenhuma atividade; jogadores simulados não terão motivo para visitá-la.");
 
             var seen = new HashSet<string>(StringComparer.Ordinal);
             for (int a = 0; a < r.Activities.Count; a++)
-            {
-                var act = r.Activities[a];
-                string p = $"{rp}.activities[{a}]";
-                if (string.IsNullOrWhiteSpace(act.Id) || !IdPattern.IsMatch(act.Id))
-                    v.Error(f, p + ".id", $"ID '{act.Id}' inválido (use minúsculas, números e _, iniciando por letra).");
-                else if (!seen.Add(act.Id))
-                    v.Error(f, p + ".id", $"ID '{act.Id}' duplicado neste local.");
-                v.Require(f, p + ".name", act.Name);
-                if (!ActivityTypes.All.Contains(act.Type))
-                {
-                    v.Error(f, p + ".type", $"Tipo de atividade '{act.Type}' desconhecido. Válidos: {string.Join(", ", ActivityTypes.All)}.");
-                    continue;
-                }
-                if (isCity && ActivityTypes.NotInCity.Contains(act.Type))
-                    v.Error(f, p + ".type", $"Atividade '{act.Type}' envolve combate e não pode existir em cidade.");
-                if (!isCity && ActivityTypes.CityOnly.Contains(act.Type))
-                    v.Error(f, p + ".type", $"Atividade '{act.Type}' é um serviço de cidade.");
-                if (act.Type == ActivityTypes.Ambush && r.Pvp != PvpRules.Open)
-                    v.Error(f, p + ".type", "Emboscada exige área com PvP aberto.");
-                if (act.MinLevel < 1) v.Error(f, p + ".minLevel", "Nível mínimo deve ser >= 1.");
-                if (act.MinGroupSize < 1) v.Error(f, p + ".minGroupSize", "Grupo mínimo deve ser >= 1.");
-                if (act.MaxGroupSize < act.MinGroupSize || act.MaxGroupSize > 40)
-                    v.Error(f, p + ".maxGroupSize", "Grupo máximo deve estar entre o mínimo e 40.");
-                if (act.TypicalMinutes < 1 || act.TypicalMinutes > 600)
-                    v.Error(f, p + ".typicalMinutes", "Duração típica deve estar entre 1 e 600 min.");
-                if (act.BaseRiskPermille < 0 || act.BaseRiskPermille > 1000)
-                    v.Error(f, p + ".baseRiskPermille", "Risco base deve estar entre 0 e 1000 permille.");
-                for (int k = 0; k < act.ClassIds.Count; k++)
-                    if (!classIds.Contains(act.ClassIds[k]))
-                        v.Error(f, $"{p}.classIds[{k}]", $"Classe '{act.ClassIds[k]}' não existe.");
-                for (int k = 0; k < act.RequiredItemIds.Count; k++)
-                    if (!itemIds.Contains(act.RequiredItemIds[k]))
-                        v.Error(f, $"{p}.requiredItemIds[{k}]", $"Item '{act.RequiredItemIds[k]}' não existe.");
-                for (int k = 0; k < act.ItemIds.Count; k++)
-                    if (!itemIds.Contains(act.ItemIds[k]))
-                        v.Error(f, $"{p}.itemIds[{k}]", $"Item '{act.ItemIds[k]}' não existe.");
+                ValidateActivity(set, r, r.Activities[a], $"{rp}.activities[{a}]", seen, classIds, itemIds, v);
 
-                bool needsCreatures = act.Type == ActivityTypes.Hunt || act.Type == ActivityTypes.Boss;
-                if (needsCreatures && act.CreatureIds.Count == 0)
-                    v.Error(f, p + ".creatureIds", "Caça e boss precisam de ao menos uma criatura.");
-                for (int k = 0; k < act.CreatureIds.Count; k++)
-                {
-                    string cid = act.CreatureIds[k];
-                    var creature = set.Creatures.FirstOrDefault(c => c.Id == cid);
-                    string cp = $"{p}.creatureIds[{k}]";
-                    if (creature == null)
-                        v.Error(f, cp, $"Criatura '{cid}' não existe.");
-                    else
-                    {
-                        if (!creature.RegionIds.Contains(r.Id))
-                            v.Error(f, cp, $"Criatura '{cid}' não aparece em '{r.Id}' (ver creatures.json regionIds).");
-                        if (act.Type == ActivityTypes.Boss && creature.Kind != CreatureKinds.Boss)
-                            v.Error(f, cp, $"Criatura '{cid}' não é um boss.");
-                        if (act.Type == ActivityTypes.Hunt && creature.Kind == CreatureKinds.Boss)
-                            v.Error(f, cp, $"Boss '{cid}' deve ser oferecido como atividade 'boss', não 'hunt'.");
-                        if (act.Type == ActivityTypes.Boss && act.MinGroupSize < creature.RecommendedGroupSize)
-                            v.Warning(f, p + ".minGroupSize", $"Grupo mínimo menor que o recomendado para '{cid}' ({creature.RecommendedGroupSize}).");
-                    }
-                }
-                if (act.Type == ActivityTypes.Gather)
-                {
-                    if (act.ItemIds.Count == 0)
-                        v.Error(f, p + ".itemIds", "Coleta precisa de ao menos um item.");
-                    for (int k = 0; k < act.ItemIds.Count; k++)
-                        if (!r.ResourceItemIds.Contains(act.ItemIds[k]))
-                            v.Error(f, $"{p}.itemIds[{k}]", $"Item '{act.ItemIds[k]}' não está em resourceItemIds deste local.");
-                }
+            var areaIds = new HashSet<string>(StringComparer.Ordinal);
+            for (int j = 0; j < r.Areas.Count; j++)
+            {
+                var area = r.Areas[j];
+                string ap = $"{rp}.areas[{j}]";
+                if (string.IsNullOrWhiteSpace(area.Id) || !IdPattern.IsMatch(area.Id))
+                    v.Error(f, ap + ".id", $"ID '{area.Id}' inválido (use minúsculas, números e _, iniciando por letra).");
+                else if (!areaIds.Add(area.Id))
+                    v.Error(f, ap + ".id", $"Área '{area.Id}' duplicada nesta zona.");
+                v.Require(f, ap + ".name", area.Name);
+                v.OneOf(f, ap + ".kind", area.Kind, AreaKinds.All);
+                if (AreaKinds.All.Contains(area.Kind) && !AreaKinds.AllowedIn(r.Function).Contains(area.Kind))
+                    v.Error(f, ap + ".kind", r.IsCity
+                        ? $"Área do tipo '{area.Kind}' não pode existir em cidade."
+                        : $"Área do tipo '{area.Kind}' só existe em cidades.");
+                var (rmin, rmax) = AreaKinds.RadiusRange(area.Kind);
+                if (area.Radius < rmin || area.Radius > rmax)
+                    v.Error(f, ap + ".radius", $"Raio deste tipo de área deve estar entre {rmin} e {rmax} unidades ({rmin * 10} a {rmax * 10} m)."); 
+                if (area.Kind == AreaKinds.Hideout && r.Pvp != PvpRules.Open)
+                    v.Warning(f, ap + ".kind", "Esconderijos de guilda costumam ficar em zonas com PvP aberto.");
+                if (area.Activities.Count == 0 && !AreaKinds.IsPortal(area.Kind) && area.Kind != AreaKinds.Landmark)
+                    v.Warning(f, ap + ".activities", "Área sem atividades: ninguém terá motivo para ir até lá.");
+                for (int a = 0; a < area.Activities.Count; a++)
+                    ValidateActivity(set, r, area.Activities[a], $"{ap}.activities[{a}]", seen, classIds, itemIds, v);
             }
+        }
+    }
+
+    /// <summary>
+    /// Regras de construcao: a area cabe na zona, nao bloqueia saidas nem a encruzilhada
+    /// e nao ocupa o mesmo espaco de outra area.
+    /// </summary>
+    private static void ValidateAreaPlacement(ContentSet set, RegionDefinition r, string rp, World.ZoneLayout layout, Collector v)
+    {
+        const string f = RegionsFile;
+        var center = layout.Center(r.Id);
+        for (int j = 0; j < r.Areas.Count; j++)
+        {
+            var a = r.Areas[j];
+            string ap = $"{rp}.areas[{j}]";
+            World.MapPos c;
+            try { c = layout.AreaCenter(r.Id, a.Id); } catch (KeyNotFoundException) { continue; }
+            if (c.DistanceTo(center) + a.Radius > set.World.ZoneRadius * 0.92)
+                v.Error(f, ap + ".position", "A área não cabe dentro da zona.");
+            if (c.DistanceTo(layout.Hub(r.Id)) <= a.Radius + 4)
+                v.Error(f, ap + ".position", "A área cobre a encruzilhada da zona e bloquearia as estradas.");
+            foreach (var con in r.Connections)
+            {
+                World.MapPos gate;
+                try { gate = layout.Gate(r.Id, con.To); } catch (KeyNotFoundException) { continue; }
+                if (c.DistanceTo(gate) <= a.Radius + 4)
+                    v.Error(f, ap + ".position", $"A área bloqueia a saída para '{con.To}'.");
+            }
+            for (int k = 0; k < j; k++)
+            {
+                var b = r.Areas[k];
+                World.MapPos cb;
+                try { cb = layout.AreaCenter(r.Id, b.Id); } catch (KeyNotFoundException) { continue; }
+                if (c.DistanceTo(cb) < a.Radius + b.Radius)
+                    v.Error(f, ap + ".position", $"A área ocupa o mesmo espaço que '{b.Name}'.");
+            }
+        }
+    }
+
+    private static void ValidateActivity(ContentSet set, RegionDefinition r, ActivityDefinition act, string p,
+        HashSet<string> seen, HashSet<string> classIds, HashSet<string> itemIds, Collector v)
+    {
+        const string f = RegionsFile;
+        bool isCity = r.IsCity;
+        if (string.IsNullOrWhiteSpace(act.Id) || !IdPattern.IsMatch(act.Id))
+            v.Error(f, p + ".id", $"ID '{act.Id}' inválido (use minúsculas, números e _, iniciando por letra).");
+        else if (!seen.Add(act.Id))
+            v.Error(f, p + ".id", $"ID '{act.Id}' duplicado neste local.");
+        v.Require(f, p + ".name", act.Name);
+        if (!ActivityTypes.All.Contains(act.Type))
+        {
+            v.Error(f, p + ".type", $"Tipo de atividade '{act.Type}' desconhecido. Válidos: {string.Join(", ", ActivityTypes.All)}.");
+            return;
+        }
+        if (isCity && ActivityTypes.NotInCity.Contains(act.Type))
+            v.Error(f, p + ".type", $"Atividade '{act.Type}' envolve combate e não pode existir em cidade.");
+        if (!isCity && ActivityTypes.CityOnly.Contains(act.Type))
+            v.Error(f, p + ".type", $"Atividade '{act.Type}' é um serviço de cidade.");
+        if (act.Type == ActivityTypes.Ambush && r.Pvp != PvpRules.Open)
+            v.Error(f, p + ".type", "Emboscada exige área com PvP aberto.");
+        if (act.MinLevel < 1) v.Error(f, p + ".minLevel", "Nível mínimo deve ser >= 1.");
+        if (act.MinGroupSize < 1) v.Error(f, p + ".minGroupSize", "Grupo mínimo deve ser >= 1.");
+        if (act.MaxGroupSize < act.MinGroupSize || act.MaxGroupSize > 40)
+            v.Error(f, p + ".maxGroupSize", "Grupo máximo deve estar entre o mínimo e 40.");
+        if (act.TypicalMinutes < 1 || act.TypicalMinutes > 600)
+            v.Error(f, p + ".typicalMinutes", "Duração típica deve estar entre 1 e 600 min.");
+        if (act.BaseRiskPermille < 0 || act.BaseRiskPermille > 1000)
+            v.Error(f, p + ".baseRiskPermille", "Risco base deve estar entre 0 e 1000 permille.");
+        for (int k = 0; k < act.ClassIds.Count; k++)
+            if (!classIds.Contains(act.ClassIds[k]))
+                v.Error(f, $"{p}.classIds[{k}]", $"Classe '{act.ClassIds[k]}' não existe.");
+        for (int k = 0; k < act.RequiredItemIds.Count; k++)
+            if (!itemIds.Contains(act.RequiredItemIds[k]))
+                v.Error(f, $"{p}.requiredItemIds[{k}]", $"Item '{act.RequiredItemIds[k]}' não existe.");
+        for (int k = 0; k < act.ItemIds.Count; k++)
+            if (!itemIds.Contains(act.ItemIds[k]))
+                v.Error(f, $"{p}.itemIds[{k}]", $"Item '{act.ItemIds[k]}' não existe.");
+
+        bool needsCreatures = act.Type == ActivityTypes.Hunt || act.Type == ActivityTypes.Boss;
+        if (needsCreatures && act.CreatureIds.Count == 0)
+            v.Error(f, p + ".creatureIds", "Caça e boss precisam de ao menos uma criatura.");
+        for (int k = 0; k < act.CreatureIds.Count; k++)
+        {
+            string cid = act.CreatureIds[k];
+            var creature = set.Creatures.FirstOrDefault(c => c.Id == cid);
+            string cp = $"{p}.creatureIds[{k}]";
+            if (creature == null)
+                v.Error(f, cp, $"Criatura '{cid}' não existe.");
+            else
+            {
+                if (!creature.RegionIds.Contains(r.Id))
+                    v.Error(f, cp, $"Criatura '{cid}' não aparece em '{r.Id}' (ver creatures.json regionIds).");
+                if (act.Type == ActivityTypes.Boss && creature.Kind != CreatureKinds.Boss)
+                    v.Error(f, cp, $"Criatura '{cid}' não é um boss.");
+                if (act.Type == ActivityTypes.Hunt && creature.Kind == CreatureKinds.Boss)
+                    v.Error(f, cp, $"Boss '{cid}' deve ser oferecido como atividade 'boss', não 'hunt'.");
+                if (act.Type == ActivityTypes.Boss && act.MinGroupSize < creature.RecommendedGroupSize)
+                    v.Warning(f, p + ".minGroupSize", $"Grupo mínimo menor que o recomendado para '{cid}' ({creature.RecommendedGroupSize}).");
+            }
+        }
+        if (act.Type == ActivityTypes.Gather)
+        {
+            if (act.ItemIds.Count == 0)
+                v.Error(f, p + ".itemIds", "Coleta precisa de ao menos um item.");
+            for (int k = 0; k < act.ItemIds.Count; k++)
+                if (!r.ResourceItemIds.Contains(act.ItemIds[k]))
+                    v.Error(f, $"{p}.itemIds[{k}]", $"Item '{act.ItemIds[k]}' não está em resourceItemIds deste local.");
         }
     }
 

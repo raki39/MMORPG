@@ -95,14 +95,16 @@ public static class StatusText
     {
         string Zone(string id) => content.Regions.TryGetValue(id, out var r) ? r.Name : id;
         string Act(string zone, string act) =>
-            content.Regions.TryGetValue(zone, out var r) ? r.Activities.FirstOrDefault(a => a.Id == act)?.Name ?? act : act;
+            content.Regions.TryGetValue(zone, out var r) ? r.FindActivity(act)?.Name ?? act : act;
+        string Place(string zone, string act) =>
+            content.Regions.TryGetValue(zone, out var r) && r.AreaOfActivity(act) is { } area ? area.Name : Zone(zone);
         return v.Status switch
         {
             CharacterStatus.Offline => "Desconectado",
             CharacterStatus.Idle => $"Decidindo o que fazer · {Zone(v.RegionId)}",
-            CharacterStatus.Traveling when v.ActivityId.Length > 0 => $"A caminho: {Act(v.TargetRegionId, v.ActivityId)} · {Zone(v.TargetRegionId)}",
+            CharacterStatus.Traveling when v.ActivityId.Length > 0 => $"A caminho de {Place(v.TargetRegionId, v.ActivityId)} · {Act(v.TargetRegionId, v.ActivityId)}",
             CharacterStatus.Traveling => $"Andando · {Zone(v.RegionId)}",
-            CharacterStatus.Doing when v.ActivityId.Length > 0 => $"{Act(v.TargetRegionId, v.ActivityId)} · {Zone(v.TargetRegionId)}",
+            CharacterStatus.Doing when v.ActivityId.Length > 0 => $"{Act(v.TargetRegionId, v.ActivityId)} · {Place(v.TargetRegionId, v.ActivityId)}",
             _ => $"Descansando · {Zone(v.RegionId)}",
         };
     }

@@ -155,3 +155,26 @@ FPS médio medido em 1920×1080, RTX 3060, velocidade 10×, 6 s, mapa com movime
 
 - Clicar num jogador ou numa zona abre uma ficha em modal grande, com abas e ações, em vez do painel lateral. Grupos de 5 ou mais pessoas no mesmo ponto viram uma bolha clicável com lista e busca.
 - A configuração de zona edita um **rascunho** validado pelo mesmo `ContentValidator` do Core. Publicar no mundo ativo fica desabilitado, com explicação, até existir o sistema de atualizações (M7) ou o modo sandbox. Rascunhos e favoritos vivem só na sessão até existir o save.
+
+## D-019 — Zona → área → atividade (lugares com posição e tamanho)
+**Data:** 04/11/2026 · **Estado:** aceita (amplia o plano 4.4.1 e 6.1)
+
+- **Zona:** mapa com regras gerais (D-015). **Área:** lugar dentro da zona, com ID, nome, tipo, descrição, raio e posição. **Atividade:** o que se faz ali. **Objetivo do personagem** (por que escolheu) e **quest** (objetivo com recompensa, ex.: "mate 10 lobos") ficam separados e chegam depois; caçar lobos existe com ou sem quest.
+- A área oferece as atividades; para fazer uma delas, o personagem sai da estrada e vai até a área. Atividades sem lugar fixo (ex.: explorar) ficam na zona e usam a encruzilhada como destino.
+- Tipos de área: cidade (loja, forja, taverna, praça, campo de treino); natureza (área de caça, veio de minério, campo de ervas, veio de cristal, marco); especiais (entrada de masmorra e esconderijo de guilda, que são portais para outro espaço em marcos futuros; covil de boss; passagem estreita).
+- No mapa, os ícones são das **áreas** (pelo tipo), não das tarefas. A ficha da área lista as tarefas com requisitos, criaturas, saque e quem está fazendo agora.
+- IDs de atividade são únicos dentro da zona, inclusive entre áreas. Ocupação, decisões e eventos continuam por `zona/atividade`.
+
+## D-020 — Regras de construção de áreas
+**Data:** 04/11/2026 · **Estado:** aceita (validador do Core; o editor de posicionamento usará as mesmas regras)
+
+- Tipo compatível com a função da zona (`AreaKinds.AllowedIn`): cidade não tem caça e zona de caça não tem mercado.
+- Raio dentro da faixa do tipo (`AreaKinds.RadiusRange`, ex.: caça 16–40, forja 8–16). O tamanho define espaço, não a quantidade de monstros ou recursos, que será configurada à parte.
+- A área precisa caber na zona, não pode cobrir a encruzilhada nem uma saída (passagem obrigatória) e não pode ocupar o mesmo espaço de outra área. Não há limite arbitrário de quantidade: vale o espaço disponível.
+- Posição livre (`position` relativa ao centro) ou automática, num anel que evita o nome da zona e as estradas.
+- Perda por morte é marcada no mapa com força: hachura e selo vermelho "☠ FULL LOOT" e hachura e selo laranja "PERDA PARCIAL". Ruínas Sombrias passou a ser full loot.
+
+## D-021 — Acabamento dos modais
+**Data:** 04/11/2026 · **Estado:** aceita
+
+Moldura comum (`ModalFrame`): banner com gradiente na cor do contexto, feixes e pontilhado, sombra profunda tingida, botão de fechar redondo, abas com indicador deslizante animado, transição do conteúdo, cartões com sombra e faixa de destaque, indicadores com barra lateral e ações primárias com brilho. Fichas: jogador, zona (áreas como cartões clicáveis), área (tarefas, criaturas, saque, portais) e lista de aglomeração.

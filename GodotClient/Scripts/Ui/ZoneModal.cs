@@ -77,26 +77,16 @@ public partial class ZoneModal : ModalFrame
             Stat($"{people * 100 / Math.Max(1, _zone.Capacity)}%", "lotação", WorldMapView.Ramp(Mathf.Clamp(people / (float)Math.Max(1, _zone.Capacity) * 4f, 0, 1))),
             Stat($"{(int)(WorldMapView.DangerOf(_zone) * 100)}", "índice de perigo", WorldMapView.Ramp(WorldMapView.DangerOf(_zone))));
 
-        var acts = Column(8);
-        if (_zone.Activities.Count == 0)
-            acts.AddChild(ThemeFactory.Text("Esta zona não oferece atividades.", UiTokens.FontBody, UiTokens.Warning));
-        int maxAt = Math.Max(1, _zone.Activities.Count == 0 ? 1 : _zone.Activities.Max(a => _map.PeopleAtSpot(_zone.Id, a.Id)));
-        foreach (var a in _zone.Activities)
+        var areas = Column(10);
+        if (_zone.Areas.Count == 0)
+            areas.AddChild(ThemeFactory.Text("Esta zona ainda não tem áreas.", UiTokens.FontBody, UiTokens.Warning));
+        foreach (var area in _zone.Areas) areas.AddChild(AreaCard(area));
+        if (_zone.Activities.Count > 0)
         {
-            int n = _map.PeopleAtSpot(_zone.Id, a.Id);
-            var row = new HBoxContainer();
-            row.AddThemeConstantOverride("separation", 12);
-            row.AddChild(new GlyphIcon(a.Type) { CustomMinimumSize = new Vector2(30, 30) });
-            var info = Column(2);
-            info.AddChild(ThemeFactory.Text(a.Name, UiTokens.FontBody, UiTokens.TextPrimary, UiFonts.Medium));
-            string group = a.MinGroupSize == a.MaxGroupSize ? $"grupo {a.MinGroupSize}" : $"grupo {a.MinGroupSize}–{a.MaxGroupSize}";
-            info.AddChild(ThemeFactory.Text($"{PtBr.ActivityType(a.Type)} · nível {a.MinLevel}+ · {group} · ~{a.TypicalMinutes} min · risco {a.BaseRiskPermille / 10}%",
-                UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Numbers));
-            row.AddChild(info);
-            var bar = Bar("", n, maxAt, ActivityPalette.Color(a.Type), $"{n} agora", 0);
-            bar.CustomMinimumSize = new Vector2(220, 0);
-            row.AddChild(bar);
-            acts.AddChild(row);
+            var whole = Column(6);
+            foreach (var a in _zone.Activities)
+                whole.AddChild(TaskLine(a));
+            areas.AddChild(Card("Na zona inteira (sem lugar fixo)", whole));
         }
 
         var exits = Column(8);
@@ -117,7 +107,70 @@ public partial class ZoneModal : ModalFrame
         var note = ThemeFactory.Text("Zonas vizinhas sem saída declarada não se ligam: o caminho passa por outras zonas.", UiTokens.FontCaption, UiTokens.TextDisabled);
         exits.AddChild(note);
 
-        return Column(16, stats, Card("Atividades oferecidas", acts, ZoneAccent(_zone)), Card("Saídas", exits));
+        return Column(16, stats, Card($"Áreas · {_zone.Areas.Count}", areas, ZoneAccent(_zone)), Card("Saídas", exits));
+    }
+
+
+    /// <summary>Cartao clicavel de area: emblema, nome, tipo, tarefas e quem esta la.</summary>
+    private Control AreaCard(AreaDefinition area)
+    {
+        var col = AreaPalette.Color(area.Kind);
+        var b = new Button { FocusMode = FocusModeEnum.None, SizeFlagsHorizontal = SizeFlags.ExpandFill, TooltipText = $"Abrir {area.Name}" };
+        var n = ThemeFactory.Box(new Color("#121A24"), 0, border: new Color(col, 0.35f), radius: 10);
+        n.BorderWidthLeft = 3;
+        var h = ThemeFactory.Box(new Color("#18222F"), 0, border: new Color(col, 0.9f), radius: 10);
+        h.BorderWidthLeft = 3;
+        h.ShadowColor = new Color(col, 0.18f);
+        h.ShadowSize = 10;
+        b.AddThemeStyleboxOverride("normal", n);
+        b.AddThemeStyleboxOverride("hover", h);
+        b.AddThemeStyleboxOverride("pressed", h);
+        var row = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
+        row.SetAnchorsPreset(LayoutPreset.FullRect);
+        row.OffsetLeft = 14; row.OffsetRight = -14; row.OffsetTop = 10; row.OffsetBottom = -10;
+        row.AddThemeConstantOverride("separation", 14);
+        row.AddChild(new KindEmblem(area.Kind) { CustomMinimumSize = new Vector2(48, 48), MouseFilter = MouseFilterEnum.Ignore, SizeFlagsVertical = SizeFlags.ShrinkCenter });
+        var info = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore, SizeFlagsHorizontal = SizeFlags.ExpandFill, Alignment = BoxContainer.AlignmentMode.Center };
+        info.AddThemeConstantOverride("separation", 3);
+        var title = ThemeFactory.Text(area.Name, 16, UiTokens.TextPrimary, UiFonts.SemiBold);
+        title.MouseFilter = MouseFilterEnum.Ignore;
+        info.AddChild(title);
+        string tasks = area.Activities.Count == 0
+            ? (AreaKinds.IsPortal(area.Kind) ? $"Leva a: {area.LeadsTo} (em breve)" : "Sem tarefas")
+            : string.Join("  ·  ", area.Activities.Select(a => $"{a.Name} ({_map.PeopleAtSpot(_zone.Id, a.Id)})"));
+        var sub = ThemeFactory.Text($"{AreaPalette.Name(area.Kind)}  —  {tasks}", UiTokens.FontSmall, UiTokens.TextSecondary);
+        sub.MouseFilter = MouseFilterEnum.Ignore;
+        sub.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        info.AddChild(sub);
+        row.AddChild(info);
+        int here = _map.PeopleInArea(_zone.Id, area.Id).Count;
+        var count = ThemeFactory.Text(here.ToString(), 24, here > 0 ? UiTokens.Info : UiTokens.TextDisabled, UiFonts.Numbers);
+        count.MouseFilter = MouseFilterEnum.Ignore;
+        count.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        row.AddChild(count);
+        var arrow = ThemeFactory.Text("›", 24, col);
+        arrow.MouseFilter = MouseFilterEnum.Ignore;
+        arrow.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        row.AddChild(arrow);
+        b.AddChild(row);
+        b.CustomMinimumSize = new Vector2(0, 74);
+        string zid = _zone.Id, aid = area.Id;
+        b.Pressed += () => { Close(); _ctx.OpenArea(zid, aid); };
+        return b;
+    }
+
+    private Control TaskLine(ActivityDefinition a)
+    {
+        int n = _map.PeopleAtSpot(_zone.Id, a.Id);
+        var row = new HBoxContainer();
+        row.AddThemeConstantOverride("separation", 12);
+        row.AddChild(new GlyphIcon(a.Type) { CustomMinimumSize = new Vector2(30, 30) });
+        var info = Column(2);
+        info.AddChild(ThemeFactory.Text(a.Name, UiTokens.FontBody, UiTokens.TextPrimary, UiFonts.Medium));
+        info.AddChild(ThemeFactory.Text($"{PtBr.ActivityType(a.Type)} · nível {a.MinLevel}+ · ~{a.TypicalMinutes} min", UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Numbers));
+        row.AddChild(info);
+        row.AddChild(ThemeFactory.Text($"{n} agora", UiTokens.FontSmall, n > 0 ? UiTokens.Info : UiTokens.TextDisabled, UiFonts.Numbers));
+        return row;
     }
 
     // ---------------- Jogadores ----------------
@@ -188,12 +241,23 @@ public partial class ZoneModal : ModalFrame
         form.AddChild(Field("Capacidade", Spin(1, 5000, _draft.Capacity, v => _draft.Capacity = v)));
 
         var acts = Column(6);
-        foreach (var a in _zone.Activities)
+        void Check(ActivityDefinition a)
         {
             var cb = new CheckBox { Text = $"{a.Name}  ·  {PtBr.ActivityType(a.Type)}", ButtonPressed = _draft.Offered.Contains(a.Id), FocusMode = FocusModeEnum.None };
             string id = a.Id;
             cb.Toggled += on => { if (on) _draft.Offered.Add(id); else _draft.Offered.Remove(id); Validate(); };
             acts.AddChild(cb);
+        }
+        foreach (var area in _zone.Areas)
+        {
+            acts.AddChild(Row(8, new KindEmblem(area.Kind) { CustomMinimumSize = new Vector2(22, 22) },
+                ThemeFactory.Text(area.Name, UiTokens.FontSmall, AreaPalette.Color(area.Kind), UiFonts.SemiBold)));
+            foreach (var a in area.Activities) Check(a);
+        }
+        if (_zone.Activities.Count > 0)
+        {
+            acts.AddChild(ThemeFactory.Text("Zona inteira", UiTokens.FontSmall, UiTokens.TextSecondary, UiFonts.SemiBold));
+            foreach (var a in _zone.Activities) Check(a);
         }
 
         _issuesBox = Column(6);
@@ -257,6 +321,7 @@ public partial class ZoneModal : ModalFrame
         z.DeathRule = _draft.DeathRule; z.Control = _draft.Control; z.LevelMin = _draft.LevelMin; z.LevelMax = _draft.LevelMax;
         z.Capacity = _draft.Capacity;
         z.Activities.RemoveAll(a => !_draft.Offered.Contains(a.Id));
+        foreach (var ar in z.Areas) ar.Activities.RemoveAll(a => !_draft.Offered.Contains(a.Id));
 
         string prefix = $"regions[{idx}]";
         var issues = ContentValidator.Validate(copy)
@@ -350,7 +415,7 @@ public partial class ZoneEmblem : Control
         }
         var rim = _zone.IsCity ? UiTokens.Accent : _zone.Pvp == PvpRules.Open ? UiTokens.Danger : biome.Lightened(0.45f);
         DrawArc(c, r, 0, Mathf.Tau, 48, rim, 3f, true);
-        var main = _zone.Activities.FirstOrDefault()?.Type ?? ActivityTypes.Explore;
+        var main = _zone.AllActivities().FirstOrDefault()?.Type ?? ActivityTypes.Explore;
         if (_zone.IsCity) main = ActivityTypes.Trade;
         ActivityPalette.DrawGlyph(this, main, c, r * 0.42f, new Color(UiTokens.TextPrimary, 0.92f));
     }

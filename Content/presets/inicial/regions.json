@@ -29,48 +29,94 @@
         }
       ],
       "resourceItemIds": [],
-      "activities": [
+      "activities": [],
+      "areas": [
         {
-          "id": "mercado",
-          "type": "trade",
-          "name": "Comprar e vender no mercado",
-          "typicalMinutes": 15,
-          "maxGroupSize": 1
+          "id": "mercado_central",
+          "name": "Mercado Central",
+          "kind": "shop",
+          "radius": 15,
+          "description": "Barracas e leiloeiros: tudo se compra e se vende aqui.",
+          "activities": [
+            {
+              "id": "mercado",
+              "type": "trade",
+              "name": "Comprar e vender no mercado",
+              "typicalMinutes": 15,
+              "maxGroupSize": 1
+            }
+          ]
         },
         {
-          "id": "ferreiro",
-          "type": "repair",
-          "name": "Consertar equipamento",
-          "typicalMinutes": 5,
-          "maxGroupSize": 1
+          "id": "forja_de_bram",
+          "name": "Forja de Bram",
+          "kind": "forge",
+          "radius": 12,
+          "description": "O ferreiro conserta armas e armaduras.",
+          "activities": [
+            {
+              "id": "ferreiro",
+              "type": "repair",
+              "name": "Consertar equipamento",
+              "typicalMinutes": 5,
+              "maxGroupSize": 1
+            }
+          ]
         },
         {
-          "id": "quadro_de_missoes",
-          "type": "quest",
-          "name": "Pegar missões no quadro",
-          "typicalMinutes": 10,
-          "maxGroupSize": 5
+          "id": "taverna_do_javali",
+          "name": "Taverna do Javali Dourado",
+          "kind": "tavern",
+          "radius": 15,
+          "description": "Ponto de encontro: conversas, grupos e boatos.",
+          "activities": [
+            {
+              "id": "taverna",
+              "type": "socialize",
+              "name": "Socializar na taverna",
+              "typicalMinutes": 30,
+              "maxGroupSize": 10
+            },
+            {
+              "id": "recrutamento",
+              "type": "recruit",
+              "name": "Recrutar para grupo",
+              "typicalMinutes": 10,
+              "maxGroupSize": 5
+            }
+          ]
         },
         {
-          "id": "treinador",
-          "type": "train",
-          "name": "Treinar habilidades",
-          "typicalMinutes": 10,
-          "maxGroupSize": 1
+          "id": "praca_central",
+          "name": "Praça Central",
+          "kind": "town_square",
+          "radius": 15,
+          "description": "O quadro de missões reúne pedidos de toda a região.",
+          "activities": [
+            {
+              "id": "quadro_de_missoes",
+              "type": "quest",
+              "name": "Pegar missões no quadro",
+              "typicalMinutes": 10,
+              "maxGroupSize": 5
+            }
+          ]
         },
         {
-          "id": "taverna",
-          "type": "socialize",
-          "name": "Socializar na taverna",
-          "typicalMinutes": 30,
-          "maxGroupSize": 10
-        },
-        {
-          "id": "recrutamento",
-          "type": "recruit",
-          "name": "Recrutar para grupo",
-          "typicalMinutes": 10,
-          "maxGroupSize": 5
+          "id": "campo_de_treino",
+          "name": "Campo de Treino",
+          "kind": "training_ground",
+          "radius": 14,
+          "description": "Bonecos de palha e instrutores da guarda.",
+          "activities": [
+            {
+              "id": "treinador",
+              "type": "train",
+              "name": "Treinar habilidades",
+              "typicalMinutes": 10,
+              "maxGroupSize": 1
+            }
+          ]
         }
       ]
     },
@@ -100,54 +146,83 @@
       ],
       "activities": [
         {
-          "id": "cacar_lobos",
-          "type": "hunt",
-          "name": "Caçar lobos",
-          "creatureIds": [
-            "lobo_cinzento"
-          ],
-          "typicalMinutes": 20,
-          "maxGroupSize": 3,
-          "baseRiskPermille": 80
-        },
-        {
-          "id": "cacar_aranhas",
-          "type": "hunt",
-          "name": "Caçar aranhas tecelãs",
-          "creatureIds": [
-            "aranha_tecela"
-          ],
-          "minLevel": 3,
-          "typicalMinutes": 25,
-          "maxGroupSize": 3,
-          "baseRiskPermille": 150
-        },
-        {
-          "id": "coletar_ervas",
-          "type": "gather",
-          "name": "Coletar ervas curativas",
-          "itemIds": [
-            "erva_curativa"
-          ],
-          "typicalMinutes": 15,
-          "maxGroupSize": 2,
-          "baseRiskPermille": 40
-        },
-        {
-          "id": "entrega_lenhador",
-          "type": "quest",
-          "name": "Entrega para o lenhador",
-          "typicalMinutes": 20,
-          "maxGroupSize": 3,
-          "baseRiskPermille": 30
-        },
-        {
           "id": "explorar_floresta",
           "type": "explore",
           "name": "Explorar trilhas da floresta",
           "typicalMinutes": 30,
           "maxGroupSize": 5,
           "baseRiskPermille": 60
+        }
+      ],
+      "areas": [
+        {
+          "id": "clareira_dos_lobos",
+          "name": "Clareira dos Lobos",
+          "kind": "hunting_ground",
+          "radius": 26,
+          "description": "Matilhas de lobos cinzentos e moitas de ervas.",
+          "activities": [
+            {
+              "id": "cacar_lobos",
+              "type": "hunt",
+              "name": "Caçar lobos",
+              "creatureIds": [
+                "lobo_cinzento"
+              ],
+              "typicalMinutes": 20,
+              "maxGroupSize": 3,
+              "baseRiskPermille": 80
+            },
+            {
+              "id": "coletar_ervas",
+              "type": "gather",
+              "name": "Coletar ervas curativas",
+              "itemIds": [
+                "erva_curativa"
+              ],
+              "typicalMinutes": 15,
+              "maxGroupSize": 2,
+              "baseRiskPermille": 40
+            }
+          ]
+        },
+        {
+          "id": "ninho_das_tecelas",
+          "name": "Ninho das Tecelãs",
+          "kind": "hunting_ground",
+          "radius": 22,
+          "description": "Teias entre as árvores antigas; aranhas venenosas.",
+          "activities": [
+            {
+              "id": "cacar_aranhas",
+              "type": "hunt",
+              "name": "Caçar aranhas tecelãs",
+              "creatureIds": [
+                "aranha_tecela"
+              ],
+              "minLevel": 3,
+              "typicalMinutes": 25,
+              "maxGroupSize": 3,
+              "baseRiskPermille": 150
+            }
+          ]
+        },
+        {
+          "id": "cabana_do_lenhador",
+          "name": "Cabana do Lenhador",
+          "kind": "landmark",
+          "radius": 12,
+          "description": "O lenhador sempre precisa de ajuda com entregas.",
+          "activities": [
+            {
+              "id": "entrega_lenhador",
+              "type": "quest",
+              "name": "Entrega para o lenhador",
+              "typicalMinutes": 20,
+              "maxGroupSize": 3,
+              "baseRiskPermille": 30
+            }
+          ]
         }
       ]
     },
@@ -180,35 +255,55 @@
       ],
       "activities": [
         {
-          "id": "cacar_lobos",
-          "type": "hunt",
-          "name": "Caçar lobos das colinas",
-          "creatureIds": [
-            "lobo_cinzento"
-          ],
-          "minLevel": 3,
-          "typicalMinutes": 20,
-          "maxGroupSize": 3,
-          "baseRiskPermille": 90
-        },
-        {
-          "id": "coletar_ervas",
-          "type": "gather",
-          "name": "Colher ervas das encostas",
-          "itemIds": [
-            "erva_curativa"
-          ],
-          "typicalMinutes": 15,
-          "maxGroupSize": 2,
-          "baseRiskPermille": 40
-        },
-        {
           "id": "explorar_colinas",
           "type": "explore",
           "name": "Explorar as colinas",
           "typicalMinutes": 25,
           "maxGroupSize": 5,
           "baseRiskPermille": 60
+        }
+      ],
+      "areas": [
+        {
+          "id": "encosta_dos_lobos",
+          "name": "Encosta dos Lobos",
+          "kind": "hunting_ground",
+          "radius": 24,
+          "description": "Lobos que descem das colinas ao entardecer.",
+          "activities": [
+            {
+              "id": "cacar_lobos",
+              "type": "hunt",
+              "name": "Caçar lobos das colinas",
+              "creatureIds": [
+                "lobo_cinzento"
+              ],
+              "minLevel": 3,
+              "typicalMinutes": 20,
+              "maxGroupSize": 3,
+              "baseRiskPermille": 90
+            }
+          ]
+        },
+        {
+          "id": "campo_de_ervas",
+          "name": "Campo de Ervas",
+          "kind": "herb_patch",
+          "radius": 20,
+          "description": "Encostas floridas com ervas curativas.",
+          "activities": [
+            {
+              "id": "coletar_ervas",
+              "type": "gather",
+              "name": "Colher ervas das encostas",
+              "itemIds": [
+                "erva_curativa"
+              ],
+              "typicalMinutes": 15,
+              "maxGroupSize": 2,
+              "baseRiskPermille": 40
+            }
+          ]
         }
       ]
     },
@@ -240,41 +335,70 @@
         "minerio_ferro",
         "minerio_prata"
       ],
-      "activities": [
+      "activities": [],
+      "areas": [
         {
-          "id": "coletar_minerio",
-          "type": "gather",
-          "name": "Minerar ferro e prata",
-          "itemIds": [
-            "minerio_ferro",
-            "minerio_prata"
-          ],
-          "minLevel": 6,
-          "typicalMinutes": 25,
-          "maxGroupSize": 2,
-          "baseRiskPermille": 120
+          "id": "veio_de_ferro",
+          "name": "Veio de Ferro",
+          "kind": "ore_vein",
+          "radius": 18,
+          "description": "Paredes ricas em ferro e prata.",
+          "activities": [
+            {
+              "id": "coletar_minerio",
+              "type": "gather",
+              "name": "Minerar ferro e prata",
+              "itemIds": [
+                "minerio_ferro",
+                "minerio_prata"
+              ],
+              "minLevel": 6,
+              "typicalMinutes": 25,
+              "maxGroupSize": 2,
+              "baseRiskPermille": 120
+            }
+          ]
         },
         {
-          "id": "cacar_goblins",
-          "type": "hunt",
-          "name": "Caçar goblins",
-          "creatureIds": [
-            "goblin_mineiro",
-            "goblin_xama"
-          ],
-          "minLevel": 7,
-          "typicalMinutes": 30,
-          "maxGroupSize": 5,
-          "baseRiskPermille": 200
+          "id": "acampamento_goblin",
+          "name": "Acampamento Goblin",
+          "kind": "hunting_ground",
+          "radius": 24,
+          "description": "Goblins mineiros e seus xamãs.",
+          "activities": [
+            {
+              "id": "cacar_goblins",
+              "type": "hunt",
+              "name": "Caçar goblins",
+              "creatureIds": [
+                "goblin_mineiro",
+                "goblin_xama"
+              ],
+              "minLevel": 7,
+              "typicalMinutes": 30,
+              "maxGroupSize": 5,
+              "baseRiskPermille": 200
+            }
+          ]
         },
         {
-          "id": "explorar_galerias",
-          "type": "explore",
-          "name": "Explorar galerias profundas",
-          "minLevel": 8,
-          "typicalMinutes": 30,
-          "maxGroupSize": 5,
-          "baseRiskPermille": 180
+          "id": "entrada_das_galerias",
+          "name": "Entrada das Galerias",
+          "kind": "dungeon",
+          "radius": 14,
+          "description": "Descida para as galerias profundas da mina.",
+          "leadsTo": "Galerias Profundas",
+          "activities": [
+            {
+              "id": "explorar_galerias",
+              "type": "explore",
+              "name": "Explorar galerias profundas",
+              "minLevel": 8,
+              "typicalMinutes": 30,
+              "maxGroupSize": 5,
+              "baseRiskPermille": 180
+            }
+          ]
         }
       ]
     },
@@ -300,19 +424,29 @@
         }
       ],
       "resourceItemIds": [],
-      "activities": [
+      "activities": [],
+      "areas": [
         {
-          "id": "enfrentar_rei",
-          "type": "boss",
-          "name": "Enfrentar o Rei Goblin",
-          "creatureIds": [
-            "rei_goblin"
-          ],
-          "minLevel": 15,
-          "minGroupSize": 5,
-          "maxGroupSize": 5,
-          "typicalMinutes": 45,
-          "baseRiskPermille": 450
+          "id": "salao_do_trono",
+          "name": "Salão do Trono",
+          "kind": "boss_lair",
+          "radius": 24,
+          "description": "Onde o Rei Goblin recebe os desafiantes.",
+          "activities": [
+            {
+              "id": "enfrentar_rei",
+              "type": "boss",
+              "name": "Enfrentar o Rei Goblin",
+              "creatureIds": [
+                "rei_goblin"
+              ],
+              "minLevel": 15,
+              "minGroupSize": 5,
+              "maxGroupSize": 5,
+              "typicalMinutes": 45,
+              "baseRiskPermille": 450
+            }
+          ]
         }
       ]
     },
@@ -341,36 +475,55 @@
         }
       ],
       "resourceItemIds": [],
-      "activities": [
+      "activities": [],
+      "areas": [
         {
-          "id": "cacar_esqueletos",
-          "type": "hunt",
-          "name": "Caçar esqueletos da ravina",
-          "creatureIds": [
-            "esqueleto_guardiao"
-          ],
-          "minLevel": 9,
-          "typicalMinutes": 25,
-          "maxGroupSize": 3,
-          "baseRiskPermille": 300
+          "id": "garganta_estreita",
+          "name": "Garganta Estreita",
+          "kind": "chokepoint",
+          "radius": 18,
+          "description": "Passagem apertada entre paredões: perfeita para emboscadas.",
+          "activities": [
+            {
+              "id": "emboscar_viajantes",
+              "type": "ambush",
+              "name": "Emboscar viajantes",
+              "minLevel": 10,
+              "typicalMinutes": 20,
+              "maxGroupSize": 3,
+              "baseRiskPermille": 600
+            },
+            {
+              "id": "patrulhar_ravina",
+              "type": "patrol",
+              "name": "Patrulhar a ravina",
+              "minLevel": 12,
+              "typicalMinutes": 25,
+              "maxGroupSize": 5,
+              "baseRiskPermille": 400
+            }
+          ]
         },
         {
-          "id": "emboscar_viajantes",
-          "type": "ambush",
-          "name": "Emboscar viajantes",
-          "minLevel": 10,
-          "typicalMinutes": 20,
-          "maxGroupSize": 3,
-          "baseRiskPermille": 600
-        },
-        {
-          "id": "patrulhar_ravina",
-          "type": "patrol",
-          "name": "Patrulhar a ravina",
-          "minLevel": 12,
-          "typicalMinutes": 25,
-          "maxGroupSize": 5,
-          "baseRiskPermille": 400
+          "id": "ossuario",
+          "name": "Ossuário",
+          "kind": "hunting_ground",
+          "radius": 22,
+          "description": "Restos de uma antiga batalha que não descansam.",
+          "activities": [
+            {
+              "id": "cacar_esqueletos",
+              "type": "hunt",
+              "name": "Caçar esqueletos da ravina",
+              "creatureIds": [
+                "esqueleto_guardiao"
+              ],
+              "minLevel": 9,
+              "typicalMinutes": 25,
+              "maxGroupSize": 3,
+              "baseRiskPermille": 300
+            }
+          ]
         }
       ]
     },
@@ -383,7 +536,7 @@
       "levelMin": 10,
       "levelMax": 16,
       "pvp": "open",
-      "deathRule": "partial",
+      "deathRule": "full_loot",
       "control": "contestable",
       "capacity": 120,
       "mapPosition": {
@@ -398,40 +551,68 @@
       "resourceItemIds": [
         "cristal_sombrio"
       ],
-      "activities": [
+      "activities": [],
+      "areas": [
         {
-          "id": "cacar_mortos_vivos",
-          "type": "hunt",
-          "name": "Caçar mortos-vivos",
-          "creatureIds": [
-            "esqueleto_guardiao",
-            "espectro_arqueiro"
-          ],
-          "minLevel": 10,
-          "typicalMinutes": 30,
-          "maxGroupSize": 5,
-          "baseRiskPermille": 350
+          "id": "patio_dos_mortos",
+          "name": "Pátio dos Mortos",
+          "kind": "hunting_ground",
+          "radius": 26,
+          "description": "Mortos-vivos vagam entre colunas quebradas.",
+          "activities": [
+            {
+              "id": "cacar_mortos_vivos",
+              "type": "hunt",
+              "name": "Caçar mortos-vivos",
+              "creatureIds": [
+                "esqueleto_guardiao",
+                "espectro_arqueiro"
+              ],
+              "minLevel": 10,
+              "typicalMinutes": 30,
+              "maxGroupSize": 5,
+              "baseRiskPermille": 350
+            },
+            {
+              "id": "patrulhar_ruinas",
+              "type": "patrol",
+              "name": "Patrulhar as ruínas",
+              "minLevel": 12,
+              "typicalMinutes": 30,
+              "maxGroupSize": 5,
+              "baseRiskPermille": 450
+            }
+          ]
         },
         {
-          "id": "coletar_cristais",
-          "type": "gather",
-          "name": "Coletar cristais sombrios",
-          "itemIds": [
-            "cristal_sombrio"
-          ],
-          "minLevel": 10,
-          "typicalMinutes": 20,
-          "maxGroupSize": 2,
-          "baseRiskPermille": 400
+          "id": "veio_de_cristal",
+          "name": "Veio de Cristal",
+          "kind": "crystal_node",
+          "radius": 16,
+          "description": "Cristais sombrios brotam das pedras.",
+          "activities": [
+            {
+              "id": "coletar_cristais",
+              "type": "gather",
+              "name": "Coletar cristais sombrios",
+              "itemIds": [
+                "cristal_sombrio"
+              ],
+              "minLevel": 10,
+              "typicalMinutes": 20,
+              "maxGroupSize": 2,
+              "baseRiskPermille": 400
+            }
+          ]
         },
         {
-          "id": "patrulhar_ruinas",
-          "type": "patrol",
-          "name": "Patrulhar as ruínas",
-          "minLevel": 12,
-          "typicalMinutes": 30,
-          "maxGroupSize": 5,
-          "baseRiskPermille": 450
+          "id": "esconderijo_das_ruinas",
+          "name": "Esconderijo das Ruínas",
+          "kind": "hideout",
+          "radius": 14,
+          "description": "Local para uma guilda erguer seu esconderijo.",
+          "leadsTo": "Esconderijo de guilda",
+          "activities": []
         }
       ]
     }

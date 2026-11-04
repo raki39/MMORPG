@@ -89,11 +89,14 @@ public partial class Main : Node
             FocusZone = id => { _map.SelectRegion(id); _map.FocusRegion(id); },
             OpenPerson = OpenPerson,
             OpenZone = OpenZone,
+            OpenArea = OpenArea,
+            FocusArea = (z, a) => { _map.SelectArea(z + "#" + a); _map.FocusArea(z, a); },
         };
 
         _map.Setup(content, _host.Layout, _host.Persons, terrain);
         _map.RegionSelected += id => { if (id.Length > 0) OpenZone(id); };
         _map.PersonSelected += OpenPerson;
+        _map.AreaSelected += OpenArea;
         _map.ClusterSelected += OpenCluster;
 
         BuildTopBar(content);
@@ -130,7 +133,9 @@ public partial class Main : Node
                 : int.TryParse(p, out var n) ? n : 0;
             if (id > 0) OpenPerson(id);
         }
+        if (_args.TryGetValue("focus", out var fz) && _ctx.Content.Regions.ContainsKey(fz)) _map.FocusRegion(fz);
         if (_args.TryGetValue("open-zone", out var z) && _ctx.Content.Regions.ContainsKey(z)) OpenZone(z);
+        if (_args.TryGetValue("open-area", out var ar) && ar.Split('#') is { Length: 2 } ap) OpenArea(ap[0], ap[1]);
         if (_args.ContainsKey("open-cluster"))
         {
             var snap = _host.Snapshot;
@@ -138,7 +143,7 @@ public partial class Main : Node
                 .Where(i => snap.ByPerson[i] is { Status: Simulation.Core.Population.CharacterStatus.Doing } v && v.ActivityId.Length > 0)
                 .GroupBy(i => snap.ByPerson[i]!.TargetRegionId + "/" + snap.ByPerson[i]!.ActivityId)
                 .OrderByDescending(g => g.Count()).FirstOrDefault();
-            if (best != null) OpenCluster(best.Key, GetViewport().GetVisibleRect().Size / 2f);
+            if (best != null) OpenCluster(best.Key.Split('/')[0] + "#", GetViewport().GetVisibleRect().Size / 2f);
         }
         if (_modal != null && _args.TryGetValue("tab", out var tab) && int.TryParse(tab, out int ti)) _modal.SelectTab(ti);
     }
@@ -193,18 +198,23 @@ public partial class Main : Node
         _ui.AddChild(_modal);
     }
 
-    private void OpenCluster(string spotKey, Vector2 at)
+    private void OpenArea(string zoneId, string areaId)
+    {
+        if (_host == null || !_ctx.Content.Regions.TryGetValue(zoneId, out var zr) || zr.Areas.All(a => a.Id != areaId)) return;
+        CloseOverlays();
+        _map.SelectArea(zoneId + "#" + areaId);
+        _modal = new AreaModal(_ctx, _map, zoneId, areaId);
+        _modal.Closed += () => { _modal = null; _map.SelectArea(null); };
+        _ui.AddChild(_modal);
+    }
+
+    private void OpenCluster(string placeKey, Vector2 at)
     {
         CloseOverlays();
-        var parts = spotKey.Split('/');
+        var parts = placeKey.Split('#');
         var zone = _ctx.Content.Regions[parts[0]];
-        string title = parts[1].Length == 0 ? "Na encruzilhada" : _ctx.ActivityName(parts[0], parts[1]);
-        var people = _map.PeopleAt(spotKey);
-        if (people.Count == 0)
-        {
-            var snap = _host!.Snapshot;
-            people = Enumerable.Range(1, snap.ByPerson.Length - 1).Where(i => snap.ByPerson[i] is { } v && v.TargetRegionId + "/" + v.ActivityId == spotKey).ToList();
-        }
+        string title = parts[1].Length == 0 ? "Na encruzilhada" : zone.Areas.First(a => a.Id == parts[1]).Name;
+        var people = _map.PeopleAt(placeKey);
         _popover = new ClusterPopover(_ctx, title, $"{zone.Name} · {people.Count} jogadores", people, at, GetViewport().GetVisibleRect().Size);
         _ui.AddChild(_popover);
     }

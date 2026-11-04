@@ -19,7 +19,10 @@ public class ContentTests
         Assert.Equal(12, db.Abilities.Count);
         Assert.Equal(7, db.Creatures.Count);
         Assert.Single(db.Creatures.Values, c => c.Kind == CreatureKinds.Boss);
-        Assert.All(db.Regions.Values, r => Assert.NotEmpty(r.Activities));
+        Assert.All(db.Regions.Values, r => Assert.NotEmpty(r.AllActivities()));
+        Assert.Contains(db.Regions.Values.SelectMany(r => r.Areas), a => a.Kind == AreaKinds.Dungeon);
+        Assert.Contains(db.Regions.Values.SelectMany(r => r.Areas), a => a.Kind == AreaKinds.Hideout);
+        Assert.Contains(db.Regions.Values, r => r.DeathRule == DeathRules.FullLoot);
         Assert.Contains(db.Regions.Values, r => r.Pvp == PvpRules.Open && r.DeathRule == DeathRules.Partial);
         Assert.Equal(120, db.World.ZoneRadius);
         Assert.Equal(64, r.ContentHash.Length);
@@ -117,6 +120,7 @@ public class ContentTests
     {
         var set = TestSupport.FreshPresetSet();
         set.Regions[1].Activities.Clear();
+        set.Regions[1].Areas.Clear();
         var issues = ContentValidator.Validate(set);
         Assert.Contains(issues, i => i.Severity == IssueSeverity.Warning && i.Path == "regions[1].activities");
         Assert.DoesNotContain(issues, i => i.Severity == IssueSeverity.Error);
@@ -127,8 +131,8 @@ public class ContentTests
     {
         var set = TestSupport.FreshPresetSet();
         int lair = set.Regions.FindIndex(r => r.Id == "covil_do_rei_goblin");
-        set.Regions[lair].Activities[0].Type = ActivityTypes.Hunt;
-        Assert.Contains(Errors(set), e => e.Path == $"regions[{lair}].activities[0].creatureIds[0]");
+        set.Regions[lair].Areas[0].Activities[0].Type = ActivityTypes.Hunt;
+        Assert.Contains(Errors(set), e => e.Path == $"regions[{lair}].areas[0].activities[0].creatureIds[0]");
     }
 
     [Fact]
@@ -164,5 +168,88 @@ public class ContentTests
         set.World.StartingRegionId = "floresta_sussurrante";
         var ex = Assert.Throws<ContentValidationException>(() => ContentDatabase.Create(set));
         Assert.Contains(ex.Issues, i => i.Path == "startingRegionId");
+    }
+
+    [Fact]
+    public void Areas_TipoDeCidadeForaDaCidade_EhErro()
+    {
+        var set = TestSupport.FreshPresetSet();
+        int forest = set.Regions.FindIndex(r => r.Id == "floresta_sussurrante");
+        set.Regions[forest].Areas[0].Kind = AreaKinds.Tavern;
+        Assert.Contains(Errors(set), e => e.Path == $"regions[{forest}].areas[0].kind");
+    }
+
+    [Fact]
+    public void Areas_IdDeAtividadeRepetidoEntreAreas_EhErro()
+    {
+        var set = TestSupport.FreshPresetSet();
+        int forest = set.Regions.FindIndex(r => r.Id == "floresta_sussurrante");
+        var dup = set.Regions[forest].Areas[0].Activities[0];
+        set.Regions[forest].Areas[1].Activities.Add(new ActivityDefinition
+        {
+            Id = dup.Id, Type = dup.Type, Name = "Cópia", TypicalMinutes = 10, CreatureIds = { dup.CreatureIds[0] },
+        });
+        Assert.Contains(Errors(set), e => e.Path.StartsWith($"regions[{forest}].areas[1].activities[") && e.Message.Contains("duplicado"));
+    }
+
+    [Fact]
+    public void Areas_AtividadeAconteceNaArea_EAreaFicaDentroDaZona()
+    {
+        var db = TestSupport.Preset;
+        var layout = new Simulation.Core.World.ZoneLayout(db);
+        foreach (var z in db.Regions.Values)
+        {
+            foreach (var area in z.Areas)
+            {
+                var c = layout.AreaCenter(z.Id, area.Id);
+                Assert.True(c.DistanceTo(layout.Center(z.Id)) + area.Radius <= db.World.ZoneRadius, $"{z.Id}/{area.Id} sai da zona");
+                foreach (var a in area.Activities)
+                    Assert.Equal(c, layout.Spot(z.Id, a.Id));
+            }
+            foreach (var a in z.Activities)
+                Assert.Equal(layout.Hub(z.Id), layout.Spot(z.Id, a.Id));
+        }
+    }
+
+    [Fact]
+    public void Areas_TipoIncompativelComAZona_EhErro()
+    {
+        var set = TestSupport.FreshPresetSet();
+        int city = set.Regions.FindIndex(r => r.IsCity);
+        set.Regions[city].Areas[0].Kind = AreaKinds.HuntingGround;
+        Assert.Contains(Errors(set), e => e.Path == $"regions[{city}].areas[0].kind" && e.Message.Contains("cidade"));
+    }
+
+    [Fact]
+    public void Areas_TamanhoForaDaFaixaDoTipo_EhErro()
+    {
+        var set = TestSupport.FreshPresetSet();
+        int city = set.Regions.FindIndex(r => r.IsCity);
+        int forge = set.Regions[city].Areas.FindIndex(a => a.Kind == AreaKinds.Forge);
+        set.Regions[city].Areas[forge].Radius = 30;
+        Assert.Contains(Errors(set), e => e.Path == $"regions[{city}].areas[{forge}].radius");
+    }
+
+    [Fact]
+    public void Areas_SobrepostasOuBloqueandoSaida_SaoErro()
+    {
+        var set = TestSupport.FreshPresetSet();
+        int forest = set.Regions.FindIndex(r => r.Id == "floresta_sussurrante");
+        var areas = set.Regions[forest].Areas;
+        // Duas areas no mesmo lugar.
+        areas[0].Position = new MapPoint { X = 0, Y = 60 };
+        areas[1].Position = new MapPoint { X = 10, Y = 60 };
+        // Uma terceira em cima da saida para a cidade (leste).
+        areas[2].Position = new MapPoint { X = 100, Y = 0 };
+        var errors = Errors(set);
+        Assert.Contains(errors, e => e.Path == $"regions[{forest}].areas[1].position" && e.Message.Contains("mesmo espaço"));
+        Assert.Contains(errors, e => e.Path == $"regions[{forest}].areas[2].position" && e.Message.Contains("saída"));
+    }
+
+    [Fact]
+    public void Areas_DoPreset_RespeitamRegrasDeConstrucao()
+    {
+        var issues = ContentValidator.Validate(TestSupport.FreshPresetSet());
+        Assert.DoesNotContain(issues, i => i.Path.Contains(".areas[") && i.Severity == IssueSeverity.Error);
     }
 }
