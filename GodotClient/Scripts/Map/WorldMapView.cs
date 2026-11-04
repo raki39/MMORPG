@@ -235,6 +235,13 @@ public partial class WorldMapView : Node2D
 
     public void ZoomBy(float factor) => ZoomAround(_viewArea.GetCenter(), factor);
 
+    /// <summary>A area util mudou (painel lateral recolhido/aberto): desliza o mapa sem mudar o zoom.</summary>
+    public void ShiftViewArea(Rect2 oldArea, Rect2 newArea)
+    {
+        _viewArea = newArea;
+        _targetPan += newArea.GetCenter() - oldArea.GetCenter();
+    }
+
     public void FocusRegion(string regionId)
     {
         if (!_zoneIndex.ContainsKey(regionId)) return;

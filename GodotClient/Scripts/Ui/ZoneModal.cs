@@ -525,8 +525,11 @@ public static class PlayerRow
     {
         var p = ctx.Persons[personId - 1];
         var b = new Button { FocusMode = Control.FocusModeEnum.None, CustomMinimumSize = new Vector2(0, 46), SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
-        b.AddThemeStyleboxOverride("normal", ThemeFactory.Box(new Color(UiTokens.SurfaceRaised, 0.35f), 10, radius: 8));
-        b.AddThemeStyleboxOverride("hover", ThemeFactory.Box(UiTokens.SurfaceHover, 10, border: UiTokens.BorderStrong, radius: 8));
+        b.AddThemeStyleboxOverride("normal", new StyleBoxEmpty());
+        var hover = new StyleBoxFlat { BgColor = new Color(1, 1, 1, 0.035f), BorderColor = UiTokens.Accent, BorderWidthLeft = 2 };
+        hover.SetCornerRadiusAll(2);
+        b.AddThemeStyleboxOverride("hover", hover);
+        b.AddThemeStyleboxOverride("pressed", hover);
         var row = new HBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
         row.SetAnchorsPreset(Control.LayoutPreset.FullRect);
         row.OffsetLeft = 10; row.OffsetRight = -10;
@@ -536,7 +539,7 @@ public static class PlayerRow
         var col = new VBoxContainer { Alignment = BoxContainer.AlignmentMode.Center, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, MouseFilter = Control.MouseFilterEnum.Ignore };
         col.AddThemeConstantOverride("separation", -2);
         string cls = ctx.Content.Classes.TryGetValue(v.ClassId, out var c) ? c.Name : v.ClassId;
-        var name = ThemeFactory.Text($"{v.Name}   ·   Nv {v.Level} {cls}", UiTokens.FontSmall, UiTokens.TextPrimary, UiFonts.SemiBold);
+        var name = ThemeFactory.Text($"{v.Name}  ·  Nv {v.Level} {cls}", UiTokens.FontBody, UiTokens.TextPrimary, UiFonts.Medium);
         name.MouseFilter = Control.MouseFilterEnum.Ignore;
         var st = ThemeFactory.Text(StatusText.Of(v, ctx.Content), UiTokens.FontCaption, UiTokens.TextSecondary);
         st.MouseFilter = Control.MouseFilterEnum.Ignore;

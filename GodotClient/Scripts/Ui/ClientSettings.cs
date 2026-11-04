@@ -27,6 +27,8 @@ public static class ClientSettings
     public static bool ShowFps { get; set; } = true;
     /// <summary>Texto nitido (LCD, como o ClearType) ou suave (tons de cinza).</summary>
     public static bool TextLcd { get; set; } = true;
+    /// <summary>Painel lateral do mapa aberto (P recolhe).</summary>
+    public static bool SidePanelOpen { get; set; } = true;
     public static bool PauseOffMap { get; set; } = true;
     public static int StartSpeed { get; set; } = 1;
     public static bool CampaignNote { get; set; } = true;
@@ -42,6 +44,7 @@ public static class ClientSettings
         Msaa = Math.Clamp((int)cfg.GetValue("video", "msaa", Msaa), 0, 3);
         ShowFps = (bool)cfg.GetValue("interface", "show_fps", ShowFps);
         TextLcd = (bool)cfg.GetValue("interface", "text_lcd", TextLcd);
+        SidePanelOpen = (bool)cfg.GetValue("interface", "side_panel", SidePanelOpen);
         PauseOffMap = (bool)cfg.GetValue("game", "pause_off_map", PauseOffMap);
         StartSpeed = (int)cfg.GetValue("game", "start_speed", StartSpeed);
         CampaignNote = (bool)cfg.GetValue("game", "campaign_note", CampaignNote);
@@ -57,6 +60,7 @@ public static class ClientSettings
         cfg.SetValue("video", "msaa", Msaa);
         cfg.SetValue("interface", "show_fps", ShowFps);
         cfg.SetValue("interface", "text_lcd", TextLcd);
+        cfg.SetValue("interface", "side_panel", SidePanelOpen);
         cfg.SetValue("game", "pause_off_map", PauseOffMap);
         cfg.SetValue("game", "start_speed", StartSpeed);
         cfg.SetValue("game", "campaign_note", CampaignNote);
@@ -215,7 +219,7 @@ public partial class SettingsPage : ModalFrame
         foreach (var (k, what) in new[]
         {
             ("Espaço", "Pausar / continuar (no mapa)"), ("1 · 2 · 3 · 4", "Velocidade 1× · 2× · 5× · 10×"), ("M · J · Z · Q", "Mapa · Jogadores · Zonas · Missões"),
-            ("Alt+← · Alt+→", "Voltar · avançar (também os botões laterais do mouse)"), ("Esc", "Fechar o cartão ou voltar ao mapa"),
+            ("Alt+← · Alt+→", "Voltar · avançar (também os botões laterais do mouse)"), ("Esc", "Fechar o cartão ou voltar ao mapa"), ("P", "Recolher ou abrir o painel lateral do mapa"),
             ("F11 · Alt+Enter", "Alternar tela cheia"), ("+ · − · Home", "Aproximar · afastar · enquadrar o mapa"), ("Botão direito", "Arrastar o mapa"),
         })
         {

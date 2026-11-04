@@ -19,9 +19,16 @@ public partial class ClusterPopover : PanelContainer
         _ctx = ctx;
         _people = people.ToList();
         MouseFilter = MouseFilterEnum.Stop;
-        var sb = ThemeFactory.Glass(16, 12);
-        sb.BgColor = new Color(UiTokens.Surface, 0.97f);
-        sb.BorderColor = new Color(UiTokens.Accent, 0.4f);
+        var sb = new StyleBoxFlat
+        {
+            BgColor = new Color(UiTokens.CardTop, 0.985f), BorderColor = UiTokens.BorderStrong,
+            ShadowColor = new Color(0, 0, 0, 0.55f), ShadowSize = 14, ShadowOffset = new Vector2(0, 4),
+            ContentMarginLeft = 14, ContentMarginRight = 14, ContentMarginTop = 12, ContentMarginBottom = 12, AntiAliasing = true,
+        };
+        sb.SetBorderWidthAll(1);
+        sb.BorderWidthTop = 2;
+        sb.BorderColor = UiTokens.BorderStrong;
+        sb.SetCornerRadiusAll(4);
         AddThemeStyleboxOverride("panel", sb);
 
         var col = new VBoxContainer();
@@ -30,10 +37,11 @@ public partial class ClusterPopover : PanelContainer
         var head = new HBoxContainer();
         var titles = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
         titles.AddThemeConstantOverride("separation", 0);
-        titles.AddChild(ThemeFactory.Text(title, 17, UiTokens.TextPrimary, UiFonts.SemiBold));
+        titles.AddChild(ThemeFactory.Text(title, 16, UiTokens.TextPrimary, UiFonts.SemiBold));
         titles.AddChild(ThemeFactory.Text(subtitle, UiTokens.FontSmall, UiTokens.TextSecondary));
         head.AddChild(titles);
-        var close = new Button { Text = "✕", FocusMode = FocusModeEnum.None, CustomMinimumSize = new Vector2(32, 32) };
+        var close = new Button { Text = "✕", Flat = true, FocusMode = FocusModeEnum.None, CustomMinimumSize = new Vector2(28, 28), SizeFlagsVertical = SizeFlags.ShrinkBegin };
+        close.AddThemeColorOverride("font_color", UiTokens.TextSecondary);
         close.Pressed += QueueFree;
         head.AddChild(close);
         col.AddChild(head);

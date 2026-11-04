@@ -673,6 +673,19 @@ Proposta do criador, analisada com o Claude.
   - tempo conectado por personagem no snapshot.
 - **O que não é mostrado:** o humor da pessoa existe no Core, mas nenhum sistema o altera ainda, então não aparece como dado (D-026).
 
+- **Barra superior e interface do mapa** (pedido do criador, após ver a barra sobrepondo o painel lateral):
+  - **barra:**
+    - altura fixa de 56 px, com o conteúdo cortado; os botões do menu eram mais altos que a barra e a faziam crescer por cima do painel;
+    - menu mais espaçado, com seta e **submenu** ao passar o mouse:
+      - Mapa: camadas e enquadrar;
+      - Jogadores: todos, conectados, favoritos;
+      - Zonas: todas e cada cidade;
+      - Missões: por categoria;
+    - indicadores sem minigráficos;
+    - relógio com ícone;
+  - **painel lateral recolhível:** botão no grupo de controles do mapa ou tecla P, com animação; o mapa desliza sem perder o zoom e a preferência fica salva;
+  - **painéis do mapa no kit:** camadas com ícones, controles com ícones, aviso, lista da bolha e cartão-resumo.
+
 **Desempenho:**
-- `tools/perf.ps1`: todas as vistas do mapa com p95 entre 2,4 e 5,0 ms, dentro do orçamento.
+- `tools/perf.ps1`: todas as vistas do mapa com p95 entre 2,8 e 4,8 ms, dentro do orçamento.
 - Página do jogador: cerca de 1.100 FPS, p95 de 1,1 ms.

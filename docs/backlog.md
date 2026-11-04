@@ -121,6 +121,7 @@ Falta para fechar o M2:
 - [ ] Revisão do criador do kit v3 em 1920×1080
 - [ ] Kit v3 na página de área, nas abas secundárias (Missões, Histórico, Rotina, Jogadores e Regras da zona) e no painel lateral do mapa
 - [ ] Escala da interface nas Configurações (telas menores que 1600×900)
+- [x] Barra superior de altura fixa com submenus, indicadores sem gráfico, painel lateral recolhível e painéis do mapa no kit (D-034)
 - [ ] Abas de Inventário e Banco (M5) e últimos abates (M3) com dados reais
 - [ ] Ícones de áreas mais detalhados no mapa
 - [x] Navegação com histórico (voltar e avançar) entre dossiês (D-033)
