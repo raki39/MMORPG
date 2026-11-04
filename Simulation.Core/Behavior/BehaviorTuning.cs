@@ -42,22 +42,5 @@ public static class BehaviorTuning
     /// <summary>Espera quando nao ha nenhuma opcao viavel (minutos).</summary>
     public const int IdleRethinkMinutes = 20;
 
-    // ---- Progressao (hipotese simples ate o combate do M3) ----
-    /// <summary>XP por minuto de atividade, por tipo (antes do ajuste de adequacao ao nivel).</summary>
-    public static int XpPerMinute(string activityType) => activityType switch
-    {
-        "hunt" => 12,
-        "quest" => 10,
-        "ambush" => 8,
-        "patrol" => 8,
-        "explore" => 6,
-        "gather" => 5,
-        "train" => 4,
-        _ => 0,
-    };
-
-    /// <summary>XP necessario para sair do nivel atual.</summary>
-    public static long XpToNextLevel(int level) => 60L * level * level + 140L * level;
-
-    public const int MaxLevel = 60;
+    // Progressao (XP, curva, faixas e teto) fica no conteudo: progression.json (D-027).
 }

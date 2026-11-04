@@ -12,6 +12,7 @@ public sealed class ContentSet
     public List<ItemDefinition> Items { get; set; } = new();
     public List<CreatureDefinition> Creatures { get; set; } = new();
     public PopulationDefinition Population { get; set; } = new();
+    public ProgressionDefinition Progression { get; set; } = new();
 
     /// <summary>Hash do conteudo de origem (calculado por quem carregou os arquivos).</summary>
     public string SourceHash { get; set; } = "";
@@ -38,6 +39,7 @@ public sealed class ContentDatabase
     public WorldDefinition World => Set.World;
     public string SourceHash => Set.SourceHash;
     public NamePoolDefinition Names => Set.Population.Names;
+    public ProgressionDefinition Progression => Set.Progression;
 
     public IReadOnlyDictionary<string, RegionDefinition> Regions { get; }
     public IReadOnlyDictionary<string, ClassDefinition> Classes { get; }

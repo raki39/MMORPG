@@ -50,7 +50,11 @@ public partial class PlayerModal : ModalFrame
         if (v != null)
         {
             bool online = v.Status != CharacterStatus.Offline;
-            Fact("Nível", v.Level.ToString(), UiTokens.Info, $"Nível {v.Level}\nXP|{v.Experience} / {BehaviorTuning.XpToNextLevel(v.Level)}\n~Curva provisória até o combate (M3).");
+            var prog = _ctx.Content.Progression;
+            string stage = (ProgressionRules.StageRate(prog, v.Level) / 1000.0).ToString("0.##", CultureInfo.GetCultureInfo("pt-BR"));
+            Fact("Nível", v.Level.ToString(), UiTokens.Info, v.Level >= prog.LevelCap
+                ? $"Nível {v.Level}\n~Nível máximo atual ({prog.LevelCap})."
+                : $"Nível {v.Level}\nXP|{v.Experience} / {ProgressionRules.XpToNextLevel(prog, v.Level)}\nTaxa da faixa|×{stage}\n~Faixas de nível mais altas rendem menos XP.");
             Fact("Classe", cls?.Name ?? v.ClassId, RoleColor(cls?.Role));
             Fact("Perfil", ProfileName, color, $"Perfil {ProfileName}\n~Tendência de origem; a pessoa não é um clone do perfil.");
             Fact("Status", online ? "Conectado" : "Desconectado", online ? UiTokens.Success : UiTokens.TextSecondary);
@@ -158,7 +162,7 @@ public partial class PlayerModal : ModalFrame
 
     private Control ProgressBody(CharacterView v)
     {
-        long need = BehaviorTuning.XpToNextLevel(v.Level);
+        long need = ProgressionRules.XpToNextLevel(_ctx.Content.Progression, v.Level);
         return Column(6,
             Bar($"Nível {v.Level} → {v.Level + 1}", v.Experience, need, UiTokens.Success, $"{v.Experience}/{need}", 110),
             Bar("Zonas conhecidas", v.KnownRegions, _ctx.Content.Regions.Count, UiTokens.Info, $"{v.KnownRegions}/{_ctx.Content.Regions.Count}", 110));

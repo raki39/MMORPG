@@ -94,8 +94,37 @@ A primeira rodada mostrou 10,5% do tempo em "espera sem opção viável". Invest
 
 Foi corrigido, e um teste (`TempoJogado_FechaComAsSessoesEAsAtividades`) agora confere que a soma fecha com as sessões.
 
+## Resultado após a progressão no conteúdo (D-027, 04/11/2026)
+
+Mesma rodada: 5 seeds × 1.000 pessoas × 90 dias. **11 de 17 metas dentro da faixa.**
+
+As metas de progressão agora seguem o ritmo A escolhido pelo criador, medido em horas conectadas.
+
+| Medida | Meta | Resultado | Prévia nominal |
+|---|---|---|---|
+| Horas até o nível 5 | 1–4 h | 2,7 h | 1,9 h |
+| Horas até o nível 10 | 8–20 h | 17 h | 10,7 h |
+| Horas até o nível 15 | 22–50 h | 41 h (só 42–45% chegaram) | 31 h |
+| Casuais no nível 10 ou mais | 60–95% | 96% (acima) | — |
+
+**Por que o resultado fica acima da prévia:**
+- A prévia supõe 60% do tempo conectado rendendo XP.
+- Na simulação, é menos: a taverna e o quadro de missões não dão mais XP, e o deslocamento é de 23%.
+
+**Divisão do tempo, pior que antes, e por quê:**
+- **Taverna com 31% do tempo.** Com o ritmo novo, os personagens passam do conteúdo atual: o nível mediano no fim é 14 para o casual e 19 para o hardcore, mas as caças vão só até o desafio 15.
+  - Sem caça adequada, o XP rende pouco, e a taverna vence na nota.
+- **Quadro de missões ainda com 23,5% das escolhas,** mesmo sem dar XP. A missão ainda é uma atividade com afinidade alta e sem viagem.
+  - O conserto disso é transformá-la em quest estruturada (passo 3 do D-025).
+- **Caça com 8,6% e coleta com 2,6%:** os mesmos motivos.
+
+**Conclusão:** o ritmo de progressão está calibrado. O que falta é conteúdo para os níveis que os personagens alcançam e quests de verdade.
+
 ## Próximos passos
 
-1. **Conferir a fórmula de decisão** com o criador (itens 1, 2, 3, 5 e 6 acima) e registrar os desvios em relação ao plano 4.4.
-2. **Combate (M3)**, que dá consequência real à caça, ao PvP, à morte e ao saque (item 4).
-3. **Reavaliar as metas de progressão.** Depende de decidir quanto tempo o jogo deve levar até o nível máximo do conteúdo atual (18).
+Ordem do D-025:
+1. Redistribuir e ampliar as áreas até o nível 30.
+2. Montar o catálogo de quests por cidade.
+3. Medir de novo.
+4. Integrar os objetivos pessoais (D-026).
+5. Combate (M3).

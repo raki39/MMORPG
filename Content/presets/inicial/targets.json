@@ -1,23 +1,28 @@
 {
   "schemaVersion": 1,
-  "description": "Metas de referência do mundo inicial (M2). Hipóteses iniciais propostas pelo Claude em 04/11/2026, definidas antes de olhar as rodadas grandes; ajustar com o criador. Não são regras do mundo.",
+  "description": "Metas de referência do mundo inicial (M2). Hipóteses ajustáveis, não regras do mundo. As de progressão seguem o ritmo A escolhido pelo criador (D-027): horas conectadas de um perfil de referência, contando viagem e cidade.",
   "warmupDays": 7,
   "rareActivityPermille": 10,
   "targets": [
     {
-      "id": "horas_nivel_5", "name": "Horas jogadas até o nível 5 (mediana)", "metric": "hours_to_level", "level": 5,
-      "min": 2, "max": 6, "unit": "h",
-      "rationale": "As primeiras sessões precisam mostrar progresso: um casual (cerca de 3 h por semana) chega ao 5 entre a 1ª e a 2ª semana."
+      "id": "horas_nivel_5", "name": "Horas conectadas até o nível 5 (mediana)", "metric": "hours_to_level", "level": 5,
+      "min": 1, "max": 4, "unit": "h",
+      "rationale": "Ritmo A (D-027): o começo apresenta o jogo; a prévia nominal dá cerca de 2 h. Referência de perfil, não prazo para todos."
     },
     {
-      "id": "horas_nivel_10", "name": "Horas jogadas até o nível 10 (mediana)", "metric": "hours_to_level", "level": 10,
-      "min": 10, "max": 25, "unit": "h",
-      "rationale": "O nível 10 marca a saída da zona inicial (Floresta 1–8, Colinas 3–9) para a Mina (6–12): 1 a 2 meses para um casual, cerca de 1 semana para um hardcore."
+      "id": "horas_nivel_10", "name": "Horas conectadas até o nível 10 (mediana)", "metric": "hours_to_level", "level": 10,
+      "min": 8, "max": 20, "unit": "h",
+      "rationale": "Ritmo A (D-027): prévia nominal de cerca de 11 h, contando viagem e cidade. A desaceleração forte fica para as faixas altas."
+    },
+    {
+      "id": "horas_nivel_15", "name": "Horas conectadas até o nível 15 (mediana)", "metric": "hours_to_level", "level": 15,
+      "min": 22, "max": 50, "unit": "h",
+      "rationale": "Ritmo A (D-027): prévia nominal de cerca de 31 h. O conteúdo atual termina perto do 15–18 até a redistribuição das áreas."
     },
     {
       "id": "casual_nivel_10", "name": "Casuais no nível 10 ou mais ao fim", "metric": "reached_level", "level": 10, "profile": "casual",
-      "min": 40, "max": 80, "unit": "%",
-      "rationale": "Em 90 dias, a maior parte dos casuais deve ter saído da zona inicial, mas não todos."
+      "min": 60, "max": 95, "unit": "%",
+      "rationale": "Em 90 dias um casual joga cerca de 50 h; a maioria deve passar do 10, sem ser regra para todos."
     },
     {
       "id": "sessoes_casual", "name": "Sessões por semana — casual", "metric": "sessions_per_week", "profile": "casual",

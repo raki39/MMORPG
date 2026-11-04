@@ -147,6 +147,7 @@
       "activities": [
         {
           "id": "explorar_floresta",
+          "challengeLevel": 2,
           "type": "explore",
           "name": "Explorar trilhas da floresta",
           "typicalMinutes": 30,
@@ -175,6 +176,7 @@
             },
             {
               "id": "coletar_ervas",
+              "challengeLevel": 2,
               "type": "gather",
               "name": "Coletar ervas curativas",
               "itemIds": [
@@ -216,6 +218,7 @@
           "activities": [
             {
               "id": "entrega_lenhador",
+              "challengeLevel": 3,
               "type": "quest",
               "name": "Entrega para o lenhador",
               "typicalMinutes": 20,
@@ -256,6 +259,7 @@
       "activities": [
         {
           "id": "explorar_colinas",
+          "challengeLevel": 5,
           "type": "explore",
           "name": "Explorar as colinas",
           "typicalMinutes": 25,
@@ -294,6 +298,7 @@
           "activities": [
             {
               "id": "coletar_ervas",
+              "challengeLevel": 5,
               "type": "gather",
               "name": "Colher ervas das encostas",
               "itemIds": [
@@ -346,6 +351,7 @@
           "activities": [
             {
               "id": "coletar_minerio",
+              "challengeLevel": 8,
               "type": "gather",
               "name": "Minerar ferro e prata",
               "itemIds": [
@@ -391,6 +397,7 @@
           "activities": [
             {
               "id": "explorar_galerias",
+              "challengeLevel": 10,
               "type": "explore",
               "name": "Explorar galerias profundas",
               "minLevel": 8,
@@ -486,6 +493,7 @@
           "activities": [
             {
               "id": "emboscar_viajantes",
+              "challengeLevel": 11,
               "type": "ambush",
               "name": "Emboscar viajantes",
               "minLevel": 10,
@@ -495,6 +503,7 @@
             },
             {
               "id": "patrulhar_ravina",
+              "challengeLevel": 12,
               "type": "patrol",
               "name": "Patrulhar a ravina",
               "minLevel": 12,
@@ -575,6 +584,7 @@
             },
             {
               "id": "patrulhar_ruinas",
+              "challengeLevel": 13,
               "type": "patrol",
               "name": "Patrulhar as ruínas",
               "minLevel": 12,
@@ -593,6 +603,7 @@
           "activities": [
             {
               "id": "coletar_cristais",
+              "challengeLevel": 12,
               "type": "gather",
               "name": "Coletar cristais sombrios",
               "itemIds": [

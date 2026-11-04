@@ -23,12 +23,15 @@ Opções:
                         Escreve só validation.md e validation.csv (exige --out)
   --targets <arquivo>   Metas da validação (padrão: targets.json da pasta do mundo)
   --no-targets          Não calcula a validação na execução simples
+  --progression         Mostra a prévia da curva de progressão do mundo e sai
+                        (com --out, grava progression.md)
   --help                Mostra esta ajuda
 
 Códigos de saída: 0 ok · 1 uso incorreto · 2 conteúdo inválido · 3 cenário inválido
 """;
 
 var opt = new RunOptions();
+bool progressionOnly = false;
 for (int i = 0; i < args.Length; i++)
 {
     string a = args[i];
@@ -57,6 +60,7 @@ for (int i = 0; i < args.Length; i++)
             case "--seeds": opt.Seeds = ParseSeeds(Next()); break;
             case "--targets": opt.TargetsPath = Next(); break;
             case "--no-targets": opt.NoTargets = true; break;
+            case "--progression": progressionOnly = true; break;
             default: throw new ArgumentException($"Opção desconhecida: {a}");
         }
     }
@@ -67,6 +71,8 @@ for (int i = 0; i < args.Length; i++)
         return ScenarioRunner.ExitUsage;
     }
 }
+
+if (progressionOnly) return ScenarioRunner.PrintProgression(opt);
 
 var result = ScenarioRunner.Run(opt);
 foreach (var m in result.Messages)

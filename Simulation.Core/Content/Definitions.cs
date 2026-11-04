@@ -245,6 +245,11 @@ public sealed class ActivityDefinition
     public int TypicalMinutes { get; set; }
     /// <summary>Risco base declarado pelo autor (permille); o risco percebido varia com o mundo.</summary>
     public int BaseRiskPermille { get; set; }
+    /// <summary>
+    /// Nivel do desafio (D-027): define o rendimento de XP. 0 = caca e chefe usam a media das
+    /// criaturas; outros tipos sem desafio nao dao XP. Cidades nao declaram desafio.
+    /// </summary>
+    public int ChallengeLevel { get; set; }
 }
 
 public sealed class MapPoint

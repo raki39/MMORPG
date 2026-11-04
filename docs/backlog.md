@@ -69,8 +69,9 @@ Validação (D-024, [validacao.md](validacao.md)):
 - [ ] Ajustar as metas com o criador (principalmente o ritmo de progressão)
 
 Base de conteúdo e progressão (próximo passo; D-025):
-- [ ] Revisar XP e curva: teto 30 configurável, XP e curva no conteúdo, referência de horas jogadas por nível definida com o criador
-- [ ] Separar faixa recomendada da área, nível do desafio e requisitos da quest; XP pelo nível do desafio (a cidade deixa de valorizar missões)
+- [x] Revisar XP e curva (D-027): `progression.json` com teto 30, curva, taxa por faixa de nível, XP por tipo, crescimento por desafio e diferença de nível; ritmo A; prévia `--progression`; medido em 5 seeds
+- [x] Nível do desafio por atividade (caça pelas criaturas); a cidade não dá XP; a faixa da zona não entra mais no XP nem no risco
+- [ ] Faixa recomendada por área e requisitos de quest (com a redistribuição e o catálogo)
 - [ ] Redistribuir e ampliar áreas até o nível 30, com faixas menores
 - [ ] Catálogo de quests por cidade (principais, secundárias, diárias) com etapas reais, requisitos e recompensas; pegar no quadro sem XP
 - [ ] Medir a progressão até o 30 (horas por nível, XP por fonte, conteúdo esgotado antes da próxima faixa) e ajustar as metas

@@ -42,6 +42,7 @@ public static class ContentValidator
     public const string ItemsFile = "items.json";
     public const string CreaturesFile = "creatures.json";
     public const string PopulationFile = "population.json";
+    public const string ProgressionFile = "progression.json";
 
     private static readonly Regex IdPattern = new("^[a-z][a-z0-9_]*$", RegexOptions.CultureInvariant);
 
@@ -73,6 +74,7 @@ public static class ContentValidator
         ValidateCreatures(set, regionIds, itemIds, v);
         ValidateActivities(set, classIds, itemIds, v);
         ValidatePopulation(set, v);
+        ValidateProgression(set, v);
 
         return v.Issues;
     }
@@ -456,6 +458,7 @@ public static class ContentValidator
             v.Error(f, p + ".typicalMinutes", "Duração típica deve estar entre 1 e 600 min.");
         if (act.BaseRiskPermille < 0 || act.BaseRiskPermille > 1000)
             v.Error(f, p + ".baseRiskPermille", "Risco base deve estar entre 0 e 1000 permille.");
+        ValidateChallenge(set, r, act, p, v);
         for (int k = 0; k < act.ClassIds.Count; k++)
             if (!classIds.Contains(act.ClassIds[k]))
                 v.Error(f, $"{p}.classIds[{k}]", $"Classe '{act.ClassIds[k]}' não existe.");
@@ -545,6 +548,69 @@ public static class ContentValidator
             v.Error(PopulationFile, $"{p}.{name}.mean", $"Média deve estar entre {min} e {max}.");
         if (t.Spread < 0 || t.Spread > (max - min))
             v.Error(PopulationFile, $"{p}.{name}.spread", $"Dispersão deve estar entre 0 e {max - min}.");
+    }
+
+    /// <summary>
+    /// Nivel do desafio (D-027): cidade nao tem desafio (nao da XP); fora da cidade, tipo que
+    /// rende XP precisa de desafio (declarado ou, em caca e chefe, pelas criaturas).
+    /// </summary>
+    private static void ValidateChallenge(ContentSet set, RegionDefinition r, ActivityDefinition act, string p, Collector v)
+    {
+        const string f = RegionsFile;
+        var prog = set.Progression;
+        if (act.ChallengeLevel < 0 || (prog.LevelCap > 0 && act.ChallengeLevel > prog.LevelCap))
+            v.Error(f, p + ".challengeLevel", $"Nível do desafio deve estar entre 1 e o teto ({prog.LevelCap}).");
+        if (r.IsCity)
+        {
+            if (act.ChallengeLevel > 0)
+                v.Error(f, p + ".challengeLevel", "Atividades da cidade não têm desafio e não dão XP; o XP vem do que se faz no mundo.");
+            return;
+        }
+        bool givesXp = prog.ActivityXpPerMinute.TryGetValue(act.Type, out int xp) && xp > 0;
+        bool derived = (act.Type == ActivityTypes.Hunt || act.Type == ActivityTypes.Boss) && act.CreatureIds.Count > 0;
+        if (givesXp && act.ChallengeLevel == 0 && !derived)
+            v.Error(f, p + ".challengeLevel", $"Atividade do tipo '{act.Type}' dá XP e precisa do nível do desafio.");
+    }
+
+    private static void ValidateProgression(ContentSet set, Collector v)
+    {
+        const string f = ProgressionFile;
+        var p = set.Progression;
+        if (p.LevelCap < 2 || p.LevelCap > 100)
+            v.Error(f, "levelCap", "Teto de nível deve estar entre 2 e 100.");
+        var c = p.XpCurve;
+        if (c.Cubic < 0 || c.Quadratic < 0 || c.Linear < 0 || c.Constant < 0)
+            v.Error(f, "xpCurve", "Coeficientes da curva não podem ser negativos (a curva precisa crescer com o nível).");
+        else if (c.Cubic + c.Quadratic + c.Linear + c.Constant <= 0)
+            v.Error(f, "xpCurve", "A curva precisa exigir XP (algum coeficiente maior que zero).");
+        else if (c.Cubic + c.Quadratic + c.Linear == 0)
+            v.Warning(f, "xpCurve", "Curva constante: todos os níveis exigem o mesmo XP.");
+        if (p.Stages.Count == 0)
+            v.Error(f, "stages", "Defina ao menos uma faixa de taxa (fromLevel 1).");
+        for (int i = 0; i < p.Stages.Count; i++)
+        {
+            var s = p.Stages[i];
+            string sp = $"stages[{i}]";
+            if (i == 0 && s.FromLevel != 1) v.Error(f, sp + ".fromLevel", "A primeira faixa deve começar no nível 1.");
+            if (i > 0 && s.FromLevel <= p.Stages[i - 1].FromLevel) v.Error(f, sp + ".fromLevel", "Faixas devem estar em ordem crescente de nível, sem repetir.");
+            if (s.FromLevel < 1 || s.FromLevel > Math.Max(1, p.LevelCap)) v.Error(f, sp + ".fromLevel", "Nível inicial da faixa fora de 1..teto.");
+            if (s.RatePermille < 1 || s.RatePermille > 20000) v.Error(f, sp + ".ratePermille", "Taxa deve estar entre 1 e 20000 permille (×0,001 a ×20).");
+        }
+        foreach (var kv in p.ActivityXpPerMinute.OrderBy(k => k.Key, StringComparer.Ordinal))
+        {
+            string kp = $"activityXpPerMinute.{kv.Key}";
+            if (!ActivityTypes.All.Contains(kv.Key)) v.Error(f, kp, $"Tipo de atividade '{kv.Key}' desconhecido. Válidos: {string.Join(", ", ActivityTypes.All)}.");
+            else if (ActivityTypes.CityOnly.Contains(kv.Key) || kv.Key == ActivityTypes.Socialize)
+                v.Error(f, kp, "Serviços e convívio na cidade não dão XP.");
+            if (kv.Value < 0 || kv.Value > 10000) v.Error(f, kp, "XP por minuto deve estar entre 0 e 10000.");
+        }
+        if (p.ChallengeGrowthPermille < 0 || p.ChallengeGrowthPermille > 5000)
+            v.Error(f, "challengeGrowthPermille", "Crescimento por nível do desafio deve estar entre 0 e 5000 permille.");
+        var d = p.LevelDifference;
+        if (d.ToleranceLevels < 0 || d.ToleranceLevels > 20) v.Error(f, "levelDifference.toleranceLevels", "Tolerância deve estar entre 0 e 20 níveis.");
+        if (d.WeakChallengePenaltyPermille < 0 || d.WeakChallengePenaltyPermille > 1000) v.Error(f, "levelDifference.weakChallengePenaltyPermille", "Perda deve estar entre 0 e 1000 permille por nível.");
+        if (d.StrongChallengePenaltyPermille < 0 || d.StrongChallengePenaltyPermille > 1000) v.Error(f, "levelDifference.strongChallengePenaltyPermille", "Perda deve estar entre 0 e 1000 permille por nível.");
+        if (d.WeakChallengeFloorPermille < 0 || d.WeakChallengeFloorPermille > 1000) v.Error(f, "levelDifference.weakChallengeFloorPermille", "Rendimento mínimo deve estar entre 0 e 1000 permille.");
     }
 
     private sealed class Collector

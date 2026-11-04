@@ -191,8 +191,10 @@ public static class ValidationReport
             double pct = finalLevels.Count(l => l >= minLevel) * 100.0 / finalLevels.Count;
             if (pct < 50) reasons.Add($"nível mínimo {minLevel}: só {pct.ToString("0", PtBr)}% dos personagens chegaram até o fim");
         }
-        if (BehaviorTuning.XpPerMinute(a.Type) == 0)
-            reasons.Add("não dá XP e ainda não existe economia nem desgaste, então a nota não tem termo de recompensa");
+        if (region.IsCity && a.Type == ActivityTypes.Quest)
+            reasons.Add("pegar missão no quadro não dá XP (D-027); as quests estruturadas por cidade ainda não existem");
+        else if (region.IsCity)
+            reasons.Add("atividade da cidade: não dá XP e ainda não existe economia nem desgaste, então a nota não tem termo de recompensa");
         if (region.Pvp == PvpRules.Open) reasons.Add("zona PvP: o risco extra afasta quem tem aversão a risco");
         if (reasons.Count == 0) reasons.Add("pouco atraente na fórmula atual (rever na conferência da fórmula)");
         return string.Join("; ", reasons) + ".";

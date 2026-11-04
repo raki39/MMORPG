@@ -116,11 +116,14 @@ public partial class AreaModal : ModalFrame
         head.AddChild(live);
         body.AddChild(head);
 
-        int xp = BehaviorTuning.XpPerMinute(a.Type);
+        int challenge = ProgressionRules.ChallengeLevel(_ctx.Content, a);
+        // XP de referencia: personagem no proprio nivel do desafio.
+        long xp = challenge == 0 ? 0 : ProgressionRules.XpFor(_ctx.Content, a, challenge, a.TypicalMinutes);
         var rewards = new HFlowContainer();
         rewards.AddThemeConstantOverride("h_separation", 8);
         rewards.AddThemeConstantOverride("v_separation", 6);
-        if (xp > 0) rewards.AddChild(ThemeFactory.Chip($"≈ {xp * a.TypicalMinutes} XP por ciclo", UiTokens.Success, dot: true));
+        if (challenge > 0) rewards.AddChild(ThemeFactory.Chip($"Desafio nível {challenge}", UiTokens.Info));
+        if (xp > 0) rewards.AddChild(ThemeFactory.Chip($"≈ {xp} XP por ciclo", UiTokens.Success, dot: true));
         foreach (var itemId in a.ItemIds)
             if (_ctx.Content.Items.TryGetValue(itemId, out var it))
                 rewards.AddChild(ThemeFactory.Chip($"{it.Name} · {it.BaseValueCopper} cobre", ActivityPalette.Color(ActivityTypes.Gather)));

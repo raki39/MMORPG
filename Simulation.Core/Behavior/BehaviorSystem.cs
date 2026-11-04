@@ -384,13 +384,13 @@ public sealed class BehaviorSystem
 
     private void AwardExperience(Character ch, ActivityDefinition a, RegionDefinition region, int minutes)
     {
-        int rate = BehaviorTuning.XpPerMinute(a.Type);
-        if (rate == 0 || minutes <= 0) return;
-        long xp = (long)rate * minutes * ActivityScoring.LevelFit(ch.Level, region) / 1000;
+        var p = _w.Content.Progression;
+        long xp = ProgressionRules.XpFor(_w.Content, a, ch.Level, minutes);
+        if (xp <= 0) return;
         ch.Experience += xp;
-        while (ch.Level < BehaviorTuning.MaxLevel && ch.Experience >= BehaviorTuning.XpToNextLevel(ch.Level))
+        while (ch.Level < p.LevelCap && ch.Experience >= ProgressionRules.XpToNextLevel(p, ch.Level))
         {
-            ch.Experience -= BehaviorTuning.XpToNextLevel(ch.Level);
+            ch.Experience -= ProgressionRules.XpToNextLevel(p, ch.Level);
             ch.Level++;
             ch.LevelTicks.Add(ch.PlayedTicksAt(Now));
             _w.Today.LevelUps++;

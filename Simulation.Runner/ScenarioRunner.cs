@@ -47,6 +47,25 @@ public static class ScenarioRunner
     public const int ExitInvalidContent = 2;
     public const int ExitInvalidScenario = 3;
 
+    /// <summary>Previa nominal da curva de progressao (D-027); com --out grava progression.md.</summary>
+    public static int PrintProgression(RunOptions opt)
+    {
+        var content = ContentLoader.LoadFolder(opt.WorldFolder);
+        if (!content.Success)
+        {
+            foreach (var e in content.Errors) Console.Error.WriteLine(e);
+            return ExitInvalidContent;
+        }
+        string md = ProgressionPreview.ToMarkdown(content.Database!);
+        Console.WriteLine(md);
+        if (!string.IsNullOrEmpty(opt.OutDir))
+        {
+            Directory.CreateDirectory(opt.OutDir);
+            File.WriteAllText(Path.Combine(opt.OutDir, "progression.md"), md, new System.Text.UTF8Encoding(false));
+        }
+        return ExitOk;
+    }
+
     public static RunResult Run(RunOptions opt)
     {
         var msgs = new List<string>();

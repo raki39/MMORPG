@@ -315,3 +315,56 @@ Proposta do criador, analisada com o Claude.
 **Save:** estado novo como dado simples e no hash prepara o caminho, mas não substitui o teste de salvar e carregar. Esse teste fica pendente até o save existir (D-008).
 
 **Incrementos seguintes:** emoções (com escalas e valores neutros documentados), memória e sessões flexíveis, com teto de extensão.
+
+## D-027 — Progressão no conteúdo: curva, taxa por faixa e nível do desafio
+**Data:** 04/11/2026 · **Estado:** aceita (passo 1 do D-025)
+
+**Princípio.** No jogo, o jogador é o desenvolvedor do MMORPG: ele vai criar áreas, itens, magias e ajustar a progressão.
+- Por isso a progressão é **conteúdo** (`progression.json`), validada como os outros arquivos, e não constante do Core.
+- O editor do jogo poderá alterá-la depois, como a configuração de zona.
+
+**Ritmo escolhido pelo criador: opção A, lenta.**
+- As referências são em **horas conectadas** (contando viagem, cidade e organização), como resultado esperado de um perfil de referência, e não como prazo para todos.
+- Os primeiros níveis chegam rápido, porque o começo apresenta o jogo. A desaceleração fica forte nas faixas altas.
+- O hardcore chega ao fim do conteúdo enquanto os casuais ainda ocupam áreas anteriores. O MMORPG precisa oferecer coisas relevantes para os dois, sem que o nível máximo seja o único ponto divertido.
+
+**Regras:**
+- **Curva:** XP para sair do nível n = cúbico·n³ + quadrático·n² + linear·n + constante.
+  - Valor atual: 30·n² + 190·n.
+  - Coeficientes negativos são proibidos, para a curva sempre crescer.
+- **Taxa por faixa de nível** ("stages", pedido do criador, como em servidores de MMORPG): a partir de cada faixa, todo XP ganho é multiplicado por uma taxa menor.
+
+  | Níveis | Taxa |
+  |---|---|
+  | 1–4 | ×3,0 |
+  | 5–9 | ×2,0 |
+  | 10–14 | ×1,4 |
+  | 15–19 | ×1,0 |
+  | 20–24 | ×0,8 |
+  | 25–29 | ×0,7 |
+
+- **Teto:** 30, configurável até 100. No teto, a pessoa não ganha XP.
+- **XP por minuto** por tipo de atividade, num desafio de nível 1: caça 10, chefe 14, patrulha e emboscada 8, missão 8, exploração 6, coleta 5.
+  - O XP por minuto cresce 20% por nível do desafio, como monstros mais fortes rendendo mais.
+- **Nível do desafio** (`challengeLevel` na atividade):
+  - caça e chefe usam a média dos níveis das criaturas;
+  - os outros tipos que dão XP precisam declará-lo;
+  - a cidade não tem desafio, então **pegar missão no quadro, comércio, taverna, treino e conserto não dão XP**.
+  - A faixa da zona virou só orientação: não entra mais no XP nem no risco.
+- **Diferença de nível:** sem perda até 2 níveis de distância.
+  - Desafio fraco: −15% por nível além disso, com mínimo de 10%.
+  - Desafio forte: −25% por nível além disso.
+  - O risco percebido sobe 120 permille por nível em que o desafio passa o personagem.
+- **Pontuação:** o fator `level_fit` passou a usar esse rendimento, e não a faixa da zona. O valor do XP ainda aparece só nele; a troca para "avanço esperado" fica para os objetivos (D-026).
+- **Prévia nominal:** `--progression` no runner mostra horas por nível sem rodar a simulação.
+  - Personagem de referência: caça no próprio nível e ganha XP em 60% do tempo conectado.
+  - Nível 5 em cerca de 2 h, 10 em cerca de 11 h, 20 em cerca de 70 h e 30 em cerca de 219 h.
+
+**Medido** (5 seeds × 1.000 pessoas × 90 dias): nível 5 em 2,7 h, nível 10 em 17 h e nível 15 em 41 h, todos dentro das metas novas.
+- **Efeito colateral esperado:** os personagens passam do conteúdo atual (desafios até cerca de 15).
+  - Nível mediano no fim: casual 14, competitivo e hardcore 19.
+  - Sem caça do nível deles, vão para a taverna (31% do tempo).
+- **O que resolve:**
+  - a redistribuição das áreas até o 30 (passo 2);
+  - as quests estruturadas (passo 3).
+- **Desvio do plano:** a seção 4.4 não fala em taxa por faixa. Ela entrou a pedido do criador e é configurável.

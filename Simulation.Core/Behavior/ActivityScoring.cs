@@ -67,9 +67,13 @@ public static class ActivityScoring
                 int affinity = Affinity(a.Type, t);
                 f.Add(new DecisionFactor("affinity", affinity * BehaviorTuning.WeightAffinity / 1000));
 
-                int fit = LevelFit(ch.Level, region);
-                if (BehaviorTuning.XpPerMinute(a.Type) > 0)
+                // Adequacao ao nivel pelo desafio da propria atividade (D-027), nao pela faixa da zona.
+                int challenge = ProgressionRules.ChallengeLevel(content, a);
+                if (ProgressionRules.MilliXpPerMinute(content, a, ch.Level) > 0)
+                {
+                    int fit = ProgressionRules.Efficiency(content.Progression, ch.Level, challenge);
                     f.Add(new DecisionFactor("level_fit", (fit - 500) * BehaviorTuning.WeightReward / 1000));
+                }
 
                 int count = occupancy(region.Id, a.Id);
                 int crowd = Math.Min(1000, count * 1000 / perActivityCapacity);
@@ -81,7 +85,7 @@ public static class ActivityScoring
                     f.Add(new DecisionFactor("company", t.Socializing * Math.Min(count, 5) / 5 * BehaviorTuning.WeightSocial / 3000));
 
                 int risk = a.BaseRiskPermille + (region.Pvp == PvpRules.Open ? 250 : 0)
-                           + Math.Max(0, region.LevelMin - ch.Level) * 120;
+                           + Math.Max(0, challenge - ch.Level) * 120;
                 risk = Math.Min(1000, risk);
                 if (risk > 0)
                     f.Add(new DecisionFactor("risk", -risk * t.RiskAversion / 1000 * BehaviorTuning.WeightRisk / 1000));
@@ -132,12 +136,4 @@ public static class ActivityScoring
         ActivityTypes.Boss => (t.Pve * 6 + t.Coordination * 4) / 10,
         _ => 200,
     };
-
-    /// <summary>Adequacao do conteudo da regiao ao nivel (permille): 1000 dentro da faixa.</summary>
-    public static int LevelFit(int level, RegionDefinition r)
-    {
-        if (level < r.LevelMin) return Math.Max(0, 1000 - (r.LevelMin - level) * 250);
-        if (level > r.LevelMax) return Math.Max(100, 1000 - (level - r.LevelMax) * 150);
-        return 1000;
-    }
 }

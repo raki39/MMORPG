@@ -13,7 +13,7 @@ Jogo de gestão single-player e offline: o jogador cria e administra um MMORPG e
 - `Simulation.Runner`: CLI headless que compõe Core e Infrastructure.
 - `Simulation.Tests`: xUnit.
 - `GodotClient/`: projeto Godot 4.7.2 .NET; visualização, interface e comandos para o Core via `ProjectReference`. Nada de um nó por jogador no mapa; desenho em lote.
-- `Content/presets/<mundo>/`: `world`, `regions` (com `activities`), `classes`, `abilities`, `items`, `creatures`, `population` (`.json`) + `scenario.json` e `targets.json` (só do runner: cenário e metas de validação).
+- `Content/presets/<mundo>/`: `world`, `regions` (com `activities`), `classes`, `abilities`, `items`, `creatures`, `population`, `progression` (`.json`; o jogador, como desenvolvedor do MMORPG, editará esse conteúdo no jogo) + `scenario.json` e `targets.json` (só do runner: cenário e metas de validação).
 - JSON é o formato de troca; o save SQLite guarda o conteúdo da campanha; a execução usa memória (D-008).
 
 ## Regras
@@ -42,11 +42,12 @@ dotnet test
 dotnet run --project Simulation.Runner -- --world Content/presets/inicial --days 30 --seed 42 --out reports/teste01
 dotnet run --project Simulation.Runner -- --days 1 --no-skip   # verificação tick a tick
 dotnet run --project Simulation.Runner -- --days 90 --population 1000 --seeds 1-5 --out reports/validacao   # metas (docs/validacao.md)
+dotnet run --project Simulation.Runner -- --progression   # prévia nominal da curva de XP (progression.json)
 ```
 
 ## Marco atual
 
 - M0 e teste de viabilidade concluídos. M1 quase concluído (falta a revisão em 1366×768).
 - M2 em andamento. A rotina está validada com metas e várias seeds (D-024, `docs/validacao.md`).
-- Próximos passos, em ordem (D-025, D-026): XP e curva (teto 30) → redistribuir e ampliar áreas → catálogo de quests por cidade → medir a progressão até o 30 → objetivos pessoais e continuidade; depois o combate do M3. Ver `docs/backlog.md`.
+- Próximos passos, em ordem (D-025, D-026): XP e curva (teto 30, feito: D-027) → redistribuir e ampliar áreas → catálogo de quests por cidade → medir a progressão até o 30 → objetivos pessoais e continuidade; depois o combate do M3. Ver `docs/backlog.md`.
 - Após cada entrega: `tools/godot.ps1 export` (o atalho "MMORPG Tycoon" na Área de Trabalho abre `build/MMOTycoon.exe`).
