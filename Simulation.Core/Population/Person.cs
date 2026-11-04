@@ -31,6 +31,8 @@ public sealed class PersonTraits
     public int Patience;
     public int Loyalty;
     public int RiskAversion;
+    /// <summary>Preferencia por variedade (D-039a): cansa de repetir e precisa de novidade; separada da paciencia e da exploracao.</summary>
+    public int Variety;
 
     // Capacidade
     public int MechanicalSkill;
@@ -61,7 +63,7 @@ public sealed class PersonTraits
     {
         "pve", "pvp", "trade", "exploration", "socializing",
         "sociability", "aggressiveness", "patience", "loyalty", "riskAversion",
-        "mechanicalSkill", "gameKnowledge", "coordination", "cheatPropensity", "opportunism",
+        "mechanicalSkill", "gameKnowledge", "coordination", "cheatPropensity", "opportunism", "variety",
     };
 
     public int Get(string key) => key switch
@@ -70,6 +72,7 @@ public sealed class PersonTraits
         "sociability" => Sociability, "aggressiveness" => Aggressiveness, "patience" => Patience, "loyalty" => Loyalty,
         "riskAversion" => RiskAversion, "mechanicalSkill" => MechanicalSkill, "gameKnowledge" => GameKnowledge,
         "coordination" => Coordination, "cheatPropensity" => CheatPropensity, "opportunism" => Opportunism,
+        "variety" => Variety,
         _ => throw new ArgumentException($"Traço desconhecido: {key}"),
     };
 
@@ -92,6 +95,7 @@ public sealed class PersonTraits
             case "coordination": Coordination = value; break;
             case "cheatPropensity": CheatPropensity = value; break;
             case "opportunism": Opportunism = value; break;
+            case "variety": Variety = value; break;
             default: throw new ArgumentException($"Traço desconhecido: {key}");
         }
     }
@@ -118,6 +122,8 @@ public sealed class PersonMood
     public int LastProgressRatio;
     public int LastSessionScore = 500;
     public int SessionsRated;
+    /// <summary>Fracao de minutos ainda nao descontada da novidade (sessoes curtas acumulam).</summary>
+    public int NoveltyDecayCarry;
 }
 
 /// <summary>Acontecimento marcante na memoria da pessoa (D-038; plano 4.5).</summary>
@@ -195,6 +201,11 @@ public sealed class Person
     public bool IsOnline => State == LifecycleState.Online;
     /// <summary>Dia em que desistiu (-1 = nunca) e quantas vezes desistiu e voltou (D-039).</summary>
     public long QuitDay { get; internal set; } = -1;
+    /// <summary>Ultimo dia em que voltou (de inativo ou desistente); conta como presenca para a inatividade (D-039a).</summary>
+    public long LastReturnDay { get; internal set; } = -1;
+    /// <summary>Memorias ate este instante ja motivaram uma volta por saudade (nao contam de novo).</summary>
+    public long NostalgiaSpentTick { get; internal set; } = -1;
+    public int NostalgiaReturns { get; internal set; }
     public int TimesQuit { get; internal set; }
     public int TimesReturned { get; internal set; }
     public int TimesInactive { get; internal set; }

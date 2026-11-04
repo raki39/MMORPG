@@ -240,11 +240,19 @@ public static class ScenarioRunner
 
         var seeds = opt.Seeds!;
         var results = new RunMetrics[seeds.Count];
-        Parallel.For(0, seeds.Count, new ParallelOptions { MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount / 2) }, i =>
+        // Regras do cenario (rotina) sao medidas numa rodada controlada com o humor neutralizado
+        // (D-039a); as demais metas e secoes vem da campanha completa.
+        var scenarioTargets = targets.File.Targets.Where(t => t.Kind == TargetKinds.Scenario).ToList();
+        var jobs = Enumerable.Range(0, seeds.Count).Select(i => (Index: i, Neutral: false))
+            .Concat(scenarioTargets.Count > 0 ? Enumerable.Range(0, seeds.Count).Select(i => (Index: i, Neutral: true)) : Enumerable.Empty<(int, bool)>())
+            .ToList();
+        var controlled = new RunMetrics?[seeds.Count];
+        Parallel.For(0, jobs.Count, new ParallelOptions { MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount / 2) }, j =>
         {
+            var (i, neutral) = jobs[j];
             ulong seed = seeds[i];
             var db = ContentLoader.LoadFolder(opt.WorldFolder).Database!;
-            var engine = WorldFactory.Create(db, new WorldConfig { Seed = seed, PopulationSize = population });
+            var engine = WorldFactory.Create(db, new WorldConfig { Seed = seed, PopulationSize = population, NeutralMood = neutral });
             engine.DisableTickSkipping = opt.DisableTickSkipping;
             if (scenario != null)
                 foreach (var c in scenario.Commands.OrderBy(c => c.Tick).Where(c => c.Tick <= SimTime.Days(opt.Days)))
@@ -257,17 +265,30 @@ public static class ScenarioRunner
                 collector.Consume(engine.World.Events.Drain(), engine.World);
             }
             watch.Stop();
-            var m = collector.Finish(engine.World, seed, opt.Days, targets.File.Targets);
+            var m = collector.Finish(engine.World, seed, opt.Days, neutral ? scenarioTargets : targets.File.Targets);
             m.FinalStateHash = StateHasher.Compute(engine.World);
             m.SimulationSeconds = watch.Elapsed.TotalSeconds;
-            results[i] = m;
+            if (neutral) controlled[i] = m; else results[i] = m;
         });
+        for (int i = 0; i < seeds.Count; i++)
+        {
+            if (controlled[i] is not { } c) continue;
+            foreach (var t in scenarioTargets)
+            {
+                results[i].Values[t.Id] = c.Values.GetValueOrDefault(t.Id, double.NaN);
+                results[i].Notes.Remove(t.Id);
+                if (c.Notes.TryGetValue(t.Id, out var note)) results[i].Notes[t.Id] = note;
+                results[i].ControlledProfiles.Clear();
+                results[i].ControlledProfiles.AddRange(c.Profiles);
+            }
+        }
 
         var ctx = Context(opt, content, targets, population, wall);
         ValidationReport.Write(opt.OutDir, ctx, targets.File, content.Database!, results);
         var outcomes = ValidationReport.Outcomes(targets.File, results);
+        string Cls(string kind) => $"{outcomes.Count(o => o.Target.Kind == kind && o.Status == TargetStatus.Inside)}/{outcomes.Count(o => o.Target.Kind == kind)}";
         msgs.Add($"OK: {results.Length} seeds × {opt.Days} dias × {population} pessoas em {wall.Elapsed.TotalSeconds:F1} s. " +
-                 $"Metas dentro da faixa: {outcomes.Count(o => o.Status == TargetStatus.Inside)}/{outcomes.Count}. " +
+                 $"Metas dentro da faixa: regras do cenário {Cls(TargetKinds.Scenario)}, provisórias {Cls(TargetKinds.Provisional)}, dependentes de sistemas futuros {Cls(TargetKinds.Future)} (acompanhamento). " +
                  $"Relatório em {Path.GetFullPath(Path.Combine(opt.OutDir, "validation.md"))}");
         return new RunResult { ExitCode = ExitOk, Messages = msgs };
     }

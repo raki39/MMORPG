@@ -53,8 +53,10 @@ public class SessionPlanTests
             SessionRules.AccrueBoredom(ch, t, ActivityTypes.Hunt, 90, S);
             return ch.BoredomByType.GetValueOrDefault(ActivityTypes.Hunt);
         }
-        Assert.True(Gain(new PersonTraits { Exploration = 900, Pve = 500 }) > Gain(new PersonTraits { Exploration = 100, Pve = 500 }));
-        Assert.True(Gain(new PersonTraits { Exploration = 500, Pve = 900 }) < Gain(new PersonTraits { Exploration = 500, Pve = 100 }));
+        Assert.True(Gain(new PersonTraits { Variety = 900, Pve = 500 }) > Gain(new PersonTraits { Variety = 100, Pve = 500 }));
+        Assert.True(Gain(new PersonTraits { Variety = 500, Pve = 900 }) < Gain(new PersonTraits { Variety = 500, Pve = 100 }));
+        // A exploracao (gosto por explorar) nao e mais a preferencia por variedade (D-039a).
+        Assert.Equal(Gain(new PersonTraits { Variety = 500, Pve = 500, Exploration = 900 }), Gain(new PersonTraits { Variety = 500, Pve = 500, Exploration = 100 }));
     }
 
     [Fact]

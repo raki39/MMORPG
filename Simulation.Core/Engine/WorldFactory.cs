@@ -11,6 +11,11 @@ public sealed class WorldConfig
     public ulong Seed { get; set; } = 42;
     /// <summary>Pessoas geradas no inicio (no M0 todas como potenciais interessadas).</summary>
     public int PopulationSize { get; set; } = 100;
+    /// <summary>
+    /// Cenario controlado (D-039a): o humor nao muda a rotina nem a permanencia (sem fator de
+    /// engajamento, sessoes flexiveis, inatividade, desistencia). Mede a rotina pura.
+    /// </summary>
+    public bool NeutralMood { get; set; }
 }
 
 /// <summary>Cria uma campanha nova a partir de conteudo validado e configuracao.</summary>
@@ -21,7 +26,7 @@ public static class WorldFactory
         if (config.PopulationSize < 0) throw new ArgumentOutOfRangeException(nameof(config), "População negativa.");
 
         var calendar = BuildCalendar(content.World);
-        var world = new WorldState(content, config.Seed, calendar);
+        var world = new WorldState(content, config.Seed, calendar) { NeutralMood = config.NeutralMood };
         var engine = new SimulationEngine(world);
 
         for (int id = 1; id <= config.PopulationSize; id++)

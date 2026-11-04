@@ -631,7 +631,7 @@ public static class ContentValidator
             ("switchMargin", ss.SwitchMargin), ("commitMargin", ss.CommitMargin), ("commitBaseMinutes", ss.CommitBaseMinutes),
             ("commitExtraMinutesAtMaxPatience", ss.CommitExtraMinutesAtMaxPatience), ("boredomPerHour", ss.BoredomPerHour),
             ("boredomRecoveryPerHour", ss.BoredomRecoveryPerHour), ("boredomWeight", ss.BoredomWeight),
-            ("varietyBase", ss.VarietyBase), ("varietyPerExploration", ss.VarietyPerExploration),
+            ("varietyBase", ss.VarietyBase), ("varietyPerPreference", ss.VarietyPerPreference),
         })
             if (value < 0) v.Error(PopulationFile, "session." + name, "O valor não pode ser negativo.");
         if (ss.BoredomKeptBetweenSessions is < 0 or > 1000) v.Error(PopulationFile, "session.boredomKeptBetweenSessions", "Use um valor de 0 a 1000.");
@@ -722,7 +722,7 @@ public static class ContentValidator
         foreach (var (name, value) in new (string, int)[]
         {
             ("progressCarePve", pop.Mood.ProgressCarePve), ("progressCareAggressiveness", pop.Mood.ProgressCareAggressiveness),
-            ("progressCarePvp", pop.Mood.ProgressCarePvp), ("noveltyCareBase", pop.Mood.NoveltyCareBase),
+            ("progressCarePvp", pop.Mood.ProgressCarePvp), ("noveltyCareBase", pop.Mood.NoveltyCareBase), ("noveltyCareVariety", pop.Mood.NoveltyCareVariety), ("noveltyClamp", pop.Mood.NoveltyClamp),
             ("noveltyCareExploration", pop.Mood.NoveltyCareExploration), ("noveltyCareImpatience", pop.Mood.NoveltyCareImpatience),
         })
             if (value is < 0 or > 1000) v.Error(PopulationFile, "mood." + name, "Use um valor de 0 a 1000.");
@@ -740,8 +740,7 @@ public static class ContentValidator
             ("quitAfterInactiveDays", pop.Retention.QuitAfterInactiveDays),
             ("quitReturnMinDays", pop.Retention.QuitReturnMinDays),
             ("quitReturnChancePerDay", pop.Retention.QuitReturnChancePerDay),
-            ("returnSatisfaction", pop.Retention.ReturnSatisfaction),
-            ("returnNoveltyBoost", pop.Retention.ReturnNoveltyBoost),
+            ("quitGraceDaysAfterReturn", pop.Retention.QuitGraceDaysAfterReturn),
             ("extendScoreAbove", pop.Retention.ExtendScoreAbove),
             ("extendChance", pop.Retention.ExtendChance),
             ("extendPermille", pop.Retention.ExtendPermille),
@@ -753,7 +752,7 @@ public static class ContentValidator
         foreach (var (name, value) in new (string, int)[]
         {
             ("engagementNeutral", rt.EngagementNeutral), ("inactiveReturnPermille", rt.InactiveReturnPermille), ("quitBelow", rt.QuitBelow),
-            ("quitChancePerDay", rt.QuitChancePerDay), ("quitReturnChancePerDay", rt.QuitReturnChancePerDay), ("returnSatisfaction", rt.ReturnSatisfaction),
+            ("quitChancePerDay", rt.QuitChancePerDay), ("quitReturnChancePerDay", rt.QuitReturnChancePerDay),
             ("extendScoreAbove", rt.ExtendScoreAbove), ("extendChance", rt.ExtendChance), ("rageQuitFrustration", rt.RageQuitFrustration), ("rageQuitChance", rt.RageQuitChance),
         })
             if (value > 1000) v.Error(PopulationFile, "retention." + name, "Use um valor de 0 a 1000.");
@@ -795,6 +794,7 @@ public static class ContentValidator
             Permille(p, "paidAdvantageSensitivity", pr.PaidAdvantageSensitivity, v);
             Permille(p, "weekendBoost", pr.WeekendBoost, v);
             Permille(p, "talent", pr.Talent, v);
+            Permille(p, "variety", pr.Variety, v);
             Range(p, "preferredStartHour", pr.PreferredStartHour, 0, 23, v);
             Range(p, "sessionMinutes", pr.SessionMinutes, 10, 720, v);
             Range(p, "daysPerWeek", pr.DaysPerWeek, 0, 7, v);

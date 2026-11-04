@@ -277,8 +277,8 @@ public class TraitGoalTests
     {
         var (w, _, ch) = Someone();
         var d = w.Content.Dynamics;
-        var homebody = new PersonTraits { Exploration = 100, Loyalty = 500 };
-        var wanderer = new PersonTraits { Exploration = 900, Loyalty = 500 };
+        var homebody = new PersonTraits { Variety = 100, Loyalty = 500 };
+        var wanderer = new PersonTraits { Variety = 900, Loyalty = 500 };
         ch.ZoneMinutes.Clear();
         Assert.Equal(0, ActivityScoring.FamiliarityPull(ch, "zona_x", homebody, d));
         ch.ZoneMinutes["zona_x"] = d.FamiliarityFullMinutes / 2;
@@ -288,7 +288,7 @@ public class TraitGoalTests
         Assert.True(full > half && half > 0);
         Assert.True(ActivityScoring.FamiliarityPull(ch, "zona_x", wanderer, d) < full);
         // A lealdade nao entra na familiaridade.
-        Assert.Equal(full, ActivityScoring.FamiliarityPull(ch, "zona_x", new PersonTraits { Exploration = 100, Loyalty = 1000 }, d));
+        Assert.Equal(full, ActivityScoring.FamiliarityPull(ch, "zona_x", new PersonTraits { Variety = 100, Loyalty = 1000 }, d));
     }
 
     [Fact]

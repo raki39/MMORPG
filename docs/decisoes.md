@@ -995,3 +995,67 @@ Proposta do criador, analisada com o Claude.
   - teste de salvar e carregar (quando o save existir);
   - revisão do criador das metas de progressão e retenção;
   - recalibração da curva depois do combate.
+
+## D-039a — Revisão do fechamento do M2: classes de meta, variedade, novidade em meses e saudade sem recomeço
+**Data:** 04/11/2026 · **Estado:** aceita
+
+**Pedido do criador** (revisão antes da Etapa 1):
+1. Não perseguir as metas de abandono artificialmente.
+2. Investigar os 98% de hardcore insatisfeitos.
+3. A memória não deve fabricar saudade.
+4. Guardar as 162 h como resultado provisório.
+5. Nomear o "tempo em combate" corretamente.
+
+Durante a revisão, o criador acrescentou: falta de conteúdo novo é questão de meses, não de dias, porque atualizações de MMORPG saem a cada 3 a 6 meses.
+
+**Decisões:**
+- **Classes de meta** (`kind` em `targets.json`), porque "x de y" sozinho não diz se dá para avançar:
+  - **regra do cenário (7):** rotina e calendário, medidos numa rodada controlada com o humor neutralizado (`WorldConfig.NeutralMood`). Falhar indica erro. Na campanha completa, faltar por desânimo é resultado legítimo;
+  - **provisória (12):** progressão, divisão do tempo, missões;
+  - **dependente de sistema futuro (5):** tempo em missões e em coleta, desistentes, inativos, retorno. Só acompanhamento, não reprovam.
+  - Invariantes de verdade (determinismo, propriedade, cidade segura) continuam como testes, não como faixas.
+- **Traço novo: Variedade (preferência por variedade).** Pesa no tédio, na atração pela zona familiar e na necessidade de novidade.
+  - A Exploração volta a ser só o gosto por explorar (o D-036a usava a Exploração no lugar da variedade).
+  - Vem do perfil: casual 500, competitivo 450, social 550, comerciante 350, explorador 750, hardcore 300.
+  - É sorteado por último, depois do talento, para não mudar os traços já gerados.
+- **Novidade em horizonte de meses:**
+  - gasta 2 pontos por hora de jogo, não mais 20, com as frações das sessões curtas acumuladas;
+  - o termo tem limite (±300 antes do peso pessoal);
+  - a necessidade de novidade é 10% base + Variedade 50% + Exploração 20% + impaciência 20%.
+  - **Diagnóstico que motivou a mudança:** com o modelo do D-039, até os hardcore pacientes ficavam 100% insatisfeitos no dia 90. A novidade tirava cerca de 233 pontos deles e cerca de 246 dos impacientes; ou seja, dominava a satisfação de quem gosta de repetição.
+- **Saudade sem recomeço fabricado:**
+  - a volta por saudade só conta memórias boas registradas depois da última volta por saudade;
+  - cada volta aumenta o intervalo mínimo e reduz a chance seguinte;
+  - a pessoa volta com o humor que tem (saíram a satisfação mínima, a frustração zerada e o bônus de novidade), joga no dia da volta e tem 14 dias de carência antes de poder desistir de novo por intenção;
+  - o dia da volta conta como presença para a inatividade (antes, quem voltava podia ficar inativo e desistir na mesma noite);
+  - atualizações, convites e campanhas de marketing e streamers serão os outros motivos de retorno (M6/M7), sem a exigência de memórias novas.
+- **Os 12 acontecimentos** ficam como memória resumida; estados importantes (nível, missões, metas, atributos, impressões e, no M6, vínculos) ficam separados.
+- **162 h até o nível 30:** resultado de referência depois do D-037 (anda-se menos). Não será compensado agora; a recalibração rumo a cerca de 200 h vem depois do combate.
+- **Combate abstrato:** a meta e o relatório agora dizem "atividades de combate (abstratas, sem luta simulada até o M3)".
+
+**Validação** (90 dias × 1.000 pessoas × 5 seeds, mais as rodadas controladas):
+- regras do cenário: 7 de 7; provisórias: 8 de 12 (curva até o 20 e o 30, casuais no nível 10, tempo andando); dependentes de sistemas futuros: acompanhamento;
+- nenhum perfil insatisfeito no dia 90 (satisfação de 590 a 690); desistentes: 0,2%.
+
+**180 dias** (3 seeds):
+- a novidade dos hardcore vai de 772 (dia 90) a 213 (dia 180) e a satisfação, de 607 a 542; ainda nenhum insatisfeito;
+- a falta de conteúdo passa a pesar de verdade entre o 7º e o 8º mês sem atualização;
+- casuais e exploradores seguem com novidade alta.
+
+**Testes:** 7 novos (164 no total): variedade separada da exploração, saturação limitada, novidade lenta com sessões curtas, saudade sem reuso de memórias, carência, cenário controlado, classe das metas. `StateHasher` v9 (campos novos).
+
+## D-040 — Personagem e combate inicial: estatísticas diretas e morte sem perda
+**Data:** 04/11/2026 · **Estado:** aceita (para a Etapa 1 e o combate do M3)
+
+**Decisões do criador:**
+- **Atributos do personagem:** estatísticas diretas.
+  - Vida, recurso de classe, ataque físico, ataque mágico, defesa física, defesa mágica e velocidade de movimento.
+  - Alcance, custo, recarga e tempo de lançamento ficam nas habilidades.
+  - O atual `intelligence` das classes é o ataque mágico do personagem, não um atributo do jogador, e será renomeado para não confundir.
+  - Os atributos do jogador (Mecânica, Conhecimento, Coordenação) continuam da pessoa e entram na execução do combate.
+- **Morte contra monstros (piloto):**
+  - sem perda de XP nem de equipamento;
+  - a pessoa reaparece na cidade vinculada depois de um intervalo configurável, recupera os recursos e precisa viajar de novo;
+  - o custo real é o tempo perdido, a tentativa interrompida e a reação emocional de cada pessoa;
+  - desgaste, reparos e outras penalidades entram depois;
+  - full loot continua uma regra separada, aplicada nos contextos definidos (zonas, M9).

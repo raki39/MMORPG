@@ -104,20 +104,39 @@ public static class ValidationReport
         sb.Append($"| Janela das medidas semanais | a partir do dia {targets.WarmupDays} (exclui a semana de lançamento) |\n");
         sb.Append($"| Tempo total | {ctx.WallSeconds.ToString("N1", PtBr)} s |\n\n");
 
-        int inside = outcomes.Count(o => o.Status == TargetStatus.Inside);
-        sb.Append($"## Metas\n\n**{inside} de {outcomes.Count} dentro da faixa.**\n\n");
-        sb.Append("| Situação | Meta | Faixa | Média | Mín–máx entre seeds | Observação |\n|---|---|---|---:|---|---|\n");
-        foreach (var o in outcomes)
+        sb.Append("## Metas\n\n");
+        sb.Append("As metas têm três classes (D-039a); o total \"x de y\" sozinho não diz se dá para avançar:\n\n");
+        sb.Append("- **Regras do cenário:** rotina calibrada, medida numa rodada controlada com o humor neutralizado. Falhar aqui indica erro.\n");
+        sb.Append("- **Provisórias:** balanceamento que será recalibrado (progressão, divisão do tempo, missões).\n");
+        sb.Append("- **Dependem de sistemas futuros:** só acompanhamento, não reprovam (retenção, missões e coleta dependem de combate, economia e social).\n\n");
+        foreach (var (kind, title) in new[] { (TargetKinds.Scenario, "Regras do cenário"), (TargetKinds.Provisional, "Provisórias"), (TargetKinds.Future, "Dependem de sistemas futuros (acompanhamento)") })
         {
-            var t = o.Target;
-            sb.Append($"| {StatusText(o.Status)} | {t.Name} | {Fmt(t.Min)}–{Fmt(t.Max)} {t.Unit} | {Fmt(o.Mean)} | {Fmt(o.Min)}–{Fmt(o.Max)} | {Esc(o.Notes)} |\n");
+            var group = outcomes.Where(o => o.Target.Kind == kind).ToList();
+            if (group.Count == 0) continue;
+            sb.Append($"### {title}: {group.Count(o => o.Status == TargetStatus.Inside)} de {group.Count} dentro\n\n");
+            sb.Append("| Situação | Meta | Faixa | Média | Mín–máx entre seeds | Observação |\n|---|---|---|---:|---|---|\n");
+            foreach (var o in group)
+            {
+                var t = o.Target;
+                sb.Append($"| {StatusText(o.Status)} | {t.Name} | {Fmt(t.Min)}–{Fmt(t.Max)} {t.Unit} | {Fmt(o.Mean)} | {Fmt(o.Min)}–{Fmt(o.Max)} | {Esc(o.Notes)} |\n");
+            }
+            sb.Append("\n");
         }
         sb.Append("\nPor que cada faixa:\n\n");
         foreach (var t in targets.Targets.Where(t => t.Rationale.Length > 0))
             sb.Append($"- **{t.Name}:** {t.Rationale}\n");
 
         // ---- Perfis ----
-        sb.Append("\n## Perfis (média das seeds)\n\n");
+        if (runs.All(r => r.ControlledProfiles.Count > 0))
+        {
+            sb.Append("\n## Rotina pura (rodada controlada, humor neutralizado)\n\n| Perfil | Sessões/semana | Horas/semana |\n|---|---:|---:|\n");
+            foreach (var id in runs[0].ControlledProfiles.Select(p => p.Id))
+            {
+                var ps = runs.Select(r => r.ControlledProfiles.First(p => p.Id == id)).ToList();
+                sb.Append($"| {ps[0].Name} | {Fmt(Avg(ps.Select(p => p.SessionsPerWeek)))} | {Fmt(Avg(ps.Select(p => p.HoursPerWeek)))} |\n");
+            }
+        }
+        sb.Append("\n## Perfis na campanha completa (média das seeds)\n\n");
         sb.Append("| Perfil | Pessoas | Sessões/semana | Horas/semana | Nível mediano no fim | Nível p90 | Sessões em dia útil iniciadas entre 18h e 23h |\n|---|---:|---:|---:|---:|---:|---:|\n");
         foreach (var id in runs[0].Profiles.Select(p => p.Id))
         {
@@ -207,6 +226,7 @@ public static class ValidationReport
                 choicesByType[type] = choicesByType.GetValueOrDefault(type) + kv.Value;
                 totalChoices += kv.Value;
             }
+        sb.Append("Caça, chefe, patrulha e emboscada ainda são atividades abstratas (tempo e XP, sem luta simulada) até o M3; aí o tempo se divide em viagem, procura, luta, recuperação e recompensa.\n\n");
         sb.Append("| Tipo | Tempo | Escolhas |\n|---|---:|---:|\n");
         foreach (var kv in time.OrderByDescending(k => k.Value).ThenBy(k => k.Key, StringComparer.Ordinal))
         {

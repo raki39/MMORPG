@@ -115,12 +115,16 @@ public sealed class ExperienceSystem
         int minutes = (int)((now - ch.SessionStartTick) / SimTime.TicksPerMinute);
         if (minutes <= 0) return mood.LastSessionScore;
 
-        // Sem nada novo, a novidade segue caindo abaixo de zero: saturacao (o jogo cansa sem atualizacoes).
-        mood.Novelty = Math.Max(m.NoveltyMin, mood.Novelty - minutes * m.NoveltyDecayPerHour / 60);
+        // Novidade gasta devagar (D-039a): meses de jogo, nao dias. As fracoes das sessoes curtas
+        // acumulam. Sem nada novo, segue abaixo de zero: saturacao (sem atualizacoes, o jogo cansa).
+        mood.NoveltyDecayCarry += minutes * m.NoveltyDecayPerHour;
+        int spent = mood.NoveltyDecayCarry / 60;
+        mood.NoveltyDecayCarry %= 60;
+        mood.Novelty = Math.Max(m.NoveltyMin, mood.Novelty - spent);
         var parts = new SortedDictionary<string, int>(StringComparer.Ordinal);
         foreach (var kv in L.Sums) parts[kv.Key] = (int)(kv.Value / Math.Max(1, L.Minutes));
         parts[Progress] = ProgressTerm(p, ch, minutes) * ProgressCare(p.Traits, m) / 1000;
-        parts[Novelty] = (mood.Novelty - 500) * m.NoveltyWeight / 1000 * NoveltyCare(p.Traits, m) / 1000;
+        parts[Novelty] = NoveltyTerm(mood.Novelty, p.Traits, m);
         parts[Events] = Math.Clamp(L.Points, -m.EventClamp, m.EventClamp);
         int score = 500;
         foreach (var v in parts.Values) score += v;
@@ -179,9 +183,17 @@ public sealed class ExperienceSystem
     public static int ProgressCare(PersonTraits t, MoodSettingsDefinition m) =>
         Math.Clamp((t.Pve * m.ProgressCarePve + t.Aggressiveness * m.ProgressCareAggressiveness + t.Pvp * m.ProgressCarePvp) / 1000, 0, 1000);
 
-    /// <summary>Quanto a pessoa precisa de coisas novas (permille): exploracao e impaciencia.</summary>
+    /// <summary>
+    /// Quanto a pessoa precisa de coisas novas (permille, D-039a): sobretudo a preferencia por
+    /// variedade; depois a exploracao e a impaciencia. Quem gosta de repetir sente pouco.
+    /// </summary>
     public static int NoveltyCare(PersonTraits t, MoodSettingsDefinition m) =>
-        Math.Clamp(m.NoveltyCareBase + (t.Exploration * m.NoveltyCareExploration + (1000 - t.Patience) * m.NoveltyCareImpatience) / 1000, 0, 1000);
+        Math.Clamp(m.NoveltyCareBase + (t.Variety * m.NoveltyCareVariety + t.Exploration * m.NoveltyCareExploration
+            + (1000 - t.Patience) * m.NoveltyCareImpatience) / 1000, 0, 1000);
+
+    /// <summary>Novidade na nota da sessao: (novidade - 500) * peso, com limite, vezes a necessidade de novidade.</summary>
+    public static int NoveltyTerm(int novelty, PersonTraits t, MoodSettingsDefinition m) =>
+        Math.Clamp((novelty - 500) * m.NoveltyWeight / 1000, -m.NoveltyClamp, m.NoveltyClamp) * NoveltyCare(t, m) / 1000;
 
     /// <summary>Expectativa inicial de progresso: competitivos esperam mais (permille da referencia).</summary>
     public static int InitialExpectation(PersonTraits t, MoodSettingsDefinition m) =>

@@ -10,13 +10,13 @@ namespace Simulation.Core.Behavior;
 public static class SessionRules
 {
     /// <summary>
-    /// Fim de uma atividade: o tedio do tipo cresce com os minutos (mais rapido para quem gosta
-    /// de variedade, mais devagar para quem gosta muito daquele tipo) e o dos outros se alivia.
+    /// Fim de uma atividade: o tedio do tipo cresce com os minutos (mais rapido para quem prefere
+    /// variedade, mais devagar para quem gosta muito daquele tipo) e o dos outros se alivia.
     /// </summary>
     public static void AccrueBoredom(Character ch, PersonTraits t, string type, int minutes, SessionSettingsDefinition s)
     {
         if (minutes <= 0) return;
-        int variety = s.VarietyBase + t.Exploration * s.VarietyPerExploration / 1000;
+        int variety = s.VarietyBase + t.Variety * s.VarietyPerPreference / 1000;
         int relief = minutes * s.BoredomRecoveryPerHour / 60;
         foreach (var key in ch.Boredom.Keys.ToList())
         {

@@ -60,6 +60,8 @@ public sealed class PopulationProfileDefinition : IContentDefinition
     // Jogador (D-036)
     /// <summary>Talento da pessoa como jogador (permille): potencial e velocidade de aprendizado das capacidades.</summary>
     public TraitRange Talent { get; set; } = new();
+    /// <summary>Preferencia por variedade (D-039a), permille.</summary>
+    public TraitRange Variety { get; set; } = new();
 }
 
 public sealed class NamePoolDefinition
@@ -181,9 +183,9 @@ public sealed class SessionSettingsDefinition
     public int BoredomKeptBetweenSessions { get; set; } = 300;
     /// <summary>Peso do tedio na nota (com tedio 1000 e paciencia 0).</summary>
     public int BoredomWeight { get; set; } = 400;
-    /// <summary>Preferencia por variedade: base + exploracao * fator / 1000 (permille do acumulo).</summary>
+    /// <summary>Preferencia por variedade: base + variedade * fator / 1000 (permille do acumulo).</summary>
     public int VarietyBase { get; set; } = 600;
-    public int VarietyPerExploration { get; set; } = 800;
+    public int VarietyPerPreference { get; set; } = 800;
     /// <summary>Quanto a paciencia alivia o peso do tedio (permille com paciencia 1000).</summary>
     public int PatienceRelief { get; set; } = 500;
     /// <summary>Gosto pelo tipo reduz o acumulo: gosto 1000 = -metade disto; gosto 0 = +metade (permille).</summary>
@@ -217,10 +219,13 @@ public sealed class MoodSettingsDefinition
     public int ProgressCarePve { get; set; } = 500;
     public int ProgressCareAggressiveness { get; set; } = 300;
     public int ProgressCarePvp { get; set; } = 200;
-    /// <summary>Quanto precisa de novidade: base + exploracao e impaciencia (permille).</summary>
-    public int NoveltyCareBase { get; set; } = 200;
-    public int NoveltyCareExploration { get; set; } = 500;
-    public int NoveltyCareImpatience { get; set; } = 300;
+    /// <summary>Quanto precisa de novidade: base + variedade, exploracao e impaciencia (permille).</summary>
+    public int NoveltyCareBase { get; set; } = 100;
+    public int NoveltyCareVariety { get; set; } = 500;
+    public int NoveltyCareExploration { get; set; } = 200;
+    public int NoveltyCareImpatience { get; set; } = 200;
+    /// <summary>Limite (+-) do termo de novidade antes da necessidade pessoal.</summary>
+    public int NoveltyClamp { get; set; } = 300;
     /// <summary>Limite (+-) do termo de progresso.</summary>
     public int ProgressClamp { get; set; } = 200;
     /// <summary>Teto da razao de progresso (permille da referencia).</summary>
@@ -242,7 +247,7 @@ public sealed class MoodSettingsDefinition
     /// <summary>Quanto a frustracao reduz a intencao de continuar (permille).</summary>
     public int FrustrationInIntention { get; set; } = 500;
     /// <summary>Novidade gasta por hora de jogo.</summary>
-    public int NoveltyDecayPerHour { get; set; } = 20;
+    public int NoveltyDecayPerHour { get; set; } = 2;
     /// <summary>Novidade por zona descoberta.</summary>
     public int NoveltyPerDiscovery { get; set; } = 60;
     /// <summary>Novidade na primeira vez num tipo de atividade.</summary>
@@ -371,10 +376,8 @@ public sealed class RetentionSettingsDefinition
     public int QuitReturnMinDays { get; set; } = 30;
     /// <summary>Chance diaria de voltar com saudade maxima (permille).</summary>
     public int QuitReturnChancePerDay { get; set; } = 4;
-    /// <summary>Satisfacao minima ao voltar (recomeco).</summary>
-    public int ReturnSatisfaction { get; set; } = 550;
-    /// <summary>Novidade recuperada ao voltar depois de muito tempo.</summary>
-    public int ReturnNoveltyBoost { get; set; } = 300;
+    /// <summary>Dias depois de voltar sem desistir por intencao baixa: as novas sessoes decidem (D-039a).</summary>
+    public int QuitGraceDaysAfterReturn { get; set; } = 14;
     /// <summary>Sessao indo bem (nota parcial) a partir disto pode se estender.</summary>
     public int ExtendScoreAbove { get; set; } = 700;
     /// <summary>Chance de estender a sessao quando vai bem (permille).</summary>

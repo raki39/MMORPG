@@ -190,19 +190,21 @@ public sealed class BehaviorSystem
                 // Desistente (D-039): so a saudade dos bons momentos traz de volta (atualizacoes e convites no M6/M7).
                 _exp.OnDaily(p, ch);
                 if (!TryReturnFromQuit(p, ch, day, rng)) continue;
+                _w.Scheduler.Schedule(dayStart + SessionStartMinute(p, rng, kind) * SimTime.TicksPerMinute, EvSessionStart, p.Id, SessionMinutes(p, rng, kind));
+                continue;
             }
             else
             {
                 _traits.OnDaily(p, day);   // inatividade (D-036), antes de decidir se joga hoje
                 _exp.OnDaily(p, ch);       // humor e memoria (D-038)
-                if (!p.IsOnline && ReviewRetention(p, ch, day, rng)) continue;   // inativo ou desistiu (D-039)
+                if (!_w.NeutralMood && !p.IsOnline && ReviewRetention(p, ch, day, rng)) continue;   // inativo ou desistiu (D-039)
             }
             int chance = p.Traits.DaysPerWeek * 1000 / 7;
             chance = kind == DayKind.Weekday
                 ? chance * (1000 - p.Traits.WeekendBoost * 2 / 7) / 1000
                 : chance * (1000 + p.Traits.WeekendBoost) / 1000;
             // O humor muda a rotina (D-039): engajado joga mais; inativo raramente aparece.
-            chance = chance * PlayFactor(p.Mood.Engagement, rt) / 1000;
+            if (!_w.NeutralMood) chance = chance * PlayFactor(p.Mood.Engagement, rt) / 1000;
             if (p.State == LifecycleState.Inactive) chance = chance * rt.InactiveReturnPermille / 1000 * p.Mood.ReturnIntention / 1000;
             if (!rng.ChancePermille(chance)) continue;
             int minute = SessionStartMinute(p, rng, kind);
@@ -224,7 +226,8 @@ public sealed class BehaviorSystem
     private bool ReviewRetention(Person p, Character ch, long day, DeterministicRng rng)
     {
         var rt = _w.Content.Retention;
-        long off = p.LastPlayedDay < 0 ? 0 : day - p.LastPlayedDay;
+        long last = Math.Max(p.LastPlayedDay, p.LastReturnDay);
+        long off = last < 0 ? 0 : day - last;
         if (p.State != LifecycleState.Inactive && off >= rt.InactiveAfterDays)
         {
             p.State = LifecycleState.Inactive;
@@ -237,7 +240,9 @@ public sealed class BehaviorSystem
         bool quit = false;
         string reason = "";
         if (p.State == LifecycleState.Inactive && off >= rt.QuitAfterInactiveDays) { quit = true; reason = "long_inactivity"; }
-        else if (ri < rt.QuitBelow && rng.ChancePermille(rt.QuitChancePerDay * (rt.QuitBelow - ri) / Math.Max(1, rt.QuitBelow))) { quit = true; reason = "low_intention"; }
+        // Carencia depois de voltar: as novas sessoes decidem, nao o humor de quando saiu (D-039a).
+        else if (ri < rt.QuitBelow && (p.LastReturnDay < 0 || day - p.LastReturnDay >= rt.QuitGraceDaysAfterReturn)
+            && rng.ChancePermille(rt.QuitChancePerDay * (rt.QuitBelow - ri) / Math.Max(1, rt.QuitBelow))) { quit = true; reason = "low_intention"; }
         if (!quit) return false;
         p.State = LifecycleState.Quit;
         p.QuitDay = day;
@@ -252,23 +257,28 @@ public sealed class BehaviorSystem
     }
 
     /// <summary>
-    /// Desistente: depois de um tempo fora, pode voltar pela saudade (memorias boas, que
-    /// esmaecem) e pela lealdade. Volta com a satisfacao renovada e parte da novidade.
+    /// Desistente (D-039a): pode voltar pela saudade de boas experiencias realmente registradas,
+    /// que ainda nao motivaram uma volta, e pela lealdade. Cada volta por saudade gasta essas
+    /// memorias, aumenta o intervalo minimo e reduz a chance seguinte (sem ciclos rapidos).
+    /// Volta com o humor que tem (a frustracao ja se dissipou com o tempo); atualizacoes,
+    /// convites e campanhas com streamers serao outros motivos (M6/M7).
     /// </summary>
+    public static int Nostalgia(Person p) =>
+        Math.Min(1000, p.Memories.Where(m => m.Valence > 0 && m.Tick > p.NostalgiaSpentTick).Sum(m => m.Intensity));
+
     private bool TryReturnFromQuit(Person p, Character ch, long day, DeterministicRng rng)
     {
         var rt = _w.Content.Retention;
-        if (p.QuitDay < 0 || day - p.QuitDay < rt.QuitReturnMinDays) return false;
-        int nostalgia = Math.Min(1000, p.Memories.Where(m => m.Valence > 0).Sum(m => m.Intensity));
-        int chance = rt.QuitReturnChancePerDay * nostalgia / 1000 * (500 + p.Traits.Loyalty) / 1000;
+        if (p.QuitDay < 0 || day - p.QuitDay < rt.QuitReturnMinDays * (1 + p.NostalgiaReturns)) return false;
+        int nostalgia = Nostalgia(p);
+        int chance = rt.QuitReturnChancePerDay * nostalgia / 1000 * (500 + p.Traits.Loyalty) / 1000 / (1 + p.NostalgiaReturns);
         if (!rng.ChancePermille(chance)) return false;
         p.State = LifecycleState.Offline;
         p.TimesReturned++;
+        p.NostalgiaReturns++;
+        p.NostalgiaSpentTick = Now;
+        p.LastReturnDay = day;
         _w.Today.Returns++;
-        p.Mood.Satisfaction = Math.Max(p.Mood.Satisfaction, rt.ReturnSatisfaction);
-        p.Mood.Frustration = 0;
-        p.Mood.Novelty = Math.Min(1000, p.Mood.Novelty + rt.ReturnNoveltyBoost);
-        p.Mood.ProgressExpectation = ExperienceSystem.InitialExpectation(p.Traits, _w.Content.Mood);
         _exp.UpdateEngagement(p, ch);
         _w.Emit("player_returned", EventImportance.Normal, new[] { new EntityRef("person", p.Id), new EntityRef("character", ch.Id) },
             new[] { new EventCause("nostalgia", nostalgia), new EventCause("days_away", (int)(day - p.QuitDay)) }, $"{day - p.QuitDay} dias");
@@ -317,6 +327,7 @@ public sealed class BehaviorSystem
         {
             // Inativo que voltou a jogar (D-039).
             p.TimesReturned++;
+            p.LastReturnDay = Cal.DayIndex(Now);
             _w.Today.Returns++;
             _w.Emit("player_returned", EventImportance.Normal, new[] { new EntityRef("person", p.Id), new EntityRef("character", ch.Id) },
                 new[] { new EventCause("came_back", 1000), new EventCause("days_away", (int)(Cal.DayIndex(Now) - p.LastPlayedDay)) },
@@ -355,7 +366,7 @@ public sealed class BehaviorSystem
 
         // Sessao flexivel (D-039; plano 4.3): indo bem e engajado, fica mais um pouco (uma vez, com teto).
         var rt = _w.Content.Retention;
-        if (!ch.SessionExtended && p.Mood.Engagement >= rt.EngagementNeutral && SessionScoreSoFar(ch) >= rt.ExtendScoreAbove
+        if (!_w.NeutralMood && !ch.SessionExtended && p.Mood.Engagement >= rt.EngagementNeutral && SessionScoreSoFar(ch) >= rt.ExtendScoreAbove
             && Rng("behavior.session_flex", ch.Id * 1_000_000L + ch.DecisionCount).ChancePermille(rt.ExtendChance))
         {
             int planned = (int)((ch.SessionEndTick - ch.SessionStartTick) / SimTime.TicksPerMinute);
@@ -597,7 +608,7 @@ public sealed class BehaviorSystem
             int valence = _exp.OnActivity(p, ch, region, a, minutes, fit, fit > 0, ActivityScoring.RiskOf(region, a, challenge, levelBefore), firstTimeType);
             // Frustracao alta e mais uma experiencia ruim: pode largar a sessao na hora (D-039).
             var rt = _w.Content.Retention;
-            rageQuit = valence < 0 && p.Mood.Frustration >= rt.RageQuitFrustration
+            rageQuit = !_w.NeutralMood && valence < 0 && p.Mood.Frustration >= rt.RageQuitFrustration
                 && Rng("behavior.session_flex", ch.Id * 1_000_000L + ch.DecisionCount + 500_000).ChancePermille(rt.RageQuitChance);
             // Explorar revela mais longe: as zonas ligadas as vizinhas.
             if (a.Type == ActivityTypes.Explore)

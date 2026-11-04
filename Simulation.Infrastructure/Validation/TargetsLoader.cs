@@ -39,6 +39,20 @@ public sealed class TargetDefinition
     public string Unit { get; set; } = "";
     /// <summary>Por que a faixa foi escolhida (aparece no relatorio).</summary>
     public string Rationale { get; set; } = "";
+    /// <summary>
+    /// Classe (D-039a): "scenario" = regra do cenario (rotina calibrada; medida com humor
+    /// neutralizado; falhar indica erro); "provisional" = balanceamento a recalibrar;
+    /// "future" = depende de sistemas que ainda nao existem (so acompanhamento).
+    /// </summary>
+    public string Kind { get; set; } = "";
+}
+
+public static class TargetKinds
+{
+    public const string Scenario = "scenario";
+    public const string Provisional = "provisional";
+    public const string Future = "future";
+    public static readonly string[] All = { Scenario, Provisional, Future };
 }
 
 public static class TargetMetrics
@@ -121,6 +135,8 @@ public static class TargetsLoader
             if (string.IsNullOrWhiteSpace(t.Id)) errors.Add($"{p}.id — obrigatório.");
             else if (!ids.Add(t.Id)) errors.Add($"{p}.id — '{t.Id}' repetido.");
             if (string.IsNullOrWhiteSpace(t.Name)) errors.Add($"{p}.name — obrigatório.");
+            if (!TargetKinds.All.Contains(t.Kind))
+                errors.Add($"{p}.kind — use {string.Join(", ", TargetKinds.All)} (regra do cenário, provisória ou dependente de sistema futuro).");
             if (!TargetMetrics.All.Contains(t.Metric))
                 errors.Add($"{p}.metric — '{t.Metric}' desconhecida; use {string.Join(", ", TargetMetrics.All)}.");
             if (t.Profile.Length > 0 && !content.Profiles.ContainsKey(t.Profile))

@@ -87,7 +87,8 @@ O relatório de validação (`reports/<pasta>/report.md`, seção "Evolução do
 
 Medido no D-036a (90 dias × 1.000 pessoas × 5 seeds), em pontos da escala 1–20:
 
-| Perfil | Horas/semana | Mecânica | Conhecimento | PvE | Exploração | Comércio | Aversão a risco | Metas concluídas | Metas abandonadas |
+| Perfil | Horas/semana | Mecânica | Conhecimento | PvE | Exploração | Comércio | Variedade (D-039a) | **Preferência por variedade:** tédio mais rápido ao repetir; menos atração pela zona familiar; maior necessidade de novidade. Separada da Paciência (tolera repetir) e da Exploração (gosta de explorar) | — (personalidade) | — |
+| Aversão a risco | Metas concluídas | Metas abandonadas |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | Casual | 4,2 | +0,05 | +1,10 | +0,11 | +0,11 | 0,00 | 0,00 | 10,5 | 1,0 |
 | Comerciante | 8,5 | +0,05 | +1,01 | +0,09 | +0,06 | +0,12 | 0,00 | 14,6 | 2,7 |
@@ -112,7 +113,7 @@ Como ler a tabela (seed 1):
 | PvE | Vontade de caçar e enfrentar chefe; gosto por missões; metas de nível | Experiências boas de caça | — (repetir só gera tédio) |
 | PvP | Vontade de patrulhar, emboscar, PvP aberto. **Não melhora a execução** | Experiências boas de PvP; abate de jogador (+3, M3) | — |
 | Comércio | Vontade de coletar e comerciar; metas de praticar | Experiências boas de coleta e comércio | — |
-| Exploração | Vontade de explorar e fazer missões; **preferência por variedade** (reduz a atração pela zona familiar); metas de descobrir zonas | Experiências boas explorando; 1 unidade a cada 4 zonas descobertas | — |
+| Exploração | Vontade de explorar e fazer missões; metas de descobrir zonas; um pouco da necessidade de novidade | Experiências boas explorando; 1 unidade a cada 4 zonas descobertas | — |
 | Socializar | Vontade de ir à taverna e de jogar onde há gente | Experiências boas na taverna | — |
 | Sociabilidade | Valor da companhia na taverna; classe de suporte | Tempo na taverna | — |
 | Agressividade | **Competitividade**: entra no gosto por desafio acima do nível (40%); emboscada; metas de nível; classe tanque | — (personalidade) | — |
@@ -129,7 +130,7 @@ Como ler a tabela (seed 1):
 
 - **Zona familiar** (D-036a): a zona onde a pessoa já passou tempo atrai.
   - Cresce com os minutos na zona até 600 min (peso máximo 80).
-  - É menor para quem gosta de variedade: `× (1 − Exploração / 2)`.
+  - É menor para quem prefere variedade: `× (1 − Variedade / 2)` (D-039a).
   - A lealdade não entra aqui.
 - **Gosto por desafio** (D-036a): conteúdo acima do nível (até 3 níveis, 40 por nível).
   - Apetite = Agressividade × 0,4 + Mecânica × 0,3 + (1000 − Aversão a risco) × 0,3.

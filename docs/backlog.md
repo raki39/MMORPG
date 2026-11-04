@@ -52,8 +52,8 @@ Critério do plano: revisar o padrão visual cedo, com fixtures identificadas e 
 Uma etapa por vez, fechada por inteiro (testes, validação, documentação, exportação e resumo ao criador) antes da próxima. Interface só a do sistema da etapa; polimento visual vai para a lista do M8.
 
 1. ~~Fechar o M2: plano da sessão, humor, memória, abandono e retorno~~ (feito: D-037, D-038, D-039)
-2. **Etapa 1 — O personagem:**
-   - atributos do personagem por classe + nível + equipamento (fórmulas no conteúdo; nomes sem confundir com os atributos do jogador);
+2. **Etapa 1 — O personagem** (decisões no D-040):
+   - estatísticas diretas por classe + nível + equipamento: vida, recurso de classe, ataque e defesa físicos e mágicos, velocidade de movimento (fórmulas no conteúdo; nomes sem confundir com os atributos do jogador);
    - revisão das 3 classes e das 12 magias;
    - itens como instâncias (dono, origem) e equipamento inicial;
    - inventário e carteira de ouro com fontes registradas;
@@ -61,7 +61,8 @@ Uma etapa por vez, fechada por inteiro (testes, validação, documentação, exp
 3. **Etapa 2 — Combate PvE (M3):**
    - criaturas vivas por área e combate determinístico sem 3D;
    - magias e efeitos combináveis;
-   - XP e saque por abate; morte;
+   - XP e saque por abate;
+   - morte sem perda (D-040): reaparece na cidade vinculada depois de um intervalo, recupera os recursos e viaja de novo;
    - Mecânica e Conhecimento na execução (sai o bônus de XP);
    - recalibrar a curva (a ou b).
 4. **Etapa 3 — PvP e chefe (M3):**
@@ -118,7 +119,9 @@ Continuidade, humor e retenção (D-026; fechamento do M2):
 - [x] Sessões flexíveis: estender com teto, encerrar por frustração (D-039)
 - [x] Inativo, desistente e retorno, com causas registradas (D-039)
 - [x] Ficha: Humor, Memórias marcantes, plano da sessão; listas com Inativos e Desistiram (D-039)
+- [x] Revisão D-039a: metas em três classes (regra do cenário em rodada controlada, provisória, sistema futuro), traço Variedade, novidade em horizonte de meses, saudade sem recomeço fabricado e sem ciclos
 - [ ] Revisão do criador das metas de retenção e progressão (hipóteses em targets.json)
+- [ ] Outros motivos de retorno: atualizações (M7), convites de amigos (M6), campanhas de marketing e streamers (M7)
 - [ ] Conhecimento "sabe que existe" × "conhece" e exploração do interior das zonas (com o editor de mapa)
 - [ ] Ambições de longo prazo em etapas (ficar muito forte, liderar guilda)
 - [ ] Teste de salvar e carregar metas, planos, humor e memória (quando o save existir)

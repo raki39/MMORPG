@@ -122,6 +122,8 @@ public sealed class WorldState
 
     public ContentDatabase Content { get; }
     public ulong Seed { get; }
+    /// <summary>Cenario controlado: humor sem efeito na rotina e na permanencia (D-039a).</summary>
+    public bool NeutralMood { get; init; }
     public SimClock Clock { get; }
     public RngStreams Rng { get; }
     public EventScheduler Scheduler { get; } = new();

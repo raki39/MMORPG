@@ -147,6 +147,18 @@ public class ValidationTests
         Assert.Contains(errors, x => x.Contains("targets[1]") && x.Contains("maior que max"));
         Assert.Contains(errors, x => x.Contains("targets[2].types") && x.Contains("voar"));
         Assert.Contains(errors, x => x.Contains("targets[2].profile"));
+        Assert.Contains(errors, x => x.Contains("targets[0].kind"));   // classe obrigatoria (D-039a)
+    }
+
+    [Fact]
+    public void MetasDoPreset_TemClasse_EARotinaERegraDoCenario()
+    {
+        var r = TargetsLoader.Load(Path.Combine(TestSupport.PresetFolder, TargetsLoader.FileName), TestSupport.Preset);
+        Assert.All(r.File.Targets, t => Assert.Contains(t.Kind, TargetKinds.All));
+        Assert.All(r.File.Targets.Where(t => t.Metric is TargetMetrics.SessionsPerWeek or TargetMetrics.HoursPerWeek),
+            t => Assert.Equal(TargetKinds.Scenario, t.Kind));
+        Assert.All(r.File.Targets.Where(t => t.Metric is TargetMetrics.QuitShare or TargetMetrics.InactiveShare or TargetMetrics.ReturnShare),
+            t => Assert.Equal(TargetKinds.Future, t.Kind));
     }
 
     [Fact]

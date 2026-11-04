@@ -3,6 +3,20 @@ using Simulation.Core.Population;
 
 namespace Simulation.Tests;
 
+public class VarietyTraitTests
+{
+    [Fact]
+    public void PreferenciaPorVariedade_VemDoPerfil_ExploradoresVariamMaisQueHardcore()
+    {
+        var db = TestSupport.Preset;
+        var people = Enumerable.Range(1, 600).Select(i => Simulation.Core.Population.PopulationGenerator.Generate(i, db, 42)).ToList();
+        double Mean(string profile) => people.Where(p => p.ProfileId == profile).Average(p => p.Traits.Variety);
+        Assert.True(Mean("explorador") > Mean("hardcore") + 200);
+        Assert.Contains(people, p => p.Traits.Variety != p.Traits.Exploration);
+        Assert.Equal(people[0].Traits.Variety, people[0].BaseTraits.Variety);
+    }
+}
+
 public class PopulationTests
 {
     private static List<Person> Generate(int count, ulong seed) =>

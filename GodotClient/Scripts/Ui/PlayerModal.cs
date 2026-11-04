@@ -481,6 +481,7 @@ public partial class PlayerModal : ModalFrame
             (UiTokens.To20(t.Patience), "hourglass", "Paciente", "Repete a mesma atividade sem cansar tão cedo.", "zap", "Inquieto", "Cansa de repetir e troca de atividade logo."),
             (UiTokens.To20(t.Loyalty), "shield", "Leal", "Mantém as metas assumidas; no M6, fiel a grupos e guildas.", "compass", "Independente", "Larga metas com mais facilidade; no M6, muda de grupo sem apego."),
             (UiTokens.To20(t.RiskAversion), "shield", "Cauteloso", "Evita perigo, PvP e conteúdo acima do nível.", "flame", "Destemido", "Aceita risco e encara zonas perigosas."),
+            (UiTokens.To20(t.Variety), "layers", "Versátil", "Gosta de variar de atividade e de lugar; cansa de repetir e quer novidade.", "hammer", "Metódico", "Repete o que funciona sem se cansar; precisa pouco de novidade."),
         };
         var best = options.OrderByDescending(o => Math.Abs(o.V - 10.5f)).First();
         if (Math.Abs(best.V - 10.5f) < 3) return ("scale", "Equilibrado", "Nenhum traço de personalidade se destaca.");
@@ -1097,7 +1098,7 @@ public partial class PlayerModal : ModalFrame
         foreach (var g in new[]
         {
             Group("Estilo de jogo", new[] { "pve", "pvp", "trade", "exploration", "socializing" }),
-            Group("Personalidade", new[] { "sociability", "aggressiveness", "patience", "loyalty", "riskAversion" }),
+            Group("Personalidade", new[] { "sociability", "aggressiveness", "patience", "loyalty", "riskAversion", "variety" }),
             Group("Capacidade", new[] { "mechanicalSkill", "gameKnowledge", "coordination" }),
             Group("Conduta", new[] { "cheatPropensity", "opportunism" }),
         })

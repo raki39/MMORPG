@@ -120,12 +120,77 @@ public class RetentionTests
         p.Traits.Loyalty = 1000;
         p.Mood.Frustration = 700;
         w.Behavior.Experience.Remember(p, "main_quest", "saudade", 1000, 1000);
+        int satisfaction = p.Mood.Satisfaction;
         var events = NextMidnight(e);
         Assert.NotEqual(LifecycleState.Quit, p.State);
         var back = events.Single(x => x.Type == "player_returned" && x.Entities[0].Id == p.Id);
         Assert.Equal("nostalgia", back.Causes[0].Factor);
-        Assert.Equal(0, p.Mood.Frustration);
-        Assert.True(p.Mood.Satisfaction >= set.Population.Retention.ReturnSatisfaction);
+        // Sem recomeco fabricado (D-039a): volta com o humor que tem; a frustracao so passou com o tempo.
+        Assert.Equal(satisfaction, p.Mood.Satisfaction);
+        Assert.True(p.Mood.Frustration > 0);
+        Assert.Equal(1, p.NostalgiaReturns);
+        // Quem volta pela saudade joga no dia da volta.
+        e.AdvanceTo(w.Clock.Tick + SimTime.Days(1) - SimTime.Minutes(2));
+        Assert.Contains(w.Events.Drain(), x => x.Type == "session_started" && x.Entities[0].Id == p.Id);
+    }
+
+    [Fact]
+    public void Saudade_NaoReusaAsMesmasMemorias_NemGeraCiclosRapidos()
+    {
+        var set = TestSupport.FreshPresetSet();
+        set.Population.Retention.QuitReturnChancePerDay = 1000;
+        set.Population.Retention.QuitReturnMinDays = 2;
+        var e = Opened(ContentDatabase.Create(set));
+        e.AdvanceTo(SimTime.Days(5));
+        var w = e.World;
+        var p = Offline(e);
+        long today = w.Clock.Calendar.DayIndex(w.Clock.Tick);
+        p.Traits.Loyalty = 1000;
+        p.MemoryList.Clear();
+        w.Behavior.Experience.Remember(p, "main_quest", "antiga", 1000, 1000);
+        // Ja voltou uma vez por essas memorias: elas estao gastas.
+        p.State = LifecycleState.Quit;
+        p.QuitDay = today - 20;
+        p.NostalgiaSpentTick = w.Clock.Tick;
+        p.NostalgiaReturns = 1;
+        Assert.Equal(0, BehaviorSystem.Nostalgia(p));
+        for (int d = 0; d < 10; d++) NextMidnight(e);
+        Assert.Equal(LifecycleState.Quit, p.State);   // sem memorias boas novas, a saudade nao traz de volta
+    }
+
+    [Fact]
+    public void DepoisDeVoltar_HaCarencia_AntesDeDesistirDeNovoPorIntencao()
+    {
+        var e = Opened();
+        e.AdvanceTo(SimTime.Days(20) - SimTime.Minutes(1));
+        var w = e.World;
+        var p = Offline(e);
+        p.LastReturnDay = 19;
+        for (int d = 0; d < R.QuitGraceDaysAfterReturn - 2; d++)
+        {
+            p.Mood.Satisfaction = 0;
+            p.Mood.Frustration = 1000;
+            NextMidnight(e);
+            Assert.NotEqual(LifecycleState.Quit, p.State);
+        }
+    }
+
+    [Fact]
+    public void CenarioControlado_HumorNaoMudaRotinaNemPermanencia()
+    {
+        var e = WorldFactory.Create(TestSupport.Preset, new WorldConfig { Seed = 42, PopulationSize = 100, NeutralMood = true });
+        e.Submit(new SetServerOpenCommand(true), SimTime.Hours(8));
+        e.AdvanceTo(SimTime.Days(5));
+        var w = e.World;
+        foreach (var p in w.Persons.Where(x => x.CharacterId > 0))
+        {
+            p.Mood.Satisfaction = 0;
+            p.Mood.Frustration = 1000;
+        }
+        var all = new List<SimEvent>();
+        for (int d = 0; d < 20; d++) all.AddRange(NextMidnight(e));
+        Assert.DoesNotContain(all, x => x.Type is "player_quit" or "player_inactive" or "session_extended");
+        Assert.Equal(1000, BehaviorSystem.PlayFactor(w.Content.Retention.EngagementNeutral, w.Content.Retention));
     }
 
     [Fact]

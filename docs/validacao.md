@@ -212,6 +212,18 @@ Mesma rodada: 5 seeds × 1.000 pessoas × 90 dias. **15 de 21 metas dentro da fa
   - casuais quase não desistem porque ainda faltam as causas: mortes (M3), economia (M5) e social (M6).
 - **Seções novas do relatório:** continuidade e motivos de troca, humor e memória por perfil, retenção e motivos de desistência, evolução dos atributos.
 
+## Revisão D-039a (04/11/2026)
+
+- **Metas por classe:**
+  - **regras do cenário:** 7 de 7, rotina medida com o humor neutralizado;
+  - **provisórias:** 8 de 12;
+  - **dependentes de sistemas futuros:** acompanhamento.
+- **162 h até o nível 30:** resultado de referência depois do D-037. Não se compensa agora; a recalibração rumo a cerca de 200 h vem depois do combate.
+- **Novidade em meses:**
+  - no dia 90 ninguém está insatisfeito;
+  - em 180 dias a novidade dos hardcore cai a 213, com satisfação de 542;
+  - a falta de conteúdo pesa de verdade só depois de 7 a 8 meses sem atualização.
+
 ## Próximos passos
 
 Roteiro por etapas (backlog):

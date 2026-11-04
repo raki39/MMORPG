@@ -27,6 +27,7 @@ public static class StateHasher
             h.ULong(kv.Value.S0); h.ULong(kv.Value.S1); h.ULong(kv.Value.S2); h.ULong(kv.Value.S3);
         }
 
+        h.Bool(w.NeutralMood);
         h.Bool(w.Server.IsOpen);
         h.Long(w.Server.LastOpenedTick);
 
@@ -130,13 +131,14 @@ public static class StateHasher
         h.Int(p.Id); h.Str(p.Name); h.Str(p.ProfileId); h.ULong(p.AppearanceSeed);
         h.Int((int)p.State); h.Int(p.AccountId); h.Int(p.CharacterId); h.Long(p.LastPlayedDay);
         h.Long(p.QuitDay); h.Int(p.TimesQuit); h.Int(p.TimesReturned); h.Int(p.TimesInactive);
+        h.Long(p.LastReturnDay); h.Long(p.NostalgiaSpentTick); h.Int(p.NostalgiaReturns); h.Int(p.Mood.NoveltyDecayCarry);
         var t = p.Traits;
         h.Int(t.Pve); h.Int(t.Pvp); h.Int(t.Trade); h.Int(t.Exploration); h.Int(t.Socializing);
         h.Int(t.Sociability); h.Int(t.Aggressiveness); h.Int(t.Patience); h.Int(t.Loyalty); h.Int(t.RiskAversion);
         h.Int(t.MechanicalSkill); h.Int(t.GameKnowledge); h.Int(t.Coordination);
         h.Int(t.CheatPropensity); h.Int(t.Opportunism);
         h.Int(t.LeisureBudgetCentsPerMonth); h.Int(t.WillingnessToPay); h.Int(t.PaidAdvantageSensitivity);
-        h.Int(t.PreferredStartHour); h.Int(t.SessionMinutes); h.Int(t.DaysPerWeek); h.Int(t.WeekendBoost); h.Int(t.Talent);
+        h.Int(t.PreferredStartHour); h.Int(t.SessionMinutes); h.Int(t.DaysPerWeek); h.Int(t.WeekendBoost); h.Int(t.Talent); h.Int(t.Variety);
         // Atributos vivos (D-036): base de nascenca e pratica acumulada.
         foreach (var k in PersonTraits.DynamicKeys) h.Int(p.BaseTraits.Get(k));
         h.Int(p.PracticeProgress.Count);

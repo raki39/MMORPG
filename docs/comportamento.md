@@ -1,6 +1,6 @@
 # Comportamento da pessoa simulada (fechamento do M2)
 
-Como cada pessoa decide, sente e permanece no jogo. Complementa [atributos.md](atributos.md) (os traços e como mudam) e as decisões D-037, D-038 e D-039. Todos os números ficam em `Content/presets/inicial/population.json`, nas seções `session`, `mood`, `memory` e `retention`; o validador confere as faixas.
+Como cada pessoa decide, sente e permanece no jogo. Complementa [atributos.md](atributos.md) (os traços e como mudam) e as decisões D-037, D-038, D-039 e D-039a. Todos os números ficam em `Content/presets/inicial/population.json`, nas seções `session`, `mood`, `memory` e `retention`; o validador confere as faixas.
 
 ## Visão geral
 
@@ -13,6 +13,8 @@ Como cada pessoa decide, sente e permanece no jogo. Complementa [atributos.md](a
 | Memória (D-038) | Impressão de cada lugar e acontecimentos marcantes | Fator "lembrança" e saudade |
 | Retenção (D-039) | Ativo, inativo, desistente e retorno | Se e quanto a pessoa joga |
 
+Quem gosta de repetir e quem precisa de variedade é um traço próprio: **Variedade** (preferência por variedade, D-039a). Ela é separada da Paciência (tolerar a repetição) e da Exploração (gostar de explorar).
+
 ## Plano da sessão e continuidade
 
 - **Formação:** a primeira decisão da sessão forma o plano. O motivo é o fator que mais pesou.
@@ -23,10 +25,11 @@ Como cada pessoa decide, sente e permanece no jogo. Complementa [atributos.md](a
 - **Sem custo afundado:** a viagem já feita não obriga a insistir.
 - **Tédio contextual** (substitui a penalidade fixa de repetição):
   - cresce por tipo de atividade, 300 por hora;
-  - cresce mais rápido para quem gosta de variedade (Exploração) e mais devagar para quem gosta muito daquele tipo;
+  - cresce mais rápido para quem prefere variedade e mais devagar para quem gosta muito daquele tipo;
   - fazer outra coisa alivia 400 por hora; entre sessões sobram 30%;
   - na decisão pesa até 300 pontos, aliviado pela paciência.
 - **Explorar sem nada novo** ao alcance perde metade do gosto.
+- **Zona familiar:** atrai menos quem prefere variedade.
 
 ## Experiência e humor
 
@@ -52,10 +55,11 @@ Como cada pessoa decide, sente e permanece no jogo. Complementa [atributos.md](a
   - É o XP da sessão contra a referência do nível (caça no próprio nível).
   - A expectativa começa pela competitividade, aproxima-se do real aos poucos e tem piso.
   - No nível máximo o termo é neutro.
-- **Novidade:** pesa pelo quanto a pessoa precisa de coisas novas (base 20%, Exploração 50%, impaciência 30%).
-  - Gasta 20 por hora de jogo.
-  - É renovada por zonas, atividades, níveis e missões novas.
-  - Abaixo de zero é **saturação**: sem atualizações, o jogo cansa.
+- **Novidade, em horizonte de meses (D-039a):** atualizações de MMORPG saem a cada 3 a 6 meses, e ninguém quer conteúdo novo depois de uma semana.
+  - **Ritmo:** gasta 2 pontos por hora de jogo (as frações das sessões curtas se acumulam) e é renovada por zonas, atividades, níveis e missões novas.
+  - **Hardcore que já esgotou tudo** (25 h por semana): cerca de 2,5 meses para a novidade ficar neutra (500) e cerca de 5 meses para chegar a zero. Abaixo de zero é saturação.
+  - **Casual:** anos.
+  - **Peso na nota:** (novidade − 500) × 0,3, com limite de ±300, vezes a necessidade de novidade. A necessidade é 10% base + Variedade 50% + Exploração 20% + impaciência 20%. Quem gosta de repetir sente pouco.
 
 **Humor** (permille):
 
@@ -73,10 +77,11 @@ Como cada pessoa decide, sente e permanece no jogo. Complementa [atributos.md](a
   - aprende 30% com cada experiência;
   - na decisão vira o fator "lembrança do lugar" (até ±150);
   - boas impressões perdem 1,5% por dia e más perdem 4%.
-- **Acontecimentos marcantes:** até 12 por pessoa.
+- **Acontecimentos marcantes:** até 12 por pessoa, como memória resumida.
   - Quais: níveis múltiplos de 5, missão principal, meta concluída ou abandonada, zona descoberta, atividade ou sessão muito boa ou muito ruim, ficar sem nada para fazer.
   - Conquistas perdem 10 de intensidade por dia; frustrações, 25.
   - O mesmo fato se reforça; com a memória cheia, sai o mais fraco.
+- **Estados importantes ficam fora dela**, como estado próprio: nível, missões concluídas, metas, atributos e impressões dos lugares; vínculos com outras pessoas no M6.
 
 ## Retenção
 
@@ -85,22 +90,32 @@ Como cada pessoa decide, sente e permanece no jogo. Complementa [atributos.md](a
 - **Sessões flexíveis:**
   - indo bem (nota parcial ≥ 700) e engajada, a pessoa estende a sessão uma vez em 30%, com chance de 40%;
   - com frustração ≥ 600 e uma experiência ruim, pode sair na hora (30%).
-- **Inativo:** 14 dias sem jogar. Volta com chance de 25% da rotina × intenção de continuar.
+- **Inativo:** 14 dias sem jogar (o dia de uma volta conta como presença). Volta com chance de 25% da rotina × intenção de continuar.
 - **Desistente** (`player_quit`, com o que mais incomodava como causa):
   - intenção de continuar abaixo de 420: até 6% por dia, proporcional à distância do limite;
   - ou 45 dias sem jogar.
-- **Retorno do desistente** (`player_returned`):
-  - depois de 30 dias, pela saudade (soma das memórias boas, que esmaecem) e pela lealdade, até 0,4% por dia;
-  - volta com satisfação de pelo menos 550, frustração zerada e +300 de novidade.
-  - Atualizações (M7) e convites de amigos (M6) serão os gatilhos principais.
+- **Retorno pela saudade** (D-039a):
+  - só contam memórias boas realmente registradas e que ainda não motivaram uma volta;
+  - cada volta por saudade gasta essas memórias, multiplica o intervalo mínimo (30 dias × voltas + 1) e divide a chance pelo mesmo fator;
+  - chance de até 0,4% por dia, também pela lealdade;
+  - a pessoa volta com o humor que tem (sem recomeço fabricado), joga no dia da volta e tem 14 dias de carência, em que só as novas sessões decidem.
+- **Outros motivos de retorno** (sem essa exigência de memórias novas, porque quem está fora não cria experiências novas):
+  - atualizações (M7);
+  - convites de amigos (M6);
+  - campanhas de marketing e streamers (M7).
+
+## Cenário controlado
+
+O runner mede a rotina pura numa segunda rodada com `NeutralMood`: o humor não muda a frequência nem a permanência (sem fator de engajamento, sessões flexíveis, inatividade ou desistência). As metas de classe "regra do cenário" usam essa rodada. Na campanha completa, faltar por desânimo é resultado legítimo.
 
 ## O que falta (causas que chegam depois)
 
 | Fonte de satisfação ou abandono | Quando |
 |---|---|
 | Mortes, derrotas e saque | M3 (combate) |
-| Ouro, mercado e itens | M5 (economia) |
-| Amigos, grupos e guildas (inclusive convites para voltar) | M6 (social) |
-| Atualizações que renovam a novidade, monetização | M7 (empresa) |
+| Ouro, mercado, itens e equipamento | Etapa 1 e M5 (economia) |
+| Chefes, PvP, guildas: interesse no fim do conteúdo além do nível | M3 e M6 |
+| Amigos e grupos (inclusive convites para voltar) | M6 (social) |
+| Atualizações que renovam a novidade, marketing e streamers | M7 (empresa) |
 
-Por isso, hoje quase só desiste quem esgota o conteúdo (hardcore e competitivos, perto do nível 30).
+Por isso, hoje quase ninguém desiste em 90 dias: o conteúdo só começa a pesar depois de meses sem atualização.

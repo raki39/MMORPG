@@ -22,6 +22,8 @@ public sealed class RunMetrics
     /// <summary>Tempo conectado por tipo (ticks), com "travel" (deslocamento) e "idle" (espera).</summary>
     public SortedDictionary<string, long> TimeByType { get; } = new(StringComparer.Ordinal);
     public List<ProfileStats> Profiles { get; } = new();
+    /// <summary>Perfis da rodada controlada (humor neutralizado), quando houver (D-039a).</summary>
+    public List<ProfileStats> ControlledProfiles { get; } = new();
     /// <summary>Nivel de cada personagem no fim (para diagnosticar atividades com nivel minimo).</summary>
     public List<int> FinalLevels { get; } = new();
     /// <summary>Continuidade das sessoes (D-026/D-037): trocas, permanencia e motivos.</summary>

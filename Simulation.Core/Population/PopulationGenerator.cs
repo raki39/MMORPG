@@ -57,6 +57,8 @@ public static class PopulationGenerator
         };
         // Sorteado por ultimo (D-036): nao altera os tracos ja existentes das populacoes.
         t.Talent = Roll(rng, profile.Talent, 0, 1000);
+        // Depois do talento (D-039a): mantem os tracos e o talento ja gerados.
+        t.Variety = Roll(rng, profile.Variety, 0, 1000);
 
         ulong appearance = RngStreams.DeriveSeed(campaignSeed, AppearanceStreamName, personId);
         return new Person(personId, name, profile.Id, appearance, t);

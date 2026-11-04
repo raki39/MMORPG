@@ -65,9 +65,42 @@ public class MoodMemoryTests
         var grinder = new PersonTraits { Pve = 900, Aggressiveness = 700, Pvp = 600 };
         var social = new PersonTraits { Pve = 300, Aggressiveness = 200, Pvp = 100, Socializing = 900 };
         Assert.True(ExperienceSystem.ProgressCare(grinder, M) > ExperienceSystem.ProgressCare(social, M) * 2);
-        var explorer = new PersonTraits { Exploration = 900, Patience = 300 };
-        var patient = new PersonTraits { Exploration = 200, Patience = 900 };
-        Assert.True(ExperienceSystem.NoveltyCare(explorer, M) > ExperienceSystem.NoveltyCare(patient, M));
+        var seeker = new PersonTraits { Variety = 900, Exploration = 700, Patience = 300 };
+        var routine = new PersonTraits { Variety = 100, Exploration = 300, Patience = 900 };
+        Assert.True(ExperienceSystem.NoveltyCare(seeker, M) > ExperienceSystem.NoveltyCare(routine, M) * 2);
+        // A preferencia por variedade pesa mais que a exploracao (D-039a).
+        int byVariety = ExperienceSystem.NoveltyCare(new PersonTraits { Variety = 900, Patience = 500 }, M);
+        int byExploration = ExperienceSystem.NoveltyCare(new PersonTraits { Exploration = 900, Patience = 500 }, M);
+        Assert.True(byVariety > byExploration);
+    }
+
+    [Fact]
+    public void Saturacao_TemEfeitoLimitado_EQuemGostaDeRepetirSentePouco()
+    {
+        var routine = new PersonTraits { Variety = 100, Exploration = 300, Patience = 900 };
+        var seeker = new PersonTraits { Variety = 900, Exploration = 700, Patience = 300 };
+        int worst = ExperienceSystem.NoveltyTerm(M.NoveltyMin, seeker, M);
+        Assert.True(worst >= -M.NoveltyClamp);
+        Assert.True(ExperienceSystem.NoveltyTerm(M.NoveltyMin, routine, M) > worst / 2);   // metodico sente bem menos
+    }
+
+    [Fact]
+    public void NovidadeGastaDevagar_EAsSessoesCurtasAcumulam()
+    {
+        var (w, p, ch) = Someone();
+        var exp = w.Behavior.Experience;
+        p.Mood.Novelty = 500;
+        p.Mood.NoveltyDecayCarry = 0;
+        for (int i = 0; i < 30; i++)   // 30 sessoes de 20 min = 10 h
+        {
+            ch.SessionStartTick = w.Clock.Tick - SimTime.Minutes(20);
+            ch.SessionLedger.Reset(ch.XpFromActivities + ch.XpFromQuests, ch.Level);
+            exp.OnSessionEnd(p, ch, w.Clock.Tick);
+        }
+        Assert.Equal(500 - 10 * w.Content.Mood.NoveltyDecayPerHour, p.Mood.Novelty);
+        // Horizonte de meses: um hardcore (25 h/semana) leva mais de 2 meses para ir de 1000 a 500.
+        double weeks = 500.0 / w.Content.Mood.NoveltyDecayPerHour / 25;
+        Assert.True(weeks > 8, $"{weeks:0.0} semanas");
     }
 
     [Fact]

@@ -147,8 +147,8 @@ public static class ActivityScoring
 
                 if (questTerm is { } qt) f.Add(new DecisionFactor(qt.Key, qt.Value));
 
-                // Familiaridade (D-036a): zona onde ja passou tempo atrai; quem gosta de variedade
-                // (exploracao alta) sente menos essa atracao.
+                // Familiaridade (D-036a): zona onde ja passou tempo atrai; quem prefere variedade
+                // sente menos essa atracao (D-039a).
                 if (FamiliarityPull(ch, region.Id, t, content.Dynamics) is > 0 and var pull)
                     f.Add(new DecisionFactor("familiarity", pull * content.Dynamics.FamiliarityWeight / 1000));
 
@@ -191,13 +191,13 @@ public static class ActivityScoring
 
     /// <summary>
     /// Atracao pela zona onde ja passou tempo (permille, D-036a): cresce com os minutos ali ate
-    /// a familiaridade total e e menor para quem gosta de variedade (exploracao).
+    /// a familiaridade total e e menor para quem prefere variedade (D-039a).
     /// </summary>
     public static int FamiliarityPull(Character ch, string regionId, PersonTraits t, TraitDynamicsDefinition d)
     {
         if (!ch.ZoneMinutesSpent.TryGetValue(regionId, out int minutes) || minutes <= 0) return 0;
         int fam = Math.Min(1000, minutes * 1000 / Math.Max(1, d.FamiliarityFullMinutes));
-        return fam * (1000 - t.Exploration / 2) / 1000;
+        return fam * (1000 - t.Variety / 2) / 1000;
     }
 
     /// <summary>Explorar a zona ainda revelaria alguma zona desconhecida (vizinhas das vizinhas)?</summary>
