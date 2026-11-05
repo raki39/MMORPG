@@ -334,7 +334,8 @@ public class TraitDrawTests
         static TraitLinkDefinition L(string t, string a, int w = 300) => new() { Trait = t, Anchor = a, InfluencePermille = w };
         Assert.Empty(Errors(_ => { }));
         Assert.Contains(Errors(s => s.Population.Links.Add(L("preferences.dance", "traits.sociability"))), e => e.Path.Contains("links"));
-        Assert.Contains(Errors(s => s.Population.Links.Add(L("preferences.crafting", "traits.patience"))), e => e.Path.Contains("links"));
+        // Ancora fora do formato triangular (a paciencia virou triangular na P4a; a coordenacao segue em media e dispersao).
+        Assert.Contains(Errors(s => s.Population.Links.Add(L("preferences.crafting", "traits.coordination"))), e => e.Path.Contains("links") && e.Message.Contains("min, mode e max"));
         Assert.Contains(Errors(s => s.Population.Links.Add(L("traits.habit", "preferences.pve"))), e => e.Path.Contains("links"));
         Assert.Contains(Errors(s => s.Population.Links.Add(L("preferences.social", "traits.variety"))), e => e.Path.Contains("links"));
         Assert.Contains(Errors(s => s.Population.Links.Add(L("traits.sociability", "preferences.social"))), e => e.Path.Contains("links"));

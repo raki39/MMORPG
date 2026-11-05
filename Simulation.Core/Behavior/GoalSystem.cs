@@ -45,7 +45,9 @@ public sealed class GoalSystem
         foreach (var g in ch.GoalList.ToList())
         {
             if (played - g.LastProgressPlayedTicks > staleTicks) Abandon(ch, g, "no_progress");
-            else if (t.Patience < S.ImpatientBelow && rng.ChancePermille(S.ImpatientDropChance)) Abandon(ch, g, "impatience");
+            // Leal (P4a): nao abandona meta por impaciencia.
+            else if (C.PersonalityRules(p.PersonalityId)?.Rule != PersonalityRuleIds.SteadfastGoals
+                     && t.Patience < S.ImpatientBelow && rng.ChancePermille(S.ImpatientDropChance)) Abandon(ch, g, "impatience");
         }
         // Quantidade de metas e chance de adotar nao dependem da paciencia (ela so pesa na persistencia).
         if (ch.GoalList.Count >= S.MaxActive) return;
@@ -101,7 +103,8 @@ public sealed class GoalSystem
         }
 
         // Concluir uma missao principal: pacientes, quem conhece o jogo e gosta de historia (PvE + exploracao).
-        if (!Has(GoalTypes.CompleteQuest) && MainQuestTarget(ch) is { } quest)
+        if (!Has(GoalTypes.CompleteQuest) && MainQuestTarget(ch) is { } quest
+            && (C.PersonalityRules(p.PersonalityId)?.Rule != PersonalityRuleIds.OwnPath || _quests.FitsTaste(pr, quest)))
         {
             int w = 120 + (pr.Pve + pr.Exploration) / 5 + t.Patience / 5 + t.GameKnowledge / 10;
             string motive = t.Patience >= t.GameKnowledge ? "patience" : "gameKnowledge";

@@ -238,6 +238,14 @@ public sealed class Person
     public PersonTraits BaseTraits { get; }
     /// <summary>Preferencias (interesses pessoais), ao lado do perfil; estaveis.</summary>
     public PersonPreferences Preferences { get; internal set; } = new();
+    /// <summary>Personalidade principal (P4a): id do tipo, "equilibrado" ou vazio (desligada).</summary>
+    public string PersonalityId { get; internal set; } = "";
+    /// <summary>Mudanca em confirmacao: alvo e dia em que comecou (vazio = nenhuma).</summary>
+    public string PersonalityPending { get; internal set; } = "";
+    public long PersonalityPendingSince { get; internal set; }
+    internal List<PersonalityChange> PersonalityHistoryList { get; } = new();
+    /// <summary>Mudancas de personalidade: anterior, nova e o atributo que motivou.</summary>
+    public IReadOnlyList<PersonalityChange> PersonalityHistory => PersonalityHistoryList;
 
     /// <summary>Prefixo das chaves de motivo que sao preferencias ("pref_pve"); as demais sao atributos.</summary>
     public const string PreferenceMotivePrefix = "pref_";

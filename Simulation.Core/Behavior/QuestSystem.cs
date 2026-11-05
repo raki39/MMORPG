@@ -125,9 +125,40 @@ public sealed class QuestSystem
         foreach (var aq in ch.ActiveQuestList.ToList())
             if (C.Quests.TryGetValue(aq.QuestId, out var q) && q.BoardId == board.Id && aq.StepIndex >= q.Steps.Count)
                 Deliver(ch, aq, q, board);
-        // Na mesma visita, pega quantas couberem (como um jogador faria no quadro).
-        while (CanAccept(ch) && Offers(ch, board).FirstOrDefault() is { } offer)
+        // Na mesma visita, pega quantas couberem (como um jogador faria no quadro). Independente
+        // (P4a): so aceita missoes que combinam com o proprio gosto.
+        var person = _w.GetPerson(ch.PersonId);
+        bool ownPath = C.PersonalityRules(person.PersonalityId)?.Rule == PersonalityRuleIds.OwnPath;
+        while (CanAccept(ch) && Offers(ch, board).FirstOrDefault(q => !ownPath || FitsTaste(person.Preferences, q)) is { } offer)
             Accept(ch, offer);
+    }
+
+    /// <summary>
+    /// Missao que combina com o gosto (regra do Independente): alguma etapa de atividade de um
+    /// tema com preferencia de ao menos OwnPathMinPreference. Missao so de visita conta como neutra.
+    /// </summary>
+    public bool FitsTaste(PersonPreferences pr, QuestDefinition q)
+    {
+        int min = C.Personality.Rules.OwnPathMinPreference;
+        bool any = false;
+        foreach (var step in q.Steps)
+        {
+            if (!C.Regions.TryGetValue(step.RegionId, out var r) || r.FindActivity(step.ActivityId) is not { } a) continue;
+            string? pref = a.Type switch
+            {
+                ActivityTypes.Hunt or ActivityTypes.Boss => "pve",
+                ActivityTypes.Patrol or ActivityTypes.Ambush => "pvp",
+                ActivityTypes.Gather => "gathering",
+                ActivityTypes.Explore => "exploration",
+                ActivityTypes.Trade => "trade",
+                ActivityTypes.Socialize => "social",
+                _ => null,
+            };
+            if (pref == null) continue;
+            any = true;
+            if (pr.Get(pref) >= min) return true;
+        }
+        return !any;
     }
 
     private void Accept(Character ch, QuestDefinition q)

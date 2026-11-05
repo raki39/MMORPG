@@ -98,6 +98,20 @@ public sealed class ContentDatabase
     public PopulationTraitsDefinition PopulationTraits => Set.Population.Traits;
     /// <summary>Distribuicoes das preferencias.</summary>
     public PreferencesDefinition PreferenceRanges => Set.Population.Preferences;
+    /// <summary>Personalidade principal (P4a).</summary>
+    public PersonalitySettingsDefinition Personality => Set.Population.Personality;
+
+    /// <summary>
+    /// Tipo de personalidade cujas regras valem agora (ligada e com regras ligadas); null para
+    /// Equilibrado, vazio ou desligada.
+    /// </summary>
+    public PersonalityTypeDefinition? PersonalityRules(string personalityId)
+    {
+        var s = Set.Population.Personality;
+        if (!s.Enabled || !s.RulesEnabled || personalityId.Length == 0) return null;
+        foreach (var t in s.Types) if (t.Id == personalityId) return t;
+        return null;
+    }
     /// <summary>Prioridade de progressao inicial (D-055).</summary>
     public EarlyProgressionDefinition EarlyProgression => Set.Population.EarlyProgression;
     /// <summary>Ligacoes parciais entre atributos.</summary>

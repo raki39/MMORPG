@@ -1877,3 +1877,41 @@ O criador pediu para separar **gosto** (Preferências) de **necessidade de progr
 **Decisão do criador:** manter os parâmetros. Não aumentar artificialmente a participação das missões nem forçar os personagens restantes a chegar ao nível 10: eles têm caminhos disponíveis, e o incentivo não é obrigação. A descoberta orientada fica limitada às informações disponíveis; novas fontes entram com os sistemas correspondentes.
 
 **Estado:** aceita e fechada; próxima etapa, a P4 (traits).
+
+## D-056 — Personalidade principal (P4a)
+**Data:** 05/11/2026 · **Estado:** aceita e fechada
+
+O criador pediu que cada jogador tenha **uma** personalidade principal, com efeito real no comportamento. Ela funciona quase como uma trait, mas é a identidade central. As traits (P4b em diante) são os traços, um sistema separado. Detalhes em `personalidade.md`.
+
+**Mecanismos** (`population.json`, seção `personality`, validada):
+1. **Classificação pela régua do preset:**
+   - A posição de cada pessoa nos 6 atributos de personalidade é calculada na distribuição do conteúdo, não na população do servidor.
+   - Vence o atributo mais extremo, se chegar a 700 (os 15% de um extremo). Senão, a pessoa é Equilibrado.
+   - Paciência, Lealdade e Aversão a risco passaram para a triangular equivalente (mesmo centro e mesmo desvio).
+2. **Mudança rara:**
+   - Só pelos atributos de personalidade, com histerese: margem de 100 e faixa de proteção de 600 a 800 para entrar e sair de Equilibrado.
+   - O mesmo alvo precisa se manter por 14 dias seguidos.
+   - Registra a personalidade anterior, a nova e o atributo que motivou a troca (evento `personality_changed` e histórico).
+3. **Regras categóricas:**
+   - Ficam num fator próprio ("Personalidade"), separado dos efeitos graduais dos atributos.
+   - O "nunca" é uma penalidade de 1000, não um filtro: sempre há alternativa válida.
+   - Disponibilidade, sono, obrigações e validade das ações continuam valendo.
+   - Equilibrado não tem regra nem bônus.
+
+**Medição** (5 seeds × 1.000 × 90 dias, mesmas pessoas sem e com regras):
+- **Distribuição:** Equilibrado 11,7%; cada personalidade entre 6,8% e 7,8%. Nenhuma mudança em 90 dias.
+- **Rotina:** igual (regras do cenário 7 de 9; horas por perfil iguais).
+- **Pacífico:** PvP 2,2% → 0%.
+- **Agressivo:** PvP 8,7% → 31,2%. Continua respondendo à preferência de PvP, ao risco, às outras preferências e às metas.
+- **Andando ou esperando:** 19,4% → 20,3%, pelo Inquieto, pelo Paciente e pelo Versátil.
+- **Correção durante a medição:** o Independente ia ao quadro sem aceitar nada. O quadro e a meta de missão agora consideram só as missões que ele aceitaria.
+
+**Decisões do criador:**
+- O efeito forte do Agressivo não prova erro; ele não ficou preso a uma atividade. O bônus de 150 fica como candidato.
+- 20,3% contra um limite provisório de 20% não justifica, sozinho, enfraquecer personalidades. A divergência fica registrada em `validacao.md`.
+
+**Depois:**
+- As regras da Etapa 3 (Pacífico só se defende ou foge; Agressivo inicia e revida) e dos grupos (M6).
+- Possível calibração do Inquieto: contar a repetição em minutos, não em ciclos.
+
+**Próximo:** R6 (variedade de horários, aprovada pelo criador a partir do diagnóstico da rotina) e depois a P4b (traits).

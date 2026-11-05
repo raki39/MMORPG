@@ -41,8 +41,9 @@ public static class ActivityScoring
 
     public static List<ScoredOption> Evaluate(Character ch, PersonTraits t, PersonPreferences pr, ContentDatabase content, RouteFinder routes,
         Func<string, string, int> occupancy, long now, DeterministicRng rng, QuestSystem? quests = null, GoalSystem? goals = null,
-        IReadOnlyDictionary<string, int>? impressions = null)
+        IReadOnlyDictionary<string, int>? impressions = null, PersonalityTypeDefinition? personality = null)
     {
+        bool firstDecision = ch.LastDecision == null || ch.LastDecision.Tick < ch.SessionStartTick;
         var options = new List<ScoredOption>();
         int remaining = (int)Math.Max(0, (ch.SessionEndTick - now) / Time.SimTime.TicksPerMinute);
 
@@ -68,7 +69,9 @@ public static class ActivityScoring
                     if (board != null)
                     {
                         int ready = quests.ReadyCount(ch, board);
-                        bool offer = quests.CanAccept(ch) && quests.Offers(ch, board).Any();
+                        // Independente (P4a): so contam as ofertas que ele aceitaria (sem ida ao quadro a toa).
+                        bool ownPath = personality?.Rule == PersonalityRuleIds.OwnPath;
+                        bool offer = quests.CanAccept(ch) && quests.Offers(ch, board).Any(q => !ownPath || quests.FitsTaste(pr, q));
                         if (ready == 0 && !offer) continue;
                         questTerm = ready > 0
                             ? ("quest_deliver", content.Behavior.QuestDeliverWeight + (ready - 1) * content.Behavior.QuestDeliverPerExtra)
@@ -116,13 +119,15 @@ public static class ActivityScoring
 
                 int count = occupancy(region.Id, a.Id);
                 int crowd = Math.Min(1000, count * 1000 / perActivityCapacity);
+                int crowdingContribution = 0;
                 if (a.Type == ActivityTypes.Socialize)
                     f.Add(new DecisionFactor("company", t.Sociability * Math.Min(count, 10) / 10 * content.Behavior.WeightSocial / 1000));
                 else if (a.Type == ActivityTypes.Hunt || a.Type == ActivityTypes.Gather)
                 {
                     // Coordenacao divide o lugar melhor; oportunismo foge da disputa (D-036).
                     int crowdWeight = content.Behavior.WeightCrowding * (1150 - t.Coordination * 3 / 10) / 1000 * (900 + t.Opportunism * 2 / 10) / 1000;
-                    f.Add(new DecisionFactor("crowding", -crowd * crowdWeight / 1000));
+                    crowdingContribution = -crowd * crowdWeight / 1000;
+                    f.Add(new DecisionFactor("crowding", crowdingContribution));
                 }
                 else if (count > 0)
                     f.Add(new DecisionFactor("company", pr.Social * Math.Min(count, 5) / 5 * content.Behavior.WeightSocial / 3000));
@@ -131,6 +136,14 @@ public static class ActivityScoring
                 int risk = RiskOf(region, a, challenge, ch.Level) * (1150 - t.MechanicalSkill * 3 / 10) / 1000;
                 if (risk > 0)
                     f.Add(new DecisionFactor("risk", -risk * t.RiskAversion / 1000 * content.Behavior.WeightRisk / 1000));
+                // Destemido (P4a): o risco da primeira faixa acima do nivel nao pesa (devolvido no fator da personalidade).
+                int fearlessRelief = 0;
+                if (personality?.Rule == PersonalityRuleIds.Fearless && challenge > ch.Level && risk > 0)
+                {
+                    int band = content.Personality.Rules.FearlessBandLevels;
+                    int riskAlt = RiskOf(region, a, Math.Max(ch.Level, challenge - band), ch.Level) * (1150 - t.MechanicalSkill * 3 / 10) / 1000;
+                    fearlessRelief = (risk - riskAlt) * t.RiskAversion / 1000 * content.Behavior.WeightRisk / 1000;
+                }
 
                 if (travel > 0)
                 {
@@ -173,6 +186,17 @@ public static class ActivityScoring
                 if (goals != null && goals.Bonus(ch, region, a, yieldsXp, fit, delivers) is > 0 and var gb)
                     f.Add(new DecisionFactor("goal", gb));
 
+                // Personalidade principal (P4a): regra propria, separada dos efeitos graduais dos atributos.
+                if (personality != null)
+                {
+                    bool needed = questTerm != null || (goals != null && goals.Bonus(ch, region, a, yieldsXp, fit, delivers) > 0);
+                    var ctx = new PersonalityContext(a.Type, region.Pvp == PvpRules.Open, needed, count, crowd, crowdingContribution,
+                        questTerm is { Key: "quest_step" }, region.Id + "/" + a.Id == ch.LastActivityKey, ch.RepeatCount, firstDecision, remaining,
+                        challenge, ch.Level, fearlessRelief);
+                    if (PersonalityRule(personality, content.Personality.Rules, ctx) is not 0 and var pv)
+                        f.Add(new DecisionFactor("personality", pv));
+                }
+
                 // Progressao inicial (D-055): prioridade ate o nivel-alvo, igual para todos. Conta uma
                 // vez por opcao (o maior entre rendimento de XP adequado e missao disponivel), so se a
                 // opcao cabe na sessao, e nao soma com metas de progressao (na opcao vale o maior).
@@ -202,6 +226,48 @@ public static class ActivityScoring
             return c != 0 ? c : string.CompareOrdinal(x.Key, y.Key);
         });
         return options;
+    }
+
+    /// <summary>Situacao de uma opcao que as regras de personalidade leem.</summary>
+    public readonly record struct PersonalityContext(string Type, bool OpenPvpZone, bool Needed, int Count, int CrowdPermille,
+        int CrowdingContribution, bool QuestStep, bool SameAsLast, int RepeatCount, bool FirstDecision, int RemainingMinutes,
+        int Challenge, int Level, int FearlessRelief);
+
+    /// <summary>
+    /// Regra da personalidade principal para uma opcao (fator "personality"). Sao regras
+    /// categoricas (nunca, sempre, comeca por), separadas do efeito gradual do atributo, e nunca
+    /// tiram opcoes: o "nunca" e uma penalidade grande, entao a opcao so vence se nao houver outra
+    /// valida. Regras sem efeito na nota (Paciente no plano, Leal nas metas, Independente nas
+    /// missoes) agem nos seus proprios sistemas.
+    /// </summary>
+    public static int PersonalityRule(PersonalityTypeDefinition? p, PersonalityRuleSettingsDefinition r, in PersonalityContext x)
+    {
+        if (p == null) return 0;
+        bool pvpActivity = x.Type is ActivityTypes.Ambush or ActivityTypes.Patrol;
+        return p.Rule switch
+        {
+            // Pacifico: nunca inicia PvP; evita zona de PvP aberto, salvo se uma missao ou meta pedir.
+            PersonalityRuleIds.AvoidPvp => pvpActivity ? -r.NeverPenalty : x.OpenPvpZone && !x.Needed ? -r.PvpZonePenalty : 0,
+            // Agressivo: vai atras de confronto e disputa lugar cheio na caca e na coleta.
+            PersonalityRuleIds.SeekConflict => (pvpActivity ? r.ConflictBonus : 0)
+                + (x.Type is ActivityTypes.Hunt or ActivityTypes.Gather && x.CrowdingContribution < 0 ? -x.CrowdingContribution * r.CrowdReliefPermille / 1000 : 0),
+            // Sociavel: comeca e termina a sessao onde ha gente.
+            PersonalityRuleIds.SocialBookends => (x.FirstDecision || x.RemainingMinutes <= r.SocialEndMinutes) && x.Count >= r.SocialMinPeople ? r.SocialBonus : 0,
+            // Reservado: nao entra em atividade lotada.
+            PersonalityRuleIds.AvoidCrowds => x.CrowdPermille >= r.CrowdLimitPermille ? -r.NeverPenalty : 0,
+            // Paciente: fecha as etapas de missao antes de outras coisas (o plano fica no Decide).
+            PersonalityRuleIds.FinishPlan => x.QuestStep ? r.QuestStepBonus : 0,
+            // Inquieto: depois de repetir a mesma atividade, procura outra.
+            PersonalityRuleIds.Restless => x.SameAsLast && x.RepeatCount + 1 >= r.RestlessRepeats ? -r.RestlessPenalty : 0,
+            // Cauteloso: nunca entra em conteudo acima do nivel + margem.
+            PersonalityRuleIds.NoOverlevel => x.Challenge > 0 && x.Challenge > x.Level + r.MaxLevelsAbove ? -r.NeverPenalty : 0,
+            // Destemido: a primeira faixa de risco acima do nivel nao pesa.
+            PersonalityRuleIds.Fearless => x.FearlessRelief,
+            // Versatil e Metodico: inicio de sessao diferente ou igual ao da sessao anterior.
+            PersonalityRuleIds.VaryStart => x.FirstDecision && x.SameAsLast ? -r.SessionStartBonus : 0,
+            PersonalityRuleIds.RepeatStart => x.FirstDecision && x.SameAsLast ? r.SessionStartBonus : 0,
+            _ => 0,
+        };
     }
 
     /// <summary>

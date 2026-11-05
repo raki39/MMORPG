@@ -357,7 +357,7 @@ public static class ScenarioRunner
         + string.Join(",", PersonPreferences.Keys.Select(k => "pref_" + k)) + ","
         + string.Join(",", PeopleActivityTypes.Select(k => "min_" + k)) + ","
         + "target_level,h_to_target," + string.Join(",", PeopleActivityTypes.Select(k => "pre_min_" + k)) + ","
-        + "unlock_set,unlock_done,discover_set,discover_done,discover_set_non_exploration\n";
+        + "unlock_set,unlock_done,discover_set,discover_done,discover_set_non_exploration,personality,personality_initial,personality_changes,min_idle,min_played\n";
 
     /// <summary>
     /// Uma linha por pessoa da campanha (people.csv): atributos de dedicacao, horas estimadas na
@@ -386,7 +386,13 @@ public static class ScenarioRunner
             .Concat(PeopleTraitKeys.Select(k => p.Traits.Get(k).ToString(inv)))
             .Concat(PersonPreferences.Keys.Select(k => p.Preferences.Get(k).ToString(inv)))
             .Concat(PeopleActivityTypes.Select(k => ch == null ? "0" : (ch.ActivityTicksByType.GetValueOrDefault(k) / SimTime.TicksPerMinute).ToString(inv)))
-            .Concat(tracker.Columns(ch, p.CharacterId, PeopleActivityTypes))));
+            .Concat(tracker.Columns(ch, p.CharacterId, PeopleActivityTypes))
+            .Append(p.PersonalityId)
+            .Append(p.PersonalityHistory.Count > 0 ? p.PersonalityHistory[0].From : p.PersonalityId)
+            .Append(p.PersonalityHistory.Count.ToString(inv))
+            // Deslocamento = conectado - atividades - espera (idle), como na meta "andando ou esperando".
+            .Append(ch == null ? "0" : (ch.ActivityTicksByType.GetValueOrDefault("idle") / SimTime.TicksPerMinute).ToString(inv))
+            .Append(ch == null ? "0" : (ch.PlayedTicks / SimTime.TicksPerMinute).ToString(inv))));
             sb.Append('\n');
         }
         return sb.ToString();

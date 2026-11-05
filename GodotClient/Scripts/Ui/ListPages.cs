@@ -106,7 +106,7 @@ public partial class PlayersPage : ListPage
 
         string Cls(string id) => ctx.Content.Classes.TryGetValue(id, out var c) ? c.Name : id;
         string Prof(int id) => ctx.Content.Profiles.TryGetValue(ctx.Persons[id - 1].ProfileId, out var p) ? p.Name : "";
-        string Pers(int id) => PlayerModal.PersonalityOf(ctx.Persons[id - 1].Traits).Label;
+        string Pers(int id) => PlayerModal.PersonalityOf(ctx.Content, PlayerModal.CurrentPersonality(ctx, id)).Label;
         string Pref(int id) => PreferenceInfo.Summary(ctx.Persons[id - 1].Preferences);
         string PrefTip(int id)
         {
@@ -124,7 +124,7 @@ public partial class PlayersPage : ListPage
             new Column<(int Id, CharacterView V)> { Title = "Perfil", Width = 100, MinWidth = 76, Text = r => Prof(r.Id), SortKey = r => Prof(r.Id), Color = r => UiTokens.ProfileColor(ctx.Persons[r.Id - 1].ProfileId).Lightened(0.15f) },
             new Column<(int Id, CharacterView V)> { Title = "Preferências", Width = 130, MinWidth = 96, Text = r => Pref(r.Id), SortKey = r => Pref(r.Id), Color = _ => UiTokens.TextLabel, Tooltip = r => PrefTip(r.Id) },
             new Column<(int Id, CharacterView V)> { Title = "Personalidade", Width = 110, MinWidth = 96, Text = r => Pers(r.Id), SortKey = r => Pers(r.Id), Color = _ => UiTokens.TextLabel,
-                Tooltip = r => $"{Pers(r.Id)}\n~{PlayerModal.PersonalityOf(ctx.Persons[r.Id - 1].Traits).Text}" },
+                Tooltip = r => $"{Pers(r.Id)}\n~{PlayerModal.PersonalityOf(ctx.Content, PlayerModal.CurrentPersonality(ctx, r.Id)).Text}" },
             new Column<(int Id, CharacterView V)> { Title = "País", Width = 110, MinWidth = 58, Text = r => Loc(r.Id), SortKey = r => Loc(r.Id), Color = _ => UiTokens.TextSecondary,
                 Tooltip = r => $"{Loc(r.Id)}\nIdiomas|{string.Join(", ", ctx.Persons[r.Id - 1].Languages.Select(PlayerModal.LanguageName))}\n~País onde mora: a rotina vale no horário local." },
             new Column<(int Id, CharacterView V)> { Title = "Ocupação", Width = 150, MinWidth = 70, Text = r => Occ(r.Id), SortKey = r => Occ(r.Id), Color = _ => UiTokens.TextSecondary,
@@ -149,7 +149,7 @@ public partial class PlayersPage : ListPage
         // Opcoes dos filtros (a primeira de cada lista e "todos").
         var profiles = Ctx.Content.ProfilesOrdered.ToList();
         var classes = Ctx.Content.Classes.Values.OrderBy(c => c.Name, StringComparer.Ordinal).ToList();
-        var pers = Ctx.Persons.Select(p => PlayerModal.PersonalityOf(p.Traits).Label).Distinct().OrderBy(x => x, StringComparer.Ordinal).ToList();
+        var pers = Ctx.Content.Personality.Types.Select(t => t.Name).Append("Equilibrado").OrderBy(x => x, StringComparer.Ordinal).ToList();
         var prefKeys = Simulation.Core.Population.PersonPreferences.Keys.ToList();
         var zones = Ctx.Content.Regions.Values.OrderBy(z => z.Name, StringComparer.Ordinal).ToList();
         var locs = Ctx.Content.LocalitiesOrdered;
@@ -164,7 +164,7 @@ public partial class PlayersPage : ListPage
                 .Where(r => fp == 0 || Ctx.Persons[r.Id - 1].ProfileId == profiles[fp - 1].Id)
                 .Where(r => fe == 0 || PreferenceInfo.Predominant(Ctx.Persons[r.Id - 1].Preferences).Contains(prefKeys[fe - 1]))
                 .Where(r => fc == 0 || r.V.ClassId == classes[fc - 1].Id)
-                .Where(r => fq == 0 || PlayerModal.PersonalityOf(Ctx.Persons[r.Id - 1].Traits).Label == pers[fq - 1])
+                .Where(r => fq == 0 || PlayerModal.PersonalityOf(Ctx.Content, PlayerModal.CurrentPersonality(Ctx, r.Id)).Label == pers[fq - 1])
                 .Where(r => fz == 0 || r.V.RegionId == zones[fz - 1].Id)
                 .Where(r => fl == 0 || Ctx.Persons[r.Id - 1].ResidenceId == locs[fl - 1].Id)
                 .Where(r => fo == 0 || Ctx.Persons[r.Id - 1].OccupationId == occs[fo - 1].Id)

@@ -347,6 +347,10 @@ public sealed class BehaviorSystem
             else
             {
                 _traits.OnDaily(p, day);   // inatividade (D-036), antes de decidir se joga hoje
+                // Personalidade principal (P4a): muda so com alvo confirmado por dias seguidos.
+                if (PersonalitySystem.OnDaily(_w.Content, p, day) is { } pc)
+                    _w.Emit("personality_changed", EventImportance.Normal, new[] { new EntityRef("person", p.Id) },
+                        new[] { new EventCause(pc.Attribute, pc.Value) }, $"{pc.From}|{pc.To}|{pc.PositionPermille}");
                 _exp.OnDaily(p, ch);       // humor e memoria (D-038)
                 if (!_w.NeutralMood && !p.IsOnline && ReviewRetention(p, ch, day, rng)) continue;   // inativo ou desistiu (D-039)
             }
@@ -997,7 +1001,8 @@ public sealed class BehaviorSystem
     {
         var rng = Rng("behavior.decision", ch.Id * 1_000_000L + ch.DecisionCount);
         ch.DecisionCount++;
-        var options = ActivityScoring.Evaluate(ch, p.Traits, p.Preferences, _w.Content, _routes, _w.OccupancyOf, Now, rng, _quests, _goals, p.PlaceImpressions);
+        var personality = _w.Content.PersonalityRules(p.PersonalityId);
+        var options = ActivityScoring.Evaluate(ch, p.Traits, p.Preferences, _w.Content, _routes, _w.OccupancyOf, Now, rng, _quests, _goals, p.PlaceImpressions, personality);
 
         if (options.Count == 0)
         {
@@ -1021,7 +1026,9 @@ public sealed class BehaviorSystem
         bool continued = false;
         int gap = 0;
         var ss = _w.Content.Session;
-        if (focus != null && focus != top && ch.PlanReviewReason.Length == 0)
+        // Paciente (P4a): acontecimentos nao derrubam o plano da sessao; ele termina o que planejou.
+        bool review = ch.PlanReviewReason.Length > 0 && personality?.Rule != PersonalityRuleIds.FinishPlan;
+        if (focus != null && focus != top && !review)
         {
             int margin = Now < ch.Plan!.CommitUntilTick ? ss.CommitMargin : ss.SwitchMargin;
             gap = top.Utility - focus.Utility;

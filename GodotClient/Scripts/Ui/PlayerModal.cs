@@ -480,24 +480,31 @@ public partial class PlayerModal : ModalFrame
     // ----- Personalidade principal (cabecalho e progresso) -----
 
     /// <summary>Traco de personalidade que mais se afasta do meio (alto ou baixo).</summary>
-    private (string Icon, string Label, string Text) MainPersonality() => PersonalityOf(_person.Traits);
+    private (string Icon, string Label, string Text) MainPersonality() => PersonalityOf(_ctx.Content, CurrentPersonality(_ctx, _person.Id));
 
-    /// <summary>Personalidade principal: o traco que mais se afasta do meio (alto ou baixo).</summary>
-    public static (string Icon, string Label, string Text) PersonalityOf(Simulation.Core.Population.PersonTraits t)
+    /// <summary>
+    /// Personalidade principal (P4a): vem do Core, uma por jogador, pelo atributo de personalidade
+    /// mais extremo na distribuicao do preset; tem regra propria de comportamento (exceto Equilibrado).
+    /// </summary>
+    public static (string Icon, string Label, string Text) PersonalityOf(Simulation.Core.Content.ContentDatabase content, string id)
     {
-        var options = new (int V, string HiIcon, string Hi, string HiText, string LoIcon, string Lo, string LoText)[]
+        if (id.Length == 0) return ("scale", "—", "Personalidade desligada no preset.");
+        if (id == Simulation.Core.Population.PersonalitySystem.Balanced)
+            return ("scale", "Equilibrado", "Nenhum traço de personalidade se destaca nos extremos; sem regra própria.");
+        var t = content.Personality.Types.FirstOrDefault(x => x.Id == id);
+        if (t == null) return ("scale", id, "");
+        string icon = id switch
         {
-            (UiTokens.To20(t.Sociability), "users", "Sociável", "Cria vínculos com facilidade e gosta de companhia.", "user", "Reservado", "Prefere jogar sozinho e em lugares vazios."),
-            (UiTokens.To20(t.Aggressiveness), "flame", "Agressivo", "Tende a confrontar e a disputar espaço.", "heart-handshake", "Pacífico", "Evita confronto e disputa."),
-            (UiTokens.To20(t.Patience), "hourglass", "Paciente", "Repete a mesma atividade sem cansar tão cedo.", "zap", "Inquieto", "Cansa de repetir e troca de atividade logo."),
-            (UiTokens.To20(t.Loyalty), "shield", "Leal", "Mantém as metas assumidas; no M6, fiel a grupos e guildas.", "compass", "Independente", "Larga metas com mais facilidade; no M6, muda de grupo sem apego."),
-            (UiTokens.To20(t.RiskAversion), "shield", "Cauteloso", "Evita perigo, PvP e conteúdo acima do nível.", "flame", "Destemido", "Aceita risco e encara zonas perigosas."),
-            (UiTokens.To20(t.Variety), "layers", "Versátil", "Gosta de variar de atividade e de lugar; cansa de repetir e quer novidade.", "hammer", "Metódico", "Repete o que funciona sem se cansar; precisa pouco de novidade."),
+            "sociavel" => "users", "reservado" => "user", "agressivo" => "flame", "pacifico" => "heart-handshake",
+            "paciente" => "hourglass", "inquieto" => "zap", "leal" => "shield", "independente" => "compass",
+            "cauteloso" => "shield", "destemido" => "flame", "versatil" => "layers", "metodico" => "hammer", _ => "scale",
         };
-        var best = options.OrderByDescending(o => Math.Abs(o.V - 10.5f)).First();
-        if (Math.Abs(best.V - 10.5f) < 3) return ("scale", "Equilibrado", "Nenhum traço de personalidade se destaca.");
-        return best.V >= 11 ? (best.HiIcon, best.Hi, best.HiText) : (best.LoIcon, best.Lo, best.LoText);
+        return (icon, t.Name, t.Description);
     }
+
+    /// <summary>Personalidade atual da pessoa: a do snapshot (pode mudar) ou a de criacao.</summary>
+    public static string CurrentPersonality(ClientContext ctx, int personId) =>
+        ctx.Snapshot().ByPerson[personId]?.PersonalityId is { Length: > 0 } id ? id : ctx.Persons[personId - 1].PersonalityAtCreation;
 
     // ----- Progresso e metas de curto prazo -----
 
@@ -1349,6 +1356,7 @@ public partial class PlayerModal : ModalFrame
         "challenge" => "Gosto por desafio",
         "specialty" => "Especialidade",
         "early_progression" => "Progressão inicial",
+        "personality" => "Personalidade",
         "interruption" => "Sessão interrompível",
         _ => key,
     };
@@ -1357,6 +1365,7 @@ public partial class PlayerModal : ModalFrame
     {
         "affinity" => "Preferências da pessoa combinadas com o tipo de atividade (no PvP, também personalidade e conduta).",
         "specialty" => "Reforço mínimo da familiaridade com o tipo de atividade (atributo de especialidade): 5% do valor, com teto.",
+        "personality" => "Regra da personalidade principal (ex.: Pacífico nunca inicia PvP; Cauteloso não entra em conteúdo acima do nível + 1). Separada do efeito gradual dos atributos; uma opção com \"nunca\" só vence se não houver outra.",
         "early_progression" => "Prioridade para estabelecer o personagem até o nível-alvo do preset (missões disponíveis e atividades com bom rendimento de XP), igual para todos. Diminui perto do alvo e acaba nele; não soma com metas de nível ou de missão (vale o maior) e não vale para o que não cabe na sessão. Não muda o gosto.",
         "level_fit" => "Conteúdo dentro da faixa de nível da zona rende mais.",
         "company" => "Outros jogadores no lugar (sociabilidade na taverna; preferência Social nas demais).",

@@ -65,7 +65,18 @@ Uma etapa por vez, fechada por inteiro (testes, validação, documentação, exp
      - depois: Competitividade seguindo o tema das preferências (rankings, mercado, fabricação, PvP) e benefícios de execução da especialidade, com os sistemas correspondentes;
    - ~~progressão inicial, metas de desbloqueio e descoberta orientada pelo conteúdo~~ (D-055);
      - depois: novas fontes de informação para a descoberta (conversas, outros jogadores, guildas), `requiredQuestIds` quando houver desbloqueio por missão, equipamento e venda de excedentes com inventário e economia (M5);
-   - P4: traits;
+   - P4: personalidade principal e traits (`personalidade.md`; proposta de traits em `plano-pessoa.md`, seção 4):
+     - ~~P4a: personalidade principal no Core (régua do preset, mudança rara com margem e confirmação, regras próprias)~~ (D-056);
+       - depois: regras da Etapa 3 e dos grupos (M6); possível calibração do Inquieto (repetição contada em minutos);
+     - **R6, variedade de horários** (aprovada pelo criador; logo depois da P4a). O diagnóstico mostrou ninguém jogando entre 1 h e 8 h da hora local, porque o sono e o horário preferido saem de faixas estreitas. A correção:
+       - cronotipo com os dois extremos (matinais e notívagos) e concentração no meio. Ele influencia só em parte o sono e o horário preferido, com variação individual: ser notívago não obriga a preferir jogar de madrugada;
+       - dormir e acordar mais tarde na véspera de folga: deslocamento individual e configurável, nem todo mundo tem, e respeita compromissos e necessidade de sono;
+       - turno noturno: jogar depois do turno é uma possibilidade, não uma janela obrigatória (cansaço, vontade e disponibilidade decidem). Na folga, a rotina continua a dos dias de trabalho em vez de voltar de uma vez ao sono das 23h45;
+       - texto da tela: mostra o próximo login realmente agendado; qualquer informação de pico vem dos dados da campanha;
+       - medição: sono, início das sessões e presença por hora local, por ocupação, incluindo as passagens entre trabalho e folga. Horas por semana e pico online servem só de controle. Sem número mínimo de jogadores na madrugada;
+     - P4b: estrutura das traits (geração, compatibilidades, ficha). **Interface:** o card de Traits entra no lugar de "Inventário" na visão geral da ficha; o inventário vai depois para uma aba própria, "Personagem", com as informações do personagem;
+     - P4c: efeitos das traits ativas (inclui Maratonista e Procrastinador; no Procrastinador, se o atraso inviabilizar a sessão mínima, não começa naquela oportunidade e reconsidera numa próxima janela válida);
+     - P4d: aquisição e perda;
    - a reputação do personagem entra com a Etapa 3 e as finanças com o M7.
 2. **Etapa 1 — O personagem** (decisões no D-040):
    - estatísticas diretas por classe + nível + equipamento: vida, recurso de classe, ataque e defesa físicos e mágicos, velocidade de movimento (fórmulas no conteúdo; nomes sem confundir com os atributos do jogador);

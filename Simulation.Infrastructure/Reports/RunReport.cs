@@ -170,13 +170,14 @@ public static class RunReportWriter
     public static void WritePopulation(string path, IReadOnlyList<Person> persons)
     {
         var sb = new StringBuilder("person_id,name,profile,appearance_seed,state," + string.Join(",", TraitColumns.Select(c => c.Name))
-            + "," + string.Join(",", PersonPreferences.Keys.Select(k => "pref_" + k)) + "\n");
+            + "," + string.Join(",", PersonPreferences.Keys.Select(k => "pref_" + k)) + ",personality,personality_changes\n");
         foreach (var p in persons)
         {
             sb.Append(string.Join(",",
                 new[] { p.Id.ToString(Inv), Csv(p.Name), p.ProfileId, p.AppearanceSeed.ToString("x16", Inv), p.State.ToString() }
                 .Concat(TraitColumns.Select(c => c.Get(p.Traits).ToString(Inv)))
-                .Concat(PersonPreferences.Keys.Select(k => p.Preferences.Get(k).ToString(Inv)))));
+                .Concat(PersonPreferences.Keys.Select(k => p.Preferences.Get(k).ToString(Inv)))
+                .Append(p.PersonalityId).Append(p.PersonalityHistory.Count.ToString(Inv))));
             sb.Append('\n');
         }
         File.WriteAllText(path, sb.ToString(), new UTF8Encoding(false));

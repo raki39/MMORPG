@@ -308,6 +308,20 @@ Medição em quatro versões com as mesmas pessoas (`baselines/progressao-inicia
   - casuais no nível 10 ou mais 96,9%;
   - regras do cenário 7 de 9, sem mudança.
 
+## D-056: personalidade principal (05/11/2026)
+
+Medição com as mesmas pessoas, sem e com as regras (`baselines/personalidade/`). Nenhuma meta mudou.
+
+- **Regras do cenário:** 7 de 9, iguais. As duas divergências do D-054 continuam (horas do casual 9,8 h; fim de semana em 1,3).
+- **Provisórias:** 8 de 12 nas duas versões, mas trocaram:
+  - **cidade:** 24,3% → 23,1%, entrou na faixa;
+  - **andando ou esperando:** 19,4% → 20,3%, saiu (limite de 20%).
+- **Divergência registrada, andando ou esperando:**
+  - **De onde vem:** Inquieto 21% → 32%, Paciente 19% → 24%, Versátil 21% → 26%. Agressivo, Pacífico e Metódico andam menos.
+  - **Por quê:** é o efeito próprio dessas personalidades (trocar de lugar, ir às etapas de missão, começar a sessão em outro lugar), não ciclo vazio.
+  - **Decisão do criador:** não enfraquecer personalidades só para a meta provisória passar.
+- **Outras:** combate 33,0% → 33,7%; XP de missões 16,8% → 17,5%; horas até o nível 20 77,0 → 78,0 (já fora).
+
 ## Próximos passos
 
 Roteiro por etapas (backlog):

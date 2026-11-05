@@ -1,6 +1,6 @@
 # Plano: rotina de vida, traits e reputação
 
-**Estado:** aprovado com ajustes (D-041, 04/11/2026). P0 (D-041), P1 (D-042), P2 (D-043) e P3 (D-044) feitas; P4 em seguida, depois a Etapa 1.
+**Estado:** aprovado com ajustes (D-041, 04/11/2026). P0 (D-041), P1 (D-042), P2 (D-043) e P3 (D-044) feitas; P4a, personalidade principal (D-056, `personalidade.md`), feita; em seguida a R6 (variedade de horários) e a P4b a P4d (traits), depois a Etapa 1.
 
 **Origem:** pedido do criador antes da Etapa 1.
 - Reputação do personagem, traits comportamentais da pessoa e rotina de vida (obrigações, sono, tempo livre, vontade de jogar, localidade e fuso, finanças).

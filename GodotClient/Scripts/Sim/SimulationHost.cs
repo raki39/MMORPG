@@ -15,6 +15,8 @@ namespace GodotClient.Sim;
 public sealed class CharacterView
 {
     public int PersonId { get; init; }
+    /// <summary>Personalidade principal atual (P4a; pode mudar com o tempo).</summary>
+    public string PersonalityId { get; init; } = "";
     public int CharacterId { get; init; }
     public string Name { get; init; } = "";
     public string ClassId { get; init; } = "";
@@ -175,6 +177,8 @@ public sealed class PersonInfo
     public PersonTraits BaseTraits { get; init; } = null!;
     /// <summary>Preferencias (interesses pessoais), ao lado do perfil; estaveis.</summary>
     public PersonPreferences Preferences { get; init; } = null!;
+    /// <summary>Personalidade principal na criacao (a atual vem no CharacterView).</summary>
+    public string PersonalityAtCreation { get; init; } = "";
     /// <summary>Localidade (P1): residencia, nacionalidade, idiomas e diferenca para o horario do servidor.</summary>
     public string ResidenceId { get; init; } = "";
     public string NationalityId { get; init; } = "";
@@ -255,7 +259,7 @@ public sealed class SimulationHost : IDisposable
         Layout = new ZoneLayout(content);
         _engine = WorldFactory.Create(content, new WorldConfig { Seed = seed, PopulationSize = population });
         Persons = _engine.World.Persons
-            .Select(p => new PersonInfo { Id = p.Id, Name = p.Name, ProfileId = p.ProfileId, AppearanceSeed = p.AppearanceSeed, Traits = p.Traits, BaseTraits = p.BaseTraits, Preferences = p.Preferences,
+            .Select(p => new PersonInfo { Id = p.Id, Name = p.Name, ProfileId = p.ProfileId, AppearanceSeed = p.AppearanceSeed, Traits = p.Traits, BaseTraits = p.BaseTraits, Preferences = p.Preferences, PersonalityAtCreation = p.PersonalityId,
                 ResidenceId = p.ResidenceId, NationalityId = p.NationalityId, Languages = p.Languages, LocalOffsetMinutes = p.LocalOffsetMinutes,
                 OccupationId = p.OccupationId, SleepNeedMinutes = p.SleepNeedMinutes, BedtimeMinute = p.BedtimeMinute,
                 IncomeCentsPerMonth = p.IncomeCentsPerMonth, SupportCentsPerMonth = p.SupportCentsPerMonth, ExpectedWeeklyMinutes = p.ExpectedWeeklyMinutes,
@@ -376,6 +380,7 @@ public sealed class SimulationHost : IDisposable
             byPerson[c.PersonId] = new CharacterView
             {
                 PersonId = c.PersonId,
+                PersonalityId = w.GetPerson(c.PersonId).PersonalityId,
                 CharacterId = c.Id,
                 Name = c.Name,
                 ClassId = c.ClassId,

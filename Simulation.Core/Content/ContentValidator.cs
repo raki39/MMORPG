@@ -838,6 +838,46 @@ public static class ContentValidator
             ("contentDiscoveryPerPreference", gs.ContentDiscoveryPerPreference, 0, 2000),
         })
             if (value < lo || value > hi) v.Error(PopulationFile, "goals." + name, $"Use de {lo} a {hi}.");
+        // Personalidade principal (P4a).
+        var ps = pop.Personality;
+        if (ps.Enabled)
+        {
+            if (ps.ThresholdPermille is < 1 or > 1000) v.Error(PopulationFile, "personality.thresholdPermille", "Use de 1 a 1000.");
+            if (ps.ChangeMarginPermille < 0 || ps.ChangeMarginPermille >= ps.ThresholdPermille) v.Error(PopulationFile, "personality.changeMarginPermille", "Use de 0 até menos que o limite.");
+            if (ps.ConfirmDays is < 1 or > 365) v.Error(PopulationFile, "personality.confirmDays", "Use de 1 a 365 dias.");
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            var poles = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < ps.Types.Count; i++)
+            {
+                var ty = ps.Types[i];
+                string tp = $"personality.types[{i}]";
+                if (ty.Id.Length == 0 || ty.Id == Population.PersonalitySystem.Balanced || !seen.Add(ty.Id)) v.Error(PopulationFile, tp + ".id", "Id vazio, repetido ou reservado (equilibrado).");
+                v.Require(PopulationFile, tp + ".name", ty.Name);
+                if (!Population.PersonalitySystem.Attributes.Contains(ty.Attribute)) v.Error(PopulationFile, tp + ".attribute", "Use um atributo de personalidade (sociability, aggressiveness, patience, loyalty, riskAversion, variety).");
+                if (ty.Direction is not (PersonalityDirections.High or PersonalityDirections.Low)) v.Error(PopulationFile, tp + ".direction", "Use high ou low.");
+                if (!poles.Add(ty.Attribute + "/" + ty.Direction)) v.Error(PopulationFile, tp, "Já existe uma personalidade para este atributo e direção.");
+                if (!PersonalityRuleIds.All.Contains(ty.Rule)) v.Error(PopulationFile, tp + ".rule", "Regra desconhecida.");
+            }
+            foreach (var attr in Population.PersonalitySystem.Attributes)
+                if (!Population.PopulationGenerator.TraitRangeOf(set.Population.Traits, attr).IsTriangular)
+                    v.Error(PopulationFile, "traits." + attr, "Com personalidade ligada, os atributos de personalidade precisam do formato min, mode e max (posição na distribuição do preset).");
+            var pr = ps.Rules;
+            foreach (var (name, value) in new (string, int)[]
+            {
+                ("neverPenalty", pr.NeverPenalty), ("pvpZonePenalty", pr.PvpZonePenalty), ("conflictBonus", pr.ConflictBonus), ("socialBonus", pr.SocialBonus),
+                ("questStepBonus", pr.QuestStepBonus), ("restlessPenalty", pr.RestlessPenalty), ("sessionStartBonus", pr.SessionStartBonus),
+            })
+                if (value is < 0 or > 2000) v.Error(PopulationFile, "personality.rules." + name, "Use de 0 a 2000.");
+            if (pr.CrowdReliefPermille is < 0 or > 1000) v.Error(PopulationFile, "personality.rules.crowdReliefPermille", "Use de 0 a 1000.");
+            if (pr.CrowdLimitPermille is < 1 or > 1000) v.Error(PopulationFile, "personality.rules.crowdLimitPermille", "Use de 1 a 1000.");
+            if (pr.SocialMinPeople < 1) v.Error(PopulationFile, "personality.rules.socialMinPeople", "Use 1 ou mais.");
+            if (pr.SocialEndMinutes is < 0 or > 240) v.Error(PopulationFile, "personality.rules.socialEndMinutes", "Use de 0 a 240.");
+            if (pr.RestlessRepeats < 1) v.Error(PopulationFile, "personality.rules.restlessRepeats", "Use 1 ou mais.");
+            if (pr.OwnPathMinPreference is < 0 or > 1000) v.Error(PopulationFile, "personality.rules.ownPathMinPreference", "Use de 0 a 1000.");
+            if (pr.MaxLevelsAbove is < 0 or > 30) v.Error(PopulationFile, "personality.rules.maxLevelsAbove", "Use de 0 a 30.");
+            if (pr.FearlessBandLevels is < 0 or > 5) v.Error(PopulationFile, "personality.rules.fearlessBandLevels", "Use de 0 a 5.");
+        }
+
         // Progressao inicial (D-055): incentivo limitado, que acaba no nivel-alvo.
         var ep = pop.EarlyProgression;
         int cap = set.Progression.LevelCap > 0 ? set.Progression.LevelCap : 1000;

@@ -20,10 +20,30 @@
     }
   ],
   "dedication": { "influencePermille": 450 },
+  "personality": {
+    "enabled": true, "rulesEnabled": true, "thresholdPermille": 700, "changeMarginPermille": 100, "confirmDays": 14,
+    "rules": { "neverPenalty": 1000, "pvpZonePenalty": 300, "conflictBonus": 150, "crowdReliefPermille": 500, "socialBonus": 120, "socialMinPeople": 3,
+      "socialEndMinutes": 45, "crowdLimitPermille": 800, "questStepBonus": 100, "restlessRepeats": 2, "restlessPenalty": 250,
+      "ownPathMinPreference": 400, "maxLevelsAbove": 1, "fearlessBandLevels": 1, "sessionStartBonus": 150 },
+    "types": [
+      { "id": "sociavel", "name": "Sociável", "attribute": "sociability", "direction": "high", "rule": "social_bookends", "description": "Começa e termina a sessão onde há gente." },
+      { "id": "reservado", "name": "Reservado", "attribute": "sociability", "direction": "low", "rule": "avoid_crowds", "description": "Não entra em atividade lotada." },
+      { "id": "agressivo", "name": "Agressivo", "attribute": "aggressiveness", "direction": "high", "rule": "seek_conflict", "description": "Vai atrás de confronto e disputa lugar cheio na caça e na coleta." },
+      { "id": "pacifico", "name": "Pacífico", "attribute": "aggressiveness", "direction": "low", "rule": "avoid_pvp", "description": "Nunca inicia PvP e evita zonas de PvP aberto, salvo se uma missão ou meta pedir." },
+      { "id": "paciente", "name": "Paciente", "attribute": "patience", "direction": "high", "rule": "finish_plan", "description": "Acontecimentos não derrubam o plano da sessão; fecha etapas de missão antes de outras coisas." },
+      { "id": "inquieto", "name": "Inquieto", "attribute": "patience", "direction": "low", "rule": "restless", "description": "Depois de repetir a mesma atividade, procura outra." },
+      { "id": "leal", "name": "Leal", "attribute": "loyalty", "direction": "high", "rule": "steadfast_goals", "description": "Não abandona meta por impaciência." },
+      { "id": "independente", "name": "Independente", "attribute": "loyalty", "direction": "low", "rule": "own_path", "description": "Só aceita missões que combinam com o próprio gosto." },
+      { "id": "cauteloso", "name": "Cauteloso", "attribute": "riskAversion", "direction": "high", "rule": "no_overlevel", "description": "Nunca entra em conteúdo acima do próprio nível + 1." },
+      { "id": "destemido", "name": "Destemido", "attribute": "riskAversion", "direction": "low", "rule": "fearless", "description": "O risco da primeira faixa acima do nível não pesa." },
+      { "id": "versatil", "name": "Versátil", "attribute": "variety", "direction": "high", "rule": "vary_start", "description": "Começa cada sessão por uma atividade diferente da anterior." },
+      { "id": "metodico", "name": "Metódico", "attribute": "variety", "direction": "low", "rule": "repeat_start", "description": "Começa cada sessão pela mesma atividade da anterior." }
+    ]
+  },
   "earlyProgression": { "enabled": true, "targetLevel": 10, "weight": 150, "fullUntilLevel": 5, "minFitPermille": 600 },
   "traits": {
     "pve": { "min": 0, "mode": 250, "max": 700 }, "pvp": { "min": 0, "mode": 250, "max": 700 }, "trade": { "min": 0, "mode": 250, "max": 700 }, "exploration": { "min": 0, "mode": 250, "max": 700 }, "socializing": { "min": 0, "mode": 250, "max": 700 },
-    "sociability": { "min": 150, "mode": 540, "max": 930 }, "aggressiveness": { "min": 0, "mode": 320, "max": 700 }, "patience": { "mean": 530, "spread": 420 }, "loyalty": { "mean": 520, "spread": 430 }, "riskAversion": { "mean": 510, "spread": 530 },
+    "sociability": { "min": 150, "mode": 540, "max": 930 }, "aggressiveness": { "min": 0, "mode": 320, "max": 700 }, "patience": { "min": 187, "mode": 530, "max": 873 }, "loyalty": { "min": 169, "mode": 520, "max": 871 }, "riskAversion": { "min": 78, "mode": 510, "max": 942 },
     "mechanicalSkill": { "mean": 460, "spread": 470 }, "gameKnowledge": { "mean": 480, "spread": 570 }, "coordination": { "mean": 470, "spread": 440 },
     "cheatPropensity": { "mean": 80, "spread": 140 }, "opportunism": { "mean": 330, "spread": 480 }, "competitiveness": { "min": 0, "mode": 250, "max": 950 },
     "leisureBudgetCentsPerMonth": { "mean": 7590, "spread": 7580 }, "willingnessToPay": { "mean": 470, "spread": 340 }, "paidAdvantageSensitivity": { "mean": 610, "spread": 440 },

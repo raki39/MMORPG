@@ -117,6 +117,8 @@ public static class PopulationGenerator
         ulong appearance = RngStreams.DeriveSeed(campaignSeed, AppearanceStreamName, personId);
         var person = new Person(personId, name, profile.Id, appearance, t);
         foreach (var key in PersonPreferences.Keys) person.Preferences.Set(key, Value("preferences." + key));
+        // Personalidade principal (P4a): pelos atributos de nascenca, na distribuicao do preset.
+        person.PersonalityId = PersonalitySystem.Classify(content, t);
         AssignLocality(person, content, rng, mean);   // depois dos tracos: nao altera populacoes ja geradas
         AssignRoutine(person, content, rng, cell?.Occupation, mean);    // depois da localidade (P2)
         return person;

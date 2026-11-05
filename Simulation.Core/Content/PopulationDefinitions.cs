@@ -135,6 +135,99 @@ public sealed class EarlyProgressionDefinition
     public int MinFitPermille { get; set; } = 600;
 }
 
+/// <summary>Direcao do atributo que define uma personalidade.</summary>
+public static class PersonalityDirections
+{
+    public const string High = "high";
+    public const string Low = "low";
+}
+
+/// <summary>Regras de comportamento das personalidades (lista fechada: cada uma tem codigo e teste).</summary>
+public static class PersonalityRuleIds
+{
+    public const string AvoidPvp = "avoid_pvp";
+    public const string SeekConflict = "seek_conflict";
+    public const string SocialBookends = "social_bookends";
+    public const string AvoidCrowds = "avoid_crowds";
+    public const string FinishPlan = "finish_plan";
+    public const string Restless = "restless";
+    public const string SteadfastGoals = "steadfast_goals";
+    public const string OwnPath = "own_path";
+    public const string NoOverlevel = "no_overlevel";
+    public const string Fearless = "fearless";
+    public const string VaryStart = "vary_start";
+    public const string RepeatStart = "repeat_start";
+    public static readonly string[] All =
+        { AvoidPvp, SeekConflict, SocialBookends, AvoidCrowds, FinishPlan, Restless, SteadfastGoals, OwnPath, NoOverlevel, Fearless, VaryStart, RepeatStart };
+}
+
+/// <summary>Uma personalidade: o atributo e a direcao que a definem e a regra de comportamento.</summary>
+public sealed class PersonalityTypeDefinition
+{
+    public string Id { get; set; } = "";
+    public string Name { get; set; } = "";
+    /// <summary>Chave do atributo de personalidade (sociability, aggressiveness, patience, loyalty, riskAversion, variety).</summary>
+    public string Attribute { get; set; } = "";
+    /// <summary>"high" ou "low".</summary>
+    public string Direction { get; set; } = PersonalityDirections.High;
+    /// <summary>Regra de comportamento (PersonalityRuleIds).</summary>
+    public string Rule { get; set; } = "";
+    public string Description { get; set; } = "";
+}
+
+/// <summary>
+/// Personalidade principal (P4a): uma por jogador, pelo atributo de personalidade mais extremo na
+/// distribuicao do preset; Equilibrado se nenhum chegar ao limite. Muda so por mudanca relevante
+/// e persistente (margem e confirmacao). As regras sao fatores proprios na decisao ("personality"),
+/// separados do efeito gradual dos atributos, e sempre deixam uma alternativa valida.
+/// </summary>
+public sealed class PersonalitySettingsDefinition
+{
+    public bool Enabled { get; set; }
+    /// <summary>Liga as regras de comportamento (desligar so serve para medir a classificacao sozinha).</summary>
+    public bool RulesEnabled { get; set; } = true;
+    /// <summary>Destaque minimo (permille da distancia ao meio da distribuicao): 700 = estar nos 15% de um dos extremos.</summary>
+    public int ThresholdPermille { get; set; } = 700;
+    /// <summary>Margem para trocar de personalidade ou entrar/sair de Equilibrado.</summary>
+    public int ChangeMarginPermille { get; set; } = 100;
+    /// <summary>Dias seguidos com o mesmo alvo para confirmar a mudanca.</summary>
+    public int ConfirmDays { get; set; } = 14;
+    public List<PersonalityTypeDefinition> Types { get; set; } = new();
+    public PersonalityRuleSettingsDefinition Rules { get; set; } = new();
+}
+
+/// <summary>Numeros das regras (pontos na nota; permille onde indicado).</summary>
+public sealed class PersonalityRuleSettingsDefinition
+{
+    /// <summary>"Nunca": a opcao so vence se nao houver outra.</summary>
+    public int NeverPenalty { get; set; } = 1000;
+    /// <summary>Pacifico: zona de PvP aberto (sem missao nem meta pedindo).</summary>
+    public int PvpZonePenalty { get; set; } = 300;
+    /// <summary>Agressivo: emboscada e patrulha.</summary>
+    public int ConflictBonus { get; set; } = 150;
+    /// <summary>Agressivo: parte da penalidade de lotacao que ele ignora na caca e na coleta (permille).</summary>
+    public int CrowdReliefPermille { get; set; } = 500;
+    /// <summary>Sociavel: inicio e fim da sessao onde ha gente.</summary>
+    public int SocialBonus { get; set; } = 120;
+    public int SocialMinPeople { get; set; } = 3;
+    public int SocialEndMinutes { get; set; } = 45;
+    /// <summary>Reservado: lotacao (permille da capacidade da atividade) a partir da qual nao entra.</summary>
+    public int CrowdLimitPermille { get; set; } = 800;
+    /// <summary>Paciente: etapa de missao em andamento.</summary>
+    public int QuestStepBonus { get; set; } = 100;
+    /// <summary>Inquieto: repeticoes seguidas da mesma atividade a partir das quais procura outra.</summary>
+    public int RestlessRepeats { get; set; } = 2;
+    public int RestlessPenalty { get; set; } = 250;
+    /// <summary>Independente: preferencia minima para aceitar missao de um tema.</summary>
+    public int OwnPathMinPreference { get; set; } = 400;
+    /// <summary>Cauteloso: niveis acima do personagem a partir dos quais nao entra.</summary>
+    public int MaxLevelsAbove { get; set; } = 1;
+    /// <summary>Destemido: niveis de desafio cujo risco extra ele ignora.</summary>
+    public int FearlessBandLevels { get; set; } = 1;
+    /// <summary>Versatil e Metodico: inicio de sessao diferente ou igual a anterior.</summary>
+    public int SessionStartBonus { get; set; } = 150;
+}
+
 /// <summary>
 /// Ligacao parcial entre dois atributos (mesmo mecanismo da dedicacao compartilhada): a posicao
 /// do alvo mistura a posicao da ancora com a propria, mantendo a distribuicao do alvo. Chaves
@@ -180,6 +273,8 @@ public sealed class PopulationDefinition
     public DedicationSettingsDefinition Dedication { get; set; } = new();
     /// <summary>Prioridade de progressao inicial ate o nivel-alvo (D-055).</summary>
     public EarlyProgressionDefinition EarlyProgression { get; set; } = new();
+    /// <summary>Personalidade principal (P4a): classificacao, mudanca e regras de comportamento.</summary>
+    public PersonalitySettingsDefinition Personality { get; set; } = new();
     /// <summary>Atributos gerados pela populacao toda, independentes do perfil.</summary>
     public PopulationTraitsDefinition Traits { get; set; } = new();
     /// <summary>Preferencias (interesses pessoais).</summary>
