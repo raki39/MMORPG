@@ -171,8 +171,10 @@ public static class ThemeFactory
 }
 
 /// <summary>
-/// Tooltip estruturado. Texto: 1a linha = titulo; linhas "Rotulo|valor" viram pares
-/// alinhados; linhas iniciadas por "~" viram nota discreta; demais, texto normal.
+/// Tooltip estruturado. Texto: 1a linha = titulo ("Nome" ou "Nome|valor|#cor": o valor em
+/// destaque a direita); "^texto" = subtitulo discreto; "Rotulo|valor" = par alinhado;
+/// "#Secao" = cabecalho de secao com filete; "- item" = marcador; "~texto" = nota discreta;
+/// demais linhas = texto normal.
 /// </summary>
 public static class RichTip
 {
@@ -198,8 +200,44 @@ public static class RichTip
             var line = lines[i];
             if (i == 0)
             {
-                var title = ThemeFactory.Text(line, 14, UiTokens.TextPrimary, UiFonts.SemiBold);
-                col.AddChild(title);
+                var parts = line.Split('|');
+                var head = new HBoxContainer();
+                head.AddThemeConstantOverride("separation", 16);
+                var title = ThemeFactory.Text(parts[0], 14, UiTokens.TextPrimary, UiFonts.SemiBold);
+                title.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+                head.AddChild(title);
+                if (parts.Length >= 2)
+                {
+                    var color = parts.Length >= 3 && Color.HtmlIsValid(parts[2]) ? Color.FromHtml(parts[2]) : UiTokens.TextPrimary;
+                    head.AddChild(ThemeFactory.Text(parts[1], 16, color, UiFonts.Numbers));
+                }
+                col.AddChild(head);
+                continue;
+            }
+            if (line.StartsWith("^"))
+            {
+                col.AddChild(ThemeFactory.Text(line[1..].Trim(), UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Medium));
+                continue;
+            }
+            if (line.StartsWith("#"))
+            {
+                col.AddChild(new Control { CustomMinimumSize = new Vector2(0, 2) });
+                col.AddChild(new ColorRect { Color = UiTokens.Divider, CustomMinimumSize = new Vector2(0, 1) });
+                col.AddChild(ThemeFactory.Text(line[1..].Trim(), UiTokens.FontCaption, UiTokens.AccentSoft, UiFonts.SemiBold));
+                continue;
+            }
+            if (line.StartsWith("- "))
+            {
+                var item = new HBoxContainer();
+                item.AddThemeConstantOverride("separation", 7);
+                var dot = ThemeFactory.Text("•", UiTokens.FontSmall, UiTokens.Accent, UiFonts.SemiBold);
+                dot.SizeFlagsVertical = Control.SizeFlags.ShrinkBegin;   // alinha com a primeira linha do item
+                item.AddChild(dot);
+                var txt = ThemeFactory.Text(line[2..].Trim(), UiTokens.FontSmall, UiTokens.TextLabel);
+                txt.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+                txt.CustomMinimumSize = new Vector2(300, 0);
+                item.AddChild(txt);
+                col.AddChild(item);
                 continue;
             }
             if (line.StartsWith("~"))
@@ -235,6 +273,50 @@ public static class RichTip
         col.CustomMinimumSize = new Vector2(220, 0);
         return col;
     }
+}
+
+/// <summary>
+/// Area com dica estruturada (RichTip) e realce ao passar o mouse (fundo claro e filete
+/// dourado, como as linhas clicaveis). A area inteira e o alvo: os filhos nao capturam o mouse.
+/// </summary>
+public partial class HoverTip : PanelContainer
+{
+    private bool _hover;
+    /// <summary>Quanto o realce passa da area para os lados e para cima/baixo (o texto fica alinhado ao resto do card).</summary>
+    private const float OutX = 6, OutY = 3;
+
+    public HoverTip() : this("") { }
+
+    public HoverTip(string tip)
+    {
+        TooltipText = tip;
+        MouseFilter = MouseFilterEnum.Stop;
+        AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
+        MouseEntered += () => { _hover = true; QueueRedraw(); };
+        MouseExited += () => { _hover = false; QueueRedraw(); };
+    }
+
+    public override void _Draw()
+    {
+        if (!_hover) return;
+        var r = new Rect2(-OutX, -OutY, Size.X + OutX * 2, Size.Y + OutY * 2);
+        var sb = new StyleBoxFlat { BgColor = new Color(1, 1, 1, 0.04f), BorderColor = UiTokens.Accent, BorderWidthLeft = 2 };
+        sb.SetCornerRadiusAll(2);
+        DrawStyleBox(sb, r);
+    }
+
+    public override void _Ready() => IgnoreMouse(this);
+
+    private static void IgnoreMouse(Node n)
+    {
+        foreach (var c in n.GetChildren())
+        {
+            if (c is Control ctl) ctl.MouseFilter = MouseFilterEnum.Ignore;
+            IgnoreMouse(c);
+        }
+    }
+
+    public override GodotObject _MakeCustomTooltip(string forText) => RichTip.Make(forText);
 }
 
 /// <summary>Painel com tooltip estruturado (RichTip).</summary>

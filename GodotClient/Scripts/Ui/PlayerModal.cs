@@ -1078,12 +1078,11 @@ public partial class PlayerModal : ModalFrame
                 int v20 = UiTokens.To20(value), base20 = UiTokens.To20(baseValue);
                 int cap = Simulation.Core.Behavior.TraitDynamics.CeilingOf(_ctx.Content.Dynamics, b0, t.Talent, key);
                 int cap20 = UiTokens.To20(cap);
-                string change = value == baseValue ? "igual à base" : $"{(value > baseValue ? "+" : "")}{value - baseValue} desde o início";
-                string tip = $"{info.Name}\nAtual|{v20} / 20\nNo início|{base20} / 20 ({change})"
-                    + (info.Skill ? $"\nPotencial|{cap20} / 20 (talento {AttributeInfo.TalentTier(t.Talent)})" : "")
-                    + $"\n~Influencia: {info.Influences}\n~Muda com: {info.Changes}";
-                var cell = new TipPanel { TooltipText = tip, MouseFilter = MouseFilterEnum.Stop };
-                cell.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
+                var valueColor = v20 >= 14 ? AttrTier(v20) : v20 <= 5 ? UiTokens.Danger : UiTokens.TextPrimary;
+                string tip = $"{info.Name}|{v20} / 20|#{valueColor.ToHtml(false)}\n^{AttributeInfo.GroupOf(key)}"
+                    + (info.Skill ? $"\nPotencial|{cap20} / 20 · talento {AttributeInfo.TalentTier(t.Talent).ToLowerInvariant()}" : "")
+                    + $"\n#O que afeta\n{AttributeInfo.Bullets(info.Influences)}\n#Como muda\n{AttributeInfo.Bullets(info.Changes)}";
+                var cell = new HoverTip(tip);
                 var c = Column(5);
                 var r = new HBoxContainer();
                 r.AddThemeConstantOverride("separation", 4);

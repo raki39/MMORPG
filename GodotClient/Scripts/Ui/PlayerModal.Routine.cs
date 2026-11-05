@@ -168,11 +168,16 @@ public partial class PlayerModal
 
     // ----- Vontade de jogar -----
 
-    private Control TraitMeter(string name, int value, string tip)
+    /// <summary>
+    /// Medidor 1-20 com a mesma area de dica dos atributos: "tip" no formato antigo
+    /// ("Titulo\n~texto") vira titulo com o valor, subtitulo e "O que afeta" em marcadores.
+    /// </summary>
+    private Control TraitMeter(string name, int value, string tip, string group = "Rotina")
     {
         int v20 = UiTokens.To20(value);
-        var cell = new TipPanel { TooltipText = tip, MouseFilter = MouseFilterEnum.Stop };
-        cell.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
+        var valueColor = v20 >= 14 ? AttrTier(v20) : v20 <= 5 ? UiTokens.Danger : UiTokens.TextPrimary;
+        string body = tip.Contains("\n~", StringComparison.Ordinal) ? tip[(tip.IndexOf("\n~", StringComparison.Ordinal) + 2)..] : "";
+        var cell = new HoverTip($"{name}|{v20} / 20|#{valueColor.ToHtml(false)}\n^{group}\n#O que afeta\n{AttributeInfo.Bullets(body)}");
         var c = Column(5);
         var r = new HBoxContainer();
         var l = ThemeFactory.Text(name, UiTokens.FontBody, UiTokens.TextLabel, UiFonts.Medium);
@@ -552,7 +557,7 @@ public partial class PlayerModal
         legend.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         int pay = UiTokens.To20(t.WillingnessToPay), adv = UiTokens.To20(t.PaidAdvantageSensitivity);
         return Column(10, Row(14, donut, legend), Divider(),
-            TraitMeter("Disposição a pagar", t.WillingnessToPay, "Disposição a pagar\n~Quanto aceita gastar no jogo (M7)."),
-            TraitMeter("Aversão a vantagem paga", t.PaidAdvantageSensitivity, "Aversão a vantagem paga\n~Quanto se incomoda com vantagens compradas (M7)."));
+            TraitMeter("Disposição a pagar", t.WillingnessToPay, "Disposição a pagar\n~Quanto aceita gastar no jogo; sem efeito até a monetização (M7).", "Finanças"),
+            TraitMeter("Aversão a vantagem paga", t.PaidAdvantageSensitivity, "Aversão a vantagem paga\n~Quanto se incomoda com vantagens compradas; sem efeito até a monetização (M7).", "Finanças"));
     }
 }

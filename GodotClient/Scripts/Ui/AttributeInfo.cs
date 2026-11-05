@@ -52,6 +52,25 @@ public static class AttributeInfo
     /// Faixa de talento do jogador (a pessoa): potencial e velocidade de aprender as capacidades.
     /// Talento nao e experiencia: a experiencia vem da pratica (ExperienceTier).
     /// </summary>
+    /// <summary>Texto corrido em marcadores do RichTip ("- item" por frase ou oracao), sem ponto final.</summary>
+    public static string Bullets(string text)
+    {
+        var items = System.Text.RegularExpressions.Regex.Split(text.Trim(), @"(?<=\.)\s+|;\s+")
+            .Select(s => s.Trim().TrimEnd('.').Trim())
+            .Where(s => s.Length > 0)
+            .Select(s => char.ToUpper(s[0], System.Globalization.CultureInfo.GetCultureInfo("pt-BR")) + s[1..]);
+        return string.Join("\n", items.Select(s => "- " + s));
+    }
+
+    /// <summary>Grupo do atributo na ficha (subtitulo da dica).</summary>
+    public static string GroupOf(string key) => key switch
+    {
+        "pve" or "pvp" or "trade" or "exploration" or "socializing" => "Estilo de jogo · gosto, não execução",
+        "mechanicalSkill" or "gameKnowledge" or "coordination" => "Capacidade · evolui com prática e talento",
+        "cheatPropensity" or "opportunism" => "Conduta",
+        _ => "Personalidade",
+    };
+
     public static string TalentTier(int talent) => talent switch
     {
         < 300 => "Baixo",

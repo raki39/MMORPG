@@ -281,7 +281,8 @@ public partial class Main : Node
             // Capturas: dica de exemplo com a moldura do tema (o mouse real nao e simulado).
             var demo = new PanelContainer { Position = new Vector2(700, 300) };
             demo.AddThemeStyleboxOverride("panel", _ui.Theme.GetStylebox("panel", "TooltipPanel"));
-            demo.AddChild(RichTip.Build("Mecânica\nAtual|13 / 20\nNo início|12 / 20 (+38 desde o início)\nPotencial|17 / 20 (talento Experiente)\n~Influencia: Rendimento em combate (XP de caça de ×0,88 a ×1,12) e menos medo de risco. No combate (M3) será a habilidade de execução do jogador.\n~Muda com: Sobe com tempo em combate: mais rápido com talento, mais devagar perto do potencial. Cai depois de 7 dias sem jogar."));
+            demo.AddChild(RichTip.Build("Mecânica|13 / 20|#8B94A1\n^" + AttributeInfo.GroupOf("mechanicalSkill") + "\nPotencial|17 / 20 · talento alto\n#O que afeta\n"
+                + AttributeInfo.Bullets(AttributeInfo.ByKey["mechanicalSkill"].Influences) + "\n#Como muda\n" + AttributeInfo.Bullets(AttributeInfo.ByKey["mechanicalSkill"].Changes)));
             _ui.AddChild(demo);
         }
         if (_args.TryGetValue("side-tab", out var stb) && int.TryParse(stb, out var sti)) { if (!_sideOpen) ToggleSidePanel(); _side?.ShowTab(sti); }
