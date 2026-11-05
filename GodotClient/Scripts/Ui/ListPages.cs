@@ -37,7 +37,7 @@ public abstract partial class ListPage : ModalFrame
     protected Control Searchable(string placeholder, Func<string, Control> table, string note = "", params (string Name, IReadOnlyList<string> Options)[] filters)
     {
         var holder = new VBoxContainer();
-        var search = new LineEdit { PlaceholderText = placeholder, ClearButtonEnabled = true, Text = _search, CustomMinimumSize = new Vector2(320, 32), SizeFlagsHorizontal = SizeFlags.ShrinkBegin };
+        var search = new LineEdit { PlaceholderText = placeholder, ClearButtonEnabled = true, Text = _search, CustomMinimumSize = new Vector2(300, 32), SizeFlagsHorizontal = SizeFlags.ShrinkBegin };
         void Fill()
         {
             foreach (var c in holder.GetChildren()) { holder.RemoveChild(c); c.QueueFree(); }
@@ -45,14 +45,18 @@ public abstract partial class ListPage : ModalFrame
         }
         search.TextChanged += t => { _search = t.Trim(); Fill(); };
         Fill();
-        var top = Row(10, search);
+        // Busca e filtros quebram linha quando nao cabem (nada passa da borda da direita).
+        var top = new HFlowContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        top.AddThemeConstantOverride("h_separation", 10);
+        top.AddThemeConstantOverride("v_separation", 8);
+        top.AddChild(search);
         if (filters.Length > 0)
         {
             top.AddChild(new Control { CustomMinimumSize = new Vector2(6, 0) });
             top.AddChild(new Icon("filter", 16, UiTokens.TextSecondary));
             foreach (var (name, options) in filters)
             {
-                var o = new OptionButton { FocusMode = FocusModeEnum.None, CustomMinimumSize = new Vector2(170, 32), TooltipText = name };
+                var o = new OptionButton { FocusMode = FocusModeEnum.None, CustomMinimumSize = new Vector2(160, 32), TooltipText = name, ClipText = true };
                 foreach (var opt in options) o.AddItem(opt);
                 o.Selected = Math.Clamp(Filter(name), 0, Math.Max(0, o.ItemCount - 1));
                 string key = name;
@@ -107,23 +111,22 @@ public partial class PlayersPage : ListPage
         string Occ(int id) => ctx.Content.Occupations.TryGetValue(ctx.Persons[id - 1].OccupationId, out var o) ? o.Name : "";
         _table = new DataTable<(int Id, CharacterView V)>(new[]
         {
-            new Column<(int Id, CharacterView V)> { Title = "Personagem", Text = r => (ctx.Favorites.Contains(r.Id) ? "★ " : "") + r.V.Name, SortKey = r => r.V.Name, Tooltip = r => $"{r.V.Name}\nPessoa|{ctx.Persons[r.Id - 1].Name}\n~Clique para abrir a ficha." },
-            new Column<(int Id, CharacterView V)> { Title = "Pessoa", Width = 150, Text = r => ctx.Persons[r.Id - 1].Name, SortKey = r => ctx.Persons[r.Id - 1].Name, Color = _ => UiTokens.TextSecondary },
-            new Column<(int Id, CharacterView V)> { Title = "Perfil", Width = 100, Text = r => Prof(r.Id), SortKey = r => Prof(r.Id), Color = r => UiTokens.ProfileColor(ctx.Persons[r.Id - 1].ProfileId).Lightened(0.15f) },
-            new Column<(int Id, CharacterView V)> { Title = "Personalidade", Width = 110, Text = r => Pers(r.Id), SortKey = r => Pers(r.Id), Color = _ => UiTokens.TextLabel,
+            new Column<(int Id, CharacterView V)> { Title = "Personagem", MinWidth = 88, Text = r => (ctx.Favorites.Contains(r.Id) ? "★ " : "") + r.V.Name, SortKey = r => r.V.Name, Tooltip = r => $"{r.V.Name}\nPessoa|{ctx.Persons[r.Id - 1].Name}\n~Clique para abrir a ficha." },
+            new Column<(int Id, CharacterView V)> { Title = "Pessoa", Width = 150, MinWidth = 70, Text = r => ctx.Persons[r.Id - 1].Name, SortKey = r => ctx.Persons[r.Id - 1].Name, Color = _ => UiTokens.TextSecondary },
+            new Column<(int Id, CharacterView V)> { Title = "Perfil", Width = 100, MinWidth = 76, Text = r => Prof(r.Id), SortKey = r => Prof(r.Id), Color = r => UiTokens.ProfileColor(ctx.Persons[r.Id - 1].ProfileId).Lightened(0.15f) },
+            new Column<(int Id, CharacterView V)> { Title = "Personalidade", Width = 110, MinWidth = 96, Text = r => Pers(r.Id), SortKey = r => Pers(r.Id), Color = _ => UiTokens.TextLabel,
                 Tooltip = r => $"{Pers(r.Id)}\n~{PlayerModal.PersonalityOf(ctx.Persons[r.Id - 1].Traits).Text}" },
-            new Column<(int Id, CharacterView V)> { Title = "País", Width = 110, Text = r => Loc(r.Id), SortKey = r => Loc(r.Id), Color = _ => UiTokens.TextSecondary,
+            new Column<(int Id, CharacterView V)> { Title = "País", Width = 110, MinWidth = 58, Text = r => Loc(r.Id), SortKey = r => Loc(r.Id), Color = _ => UiTokens.TextSecondary,
                 Tooltip = r => $"{Loc(r.Id)}\nIdiomas|{string.Join(", ", ctx.Persons[r.Id - 1].Languages.Select(PlayerModal.LanguageName))}\n~País onde mora: a rotina vale no horário local." },
-            new Column<(int Id, CharacterView V)> { Title = "Ocupação", Width = 150, Text = r => Occ(r.Id), SortKey = r => Occ(r.Id), Color = _ => UiTokens.TextSecondary,
+            new Column<(int Id, CharacterView V)> { Title = "Ocupação", Width = 150, MinWidth = 70, Text = r => Occ(r.Id), SortKey = r => Occ(r.Id), Color = _ => UiTokens.TextSecondary,
                 Tooltip = r => $"{Occ(r.Id)}\n~Obrigações da pessoa: definem o tempo livre (aba Rotina da ficha)." },
-            new Column<(int Id, CharacterView V)> { Title = "Classe", Width = 90, Text = r => Cls(r.V.ClassId), SortKey = r => r.V.ClassId },
-            new Column<(int Id, CharacterView V)> { Title = "Nível", Width = 54, Right = true, Numeric = true, Text = r => r.V.Level.ToString(), SortKey = r => r.V.Level * 1_000_000L + r.V.Experience },
-            new Column<(int Id, CharacterView V)> { Title = "Situação", Width = 250, Text = r => StatusText.Of(r.V, ctx.Content), SortKey = r => (int)r.V.Status, Color = r => r.V.State == LifecycleState.Quit ? UiTokens.Danger : r.V.State == LifecycleState.Inactive ? UiTokens.Warning : r.V.Status == CharacterStatus.Offline ? UiTokens.TextDisabled : UiTokens.TextPrimary },
-            new Column<(int Id, CharacterView V)> { Title = "Zona", Width = 150, Text = r => ctx.ZoneName(r.V.RegionId), SortKey = r => ctx.ZoneName(r.V.RegionId), Color = _ => UiTokens.TextSecondary },
-            new Column<(int Id, CharacterView V)> { Title = "Zonas", Width = 54, Right = true, Numeric = true, Text = r => r.V.KnownRegions.ToString(), SortKey = r => r.V.KnownRegions, Tooltip = _ => "Zonas conhecidas" },
+            new Column<(int Id, CharacterView V)> { Title = "Classe", Width = 90, MinWidth = 66, Text = r => Cls(r.V.ClassId), SortKey = r => r.V.ClassId },
+            new Column<(int Id, CharacterView V)> { Title = "Nível", Width = 48, Right = true, Numeric = true, Text = r => r.V.Level.ToString(), SortKey = r => r.V.Level * 1_000_000L + r.V.Experience },
+            new Column<(int Id, CharacterView V)> { Title = "Situação", Width = 250, MinWidth = 80, Text = r => StatusText.Of(r.V, ctx.Content), SortKey = r => (int)r.V.Status, Color = r => r.V.State == LifecycleState.Quit ? UiTokens.Danger : r.V.State == LifecycleState.Inactive ? UiTokens.Warning : r.V.Status == CharacterStatus.Offline ? UiTokens.TextDisabled : UiTokens.TextPrimary },
+            new Column<(int Id, CharacterView V)> { Title = "Zona", Width = 150, MinWidth = 70, Text = r => ctx.ZoneName(r.V.RegionId), SortKey = r => ctx.ZoneName(r.V.RegionId), Color = _ => UiTokens.TextSecondary },
+            new Column<(int Id, CharacterView V)> { Title = "Zonas", Width = 50, Right = true, Numeric = true, Text = r => r.V.KnownRegions.ToString(), SortKey = r => r.V.KnownRegions, Tooltip = _ => "Zonas conhecidas" },
             new Column<(int Id, CharacterView V)> { Title = "Missões", Width = 62, Right = true, Numeric = true, Text = r => r.V.CompletedQuests.Sum(c => c.Times).ToString(), SortKey = r => r.V.CompletedQuests.Sum(c => c.Times), Tooltip = _ => "Missões entregues" },
-            new Column<(int Id, CharacterView V)> { Title = "XP de missões", Width = 96, Right = true, Numeric = true, Text = r => r.V.XpFromQuests + r.V.XpFromActivities == 0 ? "—" : $"{r.V.XpFromQuests * 100 / (r.V.XpFromQuests + r.V.XpFromActivities)}%", SortKey = r => r.V.XpFromQuests * 1000 / Math.Max(1, r.V.XpFromQuests + r.V.XpFromActivities) },
-        }, sortColumn: 7) { OnClick = r => ctx.OpenPerson(r.Id) };
+        }, sortColumn: 7) { OnClick = r => ctx.OpenPerson(r.Id), Gap = 14 };
         _table.OnSortChanged = () => Rebuild(false);
 
         AddTab("Todos", () => Body(_ => true));

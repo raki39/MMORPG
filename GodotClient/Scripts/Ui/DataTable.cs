@@ -13,6 +13,8 @@ public sealed class Column<T>
     public Func<T, Color>? Color { get; init; }
     public Func<T, string>? Tooltip { get; init; }
     public bool Numeric { get; init; }
+    /// <summary>Largura minima da coluna de texto ao encolher (0 = cerca de metade da largura pedida).</summary>
+    public float MinWidth { get; init; }
 }
 
 /// <summary>
@@ -130,9 +132,17 @@ public sealed class DataTable<T>
         return col;
     }
 
+    /// <summary>
+    /// Largura da coluna: numeros ficam com a largura pedida (alinhados); texto divide o espaco
+    /// que sobra na proporcao da largura pedida e encolhe ate cerca de metade, com reticencias
+    /// (a tabela cabe na tela, inclusive em 1366 px). Largura 0 = coluna principal que expande.
+    /// </summary>
     private static void Size(Control c, Column<T> col)
     {
-        if (col.Width > 0) c.CustomMinimumSize = new Vector2(col.Width, 0);
-        else c.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        if (col.Width > 0 && col.Numeric) { c.CustomMinimumSize = new Vector2(col.Width, 0); return; }
+        float w = col.Width > 0 ? col.Width : 140;
+        c.CustomMinimumSize = new Vector2(col.MinWidth > 0 ? col.MinWidth : Math.Max(44, w * 0.45f), 0);
+        c.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        c.SizeFlagsStretchRatio = w;
     }
 }
