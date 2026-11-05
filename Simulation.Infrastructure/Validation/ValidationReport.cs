@@ -457,7 +457,7 @@ public static class ValidationReport
     }
 
     private static string Fmt(double v) => double.IsNaN(v) ? "—" : v.ToString(Math.Abs(v) >= 100 ? "N0" : "N1", PtBr);
-    private static string Num(double v) => double.IsNaN(v) ? "" : v.ToString("0.###", Inv);
+    private static string Num(double v) => double.IsNaN(v) ? "" : v.ToString("0.######", Inv);   // CSV: precisao total para analise
     private static string N(long v) => v.ToString("N0", PtBr);
     private static string Pct(long part, long total) => (part / (double)total).ToString("P1", PtBr);
     private static string Short(string hash) => hash.Length > 16 ? hash[..16] : hash;

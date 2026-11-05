@@ -1425,3 +1425,70 @@ O teste "ninguém começa a sessão durante uma obrigação" agora aceita sobrep
 - Feriado ou folga amanhã: dorme na hora natural.
 - Turno de sexta → sábado começa depois do sono.
 - Primeiro turno depois da folga, e a saída para o turno não é sono.
+
+## D-048 — R2: limites da sessão, probabilidade e estimativa; conferência da R1; escala 5×2
+**Data:** 05/11/2026 · **Estado:** aceita
+
+**Conferência da R1** (pedido do criador). A contabilidade já funcionava como pedido; foram esclarecidas a documentação e as provas, sem refatorar.
+- **Dia civil × ciclo de sono:**
+  - O dia civil (meia-noite a meia-noite) continua sendo o do calendário, dos feriados, da agenda e dos relatórios.
+  - O "dia acordado" é só organização interna: o ciclo de sono atravessa as fronteiras do dia civil.
+  - Para relatórios, `CivilWindow` recorta todos os ciclos numa janela fixa de dias civis, cada minuto uma única vez.
+  - Teste: uma semana com feriado na quarta e turno noturno fecha 10.080 min, sem lacuna nem sobreposição.
+  - A "semana em 168 horas" da tela usa esse recorte.
+- **Turno noturno:**
+  - Atribuir o turno ao dia em que começou é organização.
+  - No recorte civil, as horas depois da meia-noite são do sábado, com o turno, o deslocamento e o sono que vem depois.
+  - O calendário não se desloca, e o sono pós-turno é contado (e fechado ao acordar) no sábado.
+  - "Sábado começa depois desse sono" era só descrição do dia acordado interno.
+- **Recuperação:**
+  - A regra de 8 h → −20 min e 9 h → −80 min é uma simplificação configurável.
+  - O déficit tem piso zero.
+  - Cada noite é fechada uma única vez, ao acordar; uma noite que atravessa o fim de um relatório só fecha depois dele.
+  - Teste: o déficit final de cada pessoa é exatamente a soma das noites fechadas da agenda.
+- **Meta do fim de semana:**
+  - Na seed 4, depois da R1, o valor exato foi 1,299978 (o mínimo é 1,3).
+  - Critério do relatório: uma meta é "dentro" só se **todas** as seeds caem na faixa; com a média dentro e alguma seed fora, é "instável".
+  - É uma tendência de calibração, não uma invariante. O comportamento não foi alterado para recuperar o selo.
+  - O CSV da validação passou a gravar a precisão completa.
+
+**R2 — limites da sessão:**
+- **Limite planejado e limite absoluto:** a sessão tem o fim planejado e o limite absoluto (`SessionHardEndTick`).
+  - **Sessão normal:** o limite absoluto é o fim da janela livre onde ela termina. Se essa janela acaba na hora de deitar, soma-se o **corte de sono autorizado**: o menor entre o teto por noite (180 min), o que cabe no teto do déficit (contando a falta que a noite já teria) e o que mantém o sono mínimo de 4 h antes do próximo acordar planejado.
+  - **Pausa e escapada do trabalho:** o limite absoluto é o fim planejado (volta ao trabalho).
+- **Nada passa do limite absoluto:**
+  - **Terminar a atividade:** só dentro da tolerância de saída e do limite.
+  - **Terminar o trecho de viagem:** só se ele acabar dentro do limite; senão, sai na hora.
+  - **Extensão voluntária:** só até o limite.
+  - **Chamado do trabalho:** tolerância própria (`workCallToleranceMinutes`, 5 min; 0 = sai na hora), também dentro do limite.
+  - **Nunca:** o limite nunca entra em preparo, deslocamento, obrigação incompatível ou compromisso.
+- **Invariante testada:**
+  - Nenhuma sessão invade preparo, deslocamento, obrigação incompatível, refeição, espera ou compromisso.
+  - A sobreposição com o trabalho só acontece no trabalho remoto, na pausa (dentro do intervalo declarado) ou na escapada.
+  - O sono só é consumido dentro do teto por noite, e a noite fecha com o sono mínimo.
+  - Prova: com a regra antiga de terminar o trecho de viagem, um trabalhador do turno noturno jogou das 17:11 às 21:22 e invadiu o deslocamento das 21:19; o teste falha com a regra antiga e passa com a nova.
+
+**R2 — probabilidade:**
+- **Escalas:** atributos e probabilidades em 0–1000 (permille: 1000 = 100%); fatores em permille (1000 = ×1).
+- **Combinação:** base × hábito × humor × inativo × cansaço, com a probabilidade final limitada a 0–1000 **uma única vez no fim**, para não depender da ordem nem cortar um bônus antes de uma penalidade.
+- A estimativa usa a mesma política.
+
+**R2 — estimativa semanal:**
+- Calculada na **semana real, dia a dia** (`ExpectWeek`). A chance de cada dia depende de ter jogado na véspera, pelo hábito proporcional, e a semana é repetida até estabilizar.
+- Substitui a fórmula estacionária única.
+- A tela chama de **estimativa** ("estimativa por semana", "jogo estimado"): sem humor, cansaço e extensões.
+
+**Escala 5×2** (pedido do criador: "bem mais comum que a 6×1"):
+- Nova ocupação "Comércio e serviços em escala 5×2", com peso 9 (a 6×1 caiu de 7 para 4).
+- Cinco dias de trabalho, das 09:00 às 18:50, e duas folgas fixas seguidas que nem sempre caem no fim de semana.
+- Novo campo de conteúdo `daysOff` (1 ou 2). A segunda folga é o dia seguinte à primeira, sem sorteio novo. `StateHasher` v15.
+
+**Testes:** 8 novos (226 no total).
+- Semana civil com feriado e turno noturno fecha 168 h.
+- Horas do turno de sexta no sábado civil, com o sono.
+- Cada noite fechada uma vez, com déficit ≥ 0.
+- 5×2: cinco dias, folgas seguidas e mais comum que a 6×1.
+- Nenhuma sessão invade preparo, deslocamento ou obrigação (sono só dentro do corte).
+- Noite com corte mantém o sono mínimo.
+- Chamado do trabalho com tolerância própria.
+- Probabilidade limitada só no fim, e a estimativa dia a dia.

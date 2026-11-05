@@ -33,7 +33,8 @@ A regra que amarra tudo (D-045) é a coerência: turno, sono, hora preferida, du
 | Universitário | 10 | seg–sex 08:00–12:00; ter/qui 14:00–17:30 | 45 | ±60 | não | aula da tarde no campus, direto depois de 1 h de almoço |
 | Home office | 8 | seg–sex 09:00–18:00 | 0 | ±60 | não | remoto, pausa 12:00–13:00, flexibilidade 600 |
 | Sem ocupação | 8 | — | — | — | — | todo dia livre |
-| Escala 6x1 | 7 | 10:00–18:20, seis dias | 45 | ±90 | sim | uma folga fixa em qualquer dia (inclusive domingo) |
+| Escala 5x2 | 9 | 09:00–18:50, cinco dias | 45 | ±90 | sim | duas folgas fixas seguidas, nem sempre no fim de semana |
+| Escala 6x1 | 4 | 10:00–18:20, seis dias | 45 | ±90 | sim | uma folga fixa em qualquer dia (inclusive domingo) |
 | Trabalha e estuda | 6 | seg–sex 08:00–17:00 + seg–qui 19:00–22:30 | 45 (ida) / 40 (volta da faculdade) | ±30 | não | trabalho → refeição 45 min → transferência 30 min → faculdade → casa |
 | Estudante (tarde) | 5 | seg–sex 13:00–18:00 | 30 | ±20 | não | — |
 | Autônomo | 5 | 10:00–16:30, cinco dias entre seg e sáb | 0 | ±120 | sim | remoto, pausa 12:30–13:30, flexibilidade 700, folga fixa |
@@ -88,6 +89,12 @@ A regra que amarra tudo (D-045) é a coerência: turno, sono, hora preferida, du
 
 ## 4. O dia montado (todo dia, à meia-noite local) — R1, D-047
 
+**Dia civil × dia acordado:**
+- O calendário, os feriados, a agenda e os relatórios usam o **dia civil**, de meia-noite a meia-noite.
+- O **dia acordado** é só a organização interna do cálculo.
+- O ciclo de sono atravessa as fronteiras do dia civil. Por isso relatórios e a "semana em 168 horas" recortam os ciclos numa janela fixa de dias civis (`CivilWindow`), com cada minuto contado uma única vez.
+- No turno noturno de sexta, as horas depois da meia-noite (o trabalho, a volta para casa e o sono) pertencem ao **sábado civil**.
+
 `DailySchedule.Build` monta o **dia acordado**: do início do sono que termina hoje (`SleepStart`, que pode ser na véspera) até a hora de dormir (`Bed`, que pode passar da meia-noite). O dia seguinte começa onde este termina, então cada minuto pertence a um único dia e a semana fecha 7 × 24 h.
 
 1. **Início do sono que termina hoje:** é o fim do dia acordado de ontem.
@@ -117,17 +124,22 @@ A regra que amarra tudo (D-045) é a coerência: turno, sono, hora preferida, du
 
 ## 5. Vontade de jogar no dia
 
-**Chance base** (`BaseChance`):
-- folga = min(1, minutos livres ÷ 600);
-- chance = importância + (1 − importância) × 0,35 × folga. Tempo livre ajuda mais quem liga pouco;
-- carga = min(1, minutos de obrigação ÷ 600);
-- chance × (1 − carga × 0,65 × (1 − importância)). O dia cheio cansa, menos para quem prioriza o jogo.
+**Escalas:**
+- Atributos e probabilidades vão de 0 a 1000 (permille: 1000 = 100%).
+- Fatores multiplicam em permille (1000 = ×1).
+- Frações como "35%" aparecem no texto já convertidas.
 
-**Ajustes do planejador**, nesta ordem:
-1. **Hábito proporcional:** × (1 + hábito × 0,25) se jogou ontem; × (1 − hábito × 0,25) se não jogou.
-2. **Humor:** × fator do engajamento = 1 + (engajamento − 700) ÷ 1000, entre 0,15 e 1,3. Desligado no cenário controlado.
-3. **Inativo:** × 0,25 × intenção de continuar.
-4. **Cansaço:** × (1 − cansaço × 0,4).
+**Chance base** (`BaseChance`), já uma probabilidade de 0 a 1000:
+- folga = min(1000, minutos livres × 1000 ÷ 600);
+- base = importância + (1000 − importância) × 350 ÷ 1000 × folga ÷ 1000. O tempo livre ajuda mais quem liga pouco;
+- carga = min(1000, minutos de obrigação × 1000 ÷ 600);
+- base × (1000 − carga × 650 ÷ 1000 × (1000 − importância) ÷ 1000) ÷ 1000. O dia cheio cansa, menos para quem prioriza o jogo.
+
+**Probabilidade do dia** (R2): todos os fatores são **combinados e a probabilidade final é limitada a 0–1000 uma única vez, no fim**. Assim o resultado não depende da ordem, e um bônus não é cortado antes de uma penalidade. Os fatores:
+1. **Hábito proporcional:** × (1000 ± hábito × 250 ÷ 1000), mais se jogou ontem e menos se não jogou.
+2. **Humor:** × fator do engajamento, 1000 + (engajamento − 700), entre 150 e 1300. Desligado no cenário controlado.
+3. **Inativo:** × 250 × intenção de continuar ÷ 1000.
+4. **Cansaço:** × (1000 − cansaço × 400 ÷ 1000).
 
 **Duração desejada** (`DesiredMinutes`):
 - sessão base × variação (±20%) × (1 + (0,25 + importância × 0,8) × folga);
@@ -144,7 +156,7 @@ Exemplo: o hardcore de meio período (base 152 min, importância 725, folga 1,0)
 
 **Segunda sessão:** para importância acima de 650. Chance = (importância − 650) × 200 ÷ 350 (até 20%), em outra janela, com 45% da sessão base.
 
-**Previsto** (`Expect`, sem o humor): mesma conta, com a chance na frequência de longo prazo do hábito (a ÷ (1 − b + a), onde a = chance se não jogou ontem e b = chance se jogou), mais a segunda sessão esperada.
+**Estimativa** (`ExpectWeek`, sem humor, cansaço nem extensões): a mesma regra do planejador, calculada na **semana real, dia a dia**. A chance de cada dia depende de ter jogado na véspera, e a semana se repete até estabilizar, então dias úteis e livres recebem chances diferentes. A probabilidade é limitada só no fim, e a segunda sessão esperada entra na conta. A tela chama de "estimativa".
 
 **Motivo do dia na agenda:**
 
@@ -180,13 +192,15 @@ Exemplo: o hardcore de meio período (base 152 min, importância 725, folga 1,0)
 
 ## 7. Durante a sessão
 
+- **Limite planejado e limite absoluto** (R2): toda sessão tem o fim planejado e um **limite absoluto** que nada ultrapassa.
+  - **Sessão normal:** fim da janela livre. Se a janela acaba na hora de deitar, mais o corte de sono autorizado: o menor entre 180 min, o que cabe no teto do déficit e o que mantém 4 h de sono antes do próximo acordar.
+  - **Pausa e escapada do trabalho:** o fim planejado.
+  - **Adiar a saída**, seja para terminar a atividade (até 15 min), terminar o trecho de viagem, estender ou atender o chamado do trabalho (5 min, `workCallToleranceMinutes`), **só dentro do limite absoluto**. Nunca entra em preparo, deslocamento, obrigação incompatível ou compromisso.
 - **Ficar mais um pouco:**
   - **Motivo:** gostando (nota parcial ≥ 700) ou perto de concluir a meta (70% do caminho).
   - **Chance:** 40% × tendência × (1 − autocontrole × 0,8) × (1 − cansaço).
   - **Tamanho:** 30% da sessão planejada × (0,5 + tendência), mínimo 10 min.
-  - **Limites:** 2 vezes e 180 min por sessão; não vale na pausa nem na escapada do trabalho.
-  - **Sono:** usa primeiro o resto da janela. Só avança sobre o sono se a janela termina na hora de dormir; nunca antes de uma obrigação ou de um turno.
-  - **Corte por noite:** no máximo 180 min, respeitando o teto do déficit e um sono mínimo de 4 h.
+  - **Limites:** 2 vezes e 180 min por sessão, e sempre até o limite absoluto. Não vale na pausa nem na escapada do trabalho.
 - **Trabalho remoto:**
   - **Pausa:** chance de 30% × importância. Sessão de até metade da sessão base, dentro da pausa.
   - **Escapada:** chance de 40% × flexibilidade × importância × (1 − autocontrole) × folga do dia (carga sorteada todo dia). Dura 25 ±10 min, longe do começo e do fim do expediente.

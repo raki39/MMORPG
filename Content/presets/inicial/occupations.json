@@ -20,7 +20,8 @@
         "mean": 50000,
         "spread": 30000
       },
-      "playDuringWorkFlexibility": 0
+      "playDuringWorkFlexibility": 0,
+      "daysOff": 1
     },
     {
       "id": "autonomo",
@@ -67,7 +68,8 @@
         "mean": 60000,
         "spread": 40000
       },
-      "playDuringWorkFlexibility": 700
+      "playDuringWorkFlexibility": 700,
+      "daysOff": 1
     },
     {
       "id": "comercial",
@@ -107,7 +109,8 @@
         "mean": 40000,
         "spread": 30000
       },
-      "playDuringWorkFlexibility": 0
+      "playDuringWorkFlexibility": 0,
+      "daysOff": 1
     },
     {
       "id": "cuidador",
@@ -189,14 +192,59 @@
         "mean": 220000,
         "spread": 120000
       },
-      "playDuringWorkFlexibility": 0
+      "playDuringWorkFlexibility": 0,
+      "daysOff": 1
+    },
+    {
+      "id": "escala_5x2",
+      "version": 1,
+      "name": "Comércio e serviços em escala 5x2",
+      "kind": "work",
+      "weight": 9,
+      "startVariationMinutes": 90,
+      "worksHolidays": true,
+      "description": "Cinco dias de trabalho e duas folgas seguidas por semana, que nem sempre caem no fim de semana; trabalha em feriado.",
+      "blocks": [
+        {
+          "days": [
+            "mon",
+            "tue",
+            "wed",
+            "thu",
+            "fri",
+            "sat",
+            "sun"
+          ],
+          "start": "09:00",
+          "end": "18:50",
+          "commuteMinutes": 45,
+          "label": "trabalho",
+          "personalDayOff": true,
+          "remote": false,
+          "breaks": [],
+          "route": "home",
+          "mealMinutes": 0,
+          "transferMinutes": 0
+        }
+      ],
+      "income": {
+        "mean": 210000,
+        "spread": 70000
+      },
+      "supportChancePermille": 80,
+      "support": {
+        "mean": 30000,
+        "spread": 20000
+      },
+      "playDuringWorkFlexibility": 0,
+      "daysOff": 2
     },
     {
       "id": "escala_6x1",
       "version": 1,
       "name": "Comércio em escala 6x1",
       "kind": "work",
-      "weight": 7,
+      "weight": 4,
       "startVariationMinutes": 90,
       "worksHolidays": true,
       "description": "Seis dias de trabalho e uma folga fixa por semana (que pode cair em qualquer dia, inclusive domingo); trabalha em feriado.",
@@ -232,7 +280,8 @@
         "mean": 30000,
         "spread": 20000
       },
-      "playDuringWorkFlexibility": 0
+      "playDuringWorkFlexibility": 0,
+      "daysOff": 1
     },
     {
       "id": "estudante_manha",
@@ -272,7 +321,8 @@
         "mean": 60000,
         "spread": 40000
       },
-      "playDuringWorkFlexibility": 0
+      "playDuringWorkFlexibility": 0,
+      "daysOff": 1
     },
     {
       "id": "estudante_tarde",
@@ -312,7 +362,8 @@
         "mean": 60000,
         "spread": 40000
       },
-      "playDuringWorkFlexibility": 0
+      "playDuringWorkFlexibility": 0,
+      "daysOff": 1
     },
     {
       "id": "home_office",
@@ -357,7 +408,8 @@
         "mean": 30000,
         "spread": 20000
       },
-      "playDuringWorkFlexibility": 600
+      "playDuringWorkFlexibility": 600,
+      "daysOff": 1
     },
     {
       "id": "meio_periodo_manha",
@@ -397,7 +449,8 @@
         "mean": 60000,
         "spread": 40000
       },
-      "playDuringWorkFlexibility": 0
+      "playDuringWorkFlexibility": 0,
+      "daysOff": 1
     },
     {
       "id": "meio_periodo_tarde",
@@ -437,7 +490,8 @@
         "mean": 60000,
         "spread": 40000
       },
-      "playDuringWorkFlexibility": 0
+      "playDuringWorkFlexibility": 0,
+      "daysOff": 1
     },
     {
       "id": "sem_ocupacao",
@@ -458,7 +512,8 @@
         "mean": 90000,
         "spread": 60000
       },
-      "playDuringWorkFlexibility": 0
+      "playDuringWorkFlexibility": 0,
+      "daysOff": 1
     },
     {
       "id": "trabalho_estudo",
@@ -515,7 +570,8 @@
         "mean": 30000,
         "spread": 20000
       },
-      "playDuringWorkFlexibility": 0
+      "playDuringWorkFlexibility": 0,
+      "daysOff": 1
     },
     {
       "id": "turno_noturno",
@@ -555,7 +611,8 @@
         "mean": 30000,
         "spread": 20000
       },
-      "playDuringWorkFlexibility": 0
+      "playDuringWorkFlexibility": 0,
+      "daysOff": 1
     },
     {
       "id": "universitario",
@@ -610,7 +667,8 @@
         "mean": 120000,
         "spread": 70000
       },
-      "playDuringWorkFlexibility": 0
+      "playDuringWorkFlexibility": 0,
+      "daysOff": 1
     }
   ]
 }

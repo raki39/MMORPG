@@ -11,7 +11,7 @@ namespace Simulation.Core.World;
 /// </summary>
 public static class StateHasher
 {
-    public const int FormatVersion = 13;
+    public const int FormatVersion = 15;
 
     public static string Compute(WorldState w) => Compute(w, includeContentId: true);
 
@@ -56,7 +56,7 @@ public static class StateHasher
             h.Long(c.MoveStartTick); h.Long(c.MoveEndTick); h.Str(c.MoveEntersZone);
             h.Int(c.RemainingWaypoints.Count);
             foreach (var wp in c.RemainingWaypoints) { h.Int(wp.Pos.X); h.Int(wp.Pos.Y); h.Str(wp.EntersZone); }
-            h.Long(c.SessionStartTick); h.Long(c.ActivityStartTick); h.Long(c.ActivityEndTick); h.Long(c.SessionEndTick);
+            h.Long(c.SessionStartTick); h.Long(c.ActivityStartTick); h.Long(c.ActivityEndTick); h.Long(c.SessionEndTick); h.Long(c.SessionHardEndTick);
             h.Bool(c.LogoutPending); h.Int(c.SessionKind); h.Int(c.SessionExtensions); h.Int(c.ExtendedMinutes);
             h.Long(c.SleepCutStartTick); h.Str(c.ExtendMotive);
             h.Int(c.KnownRegions.Count);
@@ -143,7 +143,7 @@ public static class StateHasher
         h.Long(p.QuitDay); h.Int(p.TimesQuit); h.Int(p.TimesReturned); h.Int(p.TimesInactive);
         h.Str(p.ResidenceId); h.Str(p.NationalityId); h.Int(p.LocalOffsetMinutes);
         // Rotina de vida (P2).
-        h.Str(p.OccupationId); h.Int(p.ShiftOffsetMinutes); h.Int(p.CommutePermille); h.Int(p.DayOffIndex);
+        h.Str(p.OccupationId); h.Int(p.ShiftOffsetMinutes); h.Int(p.CommutePermille); h.Int(p.DayOffIndex); h.Int(p.DayOff2Index);
         h.Int(p.SleepNeedMinutes); h.Int(p.BedtimeMinute); h.Long(p.IncomeCentsPerMonth); h.Long(p.SupportCentsPerMonth);
         h.Int(p.ExpectedWeeklyMinutes); h.Long(p.LastPlayedLocalDay);
         h.Int(p.SleepDebtTolerance); h.Int(p.SleepDeficitMinutes); h.Int(p.LastSleepCutMinutes); h.Int(p.SleepCutTotalMinutes); h.Long(p.LastLogoutTick);

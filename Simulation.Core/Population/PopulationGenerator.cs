@@ -88,6 +88,8 @@ public static class PopulationGenerator
         var dayOffDays = occ.Blocks.Where(b => b.PersonalDayOff).SelectMany(b => b.Days).Select(ContentValidator.WeekDayIndex)
             .Where(d => d >= 0 && d <= 6).Distinct().OrderBy(d => d).ToList();
         person.DayOffIndex = dayOffDays.Count == 0 ? -1 : dayOffDays[rng.NextInt(dayOffDays.Count)];
+        // Escala 5x2: a segunda folga e o dia seguinte (sem sorteio novo).
+        person.DayOff2Index = person.DayOffIndex >= 0 && occ.DaysOff >= 2 && dayOffDays.Contains((person.DayOffIndex + 1) % 7) ? (person.DayOffIndex + 1) % 7 : -1;
         person.SleepNeedMinutes = Roll(rng, rs.SleepNeedMinutes, 300, 660);
         person.BedtimeMinute = Roll(rng, rs.BedtimeMinute, 1260, 1680) / 5 * 5;
         int factor = content.Localities.TryGetValue(person.ResidenceId, out var loc) ? loc.IncomeFactorPermille : 1000;

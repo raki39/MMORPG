@@ -147,6 +147,8 @@ public sealed class OccupationDefinition : IContentDefinition
     public List<ObligationBlockDefinition> Blocks { get; set; } = new();
     /// <summary>Variacao individual fixa do horario (minutos, +-): cada pessoa entra um pouco antes ou depois.</summary>
     public int StartVariationMinutes { get; set; }
+    /// <summary>Folgas fixas por semana nos blocos com folga individual (1 = escala 6x1; 2 = escala 5x2, dias seguidos).</summary>
+    public int DaysOff { get; set; } = 1;
     /// <summary>Trabalha mesmo em feriados (escala, turnos, autonomos).</summary>
     public bool WorksHolidays { get; set; }
     /// <summary>

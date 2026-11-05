@@ -499,6 +499,8 @@ public sealed class RoutineSettingsDefinition
     /// livre cheio (permille), alem da parte que vem da importancia do jogo.
     /// </summary>
     public int FreeTimeDurationBase { get; set; } = 250;
+    /// <summary>Chamado do trabalho durante a escapada (R2): minutos para terminar a atividade antes de sair (0 = sai na hora).</summary>
+    public int WorkCallToleranceMinutes { get; set; } = 5;
     /// <summary>
     /// Compromissos ocasionais nos dias livres (D-046): festa, visita a familia, passeio...
     /// Chance por dia livre de fim de semana, feriado ou folga (permille), escalada pela

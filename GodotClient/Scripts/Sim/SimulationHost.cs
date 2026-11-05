@@ -101,6 +101,8 @@ public sealed record WeekDayView(int Dow, IReadOnlyList<(int Start, int End, str
     public int CareMinutes { get; init; }
     public int WaitMinutes { get; init; }
     public int CommitmentMinutes { get; init; }
+    /// <summary>Tempo livre dentro do dia civil (a semana em 168 h usa o recorte civil).</summary>
+    public int CivilFreeMinutes { get; init; }
     /// <summary>Turno que atravessa a meia-noite: sai de casa em ShiftDeparture e dorme depois do turno.</summary>
     public bool NightShift { get; init; }
     public int ShiftDeparture { get; init; } = -1;
@@ -458,17 +460,22 @@ public sealed class SimulationHost : IDisposable
         var occ = content.Occupations.TryGetValue(p.OccupationId, out var o) ? o : null;
         var rs = content.Routine;
         var list = new List<WeekDayView>();
+        var layouts = Enumerable.Range(0, 7).Select(d => Simulation.Core.Behavior.DailySchedule.Build(p, occ, rs, d, false, false, false)).ToList();
+        var estimate = Simulation.Core.Behavior.DailySchedule.ExpectWeek(p, layouts, rs);   // estimativa da semana real, dia a dia (R2)
+        // Semana civil (meia-noite a meia-noite): os dias acordados recortados, cada minuto uma vez.
+        var cycle = Enumerable.Range(-1, 9).Select(d => layouts[((d % 7) + 7) % 7]).ToList();
         for (int dow = 0; dow < 7; dow++)
         {
-            var day = Simulation.Core.Behavior.DailySchedule.Build(p, occ, rs, dow, false, false, false);
+            var day = layouts[dow];
+            var civil = Simulation.Core.Behavior.DailySchedule.CivilWindow(cycle, -1, dow, 1);
             var obligations = Simulation.Core.Behavior.DailySchedule.Obligations(p, occ, dow, false).Select(x => (x.Start, x.End, x.Label)).ToArray();
             // A mesma linha do tempo da simulacao (R1): cada minuto do dia acordado em um so trecho.
             var timeline = day.Timeline();
-            int Sum(params string[] kinds) => timeline.Where(t => kinds.Contains(t.Kind)).Sum(t => t.End - t.Start);
+            int Sum(params string[] kinds) => civil.Where(t => kinds.Contains(t.Kind)).Sum(t => t.End - t.Start);   // minutos do dia civil
             var segs = timeline.Select(t => (t.Start, t.End, t.Kind)).ToList();
             foreach (var r in day.Remote)
                 foreach (var (bs, be) in r.Breaks) segs.Add((bs, be, "break"));   // pausa: sobreposicao autorizada dentro do trabalho
-            var ex = Simulation.Core.Behavior.DailySchedule.Expect(p, day, rs);   // mesma conta do "previsto por semana"
+            var ex = estimate[dow];
             list.Add(new WeekDayView(dow, obligations, day.Wake, day.Bed, day.Windows.ToArray(), day.FreeMinutes, day.FreeDay)
             {
                 Segments = segs,
@@ -477,6 +484,7 @@ public sealed class SimulationHost : IDisposable
                 SleepMinutes = Sum("sleep"),
                 CareMinutes = Sum("prep", "arrival", "meal"),
                 WaitMinutes = Sum("wait", "awake"),
+                CivilFreeMinutes = Sum("free"),
                 CommitmentMinutes = Sum("commitment"),
                 NightShift = day.NightShiftAhead, ShiftDeparture = day.ShiftDeparture,
                 Blocks = Simulation.Core.Behavior.DailySchedule.Blocks(p, occ, dow, false).Select(b => (b.Start, b.End, b.Label, b.Def.Remote, b.Commute)).ToArray(),

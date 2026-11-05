@@ -154,6 +154,8 @@ public static class ContentValidator
             if (!kinds.Contains(o.Kind)) v.Error(OccupationsFile, p + ".kind", $"Use {string.Join(", ", kinds)}.");
             if (o.Weight < 0) v.Error(OccupationsFile, p + ".weight", "O peso não pode ser negativo.");
             if (o.StartVariationMinutes is < 0 or > 360) v.Error(OccupationsFile, p + ".startVariationMinutes", "Use de 0 a 360 minutos.");
+            if (o.DaysOff is < 1 or > 2) v.Error(OccupationsFile, p + ".daysOff", "Use 1 (escala 6x1) ou 2 (escala 5x2).");
+            if (o.DaysOff == 2 && !o.Blocks.Any(b => b.PersonalDayOff)) v.Error(OccupationsFile, p + ".daysOff", "Duas folgas só fazem sentido com blocos de folga individual.");
             if (o.SupportChancePermille is < 0 or > 1000) v.Error(OccupationsFile, p + ".supportChancePermille", "Use 0 a 1000.");
             if (o.PlayDuringWorkFlexibility is < 0 or > 1000) v.Error(OccupationsFile, p + ".playDuringWorkFlexibility", "Use 0 a 1000.");
             if (o.PlayDuringWorkFlexibility > 0 && !o.Blocks.Any(b => b.Remote))
@@ -224,6 +226,7 @@ public static class ContentValidator
         if (r.BedtimeAdaptMinutes is < 0 or > 240) v.Error(PopulationFile, "routine.bedtimeAdaptMinutes", "Use de 0 a 240 minutos.");
         if (r.PreferredDelayMaxMinutes is < 0 or > 600) v.Error(PopulationFile, "routine.preferredDelayMaxMinutes", "Use de 0 a 600 minutos.");
         if (r.FreeTimeDurationBase is < 0 or > 2000) v.Error(PopulationFile, "routine.freeTimeDurationBase", "Use 0 a 2000.");
+        if (r.WorkCallToleranceMinutes is < 0 or > 30) v.Error(PopulationFile, "routine.workCallToleranceMinutes", "Use de 0 a 30 minutos.");
         if (r.CommitmentChancePermille is < 0 or > 1000) v.Error(PopulationFile, "routine.commitmentChancePermille", "Use 0 a 1000.");
         var commitIds = new HashSet<string>(StringComparer.Ordinal);
         for (int ci = 0; ci < r.Commitments.Count; ci++)

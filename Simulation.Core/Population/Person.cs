@@ -221,6 +221,8 @@ public sealed class Person
     public int CommutePermille { get; internal set; } = 1000;
     /// <summary>Folga fixa da escala (0 = segunda .. 6 = domingo; -1 = sem).</summary>
     public int DayOffIndex { get; internal set; } = -1;
+    /// <summary>Segunda folga fixa (escala 5x2: o dia seguinte a primeira); -1 se nao houver.</summary>
+    public int DayOff2Index { get; internal set; } = -1;
     public int SleepNeedMinutes { get; internal set; } = 480;
     /// <summary>Hora preferida de dormir (minutos desde a meia-noite anterior; acima de 1440 = madrugada).</summary>
     public int BedtimeMinute { get; internal set; } = 1425;
@@ -549,6 +551,12 @@ public sealed class Character
     public long ActivityStartTick { get; internal set; }
     public long ActivityEndTick { get; internal set; }
     public long SessionEndTick { get; internal set; }
+    /// <summary>
+    /// Limite absoluto da sessao (R2): nada passa dele, nem terminar a atividade, nem terminar o
+    /// trecho de viagem, nem a extensao, nem o chamado do trabalho. Fim da janela livre; na ultima
+    /// janela do dia, mais o corte de sono autorizado. Na pausa ou na escapada, o fim planejado.
+    /// </summary>
+    public long SessionHardEndTick { get; internal set; }
     public bool LogoutPending { get; internal set; }
     /// <summary>Tipo da sessao atual (D-044): 0 normal, 1 pausa permitida do trabalho remoto, 2 escapada no expediente.</summary>
     public int SessionKind { get; internal set; }

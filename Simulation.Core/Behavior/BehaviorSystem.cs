@@ -338,14 +338,16 @@ public sealed class BehaviorSystem
         int fatigue = Math.Min(1000, projectedDeficit * 1000 / Math.Max(1, rs.FatigueFullDeficitMinutes));
         var (workSessions, overlap) = p.State == LifecycleState.Inactive ? (0, 0) : PlanWorkTime(p, day, dayStart, rng);
 
-        int chance = DailySchedule.BaseChance(p, day, rs);
-        // Habito proporcional (D-045): quem jogou ontem mantem o embalo; quem nao jogou perde um
-        // pouco na mesma proporcao (o casual que joga 2x por semana nao e punido em dobro).
+        // Probabilidade do dia (R2): a base (0..1000) vezes os fatores (permille, 1000 = x1), combinados
+        // e limitada a 0..1000 uma unica vez no fim. Mesma politica na estimativa (DailySchedule.ExpectWeek).
+        // Habito proporcional (D-045): quem jogou ontem mantem o embalo; quem nao jogou perde um pouco.
         int streak = p.Traits.Habit * rs.HabitStreakPermille / 1000;
-        chance = Math.Clamp(chance * (1000 + (p.LastPlayedLocalDay == localDay - 1 ? streak : -streak)) / 1000, 0, 1000);
-        if (!_w.NeutralMood) chance = chance * PlayFactor(p.Mood.Engagement, rt) / 1000;   // o humor muda a rotina (D-039)
-        if (p.State == LifecycleState.Inactive) chance = chance * rt.InactiveReturnPermille / 1000 * p.Mood.ReturnIntention / 1000;
-        chance = chance * (1000 - fatigue * rs.FatigueChancePenalty / 1000) / 1000;   // cansaco (P3)
+        long combined = DailySchedule.BaseChance(p, day, rs);
+        combined = combined * (1000 + (p.LastPlayedLocalDay == localDay - 1 ? streak : -streak)) / 1000;
+        if (!_w.NeutralMood) combined = combined * PlayFactor(p.Mood.Engagement, rt) / 1000;   // o humor muda a rotina (D-039)
+        if (p.State == LifecycleState.Inactive) combined = combined * rt.InactiveReturnPermille / 1000 * p.Mood.ReturnIntention / 1000;
+        combined = combined * (1000 - fatigue * rs.FatigueChancePenalty / 1000) / 1000;   // cansaco (P3)
+        int chance = (int)Math.Clamp(combined, 0, 1000);
 
         int preferred = PreferredMinute(p, rng);
         int desired = DailySchedule.DesiredMinutes(p, day, rs, DurationJitter(rng));
@@ -462,7 +464,8 @@ public sealed class BehaviorSystem
         var ch = _w.GetCharacter(p.CharacterId);
         if (ch.SessionKind != SessionDuringWork) return;
         bool finishing = ch.Status == CharacterStatus.Doing
-            && ch.ActivityEndTick - Now <= _w.Content.Behavior.LogoutToleranceMinutes * SimTime.TicksPerMinute;
+            && ch.ActivityEndTick - Now <= _w.Content.Routine.WorkCallToleranceMinutes * SimTime.TicksPerMinute
+            && ch.ActivityEndTick <= ch.SessionHardEndTick;
         _w.Emit("work_interruption", EventImportance.Low, new[] { new EntityRef("person", p.Id), new EntityRef("character", ch.Id) },
             new[] { new EventCause(finishing ? "finished_activity" : "left_activity", 1000) }, ch.ActivityId.Length > 0 ? ActivityTypeOf(ch) : "");
         if (finishing) ch.LogoutPending = true;
@@ -568,6 +571,7 @@ public sealed class BehaviorSystem
             if (end > ch.SessionEndTick)
             {
                 ch.SessionEndTick = end;
+                ch.SessionHardEndTick = Math.Max(ch.SessionHardEndTick, HardEndFor(p, SessionNormal, end));
                 ch.LogoutPending = false;
                 _w.Scheduler.Schedule(end, EvSessionEnd, p.Id);
             }
@@ -596,6 +600,7 @@ public sealed class BehaviorSystem
         ch.SessionEndTick = end;
         ch.LogoutPending = false;
         ch.SessionKind = kind;
+        ch.SessionHardEndTick = HardEndFor(p, kind, end);
         ch.SessionExtensions = 0;
         ch.ExtendedMinutes = 0;
         ch.SleepCutStartTick = 0;
@@ -624,10 +629,12 @@ public sealed class BehaviorSystem
 
         if (TryExtend(p, ch)) return;
 
+        // Adiar a saida (terminar a atividade ou o trecho de viagem) so cabe dentro do limite absoluto (R2).
         switch (ch.Status)
         {
-            case CharacterStatus.Doing when ch.ActivityEndTick - Now <= _w.Content.Behavior.LogoutToleranceMinutes * SimTime.TicksPerMinute:
-            case CharacterStatus.Traveling:
+            case CharacterStatus.Doing when ch.ActivityEndTick - Now <= _w.Content.Behavior.LogoutToleranceMinutes * SimTime.TicksPerMinute
+                                            && ch.ActivityEndTick <= ch.SessionHardEndTick:
+            case CharacterStatus.Traveling when ch.MoveEndTick <= ch.SessionHardEndTick:
                 ch.LogoutPending = true; // termina a atividade ou a etapa da viagem e sai
                 break;
             default:
@@ -675,6 +682,44 @@ public sealed class BehaviorSystem
             new[] { new EventCause(reason, 1000) });
     }
 
+    /// <summary>
+    /// Limite absoluto de uma sessao (R2). Pausa ou escapada do trabalho: o fim planejado (volta ao
+    /// trabalho). Sessao normal: o fim da janela livre onde ela termina; se essa janela acaba na
+    /// hora de dormir, mais o corte de sono autorizado. Nunca entra em preparo, deslocamento ou obrigacao.
+    /// </summary>
+    private long HardEndFor(Person p, int kind, long plannedEnd)
+    {
+        if (kind != SessionNormal) return plannedEnd;
+        long hard = -1;
+        bool atBed = false;
+        foreach (var (s, e, bed) in p.OpenWindows)
+            if (s <= plannedEnd && plannedEnd <= e && e > hard) { hard = e; atBed = bed; }
+        if (hard < 0) return plannedEnd;
+        return atBed ? hard + AllowedSleepCutMinutes(p, hard) * SimTime.TicksPerMinute : hard;
+    }
+
+    /// <summary>
+    /// Corte de sono autorizado depois da hora de deitar (R2): o menor entre o teto por noite, o que
+    /// cabe no teto do deficit (contando a falta que a noite ja teria) e o que mantem o sono minimo
+    /// antes do proximo acordar planejado. A proxima obrigacao nunca muda.
+    /// </summary>
+    private int AllowedSleepCutMinutes(Person p, long bedTick)
+    {
+        var rs = _w.Content.Routine;
+        long cal = LocalDay(p, bedTick - 1);
+        for (long d = cal; d >= cal - 1; d--)
+        {
+            var day = LayoutOf(p, d);
+            if (LocalDayStart(p, d) + day.Bed * SimTime.TicksPerMinute != bedTick) continue;
+            var next = LayoutOf(p, d + 1);
+            int plannedSleep = next.Wake - next.SleepStart;
+            int shortfall = Math.Max(0, p.SleepNeedMinutes - plannedSleep);
+            int byDeficit = DailySchedule.MaxDeficit(p, rs) - p.SleepDeficitMinutes - shortfall;
+            return Math.Max(0, Math.Min(rs.MaxSleepCutMinutes, Math.Min(byDeficit, plannedSleep - rs.MinSleepMinutes)));
+        }
+        return 0;
+    }
+
     /// <summary>Janela livre que contem o fim previsto da sessao: minutos que sobram e se ela termina na hora de dormir.</summary>
     private (int Room, bool AtBed, long End) WindowAfter(Person p, Character ch)
     {
@@ -708,16 +753,13 @@ public sealed class BehaviorSystem
         int extra = Math.Min(Math.Max(10, planned * rt.ExtendPermille / 1000 * (rs.ExtendTendencyBase + t.ExtendTendency) / 1000),
             rs.ExtendMaxMinutes - ch.ExtendedMinutes);
         var (room, atBed, windowEnd) = WindowAfter(p, ch);
-        int sleepCut = 0;
-        if (extra > room && atBed)
-        {
-            int alreadyCut = ch.SleepCutStartTick > 0 ? (int)((ch.SessionEndTick - ch.SleepCutStartTick) / SimTime.TicksPerMinute) : 0;
-            int allowed = Math.Min(Math.Min(rs.MaxSleepCutMinutes - alreadyCut, DailySchedule.MaxDeficit(p, rs) - p.SleepDeficitMinutes - alreadyCut),
-                p.SleepNeedMinutes - rs.MinSleepMinutes - alreadyCut);
-            sleepCut = Math.Clamp(extra - room, 0, Math.Max(0, allowed));
-        }
-        int total = Math.Min(extra, room + sleepCut);
+        // Limite absoluto (R2): o resto da janela e, so na ultima janela do dia, o corte de sono
+        // autorizado (teto por noite, teto do deficit e sono minimo antes da proxima obrigacao).
+        int toHard = (int)Math.Max(0, (ch.SessionHardEndTick - ch.SessionEndTick) / SimTime.TicksPerMinute);
+        int total = Math.Min(extra, toHard);
         if (total < 10) return false;
+        long newEnd = ch.SessionEndTick + total * SimTime.TicksPerMinute;
+        int sleepCut = atBed && newEnd > windowEnd ? (int)((newEnd - Math.Max(windowEnd, ch.SessionEndTick)) / SimTime.TicksPerMinute) : 0;
         if (sleepCut > 0 && ch.SleepCutStartTick == 0) ch.SleepCutStartTick = Math.Max(windowEnd, ch.SessionEndTick);
         ch.SessionExtensions++;
         ch.ExtendedMinutes += total;

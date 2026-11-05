@@ -98,13 +98,37 @@ public static class DailySchedule
         foreach (var b in occ.Blocks)
         {
             if (!b.Days.Any(d => ContentValidator.WeekDayIndex(d) == dow)) continue;
-            if (b.PersonalDayOff && p.DayOffIndex == dow) continue;
+            if (b.PersonalDayOff && (p.DayOffIndex == dow || p.DayOff2Index == dow)) continue;
             int s = ContentValidator.ParseClock(b.Start), e = ContentValidator.ParseClock(b.End);
             if (s < 0 || e < 0) continue;
             if (e <= s) e += 1440;
             list.Add((s + p.ShiftOffsetMinutes, e + p.ShiftOffsetMinutes, b.CommuteMinutes * p.CommutePermille / 1000, b.Label, b));
         }
         list.Sort((a, b) => a.Start != b.Start ? a.Start.CompareTo(b.Start) : string.CompareOrdinal(a.Label, b.Label));
+        return list;
+    }
+
+    /// <summary>
+    /// Recorte civil (R1/R2): os dias acordados sao a organizacao interna; calendario, feriados e
+    /// relatorios usam o dia civil (meia-noite a meia-noite). Este recorte coloca cada trecho dos
+    /// dias acordados no seu horario absoluto e corta numa janela fixa de dias civis: cada minuto
+    /// da janela aparece uma unica vez (o sono que atravessa a borda entra so com a parte de dentro).
+    /// days[i] e o dia acordado do dia civil (firstDay + i); a janela vai de fromDay ate fromDay + count.
+    /// </summary>
+    public static List<Segment> CivilWindow(IReadOnlyList<DayLayout> days, int firstDay, int fromDay, int count)
+    {
+        int from = fromDay * 1440, to = (fromDay + count) * 1440;
+        var list = new List<Segment>();
+        for (int i = 0; i < days.Count; i++)
+        {
+            int offset = (firstDay + i) * 1440;
+            foreach (var t in days[i].Timeline())
+            {
+                int s = Math.Max(from, offset + t.Start), e = Math.Min(to, offset + t.End);
+                if (e > s) list.Add(new Segment(s - from, e - from, t.Kind));
+            }
+        }
+        list.Sort((a, b) => a.Start.CompareTo(b.Start));
         return list;
     }
 
@@ -416,49 +440,74 @@ public static class DailySchedule
         rs.MaxDeficitMinutes * (500 + p.SleepDebtTolerance) / 1000;
 
     /// <summary>Minutos esperados numa semana tipica (sem feriados, habito e humor neutros): base do "ritmo de jogo".</summary>
-    /// <summary>Previsto de um dia pela rotina (sem humor): chance com o habito, sessao principal e segunda sessao.</summary>
+    /// <summary>Estimativa de um dia pela rotina (sem humor): chance, sessao principal e minutos esperados.</summary>
     public readonly record struct DayExpectation(int ChancePermille, int Start, int Minutes, int ExpectedMinutes);
 
     /// <summary>
-    /// Previsto do dia (D-045), a mesma regra do planejador sem o humor:
-    /// - chance = rotina com o habito proporcional (quem jogou ontem tende a jogar hoje), na
-    ///   frequencia de longo prazo da cadeia "jogou ontem?": a / (1 - b + a);
-    /// - sessao principal na janela da hora preferida, mais longa com tempo livre e importancia;
-    /// - segunda sessao em outra janela, para quem prioriza muito o jogo.
+    /// Estimativa da semana (R2), a mesma regra do planejador sem o humor, calculada dia a dia:
+    /// a chance de cada dia depende de ter jogado na vespera (habito proporcional); a semana real
+    /// (dias uteis, folgas, chances diferentes) e repetida ate estabilizar, e cada dia recebe a sua
+    /// probabilidade de jogar. Probabilidades combinadas e limitadas a 0..1000 so no fim, como no
+    /// planejador. Segunda sessao em outra janela, para quem prioriza muito o jogo. E uma estimativa:
+    /// o humor, o cansaco e as extensoes mudam o real.
     /// </summary>
-    public static DayExpectation Expect(Person p, DayLayout day, RoutineSettingsDefinition rs)
+    public static DayExpectation[] ExpectWeek(Person p, IReadOnlyList<DayLayout> week, RoutineSettingsDefinition rs)
     {
-        if (!PlaceMain(day, p.Traits.PreferredStartHour * 60, DesiredMinutes(p, day, rs), rs, out int window, out int start, out int minutes))
-            return new DayExpectation(0, -1, 0, 0);
-        int baseChance = BaseChance(p, day, rs);
+        int n = week.Count;
+        var placed = new (bool Fits, int Window, int Start, int Minutes)[n];
+        var plus = new long[n];
+        var minus = new long[n];
         int streak = p.Traits.Habit * rs.HabitStreakPermille / 1000;
-        int a = Math.Max(0, baseChance * (1000 - streak) / 1000), b = Math.Min(1000, baseChance * (1000 + streak) / 1000);
-        int chance = 1000 - b + a <= 0 ? 1000 : (int)((long)a * 1000 / (1000 - b + a));
-        long expected = (long)minutes * chance / 1000;
-        int imp = p.Traits.GameImportance;
-        if (rs.MaxSessionsPerDay > 1 && imp > rs.SecondSessionFromImportance)
+        for (int d = 0; d < n; d++)
         {
-            int c2 = (imp - rs.SecondSessionFromImportance) * rs.SecondSessionPermilleAtMax / Math.Max(1, 1000 - rs.SecondSessionFromImportance);
-            int other = -1;
-            for (int i = 0; i < day.Windows.Count; i++)
-            {
-                if (i == window || day.Windows[i].End - day.Windows[i].Start < rs.MinSessionMinutes) continue;
-                if (other < 0 || day.Windows[i].End - day.Windows[i].Start > day.Windows[other].End - day.Windows[other].Start) other = i;
-            }
-            if (other >= 0)
-            {
-                var (s2, e2) = day.Windows[other];
-                int m2 = Math.Min(e2 - s2, Math.Max(rs.MinSessionMinutes, p.Traits.SessionMinutes * rs.SecondSessionDurationPermille / 1000));
-                expected += (long)m2 * chance / 1000 * c2 / 1000;
-            }
+            bool fits = PlaceMain(week[d], p.Traits.PreferredStartHour * 60, DesiredMinutes(p, week[d], rs), rs, out int window, out int start, out int minutes);
+            placed[d] = (fits, window, start, minutes);
+            long b = fits ? BaseChance(p, week[d], rs) : 0;
+            plus[d] = Math.Clamp(b * (1000 + streak) / 1000, 0, 1000);    // jogou ontem
+            minus[d] = Math.Clamp(b * (1000 - streak) / 1000, 0, 1000);   // nao jogou ontem
         }
-        return new DayExpectation(chance, start, minutes, (int)expected);
+        // Probabilidade de ter jogado em cada dia, repetindo a semana ate estabilizar.
+        var played = new double[n];
+        double prev = 0.5;
+        for (int it = 0; it < 60; it++)
+            for (int d = 0; d < n; d++)
+            {
+                played[d] = (plus[d] * prev + minus[d] * (1 - prev)) / 1000.0;
+                prev = played[d];
+            }
+        var result = new DayExpectation[n];
+        int imp = p.Traits.GameImportance;
+        for (int d = 0; d < n; d++)
+        {
+            if (!placed[d].Fits) { result[d] = new DayExpectation(0, -1, 0, 0); continue; }
+            int chance = (int)Math.Round(played[d] * 1000);
+            long expected = (long)placed[d].Minutes * chance / 1000;
+            if (rs.MaxSessionsPerDay > 1 && imp > rs.SecondSessionFromImportance)
+            {
+                var day = week[d];
+                int c2 = (imp - rs.SecondSessionFromImportance) * rs.SecondSessionPermilleAtMax / Math.Max(1, 1000 - rs.SecondSessionFromImportance);
+                int other = -1;
+                for (int i = 0; i < day.Windows.Count; i++)
+                {
+                    if (i == placed[d].Window || day.Windows[i].End - day.Windows[i].Start < rs.MinSessionMinutes) continue;
+                    if (other < 0 || day.Windows[i].End - day.Windows[i].Start > day.Windows[other].End - day.Windows[other].Start) other = i;
+                }
+                if (other >= 0)
+                {
+                    var (s2, e2) = day.Windows[other];
+                    int m2 = Math.Min(e2 - s2, Math.Max(rs.MinSessionMinutes, p.Traits.SessionMinutes * rs.SecondSessionDurationPermille / 1000));
+                    expected += (long)m2 * chance / 1000 * c2 / 1000;
+                }
+            }
+            result[d] = new DayExpectation(chance, placed[d].Start, placed[d].Minutes, (int)expected);
+        }
+        return result;
     }
 
+    /// <summary>Estimativa semanal pela rotina tipica (sem feriados), em minutos.</summary>
     public static int ExpectedWeeklyMinutes(Person p, OccupationDefinition? occ, RoutineSettingsDefinition rs)
     {
-        long total = 0;
-        for (int dow = 0; dow < 7; dow++) total += Expect(p, Build(p, occ, rs, dow, false, false, false), rs).ExpectedMinutes;
-        return (int)total;
+        var week = Enumerable.Range(0, 7).Select(d => Build(p, occ, rs, d, false, false, false)).ToList();
+        return ExpectWeek(p, week, rs).Sum(x => x.ExpectedMinutes);
     }
 }
