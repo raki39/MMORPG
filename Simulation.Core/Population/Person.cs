@@ -240,6 +240,12 @@ public sealed class Person
     /// dia montado nunca mudar depois. Dia passado que nunca foi planejado: sem recuperacao.
     /// </summary>
     internal SortedDictionary<long, int> RecoveryByDay { get; } = new();
+    /// <summary>
+    /// Corte de sono ja usado no periodo de sono que comeca em SleepCutBedTick (R3): o teto por noite
+    /// e compartilhado por todas as sessoes que afetam o mesmo periodo.
+    /// </summary>
+    public long SleepCutBedTick { get; internal set; } = -1;
+    public int SleepCutUsedMinutes { get; internal set; }
     /// <summary>Ultima saida do jogo (tick): se passou da hora de deitar, o sono real comeca nela (R1).</summary>
     public long LastLogoutTick { get; internal set; } = -1;
     /// <summary>Sono perdido para o jogo: na ultima noite e no total.</summary>

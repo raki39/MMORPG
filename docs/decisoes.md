@@ -1497,3 +1497,74 @@ O teste "ninguém começa a sessão durante uma obrigação" agora aceita sobrep
 - Noite com corte mantém o sono mínimo.
 - Chamado do trabalho com tolerância própria.
 - Probabilidade limitada só no fim, e a estimativa dia a dia.
+
+## D-049 — R3: medição de distribuições (referência antes da R4) e corte de sono por período
+**Data:** 05/11/2026 · **Estado:** aceita
+
+**Corte de sono** (observações do criador):
+- **Onde pode cortar:** só a janela que termina **por causa do sono** (exatamente na hora de deitar, sem turno da noite) pode avançar sobre ele. Janela que termina por obrigação, preparo, deslocamento ou compromisso nunca avança, porque o limite absoluto dela é o próprio fim.
+- **Teto compartilhado:** os 180 minutos por período de sono são compartilhados por todas as sessões que afetam o mesmo período. A pessoa guarda o período (`SleepCutBedTick`) e o que já foi cortado nele (`SleepCutUsedMinutes`), e o corte autorizado de uma nova sessão desconta isso. `StateHasher` v17.
+- **Teste:** em 28 dias com 900 pessoas, toda sessão que passou da hora de deitar estava numa janela que termina no sono, e a soma por período nunca passou de 180 min.
+
+**R3 — relatório de distribuições** (`validation.md`, seção "Distribuições"), medido na campanha completa com as seeds somadas:
+- **Duração das sessões:** percentis 10, 25, 50, 75 e 90, máximo e média por perfil. Pausa e escapada do trabalho à parte.
+- **Horas por semana:** perfil × ocupação, por pessoa registrada.
+- **Sessões por dia de jogo:** uma, duas, três ou mais, e o intervalo entre sessões do mesmo dia.
+- **Uso do tempo livre:** quanto vira jogo, por perfil e por ocupação.
+- **Composição do tempo jogado:** extensões, jogo no trabalho e sono cortado.
+- **Dias sem sessão principal por motivo:** sem oportunidade, escolha, cansaço, desânimo, inativo, só no trabalho.
+- **Efeito do tempo livre, separado:** por faixa de tempo livre, a frequência de jogo e a duração planejada medidas à parte.
+- **Referência:** guardada em `docs/baselines/pre-R4/`. Nenhum peso de vontade foi mexido; a calibração fica para depois da R4, comparando com ela.
+
+**Números da referência** (campanha completa, 5 seeds):
+
+- **Duração das sessões** (mediana / p90):
+
+  | Perfil | Mediana | p90 |
+  |---|---:|---:|
+  | Casual | 117 min | 157 min |
+  | Comerciante | 145 min | 195 min |
+  | Social | 168 min | 228 min |
+  | Explorador | 185 min | 248 min |
+  | Competitivo | 235 min | 326 min |
+  | Hardcore | 340 min | 526 min |
+
+  - O hardcore chega a 853 min de máximo: confirma o ponto do criador de que a "sessão base" ampliada pelo tempo livre fica longa demais.
+  - Pausa no trabalho: mediana de 54 min; escapada: 23 min.
+- **Uso do tempo livre:**
+
+  | Perfil | Uso |
+  |---|---:|
+  | Casual | 8,5% |
+  | Comerciante | 15,9% |
+  | Social | 16,0% |
+  | Explorador | 20,2% |
+  | Competitivo | 29,2% |
+  | Hardcore | 53,5% |
+
+  Por ocupação, de 13% (trabalha e estuda) a 22% (escala 6×1).
+- **Sessões por dia de jogo:** 98,1% com uma, 1,9% com duas, 0,1% com três ou mais. Mediana de 310 min entre duas sessões do mesmo dia.
+- **Composição do tempo jogado:** extensões 1,1%; pausa e escapada do trabalho 0,6%; sono cortado 0,6%.
+- **Dias sem sessão principal** (43% da agenda):
+
+  | Motivo | Parcela |
+  |---|---:|
+  | Escolha (outro lazer) | 88,5% |
+  | Sem oportunidade | 7,0% |
+  | Inativo | 1,9% |
+  | Só no trabalho | 1,5% |
+  | Cansaço | 1,1% |
+
+- **Efeito do tempo livre:** ele aumenta as duas coisas ao mesmo tempo, como o criador apontou.
+
+  | Tempo livre no dia | Jogou | Duração planejada |
+  |---|---:|---:|
+  | 2–4 h | 43,5% | 146 min |
+  | 10 h ou mais | 71,6% | 210 min |
+
+- **Corte de sono:** 3.406 períodos encurtados; mediana de 81 min, p90 e máximo de 180 min (o teto).
+- **Para a R4:**
+  - a sessão base ampliada demais, sobretudo no hardcore;
+  - o tempo livre pesando duas vezes;
+  - quase nunca há segunda sessão (1,9%);
+  - os dias sem jogo são quase todos "escolha", sem variação de disposição.

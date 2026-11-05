@@ -77,6 +77,31 @@ public class SessionLimitTests
         Assert.True(cutChecked > 5, $"sessões que avançaram sobre o sono: {cutChecked}");
     }
 
+    /// <summary>
+    /// O teto de corte de sono e por periodo de sono, compartilhado por todas as sessoes que o
+    /// afetam; e so a janela que termina na hora de deitar pode avancar sobre o sono.
+    /// </summary>
+    [Fact]
+    public void CorteDeSono_CompartilhadoPorPeriodo_ESoNaJanelaQueTerminaNoSono()
+    {
+        var (sessions, w) = Run(34, 900, 28);
+        var byPeriod = new Dictionary<(int Person, long Bed), int>();
+        foreach (var s in sessions.Where(x => x.Kind == "normal"))
+        {
+            var (d, day, start) = WakingDay(w, s.P, s.Start);
+            int end = start + (int)((s.End - s.Start) / SimTime.TicksPerMinute);
+            if (end <= day.Bed) continue;
+            // Avancou sobre o sono: a janela da sessao termina na hora de deitar (nao em obrigacao, preparo,
+            // deslocamento ou compromisso) e o dia nao termina saindo para um turno.
+            Assert.False(day.NightShiftAhead);
+            Assert.Contains(day.Windows, x => start >= x.Start && start < x.End && x.End == day.Bed);
+            var key = (s.P.Id, BehaviorSystem.LocalDayStart(s.P, d) + day.Bed * SimTime.TicksPerMinute);
+            byPeriod[key] = byPeriod.GetValueOrDefault(key) + end - Math.Max(day.Bed, start);
+        }
+        Assert.NotEmpty(byPeriod);
+        Assert.All(byPeriod, kv => Assert.True(kv.Value <= RS.MaxSleepCutMinutes, $"pessoa {kv.Key.Person}: {kv.Value} min cortados no mesmo período"));
+    }
+
     [Fact]
     public void NoiteComCorteDeSono_MantemOSonoMinimo()
     {

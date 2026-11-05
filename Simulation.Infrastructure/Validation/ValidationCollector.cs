@@ -43,6 +43,8 @@ public sealed class RunMetrics
     public List<int> QuitDays { get; } = new();
     public List<int> QuitLevels { get; } = new();
     public long SessionsExtended { get; set; }
+    /// <summary>Distribuicoes (R3).</summary>
+    public DistributionData Distribution { get; } = new();
     /// <summary>Sono e trabalho (P3/D-044), contagens na janela: extensoes por motivo e com sono cortado,
     /// noites encurtadas e minutos cortados, sessoes na pausa e escapadas, chamados do trabalho.</summary>
     public SortedDictionary<string, double> SleepWork { get; } = new(StringComparer.Ordinal);
@@ -51,6 +53,27 @@ public sealed class RunMetrics
     public long GreatSessions { get; set; }
     public long BadSessions { get; set; }
     public long RatedSessions { get; set; }
+}
+
+/// <summary>Uma sessao fechada na janela de medicao (R3): quem, quando, quanto e quanto foi estendido.</summary>
+public sealed record SessionSample(int PersonId, string Profile, string Occupation, string Kind, long Start, long End, int ExtendedMinutes, long LocalDay)
+{
+    public int Minutes => (int)((End - Start) / SimTime.TicksPerMinute);
+}
+
+/// <summary>Um dia da agenda (R3), na janela de medicao.</summary>
+public sealed record DaySample(int PersonId, string Profile, string Occupation, long LocalDay, int FreeMinutes, int PlannedMinutes, int Sessions, int WorkSessions, string Reason);
+
+/// <summary>Medicao de distribuicoes (R3): referencia antes de mudar a vontade de jogar (R4).</summary>
+public sealed class DistributionData
+{
+    public List<SessionSample> Sessions { get; } = new();
+    public List<DaySample> Days { get; } = new();
+    /// <summary>Pessoas registradas por (perfil, ocupacao).</summary>
+    public Dictionary<(string Profile, string Occupation), int> Persons { get; } = new();
+    public double Weeks { get; set; }
+    /// <summary>Sono cortado pelo jogo por periodo de sono (minutos somados das sessoes do periodo).</summary>
+    public List<int> SleepCutPerPeriod { get; } = new();
 }
 
 public sealed class OccupationStats
@@ -148,6 +171,10 @@ public sealed class ValidationCollector
     private readonly Dictionary<long, int> _extByPerson = new(), _breakByPerson = new(), _slackByPerson = new();
     private readonly Dictionary<long, long> _cutByPerson = new();
     private readonly SortedDictionary<string, double> _sleepWork = new(StringComparer.Ordinal);
+    // R3: sessoes abertas (inicio, tipo, minutos estendidos) e fechadas na janela; corte por periodo de sono.
+    private readonly Dictionary<long, (long Start, string Kind, int Extended)> _r3Open = new();
+    private readonly List<SessionSample> _r3Sessions = new();
+    private readonly Dictionary<(long Person, long LocalDay), int> _r3CutByNight = new();
     private void CountSleepWork(string key, double amount = 1) => _sleepWork[key] = _sleepWork.GetValueOrDefault(key) + amount;
 
     public ValidationCollector(ContentDatabase content, int warmupDays)
@@ -176,6 +203,7 @@ public sealed class ValidationCollector
                 {
                     long pid = e.Entities[0].Id;
                     _openSession[pid] = e.Tick;
+                    _r3Open[pid] = (e.Tick, e.Causes.Count > 0 ? e.Causes[0].Factor : "normal", 0);
                     long cid = w.GetPerson((int)pid).CharacterId;
                     if (_lastChoice.Remove(cid, out var prev) && prev.Run > 0 && e.Tick >= _windowStart) _runs.Add(prev.Run);
                     if (e.Tick < _windowStart) break;
@@ -203,6 +231,12 @@ public sealed class ValidationCollector
                 case "session_ended":
                 {
                     long pid = e.Entities[0].Id;
+                    if (_r3Open.Remove(pid, out var r3) && r3.Start >= _windowStart)
+                    {
+                        var who = w.GetPerson((int)pid);
+                        _r3Sessions.Add(new SessionSample((int)pid, who.ProfileId, who.OccupationId, r3.Kind, r3.Start, e.Tick, r3.Extended,
+                            Simulation.Core.Behavior.BehaviorSystem.LocalDay(who, r3.Start)));
+                    }
                     if (_openSession.Remove(pid, out long start)) AddPlayed(pid, start, e.Tick);
                     if (e.Tick >= _windowStart) _rated++;
                     if (e.Tick >= _windowStart && e.Causes.Count > 0 && e.Causes[0].Factor == "frustration") _rage++;
@@ -247,6 +281,8 @@ public sealed class ValidationCollector
                     if (e.Tick < _windowStart) break;
                     _extended++;
                     _extByPerson[e.Entities[0].Id] = _extByPerson.GetValueOrDefault(e.Entities[0].Id) + 1;
+                    if (_r3Open.TryGetValue(e.Entities[0].Id, out var openR3) && int.TryParse((e.Detail ?? "").Trim('+', ' ', 'm', 'i', 'n'), out int extMin))
+                        _r3Open[e.Entities[0].Id] = (openR3.Start, openR3.Kind, openR3.Extended + extMin);
                     if (e.Causes.Count > 0) CountSleepWork("ext_" + e.Causes[0].Factor);
                     if (e.Causes.Any(c => c.Factor == "sleep_cut")) CountSleepWork("ext_sleep_cut");
                     break;
@@ -255,6 +291,10 @@ public sealed class ValidationCollector
                     if (e.Tick < _windowStart) break;
                     int cut = e.Causes.Count > 1 ? e.Causes[1].WeightPermille : 0;
                     _cutByPerson[e.Entities[0].Id] = _cutByPerson.GetValueOrDefault(e.Entities[0].Id) + cut;
+                    var sleeper = w.GetPerson((int)e.Entities[0].Id);
+                    // O periodo de sono e a noite que comeca no dia acordado da saida (local, antes do amanhecer = dia anterior).
+                    long night = Simulation.Core.Behavior.BehaviorSystem.LocalDay(sleeper, e.Tick - 6 * SimTime.TicksPerHour);
+                    _r3CutByNight[(e.Entities[0].Id, night)] = _r3CutByNight.GetValueOrDefault((e.Entities[0].Id, night)) + cut;
                     CountSleepWork("late_nights");
                     CountSleepWork("late_minutes", cut);
                     break;
@@ -447,6 +487,21 @@ public sealed class ValidationCollector
         m.QuitDays.AddRange(_quitDays);
         m.QuitLevels.AddRange(_quitLevels);
         m.SessionsExtended = _extended;
+        // ---- R3: distribuicoes ----
+        var dist = m.Distribution;
+        dist.Weeks = weeks;
+        dist.Sessions.AddRange(_r3Sessions);
+        dist.SleepCutPerPeriod.AddRange(_r3CutByNight.Values);
+        long windowDay = _windowStart / SimTime.TicksPerDay;
+        foreach (var c in chars)
+        {
+            var p = w.GetPerson(c.PersonId);
+            var key = (p.ProfileId, p.OccupationId);
+            dist.Persons[key] = dist.Persons.GetValueOrDefault(key) + 1;
+            foreach (var d in p.DayPlans)
+                if (d.LocalDay >= windowDay)
+                    dist.Days.Add(new DaySample(p.Id, p.ProfileId, p.OccupationId, d.LocalDay, d.FreeMinutes, d.PlannedMinutes, d.Sessions, d.WorkSessions, d.Reason));
+        }
         foreach (var kv in _sleepWork) m.SleepWork[kv.Key] = kv.Value;
         m.SleepWork["sessions"] = _sessionsInWindow.Values.Sum();
         m.RageQuits = _rage;

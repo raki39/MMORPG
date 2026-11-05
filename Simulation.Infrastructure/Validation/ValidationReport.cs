@@ -225,6 +225,9 @@ public static class ValidationReport
             }
         }
 
+        // ---- Distribuicoes (R3) ----
+        if (runs.All(r => r.Distribution.Sessions.Count > 0)) sb.Append(DistributionSection(content, runs));
+
         // ---- Localidades (P1) ----
         if (runs[0].Localities.Count > 0)
         {
@@ -415,6 +418,125 @@ public static class ValidationReport
         ActivityTypes.Boss => "Chefe",
         _ => type,
     };
+
+    /// <summary>
+    /// Distribuicoes (R3): referencia medida antes de mudar a vontade de jogar (R4). Junta as seeds
+    /// (amostras somadas), na janela de medicao, campanha completa.
+    /// </summary>
+    private static string DistributionSection(ContentDatabase content, IReadOnlyList<RunMetrics> runs)
+    {
+        var sb = new StringBuilder();
+        var all = runs.SelectMany(r => r.Distribution.Sessions).ToList();
+        var normal = all.Where(s => s.Kind == "normal").ToList();
+        var days = runs.SelectMany(r => r.Distribution.Days).ToList();
+        double weeks = runs[0].Distribution.Weeks;
+        string P(List<double> v, double q) => Fmt(ValidationCollector.Percentile(v, q));
+        string ProfileName(string id) => content.Profiles.TryGetValue(id, out var pr) ? pr.Name : id;
+        sb.Append("\n## Distribuições (R3: referência antes de mudar a vontade de jogar)\n\n");
+        sb.Append("Medição da campanha completa (com humor), seeds somadas, na janela de medição. Serve de referência corrigida (depois da R1 e da R2) para comparar a R4. Nada foi recalibrado.\n\n");
+
+        // Duracao das sessoes
+        sb.Append("**Duração das sessões (minutos, sessões normais).** Inclui extensões e o fim real; pausa e escapada do trabalho à parte.\n\n");
+        sb.Append("| Perfil | Sessões | p10 | p25 | Mediana | p75 | p90 | Máx. | Média |\n|---|---:|---:|---:|---:|---:|---:|---:|---:|\n");
+        foreach (var g in normal.GroupBy(s => s.Profile).OrderBy(g => ProfileName(g.Key), StringComparer.Ordinal))
+        {
+            var v = g.Select(s => (double)s.Minutes).ToList();
+            sb.Append($"| {ProfileName(g.Key)} | {N(v.Count)} | {P(v, 0.1)} | {P(v, 0.25)} | {P(v, 0.5)} | {P(v, 0.75)} | {P(v, 0.9)} | {Fmt(v.Max())} | {Fmt(v.Average())} |\n");
+        }
+        foreach (var (kind, label) in new[] { ("work_break", "Pausa no trabalho"), ("during_work", "Escapada no expediente") })
+        {
+            var v = all.Where(s => s.Kind == kind).Select(s => (double)s.Minutes).ToList();
+            if (v.Count > 0) sb.Append($"| {label} | {N(v.Count)} | {P(v, 0.1)} | {P(v, 0.25)} | {P(v, 0.5)} | {P(v, 0.75)} | {P(v, 0.9)} | {Fmt(v.Max())} | {Fmt(v.Average())} |\n");
+        }
+
+        // Horas por semana: perfil x ocupacao
+        var profiles = content.ProfilesOrdered.Select(p => p.Id).ToList();
+        var persons = new Dictionary<(string, string), int>();
+        foreach (var r in runs) foreach (var kv in r.Distribution.Persons) persons[kv.Key] = persons.GetValueOrDefault(kv.Key) + kv.Value;
+        var minutesBy = all.GroupBy(s => (s.Profile, s.Occupation)).ToDictionary(g => g.Key, g => g.Sum(s => (double)s.Minutes));
+        sb.Append("\n**Horas por semana, perfil × ocupação** (por pessoa registrada; \"—\" com menos de 10 pessoas na soma das seeds).\n\n");
+        sb.Append("| Ocupação | " + string.Join(" | ", profiles.Select(ProfileName)) + " |\n|---|" + string.Concat(profiles.Select(_ => "---:|")) + "\n");
+        foreach (var o in content.OccupationsOrdered)
+        {
+            sb.Append($"| {o.Name} |");
+            foreach (var pr in profiles)
+            {
+                int n = persons.GetValueOrDefault((pr, o.Id));
+                double h = n < 10 ? double.NaN : minutesBy.GetValueOrDefault((pr, o.Id)) / 60.0 / n / weeks;
+                sb.Append($" {Fmt(h)} |");
+            }
+            sb.Append("\n");
+        }
+
+        // Sessoes por dia e intervalo
+        // Agrupamentos por seed (a mesma pessoa e o mesmo dia existem em cada seed).
+        var perDay = runs.SelectMany((r, i) => r.Distribution.Sessions.Select(x => (Run: i, S: x)))
+            .GroupBy(t => (t.Run, t.S.PersonId, t.S.LocalDay)).Select(g => g.Select(t => t.S).ToList()).ToList();
+        int one = perDay.Count(g => g.Count == 1), two = perDay.Count(g => g.Count == 2), more = perDay.Count(g => g.Count >= 3);
+        var gaps = new List<double>();
+        foreach (var g in perDay.Where(g => g.Count > 1))
+        {
+            var ordered = g.OrderBy(s => s.Start).ToList();
+            for (int i = 1; i < ordered.Count; i++) gaps.Add((ordered[i].Start - ordered[i - 1].End) / (double)SimTime.TicksPerMinute);
+        }
+        sb.Append($"\n**Sessões por dia de jogo:** {Pct(one, perDay.Count)} com uma, {Pct(two, perDay.Count)} com duas, {Pct(more, perDay.Count)} com três ou mais. ");
+        sb.Append(gaps.Count > 0 ? $"Intervalo entre sessões do mesmo dia: mediana {P(gaps, 0.5)} min, p90 {P(gaps, 0.9)} min.\n" : "\n");
+
+        // Uso do tempo livre
+        var playedByDay = runs.SelectMany((r, i) => r.Distribution.Sessions.Select(x => (Run: i, S: x)))
+            .GroupBy(t => (t.Run, t.S.PersonId, t.S.LocalDay)).ToDictionary(g => g.Key, g => g.Sum(t => t.S.Minutes));
+        var daysR = runs.SelectMany((r, i) => r.Distribution.Days.Select(d => (Run: i, D: d))).ToList();
+        int Played((int Run, DaySample D) t) => playedByDay.GetValueOrDefault((t.Run, t.D.PersonId, t.D.LocalDay));
+        string Use(IEnumerable<(int Run, DaySample D)> ds)
+        {
+            var list = ds.ToList();
+            long free = list.Sum(t => (long)t.D.FreeMinutes);
+            long played = list.Sum(t => (long)Played(t));
+            return free == 0 ? "—" : Pct(played, free);
+        }
+        sb.Append("\n**Quanto do tempo livre vira jogo** (minutos jogados ÷ minutos livres da agenda; o jogo no trabalho e as extensões entram no jogado).\n\n| Perfil | Uso |\n|---|---:|\n");
+        foreach (var pr in profiles) sb.Append($"| {ProfileName(pr)} | {Use(daysR.Where(t => t.D.Profile == pr))} |\n");
+        sb.Append("\n| Ocupação | Uso |\n|---|---:|\n");
+        foreach (var o in content.OccupationsOrdered) sb.Append($"| {o.Name} | {Use(daysR.Where(t => t.D.Occupation == o.Id))} |\n");
+
+        // Composicao do tempo jogado
+        double total = all.Sum(s => (double)s.Minutes);
+        double ext = all.Sum(s => (double)s.ExtendedMinutes);
+        double work = all.Where(s => s.Kind is "work_break" or "during_work").Sum(s => (double)s.Minutes);
+        var cuts = runs.SelectMany(r => r.Distribution.SleepCutPerPeriod).Select(x => (double)x).ToList();
+        sb.Append($"\n**Composição do tempo jogado:** {Fmt(total / 60)} h no total; extensões {Pct((long)ext, (long)total)}; pausa e escapada do trabalho {Pct((long)work, (long)total)}; sono cortado pelo jogo {Fmt(cuts.Sum() / 60)} h ({Pct((long)cuts.Sum(), (long)total)} do tempo jogado).\n");
+
+        // Dias sem jogo
+        var noPlay = days.Where(d => d.Sessions == 0).ToList();
+        int workOnly = noPlay.Count(d => d.WorkSessions > 0);
+        sb.Append($"\n**Dias sem sessão principal** ({Pct(noPlay.Count, days.Count)} dos dias da agenda):\n\n| Motivo | Parcela dos dias sem sessão |\n|---|---:|\n");
+        foreach (var (key, label) in new[] { ("no_free_time", "Sem oportunidade (nenhuma janela comporta uma sessão)"), ("other_leisure", "Escolha: tinha tempo, preferiu outro lazer"), ("tired", "Cansaço"), ("low_engagement", "Desânimo (engajamento baixo)"), ("inactive", "Inativo") })
+        {
+            int n = noPlay.Count(d => d.Reason == key && d.WorkSessions == 0);
+            if (n > 0) sb.Append($"| {label} | {Pct(n, noPlay.Count)} |\n");
+        }
+        if (workOnly > 0) sb.Append($"| Jogou só no horário de trabalho | {Pct(workOnly, noPlay.Count)} |\n");
+
+        // Efeito separado do tempo livre
+        sb.Append("\n**Efeito do tempo livre, separado** (dias da agenda por faixa de tempo livre): a frequência (chance de jogar) e a duração (minutos planejados quando joga) medidas à parte.\n\n");
+        sb.Append("| Tempo livre no dia | Dias | Jogou | Duração planejada quando joga | Jogado por dia |\n|---|---:|---:|---:|---:|\n");
+        foreach (var (lo, hi, label) in new[] { (0, 120, "até 2 h"), (120, 240, "2–4 h"), (240, 360, "4–6 h"), (360, 600, "6–10 h"), (600, 100000, "10 h ou mais") })
+        {
+            var b = daysR.Where(t => t.D.FreeMinutes >= lo && t.D.FreeMinutes < hi).ToList();
+            if (b.Count == 0) continue;
+            var withPlay = b.Where(t => t.D.Sessions > 0).ToList();
+            double perDayPlayed = b.Average(t => (double)Played(t));
+            sb.Append($"| {label} | {N(b.Count)} | {Pct(withPlay.Count, b.Count)} | {(withPlay.Count == 0 ? "—" : Fmt(withPlay.Average(t => (double)t.D.PlannedMinutes)) + " min")} | {Fmt(perDayPlayed)} min |\n");
+        }
+
+        // Corte de sono
+        sb.Append("\n**Corte de sono (observações do criador, R2/R3).**\n\n");
+        sb.Append("- **Onde pode cortar:** só a janela que termina **por causa do sono** avança sobre ele. Janela que termina por obrigação, preparo, deslocamento ou compromisso não avança (teste).\n");
+        sb.Append("- **Teto compartilhado:** os 180 minutos por período de sono valem para a soma de todas as sessões que afetam aquele período (teste).\n");
+        if (cuts.Count > 0)
+            sb.Append($"- **Medido:** {N(cuts.Count)} períodos de sono encurtados pelo jogo; corte por período: mediana {P(cuts, 0.5)} min, p90 {P(cuts, 0.9)} min, máximo {Fmt(cuts.Max())} min.\n");
+        return sb.ToString();
+    }
 
     private static double Avg(IEnumerable<double> values)
     {

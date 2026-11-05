@@ -11,7 +11,7 @@ namespace Simulation.Core.World;
 /// </summary>
 public static class StateHasher
 {
-    public const int FormatVersion = 16;
+    public const int FormatVersion = 17;
 
     public static string Compute(WorldState w) => Compute(w, includeContentId: true);
 
@@ -146,7 +146,7 @@ public static class StateHasher
         h.Str(p.OccupationId); h.Int(p.ShiftOffsetMinutes); h.Int(p.CommutePermille); h.Int(p.DayOffIndex); h.Int(p.DayOff2Index);
         h.Int(p.SleepNeedMinutes); h.Int(p.BedtimeMinute); h.Long(p.IncomeCentsPerMonth); h.Long(p.SupportCentsPerMonth);
         h.Int(p.ExpectedWeeklyMinutes); h.Long(p.LastPlayedLocalDay);
-        h.Int(p.SleepDebtTolerance); h.Int(p.SleepDeficitMinutes); h.Int(p.LastSleepCutMinutes); h.Int(p.SleepCutTotalMinutes); h.Long(p.LastLogoutTick);
+        h.Int(p.SleepDebtTolerance); h.Int(p.SleepDeficitMinutes); h.Int(p.LastSleepCutMinutes); h.Int(p.SleepCutTotalMinutes); h.Long(p.LastLogoutTick); h.Long(p.SleepCutBedTick); h.Int(p.SleepCutUsedMinutes);
         h.Int(p.RecoveryByDay.Count);
         foreach (var (rd, rm) in p.RecoveryByDay) { h.Long(rd); h.Int(rm); }
         h.Int(p.DayPlans.Count);

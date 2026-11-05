@@ -674,6 +674,19 @@ public sealed class BehaviorSystem
         if (ch.Status == CharacterStatus.Doing) AddActivityTime(ch, ActivityTypeOf(ch), Now - ch.ActivityStartTick);
         _exp.OnSessionEnd(p, ch, Now);   // nota da sessao, satisfacao e frustracao (D-038)
         p.LastLogoutTick = Now;
+        // Corte de sono compartilhado (R3): quanto desta sessao avancou sobre o periodo de sono da janela.
+        if (ch.SessionKind == SessionNormal)
+        {
+            long bedTick = -1;
+            foreach (var (s, e, atBed) in p.OpenWindows)
+                if (atBed && s <= ch.SessionStartTick && ch.SessionStartTick < e) bedTick = e;
+            if (bedTick > 0 && Now > bedTick)
+            {
+                int cut = (int)((Now - Math.Max(bedTick, ch.SessionStartTick)) / SimTime.TicksPerMinute);
+                if (p.SleepCutBedTick != bedTick) { p.SleepCutBedTick = bedTick; p.SleepCutUsedMinutes = 0; }
+                p.SleepCutUsedMinutes += cut;
+            }
+        }
         if (ch.SleepCutStartTick > 0 && Now > ch.SleepCutStartTick)
         {
             // Ficou acordado jogando (P3): informa o motivo; o sono perdido entra no deficit uma vez,
@@ -731,7 +744,9 @@ public sealed class BehaviorSystem
             int plannedSleep = next.Wake - next.SleepStart;
             int shortfall = Math.Max(0, p.SleepNeedMinutes - plannedSleep);
             int byDeficit = DailySchedule.MaxDeficit(p, rs) - p.SleepDeficitMinutes - shortfall;
-            return Math.Max(0, Math.Min(rs.MaxSleepCutMinutes, Math.Min(byDeficit, plannedSleep - rs.MinSleepMinutes)));
+            // O teto por noite e compartilhado: o que outra sessao ja cortou deste mesmo periodo sai do total.
+            int used = p.SleepCutBedTick == bedTick ? p.SleepCutUsedMinutes : 0;
+            return Math.Max(0, Math.Min(rs.MaxSleepCutMinutes, Math.Min(byDeficit, plannedSleep - rs.MinSleepMinutes)) - used);
         }
         return 0;
     }
