@@ -78,11 +78,33 @@ public sealed record CharacterDetailView(int PersonId, long PlayedTicks, IReadOn
     public IReadOnlyDictionary<string, int> Boredom { get; init; } = new Dictionary<string, int>();
     /// <summary>Agenda dos ultimos dias (P2), mais recente no fim.</summary>
     public IReadOnlyList<DayPlanRecord> DayPlans { get; init; } = Array.Empty<DayPlanRecord>();
+    /// <summary>Sono (P3): deficit acumulado e sono perdido para o jogo (ultima noite e total).</summary>
+    public int SleepDeficitMinutes { get; init; }
+    public int LastSleepCutMinutes { get; init; }
+    public int SleepCutTotalMinutes { get; init; }
 }
 
 /// <summary>Um dia da semana tipica (P2): obrigacoes, acordar, dormir e janelas livres (minutos locais).</summary>
 public sealed record WeekDayView(int Dow, IReadOnlyList<(int Start, int End, string Label)> Obligations, int Wake, int Bed,
-    IReadOnlyList<(int Start, int End)> Windows, int FreeMinutes, bool FreeDay);
+    IReadOnlyList<(int Start, int End)> Windows, int FreeMinutes, bool FreeDay)
+{
+    /// <summary>
+    /// O dia de 0 a 24 h em trechos (para a agenda grafica): sleep, free, work, study, care,
+    /// remote (trabalho remoto), break (pausa do remoto) e commute. Inclui o que vem da vespera
+    /// (sono que comecou antes da meia-noite, turno que a atravessa, janela que passa dela).
+    /// </summary>
+    public IReadOnlyList<(int Start, int End, string Kind)> Segments { get; init; } = Array.Empty<(int, int, string)>();
+    public int ObligationMinutes { get; init; }
+    public int CommuteMinutes { get; init; }
+    public int SleepMinutes { get; init; }
+    /// <summary>Blocos de obrigacao do dia (horario desta pessoa), se e remoto e o deslocamento por trecho.</summary>
+    public IReadOnlyList<(int Start, int End, string Label, bool Remote, int Commute)> Blocks { get; init; } = Array.Empty<(int, int, string, bool, int)>();
+    /// <summary>Previsto pela rotina (sem humor nem habito): chance de jogar, sessao que cabe e minutos esperados.</summary>
+    public int ChancePermille { get; init; }
+    public int PlannedStart { get; init; } = -1;
+    public int PlannedMinutes { get; init; }
+    public int ExpectedMinutes { get; init; }
+}
 
 /// <summary>Humor da pessoa (copia imutavel, D-038).</summary>
 public sealed record MoodView(int Satisfaction, int Frustration, int Novelty, int Engagement, int ReturnIntention,
@@ -152,6 +174,8 @@ public sealed class PersonInfo
     public long IncomeCentsPerMonth { get; init; }
     public long SupportCentsPerMonth { get; init; }
     public int ExpectedWeeklyMinutes { get; init; }
+    /// <summary>Tolerancia temporaria ao deficit de sono (permille, P3).</summary>
+    public int SleepDebtTolerance { get; init; }
     public IReadOnlyList<WeekDayView> Week { get; init; } = Array.Empty<WeekDayView>();
 }
 
@@ -220,7 +244,7 @@ public sealed class SimulationHost : IDisposable
                 ResidenceId = p.ResidenceId, NationalityId = p.NationalityId, Languages = p.Languages, LocalOffsetMinutes = p.LocalOffsetMinutes,
                 OccupationId = p.OccupationId, SleepNeedMinutes = p.SleepNeedMinutes, BedtimeMinute = p.BedtimeMinute,
                 IncomeCentsPerMonth = p.IncomeCentsPerMonth, SupportCentsPerMonth = p.SupportCentsPerMonth, ExpectedWeeklyMinutes = p.ExpectedWeeklyMinutes,
-                Week = WeekOf(p) })
+                SleepDebtTolerance = p.SleepDebtTolerance, Week = WeekOf(p) })
             .ToArray();
         Calendar = _engine.World.Clock.Calendar;
         _snapshot = BuildSnapshot(-1);
@@ -396,6 +420,9 @@ public sealed class SimulationHost : IDisposable
                     .Select(kv => (kv.Key, kv.Value)).Distinct().ToArray(),
                 Boredom = c.BoredomByType.ToDictionary(kv => kv.Key, kv => kv.Value, StringComparer.Ordinal),
                 DayPlans = pw.DayPlans.ToArray(),
+                SleepDeficitMinutes = pw.SleepDeficitMinutes,
+                LastSleepCutMinutes = pw.LastSleepCutMinutes,
+                SleepCutTotalMinutes = pw.SleepCutTotalMinutes,
             };
         }
         return new SimSnapshot
@@ -423,11 +450,54 @@ public sealed class SimulationHost : IDisposable
         var content = _engine.World.Content;
         var occ = content.Occupations.TryGetValue(p.OccupationId, out var o) ? o : null;
         var list = new List<WeekDayView>();
+        var days = Enumerable.Range(0, 7).Select(d => Simulation.Core.Behavior.DailySchedule.Build(p, occ, content.Routine, d, false, false, false)).ToArray();
+        static string KindOf(string label, bool remote) => remote ? "remote" : label switch { "estudo" => "study", "cuidados" => "care", _ => "work" };
         for (int dow = 0; dow < 7; dow++)
         {
-            var day = Simulation.Core.Behavior.DailySchedule.Build(p, occ, content.Routine, dow, false, false, false);
+            var day = days[dow];
+            var prev = days[(dow + 6) % 7];
             var obligations = Simulation.Core.Behavior.DailySchedule.Obligations(p, occ, dow, false).Select(x => (x.Start, x.End, x.Label)).ToArray();
-            list.Add(new WeekDayView(dow, obligations, day.Wake, day.Bed, day.Windows.ToArray(), day.FreeMinutes, day.FreeDay));
+            var segs = new List<(int Start, int End, string Kind)>();
+            void Add(int s, int e, string kind)
+            {
+                s = Math.Max(0, s);
+                e = Math.Min(1440, e);
+                if (e > s) segs.Add((s, e, kind));
+            }
+            foreach (var (s, e) in prev.Windows) if (e > 1440) Add(s - 1440, e - 1440, "free");   // a noite de ontem passou da meia-noite
+            foreach (var (s, e) in day.Windows) Add(s, e, "free");
+            if (day.DaySleeper) Add(day.Wake - p.SleepNeedMinutes - day.RecoveryMinutes, day.Wake, "sleep");   // dorme depois do turno
+            else if (!prev.NightShiftAhead) Add(prev.Bed - 1440, day.Wake, "sleep");
+            if (!day.NightShiftAhead) Add(day.Bed, 1440, "sleep");
+            int commute = 0, obligation = 0;
+            foreach (var b in Simulation.Core.Behavior.DailySchedule.Blocks(p, occ, (dow + 6) % 7, false))
+                if (b.End > 1440)
+                {
+                    Add(0, b.End - 1440, KindOf(b.Label, b.Def.Remote));
+                    Add(b.End - 1440, b.End - 1440 + b.Commute, "commute");
+                }
+            foreach (var b in Simulation.Core.Behavior.DailySchedule.Blocks(p, occ, dow, false))
+            {
+                Add(b.Start - b.Commute, b.Start, "commute");
+                Add(b.Start, b.End, KindOf(b.Label, b.Def.Remote));
+                Add(b.End, b.End + b.Commute, "commute");
+                commute += 2 * b.Commute;
+                obligation += b.End - b.Start;
+            }
+            foreach (var r in day.Remote)
+                foreach (var (bs, be) in r.Breaks) Add(bs, be, "break");
+            int sleep = segs.Where(x => x.Kind == "sleep").Sum(x => x.End - x.Start);
+            var rs = content.Routine;
+            int chance = Simulation.Core.Behavior.DailySchedule.BaseChance(p, day, rs);
+            bool fits = Simulation.Core.Behavior.DailySchedule.PlaceMain(day, p.Traits.PreferredStartHour * 60,
+                Simulation.Core.Behavior.DailySchedule.DesiredMinutes(p, day, rs), rs, out _, out int pStart, out int pMinutes);
+            list.Add(new WeekDayView(dow, obligations, day.Wake, day.Bed, day.Windows.ToArray(), day.FreeMinutes, day.FreeDay)
+            {
+                Segments = segs, ObligationMinutes = obligation, CommuteMinutes = commute, SleepMinutes = sleep,
+                Blocks = Simulation.Core.Behavior.DailySchedule.Blocks(p, occ, dow, false).Select(b => (b.Start, b.End, b.Label, b.Def.Remote, b.Commute)).ToArray(),
+                ChancePermille = fits ? chance : 0, PlannedStart = fits ? pStart : -1, PlannedMinutes = fits ? pMinutes : 0,
+                ExpectedMinutes = fits ? pMinutes * chance / 1000 : 0,
+            });
         }
         return list;
     }

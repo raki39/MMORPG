@@ -98,6 +98,11 @@ public class RoutineTests
         Assert.False(DailySchedule.PlaceMain(busy, 21 * 60, 60, RS, out _, out _, out _));
     }
 
+    /// <summary>
+    /// Ninguem joga durante obrigacoes incompativeis (D-044). A unica sobreposicao valida e no
+    /// trabalho remoto, marcada na sessao: pausa (dentro da pausa declarada) ou escapada (com
+    /// flexibilidade da ocupacao). Deslocamento, trabalho presencial e estudo ficam protegidos.
+    /// </summary>
     [Fact]
     public void NinguemComecaASessaoDuranteUmaObrigacao()
     {
@@ -114,7 +119,18 @@ public class RoutineTests
                 long localDay = BehaviorSystem.LocalDay(p, ev.Tick);
                 int minute = (int)((ev.Tick - BehaviorSystem.LocalDayStart(p, localDay)) / SimTime.TicksPerMinute);
                 var day = w.Behavior.LayoutOf(p, localDay);
-                Assert.DoesNotContain(day.Blocks, b => minute >= b.Start && minute < b.End);
+                string kind = ev.Causes.Count > 0 ? ev.Causes[0].Factor : "";
+                foreach (var b in day.Blocks.Where(b => minute >= b.Start && minute < b.End))
+                {
+                    Assert.True(b.Remote, $"sessão dentro de obrigação presencial ({b.Label}) às {minute / 60}h{minute % 60:00}");
+                    var work = day.Remote.Single(r => minute >= r.Start && minute < r.End);   // nunca no deslocamento
+                    if (kind == "work_break") Assert.Contains(work.Breaks, br => minute >= br.Start && minute < br.End);
+                    else
+                    {
+                        Assert.Equal("during_work", kind);
+                        Assert.True(C.Occupations[p.OccupationId].PlayDuringWorkFlexibility > 0);
+                    }
+                }
                 checkedStarts++;
             }
         }

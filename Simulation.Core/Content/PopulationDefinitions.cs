@@ -62,6 +62,10 @@ public sealed class PopulationProfileDefinition : IContentDefinition
     public TraitRange Talent { get; set; } = new();
     /// <summary>Preferencia por variedade (D-039a), permille.</summary>
     public TraitRange Variety { get; set; } = new();
+    /// <summary>Tendencia a prolongar a sessao (P3): quanto a sessao "puxa". Separada da importancia do jogo.</summary>
+    public TraitRange ExtendTendency { get; set; } = new();
+    /// <summary>Autocontrole (P3): respeitar o horario planejado e o trabalho.</summary>
+    public TraitRange SelfControl { get; set; } = new();
 }
 
 public sealed class NamePoolDefinition
@@ -486,4 +490,51 @@ public sealed class RoutineSettingsDefinition
     public int FullLoadMinutes { get; set; } = 600;
     /// <summary>Engajamento abaixo do neutro menos isto: o motivo do dia sem jogo vira "sem vontade".</summary>
     public int LowEngagementGap { get; set; } = 150;
+    // ---- Sono e dificuldade de parar (P3, D-044) ----
+    /// <summary>Tolerancia ao deficit de sono (permille): escala o teto do deficit da pessoa.</summary>
+    public TraitRange SleepDebtTolerance { get; set; } = new() { Mean = 500, Spread = 200 };
+    /// <summary>Duracao da escapada no expediente (minutos).</summary>
+    public TraitRange SlackMinutes { get; set; } = new() { Mean = 25, Spread = 10 };
+    /// <summary>Custo de interromper cada tipo de atividade (permille): chefe caro, comercio barato.</summary>
+    public Dictionary<string, int> InterruptCost { get; set; } = new(StringComparer.Ordinal);
+    /// <summary>Extensoes por sessao, no maximo (P3).</summary>
+    public int ExtendMaxTimesPerSession { get; set; } = 2;
+    /// <summary>Minutos de extensao por sessao, no maximo.</summary>
+    public int ExtendMaxMinutes { get; set; } = 180;
+    /// <summary>Tamanho da extensao: duracao * extendPermille * (base + tendencia) / 10^6.</summary>
+    public int ExtendTendencyBase { get; set; } = 500;
+    /// <summary>Quanto o autocontrole segura a extensao (permille com autocontrole 1000).</summary>
+    public int SelfControlWeight { get; set; } = 800;
+    /// <summary>Meta com este progresso conta como 'falta pouco' (motivo para estender).</summary>
+    public int GoalClosePermille { get; set; } = 700;
+    /// <summary>Sono que uma extensao pode consumir numa noite, no maximo.</summary>
+    public int MaxSleepCutMinutes { get; set; } = 180;
+    /// <summary>Ninguem dorme menos que isto por causa do jogo.</summary>
+    public int MinSleepMinutes { get; set; } = 240;
+    /// <summary>Teto do deficit de sono (escala pela tolerancia da pessoa).</summary>
+    public int MaxDeficitMinutes { get; set; } = 900;
+    /// <summary>Sono a mais numa manha livre para recuperar o deficit.</summary>
+    public int RecoveryFreeNightMinutes { get; set; } = 120;
+    /// <summary>Recuperacao numa noite normal.</summary>
+    public int RecoveryNormalNightMinutes { get; set; } = 20;
+    /// <summary>Deficit para o cansaco contar inteiro.</summary>
+    public int FatigueFullDeficitMinutes { get; set; } = 600;
+    /// <summary>Cansaco reduz a chance de jogar no dia (permille com cansaco total).</summary>
+    public int FatigueChancePenalty { get; set; } = 400;
+    /// <summary>Cansaco encurta a sessao desejada (permille com cansaco total).</summary>
+    public int FatigueDurationPenalty { get; set; } = 300;
+    /// <summary>Cansaco pesa na nota da sessao (pontos com cansaco total).</summary>
+    public int FatigueMoodWeight { get; set; } = 120;
+    /// <summary>Cansaco a partir do qual o dia sem jogo vira 'cansado'.</summary>
+    public int TiredReasonFatigue { get; set; } = 500;
+    /// <summary>Chance de jogar na pausa permitida (vezes a importancia do jogo).</summary>
+    public int BreakSessionChancePermille { get; set; } = 300;
+    /// <summary>Escapada no expediente: chance maxima (vezes flexibilidade, importancia, falta de autocontrole e folga do dia).</summary>
+    public int SlackChanceAtMax { get; set; } = 400;
+    /// <summary>Sem escapada nos primeiros e ultimos minutos do expediente.</summary>
+    public int SlackEdgeMinutes { get; set; } = 30;
+    /// <summary>Chance de um chamado do trabalho interromper a escapada.</summary>
+    public int WorkInterruptChancePermille { get; set; } = 350;
+    /// <summary>Peso do custo de interromper na escolha da atividade em sessao interrompivel.</summary>
+    public int InterruptWeight { get; set; } = 300;
 }

@@ -20,7 +20,7 @@ public sealed class ExperienceSystem
 {
     // Componentes da nota da sessao (chaves estaveis; a interface traduz).
     public const string Fun = "fun", Fit = "fit", Crowding = "crowding", Company = "company",
-        Boredom = "boredom", Risk = "risk", Progress = "progress", Novelty = "novelty", Events = "events";
+        Boredom = "boredom", Risk = "risk", Progress = "progress", Novelty = "novelty", Events = "events", Fatigue = "fatigue";
 
     private readonly WorldState _w;
 
@@ -126,6 +126,8 @@ public sealed class ExperienceSystem
         parts[Progress] = ProgressTerm(p, ch, minutes) * ProgressCare(p.Traits, m) / 1000;
         parts[Novelty] = NoveltyTerm(mood.Novelty, p.Traits, m);
         parts[Events] = Math.Clamp(L.Points, -m.EventClamp, m.EventClamp);
+        int fatigue = DailySchedule.Fatigue(p, _w.Content.Routine);   // cansaco (P3)
+        if (fatigue > 0) parts[Fatigue] = -fatigue * _w.Content.Routine.FatigueMoodWeight / 1000;
         int score = 500;
         foreach (var v in parts.Values) score += v;
         score = Math.Clamp(score, 0, 1000);

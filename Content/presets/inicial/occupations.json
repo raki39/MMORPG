@@ -19,7 +19,8 @@
       "support": {
         "mean": 50000,
         "spread": 30000
-      }
+      },
+      "playDuringWorkFlexibility": 0
     },
     {
       "id": "autonomo",
@@ -43,7 +44,14 @@
           "end": "16:30",
           "commuteMinutes": 0,
           "label": "trabalho",
-          "personalDayOff": true
+          "personalDayOff": true,
+          "remote": true,
+          "breaks": [
+            {
+              "start": "12:30",
+              "end": "13:30"
+            }
+          ]
         }
       ],
       "income": {
@@ -54,7 +62,8 @@
       "support": {
         "mean": 60000,
         "spread": 40000
-      }
+      },
+      "playDuringWorkFlexibility": 700
     },
     {
       "id": "comercial",
@@ -77,7 +86,9 @@
           "start": "08:00",
           "end": "17:00",
           "commuteMinutes": 50,
-          "label": "trabalho"
+          "label": "trabalho",
+          "remote": false,
+          "breaks": []
         }
       ],
       "income": {
@@ -88,7 +99,8 @@
       "support": {
         "mean": 40000,
         "spread": 30000
-      }
+      },
+      "playDuringWorkFlexibility": 0
     },
     {
       "id": "cuidador",
@@ -113,7 +125,9 @@
           "start": "06:30",
           "end": "08:30",
           "commuteMinutes": 0,
-          "label": "cuidados"
+          "label": "cuidados",
+          "remote": false,
+          "breaks": []
         },
         {
           "days": [
@@ -128,7 +142,9 @@
           "start": "11:30",
           "end": "13:30",
           "commuteMinutes": 0,
-          "label": "cuidados"
+          "label": "cuidados",
+          "remote": false,
+          "breaks": []
         },
         {
           "days": [
@@ -143,7 +159,9 @@
           "start": "17:00",
           "end": "20:00",
           "commuteMinutes": 0,
-          "label": "cuidados"
+          "label": "cuidados",
+          "remote": false,
+          "breaks": []
         }
       ],
       "income": {
@@ -154,7 +172,8 @@
       "support": {
         "mean": 220000,
         "spread": 120000
-      }
+      },
+      "playDuringWorkFlexibility": 0
     },
     {
       "id": "escala_6x1",
@@ -179,7 +198,9 @@
           "end": "18:20",
           "commuteMinutes": 45,
           "label": "trabalho",
-          "personalDayOff": true
+          "personalDayOff": true,
+          "remote": false,
+          "breaks": []
         }
       ],
       "income": {
@@ -190,7 +211,8 @@
       "support": {
         "mean": 30000,
         "spread": 20000
-      }
+      },
+      "playDuringWorkFlexibility": 0
     },
     {
       "id": "estudante_manha",
@@ -213,7 +235,9 @@
           "start": "07:00",
           "end": "12:30",
           "commuteMinutes": 30,
-          "label": "estudo"
+          "label": "estudo",
+          "remote": false,
+          "breaks": []
         }
       ],
       "income": {
@@ -224,7 +248,8 @@
       "support": {
         "mean": 60000,
         "spread": 40000
-      }
+      },
+      "playDuringWorkFlexibility": 0
     },
     {
       "id": "estudante_tarde",
@@ -247,7 +272,9 @@
           "start": "13:00",
           "end": "18:00",
           "commuteMinutes": 30,
-          "label": "estudo"
+          "label": "estudo",
+          "remote": false,
+          "breaks": []
         }
       ],
       "income": {
@@ -258,7 +285,8 @@
       "support": {
         "mean": 60000,
         "spread": 40000
-      }
+      },
+      "playDuringWorkFlexibility": 0
     },
     {
       "id": "home_office",
@@ -268,7 +296,7 @@
       "weight": 8,
       "startVariationMinutes": 60,
       "worksHolidays": false,
-      "description": "Segunda a sexta, de casa, sem deslocamento.",
+      "description": "Segunda a sexta, de casa, sem deslocamento; pausa de almoço. Às vezes dá para jogar na pausa ou, com menos trabalho, escapar um pouco no expediente.",
       "blocks": [
         {
           "days": [
@@ -281,7 +309,14 @@
           "start": "09:00",
           "end": "18:00",
           "commuteMinutes": 0,
-          "label": "trabalho"
+          "label": "trabalho",
+          "remote": true,
+          "breaks": [
+            {
+              "start": "12:00",
+              "end": "13:00"
+            }
+          ]
         }
       ],
       "income": {
@@ -292,7 +327,8 @@
       "support": {
         "mean": 30000,
         "spread": 20000
-      }
+      },
+      "playDuringWorkFlexibility": 600
     },
     {
       "id": "meio_periodo",
@@ -315,7 +351,9 @@
           "start": "08:00",
           "end": "12:00",
           "commuteMinutes": 40,
-          "label": "trabalho"
+          "label": "trabalho",
+          "remote": false,
+          "breaks": []
         }
       ],
       "income": {
@@ -326,7 +364,8 @@
       "support": {
         "mean": 60000,
         "spread": 40000
-      }
+      },
+      "playDuringWorkFlexibility": 0
     },
     {
       "id": "sem_ocupacao",
@@ -346,7 +385,8 @@
       "support": {
         "mean": 90000,
         "spread": 60000
-      }
+      },
+      "playDuringWorkFlexibility": 0
     },
     {
       "id": "trabalho_estudo",
@@ -369,7 +409,9 @@
           "start": "08:00",
           "end": "17:00",
           "commuteMinutes": 45,
-          "label": "trabalho"
+          "label": "trabalho",
+          "remote": false,
+          "breaks": []
         },
         {
           "days": [
@@ -381,7 +423,9 @@
           "start": "19:00",
           "end": "22:30",
           "commuteMinutes": 30,
-          "label": "estudo"
+          "label": "estudo",
+          "remote": false,
+          "breaks": []
         }
       ],
       "income": {
@@ -392,7 +436,8 @@
       "support": {
         "mean": 30000,
         "spread": 20000
-      }
+      },
+      "playDuringWorkFlexibility": 0
     },
     {
       "id": "turno_noturno",
@@ -415,7 +460,9 @@
           "start": "22:00",
           "end": "06:00",
           "commuteMinutes": 35,
-          "label": "trabalho"
+          "label": "trabalho",
+          "remote": false,
+          "breaks": []
         }
       ],
       "income": {
@@ -426,7 +473,8 @@
       "support": {
         "mean": 30000,
         "spread": 20000
-      }
+      },
+      "playDuringWorkFlexibility": 0
     },
     {
       "id": "universitario",
@@ -449,7 +497,9 @@
           "start": "08:00",
           "end": "12:00",
           "commuteMinutes": 45,
-          "label": "estudo"
+          "label": "estudo",
+          "remote": false,
+          "breaks": []
         },
         {
           "days": [
@@ -459,7 +509,9 @@
           "start": "14:00",
           "end": "17:30",
           "commuteMinutes": 0,
-          "label": "estudo"
+          "label": "estudo",
+          "remote": false,
+          "breaks": []
         }
       ],
       "income": {
@@ -470,7 +522,8 @@
       "support": {
         "mean": 120000,
         "spread": 70000
-      }
+      },
+      "playDuringWorkFlexibility": 0
     }
   ]
 }

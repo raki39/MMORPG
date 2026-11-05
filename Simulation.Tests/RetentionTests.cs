@@ -201,7 +201,8 @@ public class RetentionTests
         var events = e.World.Events.Drain().ToList();
         var ext = events.Where(x => x.Type == "session_extended").ToList();
         Assert.NotEmpty(ext);
-        Assert.All(ext, x => Assert.True(x.Causes[0].WeightPermille >= R.ExtendScoreAbove));
+        // Motivo explicito: gostando da sessao (nota parcial alta) ou perto de concluir uma meta (P3).
+        Assert.All(ext, x => Assert.True(x.Causes[0].Factor == "goal_close" || (x.Causes[0].Factor == "enjoying" && x.Causes[0].WeightPermille >= R.ExtendScoreAbove)));
     }
 
     [Fact]

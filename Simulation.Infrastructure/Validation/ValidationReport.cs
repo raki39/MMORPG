@@ -185,6 +185,46 @@ public static class ValidationReport
                 sb.Append($"| {DayReason(kv.Key)} | {Pct(kv.Value, allDays)} |\n");
         }
 
+        // ---- Sono e dificuldade de parar (P3) ----
+        if (runs[0].Occupations.Count > 0)
+        {
+            double SW(string key) => runs.Average(r => r.SleepWork.GetValueOrDefault(key));
+            sb.Append("\n## Sono e dificuldade de parar (média das seeds, campanha completa)\n\n");
+            sb.Append("Importância do jogo, tendência a prolongar e autocontrole são traços separados. A extensão tem limites explícitos (vezes por sessão, minutos, sono mínimo e teto do déficit); só corta sono no fim do dia, nunca uma obrigação. Sono cortado vira déficit; manhã livre e noites normais recuperam.\n\n");
+            double ext = SW("ext_enjoying") + SW("ext_goal_close");
+            sb.Append($"- Extensões na janela: {Fmt(ext)} ({Fmt(SW("ext_enjoying"))} gostando da sessão, {Fmt(SW("ext_goal_close"))} perto de concluir a meta); {Fmt(SW("ext_sleep_cut"))} avançaram sobre a hora de dormir.\n");
+            double late = SW("late_nights");
+            sb.Append($"- Noites encurtadas pelo jogo: {Fmt(late)}, {(late > 0 ? Fmt(SW("late_minutes") / late) : "—")} min a menos em média.\n\n");
+            sb.Append("| Perfil | Extensões/semana | Sono cortado/semana | Déficit no fim | Cansados |\n|---|---:|---:|---:|---:|\n");
+            foreach (var id in runs[0].Profiles.Select(p => p.Id))
+            {
+                var ps = runs.Select(r => r.Profiles.First(p => p.Id == id)).ToList();
+                sb.Append($"| {ps[0].Name} | {Fmt(Avg(ps.Select(p => p.ExtensionsPerWeek)))} | {Fmt(Avg(ps.Select(p => p.SleepCutMinutesPerWeek)))} min | {Fmt(Avg(ps.Select(p => p.MeanDeficitMinutes)) / 60)} h | {Fmt(Avg(ps.Select(p => p.TiredPct)))}% |\n");
+            }
+            sb.Append("\nSono da noite anterior pela agenda (o sono cortado pelo jogo vai direto para o déficit). Em dia livre a pessoa dorme mais para recuperar. O déficit no fim depende do dia da semana em que a campanha termina.\n\n");
+            sb.Append("| Ocupação | Precisa | Sono em dia com obrigação | Sono em dia livre | Déficit no fim | Cansados |\n|---|---:|---:|---:|---:|---:|\n");
+            foreach (var id in runs[0].Occupations.Select(o => o.Id))
+            {
+                var os = runs.Select(r => r.Occupations.First(o => o.Id == id)).ToList();
+                string H(Func<OccupationStats, double> f) { double v = Avg(os.Select(f)); return double.IsNaN(v) ? "—" : $"{Fmt(v / 60)} h"; }
+                sb.Append($"| {os[0].Name} | {H(o => o.MeanSleepNeedMinutes)} | {H(o => o.MeanSleepBusyMinutes)} | {H(o => o.MeanSleepFreeMinutes)} | {H(o => o.MeanDeficitMinutes)} | {Fmt(Avg(os.Select(o => o.TiredPct)))}% |\n");
+            }
+
+            // ---- Jogar no horario de trabalho (D-044) ----
+            sb.Append("\n## Jogar no horário de trabalho (média das seeds)\n\n");
+            sb.Append("Só no trabalho remoto. Pausa: jogar no intervalo permitido. Escapada: jogar no expediente, rara, pela flexibilidade do trabalho, importância do jogo, falta de autocontrole e folga do dia; sessão curta e interrompível. Deslocamento, trabalho presencial e estudo ficam protegidos. Sem consequência profissional por enquanto.\n\n");
+            double sessions = Math.Max(1, SW("sessions"));
+            sb.Append($"- Sessões na pausa: {Fmt(SW("break_sessions"))} ({Pct((long)SW("break_sessions"), (long)sessions)} das sessões); escapadas: {Fmt(SW("slack_sessions"))} ({Pct((long)SW("slack_sessions"), (long)sessions)}).\n");
+            sb.Append($"- Chamados do trabalho durante a escapada: {Fmt(SW("interrupt_finished_activity") + SW("interrupt_left_activity"))} ({Fmt(SW("interrupt_finished_activity"))} terminaram a atividade, {Fmt(SW("interrupt_left_activity"))} largaram e saíram).\n\n");
+            sb.Append("| Ocupação | Pausa/semana | Escapadas/semana | Dias de trabalho com escapada |\n|---|---:|---:|---:|\n");
+            foreach (var id in runs[0].Occupations.Select(o => o.Id))
+            {
+                if (!content.Occupations.TryGetValue(id, out var occ) || !occ.Blocks.Any(b => b.Remote)) continue;
+                var os = runs.Select(r => r.Occupations.First(o => o.Id == id)).ToList();
+                sb.Append($"| {os[0].Name} | {Fmt(Avg(os.Select(o => o.BreakSessionsPerWeek)))} | {Fmt(Avg(os.Select(o => o.SlackSessionsPerWeek)))} | {Fmt(Avg(os.Select(o => o.SlackDayPct)))}% |\n");
+            }
+        }
+
         // ---- Localidades (P1) ----
         if (runs[0].Localities.Count > 0)
         {
@@ -392,6 +432,7 @@ public static class ValidationReport
         "low_engagement" => "Sem vontade (engajamento baixo)",
         "inactive" => "Inativo",
         "came_back" => "Voltou ao jogo",
+        "tired" => "Cansado (dormiu pouco)",
         _ => key,
     };
 

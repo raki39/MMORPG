@@ -11,7 +11,7 @@ namespace Simulation.Core.World;
 /// </summary>
 public static class StateHasher
 {
-    public const int FormatVersion = 10;
+    public const int FormatVersion = 11;
 
     public static string Compute(WorldState w) => Compute(w, includeContentId: true);
 
@@ -57,7 +57,8 @@ public static class StateHasher
             h.Int(c.RemainingWaypoints.Count);
             foreach (var wp in c.RemainingWaypoints) { h.Int(wp.Pos.X); h.Int(wp.Pos.Y); h.Str(wp.EntersZone); }
             h.Long(c.SessionStartTick); h.Long(c.ActivityStartTick); h.Long(c.ActivityEndTick); h.Long(c.SessionEndTick);
-            h.Bool(c.LogoutPending); h.Bool(c.SessionExtended);
+            h.Bool(c.LogoutPending); h.Int(c.SessionKind); h.Int(c.SessionExtensions); h.Int(c.ExtendedMinutes);
+            h.Long(c.SleepCutStartTick); h.Str(c.ExtendMotive);
             h.Int(c.KnownRegions.Count);
             foreach (var r in c.KnownRegions) h.Str(r);
             h.Int(c.DecisionCount); h.Str(c.LastActivityKey); h.Int(c.RepeatCount);
@@ -145,10 +146,15 @@ public static class StateHasher
         h.Str(p.OccupationId); h.Int(p.ShiftOffsetMinutes); h.Int(p.CommutePermille); h.Int(p.DayOffIndex);
         h.Int(p.SleepNeedMinutes); h.Int(p.BedtimeMinute); h.Long(p.IncomeCentsPerMonth); h.Long(p.SupportCentsPerMonth);
         h.Int(p.ExpectedWeeklyMinutes); h.Long(p.LastPlayedLocalDay);
+        h.Int(p.SleepDebtTolerance); h.Int(p.SleepDeficitMinutes); h.Int(p.LastSleepCutMinutes); h.Int(p.SleepCutTotalMinutes);
         h.Int(p.DayPlans.Count);
-        foreach (var d in p.DayPlans) { h.Long(d.LocalDay); h.Int(d.FreeMinutes); h.Int(d.Windows); h.Int(d.Sessions); h.Str(d.Reason); h.Int(d.FirstStartMinute); h.Int(d.PlannedMinutes); h.Bool(d.FreeDay); }
+        foreach (var d in p.DayPlans)
+        {
+            h.Long(d.LocalDay); h.Int(d.FreeMinutes); h.Int(d.Windows); h.Int(d.Sessions); h.Str(d.Reason); h.Int(d.FirstStartMinute); h.Int(d.PlannedMinutes); h.Bool(d.FreeDay);
+            h.Int(d.SleepMinutes); h.Int(d.DeficitMinutes); h.Int(d.WorkSessions); h.Int(d.WorkOverlapMinutes);
+        }
         h.Int(p.OpenWindows.Count);
-        foreach (var w in p.OpenWindows) { h.Long(w.Start); h.Long(w.End); }
+        foreach (var w in p.OpenWindows) { h.Long(w.Start); h.Long(w.End); h.Bool(w.EndsAtBed); }
         h.Int(p.Languages.Count);
         foreach (var lang in p.Languages) h.Str(lang);
         h.Long(p.LastReturnDay); h.Long(p.NostalgiaSpentTick); h.Int(p.NostalgiaReturns); h.Int(p.Mood.NoveltyDecayCarry);
@@ -158,7 +164,7 @@ public static class StateHasher
         h.Int(t.MechanicalSkill); h.Int(t.GameKnowledge); h.Int(t.Coordination);
         h.Int(t.CheatPropensity); h.Int(t.Opportunism);
         h.Int(t.LeisureBudgetCentsPerMonth); h.Int(t.WillingnessToPay); h.Int(t.PaidAdvantageSensitivity);
-        h.Int(t.PreferredStartHour); h.Int(t.SessionMinutes); h.Int(t.GameImportance); h.Int(t.Habit); h.Int(t.Talent); h.Int(t.Variety);
+        h.Int(t.PreferredStartHour); h.Int(t.SessionMinutes); h.Int(t.GameImportance); h.Int(t.Habit); h.Int(t.ExtendTendency); h.Int(t.SelfControl); h.Int(t.Talent); h.Int(t.Variety);
         // Atributos vivos (D-036): base de nascenca e pratica acumulada.
         foreach (var k in PersonTraits.DynamicKeys) h.Int(p.BaseTraits.Get(k));
         h.Int(p.PracticeProgress.Count);

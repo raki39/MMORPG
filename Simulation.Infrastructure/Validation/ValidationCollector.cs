@@ -43,6 +43,9 @@ public sealed class RunMetrics
     public List<int> QuitDays { get; } = new();
     public List<int> QuitLevels { get; } = new();
     public long SessionsExtended { get; set; }
+    /// <summary>Sono e trabalho (P3/D-044), contagens na janela: extensoes por motivo e com sono cortado,
+    /// noites encurtadas e minutos cortados, sessoes na pausa e escapadas, chamados do trabalho.</summary>
+    public SortedDictionary<string, double> SleepWork { get; } = new(StringComparer.Ordinal);
     public long RageQuits { get; set; }
     /// <summary>Notas das sessoes (D-038): sessoes otimas e ruins na janela.</summary>
     public long GreatSessions { get; set; }
@@ -64,6 +67,17 @@ public sealed class OccupationStats
     public double NoFreeTimePct { get; init; }
     public double MeanIncomeReais { get; init; }
     public double MeanSupportReais { get; init; }
+    /// <summary>Sono (P3): necessidade media, sono medio da agenda em dia com obrigacao e em dia livre (recuperacao),
+    /// deficit medio no fim e % cansados (motivo "tired" possivel).</summary>
+    public double MeanSleepNeedMinutes { get; init; }
+    public double MeanSleepBusyMinutes { get; init; }
+    public double MeanSleepFreeMinutes { get; init; }
+    public double MeanDeficitMinutes { get; init; }
+    public double TiredPct { get; init; }
+    /// <summary>Trabalho remoto (D-044): sessoes na pausa e escapadas por pessoa por semana; % dos dias com obrigacao com escapada.</summary>
+    public double BreakSessionsPerWeek { get; init; }
+    public double SlackSessionsPerWeek { get; init; }
+    public double SlackDayPct { get; init; }
 }
 
 public sealed class LocalityStats
@@ -99,6 +113,11 @@ public sealed class ProfileStats
     public Dictionary<string, double> Mood { get; init; } = new(StringComparer.Ordinal);
     /// <summary>% das sessoes em dia util que comecam no horario nobre (18h-23h).</summary>
     public double PrimeTimeStartPct { get; init; }
+    /// <summary>Dificuldade de parar e sono (P3): extensoes e minutos de sono cortados por pessoa por semana; deficit medio e % cansados no fim.</summary>
+    public double ExtensionsPerWeek { get; init; }
+    public double SleepCutMinutesPerWeek { get; init; }
+    public double MeanDeficitMinutes { get; init; }
+    public double TiredPct { get; init; }
 }
 
 /// <summary>
@@ -125,6 +144,11 @@ public sealed class ValidationCollector
     private readonly SortedDictionary<string, (long Sessions, double LocalX, double LocalY, double ServerX, double ServerY)> _localities = new(StringComparer.Ordinal);
     private readonly SortedDictionary<string, long> _quitReasons = new(StringComparer.Ordinal);
     private readonly List<int> _quitDays = new(), _quitLevels = new();
+    // Sono e trabalho (P3/D-044), na janela.
+    private readonly Dictionary<long, int> _extByPerson = new(), _breakByPerson = new(), _slackByPerson = new();
+    private readonly Dictionary<long, long> _cutByPerson = new();
+    private readonly SortedDictionary<string, double> _sleepWork = new(StringComparer.Ordinal);
+    private void CountSleepWork(string key, double amount = 1) => _sleepWork[key] = _sleepWork.GetValueOrDefault(key) + amount;
 
     public ValidationCollector(ContentDatabase content, int warmupDays)
     {
@@ -156,6 +180,8 @@ public sealed class ValidationCollector
                     if (_lastChoice.Remove(cid, out var prev) && prev.Run > 0 && e.Tick >= _windowStart) _runs.Add(prev.Run);
                     if (e.Tick < _windowStart) break;
                     _sessionsInWindow[pid] = _sessionsInWindow.GetValueOrDefault(pid) + 1;
+                    if (e.Causes.Count > 0 && e.Causes[0].Factor == "work_break") { _breakByPerson[pid] = _breakByPerson.GetValueOrDefault(pid) + 1; CountSleepWork("break_sessions"); }
+                    if (e.Causes.Count > 0 && e.Causes[0].Factor == "during_work") { _slackByPerson[pid] = _slackByPerson.GetValueOrDefault(pid) + 1; CountSleepWork("slack_sessions"); }
                     // Horario e dia local da pessoa (P1): fuso e feriados da residencia.
                     var person = w.GetPerson((int)pid);
                     var at = cal.ToDateTime(e.Tick + person.LocalOffsetMinutes * SimTime.TicksPerMinute);
@@ -218,7 +244,23 @@ public sealed class ValidationCollector
                     break;
                 }
                 case "session_extended":
-                    if (e.Tick >= _windowStart) _extended++;
+                    if (e.Tick < _windowStart) break;
+                    _extended++;
+                    _extByPerson[e.Entities[0].Id] = _extByPerson.GetValueOrDefault(e.Entities[0].Id) + 1;
+                    if (e.Causes.Count > 0) CountSleepWork("ext_" + e.Causes[0].Factor);
+                    if (e.Causes.Any(c => c.Factor == "sleep_cut")) CountSleepWork("ext_sleep_cut");
+                    break;
+                case "stayed_up_late":
+                {
+                    if (e.Tick < _windowStart) break;
+                    int cut = e.Causes.Count > 1 ? e.Causes[1].WeightPermille : 0;
+                    _cutByPerson[e.Entities[0].Id] = _cutByPerson.GetValueOrDefault(e.Entities[0].Id) + cut;
+                    CountSleepWork("late_nights");
+                    CountSleepWork("late_minutes", cut);
+                    break;
+                }
+                case "work_interruption":
+                    if (e.Tick >= _windowStart && e.Causes.Count > 0) CountSleepWork("interrupt_" + e.Causes[0].Factor);
                     break;
                 case "session_great":
                     if (e.Tick >= _windowStart) _great++;
@@ -235,6 +277,10 @@ public sealed class ValidationCollector
     }
 
     private static string Zone(string key) => key.Split('/')[0];
+
+    /// <summary>Cansado o bastante para "tired" ser o motivo de nao jogar (P3).</summary>
+    private static bool Tired(WorldState w, Simulation.Core.Population.Person p) =>
+        Simulation.Core.Behavior.DailySchedule.Fatigue(p, w.Content.Routine) >= w.Content.Routine.TiredReasonFatigue;
 
     /// <summary>Minuto do dia como vetor no circulo de 24 h (relatorio; nao entra na simulacao).</summary>
     public static (double X, double Y) ClockVector(int minuteOfDay)
@@ -341,6 +387,10 @@ public sealed class ValidationCollector
                 QuitPct = group.Count == 0 ? double.NaN : group.Count(c => w.GetPerson(c.PersonId).State == Simulation.Core.Population.LifecycleState.Quit) * 100.0 / group.Count,
                 InactivePct = group.Count == 0 ? double.NaN : group.Count(c => w.GetPerson(c.PersonId).State == Simulation.Core.Population.LifecycleState.Inactive) * 100.0 / group.Count,
                 ReturnedPct = group.Count == 0 ? double.NaN : group.Count(c => w.GetPerson(c.PersonId).TimesReturned > 0) * 100.0 / group.Count,
+                ExtensionsPerWeek = PerPersonWeekly(group.Select(c => (long)c.PersonId), _extByPerson, weeks, 1),
+                SleepCutMinutesPerWeek = PerPersonWeekly(group.Select(c => (long)c.PersonId), _cutByPerson, weeks, 1),
+                MeanDeficitMinutes = group.Count == 0 ? double.NaN : group.Average(c => (double)w.GetPerson(c.PersonId).SleepDeficitMinutes),
+                TiredPct = group.Count == 0 ? double.NaN : group.Count(c => Tired(w, w.GetPerson(c.PersonId))) * 100.0 / group.Count,
             });
         }
 
@@ -368,6 +418,14 @@ public sealed class ValidationCollector
                 NoFreeTimePct = allDays.Count == 0 ? double.NaN : allDays.Count(d => d.Reason == "no_free_time") * 100.0 / allDays.Count,
                 MeanIncomeReais = ps.Count == 0 ? double.NaN : ps.Average(p => p.IncomeCentsPerMonth / 100.0),
                 MeanSupportReais = ps.Count == 0 ? double.NaN : ps.Average(p => p.SupportCentsPerMonth / 100.0),
+                MeanSleepNeedMinutes = ps.Count == 0 ? double.NaN : ps.Average(p => (double)p.SleepNeedMinutes),
+                MeanSleepBusyMinutes = busyDays.Count == 0 ? double.NaN : busyDays.Average(d => (double)d.SleepMinutes),
+                MeanSleepFreeMinutes = freeDays.Count == 0 ? double.NaN : freeDays.Average(d => (double)d.SleepMinutes),
+                MeanDeficitMinutes = ps.Count == 0 ? double.NaN : ps.Average(p => (double)p.SleepDeficitMinutes),
+                TiredPct = ps.Count == 0 ? double.NaN : ps.Count(p => Tired(w, p)) * 100.0 / ps.Count,
+                BreakSessionsPerWeek = PerPersonWeekly(ids, _breakByPerson, weeks, 1),
+                SlackSessionsPerWeek = PerPersonWeekly(ids, _slackByPerson, weeks, 1),
+                SlackDayPct = busyDays.Count == 0 ? double.NaN : busyDays.Count(d => d.WorkOverlapMinutes > 0) * 100.0 / busyDays.Count,
             });
         }
         foreach (var p in chars.Select(c => w.GetPerson(c.PersonId)))
@@ -389,6 +447,8 @@ public sealed class ValidationCollector
         m.QuitDays.AddRange(_quitDays);
         m.QuitLevels.AddRange(_quitLevels);
         m.SessionsExtended = _extended;
+        foreach (var kv in _sleepWork) m.SleepWork[kv.Key] = kv.Value;
+        m.SleepWork["sessions"] = _sessionsInWindow.Values.Sum();
         m.RageQuits = _rage;
         m.GreatSessions = _great;
         m.BadSessions = _bad;

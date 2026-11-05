@@ -141,6 +141,14 @@ public static class ActivityScoring
                 if (travel + a.TypicalMinutes > remaining + content.Behavior.LogoutToleranceMinutes)
                     f.Add(new DecisionFactor("time_budget", -content.Behavior.TimeBudgetPenalty));
 
+                // Sessao interrompivel (D-044: pausa ou escapada no trabalho): o custo de largar
+                // a atividade no meio pesa; comercio e coleta atraem mais que um chefe demorado.
+                if (ch.SessionKind != 0)
+                {
+                    int cost = content.Routine.InterruptCost.TryGetValue(a.Type, out int ic) ? ic : 500;
+                    if (cost > 0) f.Add(new DecisionFactor("interruption", -cost * content.Routine.InterruptWeight / 1000));
+                }
+
                 // Tedio contextual (D-037): cansaco do tipo de atividade, aliviado pela paciencia.
                 if (BoredomPenalty(ch, t, a.Type, content.Session) is > 0 and var bored)
                     f.Add(new DecisionFactor("boredom", -bored));

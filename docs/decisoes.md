@@ -1199,3 +1199,97 @@ Durante a revisão, o criador acrescentou: falta de conteúdo novo é questão d
 - determinismo.
 
 `StateHasher` v10.
+
+## D-044 — P3: sono, dificuldade de parar e jogar no horário de trabalho remoto
+**Data:** 04/11/2026 · **Estado:** aceita (calibração a revisar)
+
+**Contexto:** o criador aprovou a P2 e pediu a P3 com cinco coisas separadas: importância do jogo, tendência a prolongar, autocontrole, sono (necessidade, déficit e recuperação) e cansaço. A pessoa pode jogar além do planejado e dormir menos, mas sem horas ilimitadas. Pediu também que quem trabalha em casa às vezes jogue durante o trabalho, sem transformar o home office em tempo livre.
+
+**Decisões:**
+- **Traços novos (sorteados por perfil, independentes dentro dele):** tendência a prolongar e autocontrole, além da tolerância ao déficit de sono. Entram no fim do sorteio da rotina; nada sorteado antes muda.
+- **Extensão da sessão** (substitui a do D-039):
+  - motivo explícito: "gostando da sessão" (nota parcial ≥ 700) ou "perto de concluir a meta" (70% do caminho);
+  - chance = 40% × tendência × (1 − autocontrole × 0,8) × (1 − cansaço); tamanho = 30% da sessão × (0,5 + tendência), mínimo 10 min;
+  - limites: 2 vezes por sessão, 180 min no total; não vale na pausa nem na escapada do trabalho nem no cenário controlado.
+- **Sono cortado:** a extensão usa primeiro o resto da janela livre e só avança sobre o sono quando a janela termina na hora de dormir. Nunca antes de uma obrigação nem antes de um turno da noite: esse caso apareceu no teste e foi corrigido.
+  - Três tetos por noite: 180 min, o teto do déficit e 4 h de sono mínimo.
+  - O que foi cortado entra no déficit na saída (evento `stayed_up_late`, com o motivo e os minutos).
+- **Déficit e recuperação:**
+  - noite mais curta que a necessidade (pela rotina ou pelo jogo) soma ao déficit;
+  - manhã livre dorme até 2 h a mais; noite normal recupera 20 min;
+  - teto do déficit = 15 h × (0,5 + tolerância).
+- **Cansaço** = déficit ÷ 10 h, até 100%:
+  - reduz a chance de jogar (até −40%) e a sessão desejada (até −30%);
+  - pesa na nota da sessão (motivo "Cansaço");
+  - acima de 50%, o dia sem jogo fica com o motivo "Cansado (dormiu pouco)".
+- **Trabalho remoto** (`occupations.json`: `remote` e `breaks` por bloco, `playDuringWorkFlexibility` por ocupação; home office 600, autônomo 700, demais 0):
+  - **pausa:** jogar no intervalo declarado. A chance vem da importância do jogo; a sessão é curta e cabe na pausa;
+  - **escapada:** jogar no expediente; chance = 40% × flexibilidade × importância × (1 − autocontrole) × folga do dia (carga sorteada a cada dia). Cerca de 25 min, longe do começo e do fim do expediente; nunca em cima da pausa;
+  - ambas são **interrompíveis**: a decisão desconta o custo de largar cada atividade (`interruptCost`: chefe 1000, emboscada 850, patrulha 700, caça 550 … comércio e conversa 0);
+  - **chamado do trabalho** (35% das escapadas): termina a atividade se falta pouco (regra de saída) ou larga e sai (`work_interruption`);
+  - a agenda guarda as sessões no trabalho e os minutos sobre o expediente; o início da sessão traz o motivo (`work_break` ou `during_work`);
+  - nenhuma consequência profissional por enquanto. Deslocamento, trabalho presencial e estudo ficam protegidos.
+- **Validador:** flexibilidade só com bloco remoto; pausa só em bloco remoto e dentro dele; faixas da seção `routine` e custos de interrupção.
+- **Calibração:** a penalidade do dia cheio de obrigações passou de 600 para 650.
+  - Motivo: as sessões no almoço aumentam os ativos em dia útil, e o reforço do fim de semana tinha caído para 1,28–1,34 (meta 1,3–2,0).
+  - Tentativa descartada: subir o bônus de dia livre (350 → 400) quase não mudou a razão (1,29–1,35), levou os ativos em dia útil a 53,7% e derrubou uma meta provisória.
+
+**Validação** (90 dias × 1.000 pessoas × 5 seeds):
+- **Metas:**
+  - regras do cenário: 7 de 7;
+  - provisórias: 9 de 12;
+  - dependentes de sistemas futuros: 2 de 5 (acompanhamento).
+- **Rotina no cenário controlado:**
+  - casual: 2,5 sessões e 3,4 h por semana; hardcore: 6,7 sessões e 31,6 h;
+  - dia útil: 50,8% dos cadastrados ativos;
+  - fim de semana: 1,31–1,36×, ainda perto do piso da faixa.
+- **Extensões** (média por seed, na janela):
+  - 1.548 no total: 716 gostando da sessão e 832 perto de concluir a meta;
+  - 746 avançaram sobre a hora de dormir;
+  - 759 noites encurtadas, 80 min a menos em média.
+- **Sono cortado por semana**, por pessoa: hardcore 32 min, competitivo 9 min, casual e explorador quase nada.
+- **Sono pela rotina:** quem trabalha e estuda dorme 7,0 h em dia útil e 9,6 h em dia livre (recupera), com necessidade de 7,8 h. Termina com 3,1 h de déficit e 28% cansados. As demais ocupações ficam perto de zero.
+- **Trabalho remoto:**
+  - pausa: 1.040 sessões (2,1% de todas);
+  - escapada: 202 sessões (0,4%), com 71 chamados do trabalho (30 terminaram a atividade, 41 largaram e saíram);
+  - home office: 0,7 pausa e 0,1 escapada por semana; escapada em 2,5% dos dias de trabalho.
+
+**Interface — aba Rotina refeita com o criador** (`PlayerModal.Routine.cs`, gráficos em `RoutineCharts.cs`):
+- **Linha 1:**
+  - **Semana típica:** barras agrupadas por dia, com o tempo livre em azul (verde em dia livre) e o jogo previsto em dourado. O previsto é a chance do dia × a sessão que cabe na janela, a mesma conta do "previsto por semana". Embaixo de cada dia, a chance de jogar.
+  - **Ocupação, ao lado:** etiquetas com ícone (remoto ou presencial, deslocamento por trecho, feriado, pausa, escapada) e um cartão **por dia da semana**, com as obrigações e horários desta pessoa, o tempo livre e a maior janela. Fecha com a semana em 168 horas.
+- **Linha 2:**
+  - **Últimos 30 dias:** gráfico de linha, com o tempo livre como área azul e o tempo jogado como linha dourada. O dia sem jogo fica no zero, na cor do motivo. Faixas verdes marcam os dias livres e um losango marca o jogo no trabalho.
+  - **Sono e cansaço:** anel de cansaço, déficit e teto, e o sono de cada noite contra a necessidade.
+  - **Como terminaram os dias:** rosca dos motivos, com "jogou só no horário de trabalho" à parte, para as contagens baterem entre os cards. Inclui a sequência atual.
+- **Linha 3:**
+  - **Vontade de jogar:** os quatro traços em duas colunas, previsto, sessão, horário preferido, uso do tempo livre e uma frase de leitura do perfil.
+  - **Onde mora** e **Finanças** (rosca de renda e apoio).
+- **Descartado com o criador:**
+  - agenda em faixas de 24 h;
+  - colunas empilhadas com trilho vazio;
+  - horários agrupados ("seg–sex"), errado porque cada dia pode ter horário próprio.
+- **Agenda guardada:** passou de 14 para 30 dias (`routine.planHistoryDays`, conteúdo). O estado fica maior; as decisões não mudam.
+- **Histórico e painel lateral** descrevem:
+  - pausa e escapada;
+  - extensão com sono cortado e "foi dormir mais tarde";
+  - chamado do trabalho.
+- **Fatores novos:** "Cansaço" e "Sessão interrompível", com explicação.
+
+**Para depois (pedido do criador):** eventos dentro do jogo e atualizações grandes ou marcantes poderão influenciar a tendência a prolongar e a volta de quem saiu. Entram com os eventos do jogo e as atualizações (M7), junto dos outros motivos de retorno.
+
+**Testes:** 10 novos (194 no total):
+- recuperação em manhã livre;
+- déficit de quem trabalha e estuda;
+- limites da extensão (nunca invade obrigação, déficit dentro do teto);
+- cenário controlado sem extensão;
+- cansado joga menos e o motivo fica na agenda;
+- traços separados (correlação dentro do perfil ≈ 0);
+- pausa e escapada só para quem pode e não todo dia;
+- sessão interrompível evita atividade cara de largar;
+- pausas inválidas são erro;
+- determinismo.
+
+O teste "ninguém começa a sessão durante uma obrigação" agora aceita sobreposição só em bloco remoto: dentro da pausa declarada, ou como escapada de ocupação com flexibilidade. O de extensão do D-039 aceita os dois motivos.
+
+`StateHasher` v11.

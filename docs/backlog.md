@@ -56,7 +56,8 @@ Uma etapa por vez, fechada por inteiro (testes, validação, documentação, exp
    - ~~P0: parâmetros da decisão no conteúdo~~ (feito, D-041);
    - ~~P1: localidade e fuso~~ (feito, D-042);
    - ~~P2: obrigações, tempo livre, vontade de jogar e renda real~~ (feito, D-043);
-   - P3: sono e dificuldade de parar;
+   - ~~P3: sono e dificuldade de parar, e jogar no horário de trabalho remoto~~ (feito, D-044);
+     - depois: eventos dentro do jogo e atualizações grandes também mexem na tendência a prolongar e na volta de quem saiu (M7, com os outros motivos de retorno);
    - P4: traits;
    - a reputação do personagem entra com a Etapa 3 e as finanças com o M7.
 2. **Etapa 1 — O personagem** (decisões no D-040):

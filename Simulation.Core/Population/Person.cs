@@ -56,6 +56,10 @@ public sealed class PersonTraits
     public int GameImportance;
     /// <summary>Habito (permille): regularidade; quem jogou ontem tende a jogar hoje, quem faltou tende a faltar.</summary>
     public int Habit;
+    /// <summary>Tendencia a prolongar a sessao (permille, P3): separada da importancia do jogo.</summary>
+    public int ExtendTendency;
+    /// <summary>Autocontrole (permille, P3): respeitar o horario planejado e o trabalho.</summary>
+    public int SelfControl;
 
     // Jogador (D-036): talento da pessoa (nao do personagem). Define o potencial e a velocidade
     // de aprendizado das capacidades (mecanica, conhecimento, coordenacao). Nao muda.
@@ -223,6 +227,14 @@ public sealed class Person
     /// <summary>Renda do trabalho e apoio familiar (centavos/mes; sem efeito ate o M7).</summary>
     public long IncomeCentsPerMonth { get; internal set; }
     public long SupportCentsPerMonth { get; internal set; }
+    // ---- Sono (P3, D-044) ----
+    /// <summary>Tolerancia temporaria ao deficit (permille): escala o teto do deficit.</summary>
+    public int SleepDebtTolerance { get; internal set; } = 500;
+    /// <summary>Deficit de sono acumulado (minutos): sobe com noites curtas, cai com sono a mais.</summary>
+    public int SleepDeficitMinutes { get; internal set; }
+    /// <summary>Sono perdido para o jogo: na ultima noite e no total.</summary>
+    public int LastSleepCutMinutes { get; internal set; }
+    public int SleepCutTotalMinutes { get; internal set; }
     /// <summary>Minutos de jogo esperados numa semana tipica (rotina e importancia, sem humor).</summary>
     public int ExpectedWeeklyMinutes { get; internal set; }
     /// <summary>Ultimo dia local em que comecou uma sessao (habito).</summary>
@@ -231,7 +243,7 @@ public sealed class Person
     internal List<DayPlanRecord> PlanList { get; } = new();
     public IReadOnlyList<DayPlanRecord> DayPlans => PlanList;
     /// <summary>Janelas livres planejadas (ticks do servidor) de hoje e de ontem: limite da sessao.</summary>
-    internal List<(long Start, long End)> OpenWindows { get; } = new();
+    internal List<(long Start, long End, bool EndsAtBed)> OpenWindows { get; } = new();
 
     /// <summary>Ultimo dia (indice) em que jogou; -1 = nunca.</summary>
     public long LastPlayedDay { get; internal set; } = -1;
@@ -251,8 +263,13 @@ public sealed class Person
 /// <summary>Agenda de um dia local (P2): tempo livre, janelas, sessoes planejadas e o motivo.</summary>
 public sealed class DayPlanRecord
 {
-    public DayPlanRecord(long localDay, int freeMinutes, int windows, int sessions, string reason, int firstStartMinute, int plannedMinutes, bool freeDay)
+    public DayPlanRecord(long localDay, int freeMinutes, int windows, int sessions, string reason, int firstStartMinute, int plannedMinutes, bool freeDay,
+        int sleepMinutes = 0, int deficitMinutes = 0, int workSessions = 0, int workOverlapMinutes = 0)
     {
+        SleepMinutes = sleepMinutes;
+        DeficitMinutes = deficitMinutes;
+        WorkSessions = workSessions;
+        WorkOverlapMinutes = workOverlapMinutes;
         LocalDay = localDay;
         FreeMinutes = freeMinutes;
         Windows = windows;
@@ -274,6 +291,12 @@ public sealed class DayPlanRecord
     public int PlannedMinutes { get; }
     /// <summary>Dia sem obrigacoes (folga, fim de semana, feriado ou sem ocupacao).</summary>
     public bool FreeDay { get; }
+    /// <summary>Sono da noite anterior (planejado) e deficit depois da conta do dia (P3).</summary>
+    public int SleepMinutes { get; }
+    public int DeficitMinutes { get; }
+    /// <summary>Sessoes no expediente remoto (pausa ou escapada) e minutos sobrepostos ao trabalho (D-044).</summary>
+    public int WorkSessions { get; }
+    public int WorkOverlapMinutes { get; }
 }
 
 /// <summary>Conta no MMORPG (plano 4.1). Criada no registro (M2).</summary>
@@ -513,8 +536,14 @@ public sealed class Character
     public long ActivityEndTick { get; internal set; }
     public long SessionEndTick { get; internal set; }
     public bool LogoutPending { get; internal set; }
-    /// <summary>A sessao atual ja foi estendida por estar indo bem (D-039).</summary>
-    public bool SessionExtended { get; internal set; }
+    /// <summary>Tipo da sessao atual (D-044): 0 normal, 1 pausa permitida do trabalho remoto, 2 escapada no expediente.</summary>
+    public int SessionKind { get; internal set; }
+    /// <summary>Extensoes desta sessao (P3) e minutos acrescentados.</summary>
+    public int SessionExtensions { get; internal set; }
+    public int ExtendedMinutes { get; internal set; }
+    /// <summary>Instante em que a extensao comeca a consumir o sono (0 = nao consome) e o motivo.</summary>
+    public long SleepCutStartTick { get; internal set; }
+    public string ExtendMotive { get; internal set; } = "";
     /// <summary>Locais que o personagem conhece (so estes entram nas decisoes).</summary>
     internal SortedSet<string> Known { get; } = new(StringComparer.Ordinal);
     public IReadOnlyCollection<string> KnownRegions => Known;

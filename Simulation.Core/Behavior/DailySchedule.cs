@@ -11,11 +11,22 @@ namespace Simulation.Core.Behavior;
 /// </summary>
 public static class DailySchedule
 {
-    public readonly record struct Busy(int Start, int End, string Label);
+    public readonly record struct Busy(int Start, int End, string Label, bool Remote = false);
+
+    /// <summary>Bloco de trabalho remoto (D-044): pausas permitidas e flexibilidade para jogar.</summary>
+    public readonly record struct RemoteWork(int Start, int End, IReadOnlyList<(int Start, int End)> Breaks);
 
     public sealed class DayLayout
     {
         public List<Busy> Blocks { get; } = new();
+        /// <summary>Blocos remotos de hoje: unico lugar onde jogar durante o trabalho pode ser permitido.</summary>
+        public List<RemoteWork> Remote { get; } = new();
+        /// <summary>Sono a mais nesta manha para recuperar o deficit (P3).</summary>
+        public int RecoveryMinutes { get; internal set; }
+        /// <summary>A noite anterior terminou num turno (dorme de manha).</summary>
+        public bool DaySleeper { get; internal set; }
+        /// <summary>O dia termina saindo para um turno da noite: o fim da ultima janela nao e a hora de dormir.</summary>
+        public bool NightShiftAhead { get; internal set; }
         public int Wake { get; internal set; }
         public int Bed { get; internal set; }
         public List<(int Start, int End)> Windows { get; } = new();
@@ -27,9 +38,13 @@ public static class DailySchedule
     }
 
     /// <summary>Obrigacoes do dia da semana (0 = segunda): inicio, fim (pode passar de 1440), deslocamento e rotulo.</summary>
-    public static List<(int Start, int End, int Commute, string Label)> Obligations(Person p, OccupationDefinition? occ, int dow, bool holiday)
+    public static List<(int Start, int End, int Commute, string Label)> Obligations(Person p, OccupationDefinition? occ, int dow, bool holiday) =>
+        Blocks(p, occ, dow, holiday).Select(b => (b.Start, b.End, b.Commute, b.Label)).ToList();
+
+    /// <summary>Obrigacoes com o bloco de origem (remoto, pausas).</summary>
+    public static List<(int Start, int End, int Commute, string Label, ObligationBlockDefinition Def)> Blocks(Person p, OccupationDefinition? occ, int dow, bool holiday)
     {
-        var list = new List<(int Start, int End, int Commute, string Label)>();
+        var list = new List<(int Start, int End, int Commute, string Label, ObligationBlockDefinition Def)>();
         if (occ == null || (holiday && !occ.WorksHolidays)) return list;
         foreach (var b in occ.Blocks)
         {
@@ -38,7 +53,7 @@ public static class DailySchedule
             int s = ContentValidator.ParseClock(b.Start), e = ContentValidator.ParseClock(b.End);
             if (s < 0 || e < 0) continue;
             if (e <= s) e += 1440;
-            list.Add((s + p.ShiftOffsetMinutes, e + p.ShiftOffsetMinutes, b.CommuteMinutes * p.CommutePermille / 1000, b.Label));
+            list.Add((s + p.ShiftOffsetMinutes, e + p.ShiftOffsetMinutes, b.CommuteMinutes * p.CommutePermille / 1000, b.Label, b));
         }
         list.Sort((a, b) => a.Start != b.Start ? a.Start.CompareTo(b.Start) : string.CompareOrdinal(a.Label, b.Label));
         return list;
@@ -51,7 +66,8 @@ public static class DailySchedule
     /// </summary>
     public static DayLayout Build(Person p, OccupationDefinition? occ, RoutineSettingsDefinition rs, int dow, bool holiday, bool prevHoliday, bool nextHoliday)
     {
-        var today = Obligations(p, occ, dow, holiday);
+        var todayBlocks = Blocks(p, occ, dow, holiday);
+        var today = todayBlocks.Select(b => (b.Start, b.End, b.Commute, b.Label)).ToList();
         var prev = Obligations(p, occ, (dow + 6) % 7, prevHoliday);
         var next = Obligations(p, occ, (dow + 1) % 7, nextHoliday);
         var day = new DayLayout();
@@ -60,21 +76,36 @@ public static class DailySchedule
         foreach (var o in prev)
             if (o.End > 1440) spillEnd = Math.Max(spillEnd, o.End - 1440 + o.Commute);
         if (spillEnd > 0) day.Blocks.Add(new Busy(0, spillEnd, prev.First(o => o.End > 1440).Label));
-        foreach (var o in today) day.Blocks.Add(new Busy(Math.Max(0, o.Start - o.Commute), o.End + o.Commute, o.Label));
+        foreach (var o in todayBlocks)
+        {
+            day.Blocks.Add(new Busy(Math.Max(0, o.Start - o.Commute), o.End + o.Commute, o.Label, o.Def.Remote));
+            if (o.Def.Remote)
+                day.Remote.Add(new RemoteWork(o.Start, o.End, o.Def.Breaks
+                    .Select(br => (ContentValidator.ParseClock(br.Start) + p.ShiftOffsetMinutes, ContentValidator.ParseClock(br.End) + p.ShiftOffsetMinutes))
+                    .Where(br => br.Item1 >= o.Start && br.Item2 <= o.End).ToList()));
+        }
         day.FreeDay = day.Blocks.Count == 0;
 
+        // Recuperacao (P3): sem obrigacao cedo, dorme mais para pagar o deficit.
+        int recovery = Math.Min(p.SleepDeficitMinutes, rs.RecoveryFreeNightMinutes);
         int wake;
         if (spillEnd > 0)
-            wake = spillEnd + rs.ArrivalMinutes + p.SleepNeedMinutes;   // dorme depois do turno
+        {
+            wake = spillEnd + rs.ArrivalMinutes + p.SleepNeedMinutes + recovery;   // dorme depois do turno
+            day.DaySleeper = true;
+        }
         else
         {
             int natural = Math.Max(0, p.BedtimeMinute + p.SleepNeedMinutes - 1440);
-            wake = today.Count > 0 ? Math.Max(0, Math.Min(natural, today[0].Start - today[0].Commute - rs.PrepMinutes)) : natural;
+            int limit = today.Count > 0 ? today[0].Start - today[0].Commute - rs.PrepMinutes : int.MaxValue;
+            wake = Math.Max(0, Math.Min(natural + recovery, limit));
+            if (wake > natural) day.RecoveryMinutes = wake - natural;
         }
+        if (spillEnd > 0) day.RecoveryMinutes = recovery;
 
         int bed;
         var night = today.Where(o => o.End > 1440).ToList();
-        if (night.Count > 0) bed = night[0].Start - night[0].Commute;   // sai para o turno da noite
+        if (night.Count > 0) { bed = night[0].Start - night[0].Commute; day.NightShiftAhead = true; }   // sai para o turno da noite
         else
         {
             bed = p.BedtimeMinute;
@@ -153,6 +184,14 @@ public static class DailySchedule
         window = best;
         return minutes >= rs.MinSessionMinutes;
     }
+
+    /// <summary>Cansaco (permille) pelo deficit de sono (P3).</summary>
+    public static int Fatigue(Person p, RoutineSettingsDefinition rs) =>
+        Math.Min(1000, p.SleepDeficitMinutes * 1000 / Math.Max(1, rs.FatigueFullDeficitMinutes));
+
+    /// <summary>Teto do deficit da pessoa: o geral escalado pela tolerancia dela.</summary>
+    public static int MaxDeficit(Person p, RoutineSettingsDefinition rs) =>
+        rs.MaxDeficitMinutes * (500 + p.SleepDebtTolerance) / 1000;
 
     /// <summary>Minutos esperados numa semana tipica (sem feriados, habito e humor neutros): base do "ritmo de jogo".</summary>
     public static int ExpectedWeeklyMinutes(Person p, OccupationDefinition? occ, RoutineSettingsDefinition rs)

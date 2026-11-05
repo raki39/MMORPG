@@ -149,6 +149,11 @@ public sealed class OccupationDefinition : IContentDefinition
     public int StartVariationMinutes { get; set; }
     /// <summary>Trabalha mesmo em feriados (escala, turnos, autonomos).</summary>
     public bool WorksHolidays { get; set; }
+    /// <summary>
+    /// Flexibilidade para jogar no expediente remoto (permille; 0 = nunca). So vale em blocos
+    /// remotos; nao transforma o trabalho em tempo livre (D-044).
+    /// </summary>
+    public int PlayDuringWorkFlexibility { get; set; }
     /// <summary>Renda do trabalho em centavos de real por mes (sem efeito ate o M7).</summary>
     public TraitRange Income { get; set; } = new();
     public int SupportChancePermille { get; set; }
@@ -168,6 +173,16 @@ public sealed class ObligationBlockDefinition
     public string Label { get; set; } = "";
     /// <summary>A pessoa tem uma folga fixa num dos dias deste bloco (escala).</summary>
     public bool PersonalDayOff { get; set; }
+    /// <summary>Trabalho remoto (em casa, com o computador): pausas e, com flexibilidade, alguma escapada.</summary>
+    public bool Remote { get; set; }
+    /// <summary>Pausas permitidas dentro do bloco ("HH:mm"), so em blocos remotos.</summary>
+    public List<BreakDefinition> Breaks { get; set; } = new();
+}
+
+public sealed class BreakDefinition
+{
+    public string Start { get; set; } = "";
+    public string End { get; set; } = "";
 }
 
 public sealed class HolidayDefinition

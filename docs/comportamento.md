@@ -88,7 +88,7 @@ Quem gosta de repetir e quem precisa de variedade é um traço próprio: **Varie
 - **Rotina:** a chance de jogar no dia vale `rotina × fator`, com fator = 1 + (engajamento − 700) / 1000, entre 0,15 e 1,3.
   - Quem acabou de entrar fica perto de 1; desanimado, joga menos.
 - **Sessões flexíveis:**
-  - indo bem (nota parcial ≥ 700) e engajada, a pessoa estende a sessão uma vez em 30%, com chance de 40%;
+  - estender a sessão segue a P3 (seção "Sono e dificuldade de parar" abaixo);
   - com frustração ≥ 600 e uma experiência ruim, pode sair na hora (30%).
 - **Inativo:** 14 dias sem jogar (o dia de uma volta conta como presença). Volta com chance de 25% da rotina × intenção de continuar.
 - **Desistente** (`player_quit`, com o que mais incomodava como causa):
@@ -100,9 +100,41 @@ Quem gosta de repetir e quem precisa de variedade é um traço próprio: **Varie
   - chance de até 0,4% por dia, também pela lealdade;
   - a pessoa volta com o humor que tem (sem recomeço fabricado), joga no dia da volta e tem 14 dias de carência, em que só as novas sessões decidem.
 - **Outros motivos de retorno** (sem essa exigência de memórias novas, porque quem está fora não cria experiências novas):
-  - atualizações (M7);
+  - atualizações (M7), sobretudo as grandes ou marcantes, e eventos dentro do jogo, que também aumentam a vontade de prolongar a sessão;
   - convites de amigos (M6);
   - campanhas de marketing e streamers (M7).
+
+## Sono e dificuldade de parar (P3, D-044)
+
+Três traços separados, todos sorteados por perfil e independentes dentro dele:
+
+| Traço | O que decide |
+|---|---|
+| Importância do jogo (P2) | Se joga no dia e quanto; segunda sessão; jogar na pausa do trabalho |
+| Tendência a prolongar | Chance e tamanho da extensão quando a sessão está boa ou a meta está perto |
+| Autocontrole | Freia a extensão e a escapada no expediente |
+
+- **Extensão:** motivo explícito, "gostando da sessão" (nota parcial ≥ 700) ou "perto de concluir a meta" (70% do caminho).
+  - Chance = 40% × tendência × (1 − autocontrole × 0,8) × (1 − cansaço).
+  - Tamanho = 30% da sessão planejada × (0,5 + tendência), mínimo 10 min.
+  - Limites explícitos: 2 vezes por sessão e 180 min no total. Nunca na pausa ou na escapada do trabalho nem no cenário controlado.
+  - Usa primeiro o resto da janela livre. Só avança sobre o sono se a janela termina na hora de dormir (nunca antes de uma obrigação nem de um turno da noite).
+  - O sono cortado tem três tetos: 180 min por noite, o teto do déficit e um sono mínimo de 4 h.
+- **Sono:** cada pessoa tem necessidade de sono e hora preferida de dormir (P2).
+  - O dia se monta a partir das obrigações. Noite mais curta que a necessidade vira **déficit**, e o sono cortado pelo jogo também entra no déficit na saída da sessão (evento `stayed_up_late`, com motivo e minutos).
+  - Recuperação: manhã livre dorme até 2 h a mais; noite normal recupera 20 min.
+  - Teto do déficit: 15 h × (0,5 + tolerância ao déficit), com a tolerância variando por pessoa.
+- **Cansaço:** déficit ÷ 10 h, até 100%. O cansaço:
+  - reduz a chance de jogar (até −40%) e a duração desejada (até −30%);
+  - pesa na nota da sessão (motivo "Cansaço");
+  - acima de 50%, "Cansado (dormiu pouco)" vira o motivo do dia sem jogo.
+- **Jogar no horário de trabalho:** só em bloco de trabalho remoto.
+  - **Pausa:** jogar no intervalo declarado na ocupação (`breaks`). A chance vem da importância do jogo; a sessão é curta e cabe na pausa.
+  - **Escapada:** jogar no expediente. Rara, pela flexibilidade da ocupação (`playDuringWorkFlexibility`) × importância × falta de autocontrole × folga do dia (carga sorteada). Dura cerca de 25 min, longe do início e do fim do expediente.
+  - Pausa e escapada são **interrompíveis**: a decisão pesa o custo de largar cada atividade (`interruptCost`: chefe 1000, emboscada 850 … comércio e conversa 0).
+  - **Chamado do trabalho** (35% das escapadas): termina a atividade se falta pouco (regra de saída) ou larga e sai.
+  - A agenda registra as sessões no trabalho e os minutos sobre o expediente. Ainda sem consequência profissional.
+  - Deslocamento, trabalho presencial e estudo ficam protegidos (teste).
 
 ## Cenário controlado
 

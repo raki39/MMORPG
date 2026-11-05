@@ -92,6 +92,11 @@ public static class PopulationGenerator
         int factor = content.Localities.TryGetValue(person.ResidenceId, out var loc) ? loc.IncomeFactorPermille : 1000;
         person.IncomeCentsPerMonth = (long)Roll(rng, occ.Income, 0, 100_000_000) * factor / 1000;
         person.SupportCentsPerMonth = rng.ChancePermille(occ.SupportChancePermille) ? (long)Roll(rng, occ.Support, 0, 100_000_000) * factor / 1000 : 0;
+        person.SleepDebtTolerance = Roll(rng, rs.SleepDebtTolerance, 0, 1000);
+        // Tendencia a prolongar e autocontrole (P3): do perfil, sorteados por ultimo.
+        var profile = content.Profiles[person.ProfileId];
+        person.Traits.ExtendTendency = Roll(rng, profile.ExtendTendency, 0, 1000);
+        person.Traits.SelfControl = Roll(rng, profile.SelfControl, 0, 1000);
         person.ExpectedWeeklyMinutes = Behavior.DailySchedule.ExpectedWeeklyMinutes(person, occ, rs);
     }
 

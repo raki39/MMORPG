@@ -116,6 +116,19 @@ Referência para qualquer tela nova. Estilo de dossiê de jogo de gestão: escur
   - leitura no hover.
 - **Rosca** (`DonutChart`), **anel** (`RingGauge`), **nota 1–5** (`RingRating`), **meio-medidor** (`SemiGauge`) e **pontos 1–5** (`Pips`).
 - **Barras finas** (`ThinBar`, 3–4 px, presas ao pixel).
+- **Barras agrupadas** (`GroupedBarChart`):
+  - uma barra sólida por série, lado a lado, sem trilho vazio;
+  - valor em cima só quando cabe;
+  - embaixo, o rótulo e um texto curto ou ícone;
+  - nada de texto espremido entre barras: o detalhe vai na leitura.
+- **Tendência diária** (`DayTrendChart`):
+  - área para a capacidade (tempo livre) e linha com pontos para o realizado;
+  - ponto no zero na cor do motivo;
+  - faixas sutis para os dias livres.
+- **Sono** (`SleepChart`): colunas contra uma referência tracejada.
+- **Leitura** (`Readout`): título e linhas coloridas.
+- **Cartões internos**, como os dias da semana: fundo `#12161C`, borda de 1 px, dourada no item de hoje.
+- **Etiquetas com ícone** (`Chip`) para condições.
 - Tudo é desenhado alinhado ao pixel (linhas em meio pixel, retângulos inteiros).
 
 ## Interação

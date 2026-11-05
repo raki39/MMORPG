@@ -152,6 +152,9 @@ public static class ContentValidator
             if (o.Weight < 0) v.Error(OccupationsFile, p + ".weight", "O peso não pode ser negativo.");
             if (o.StartVariationMinutes is < 0 or > 360) v.Error(OccupationsFile, p + ".startVariationMinutes", "Use de 0 a 360 minutos.");
             if (o.SupportChancePermille is < 0 or > 1000) v.Error(OccupationsFile, p + ".supportChancePermille", "Use 0 a 1000.");
+            if (o.PlayDuringWorkFlexibility is < 0 or > 1000) v.Error(OccupationsFile, p + ".playDuringWorkFlexibility", "Use 0 a 1000.");
+            if (o.PlayDuringWorkFlexibility > 0 && !o.Blocks.Any(b => b.Remote))
+                v.Error(OccupationsFile, p + ".playDuringWorkFlexibility", "Só faz sentido com algum bloco remoto.");
             Range(p, "income", o.Income, 0, 100_000_000, v, OccupationsFile);
             Range(p, "support", o.Support, 0, 100_000_000, v, OccupationsFile);
             var perDay = new List<(int Start, int End)>[7];
@@ -166,6 +169,13 @@ public static class ContentValidator
                 if (s >= 0 && e == s) v.Error(OccupationsFile, bp + ".end", "Início e fim iguais.");
                 if (b.CommuteMinutes is < 0 or > 240) v.Error(OccupationsFile, bp + ".commuteMinutes", "Use de 0 a 240 minutos.");
                 if (b.Days.Count == 0) v.Error(OccupationsFile, bp + ".days", "Defina ao menos um dia.");
+                if (b.Breaks.Count > 0 && !b.Remote) v.Error(OccupationsFile, bp + ".breaks", "Pausas para jogar só em blocos remotos.");
+                for (int k = 0; k < b.Breaks.Count; k++)
+                {
+                    int bs = ParseClock(b.Breaks[k].Start), be = ParseClock(b.Breaks[k].End);
+                    if (bs < 0 || be < 0 || be <= bs) v.Error(OccupationsFile, $"{bp}.breaks[{k}]", "Use HH:mm com fim depois do início.");
+                    else if (s >= 0 && e > s && (bs < s || be > e)) v.Error(OccupationsFile, $"{bp}.breaks[{k}]", "A pausa precisa ficar dentro do bloco.");
+                }
                 foreach (var day in b.Days)
                 {
                     int di = WeekDayIndex(day);
@@ -197,6 +207,30 @@ public static class ContentValidator
         if (r.MaxSessionsPerDay is < 1 or > 4) v.Error(PopulationFile, "routine.maxSessionsPerDay", "Use de 1 a 4.");
         if (r.FullFreeMinutes <= 0) v.Error(PopulationFile, "routine.fullFreeMinutes", "Use mais que zero.");
         if (r.FullLoadMinutes <= 0) v.Error(PopulationFile, "routine.fullLoadMinutes", "Use mais que zero.");
+        // Sono, extensao e sessoes no expediente (P3).
+        foreach (var (name, value) in new (string, int)[]
+        {
+            ("selfControlWeight", r.SelfControlWeight), ("goalClosePermille", r.GoalClosePermille), ("fatigueChancePenalty", r.FatigueChancePenalty),
+            ("fatigueDurationPenalty", r.FatigueDurationPenalty), ("tiredReasonFatigue", r.TiredReasonFatigue), ("breakSessionChancePermille", r.BreakSessionChancePermille),
+            ("slackChanceAtMax", r.SlackChanceAtMax), ("workInterruptChancePermille", r.WorkInterruptChancePermille), ("extendTendencyBase", r.ExtendTendencyBase),
+        })
+            if (value is < 0 or > 1000) v.Error(PopulationFile, "routine." + name, "Use um valor de 0 a 1000.");
+        foreach (var (name, value) in new (string, int)[]
+        {
+            ("extendMaxTimesPerSession", r.ExtendMaxTimesPerSession), ("extendMaxMinutes", r.ExtendMaxMinutes), ("maxSleepCutMinutes", r.MaxSleepCutMinutes),
+            ("maxDeficitMinutes", r.MaxDeficitMinutes), ("recoveryFreeNightMinutes", r.RecoveryFreeNightMinutes), ("recoveryNormalNightMinutes", r.RecoveryNormalNightMinutes),
+            ("fatigueMoodWeight", r.FatigueMoodWeight), ("slackEdgeMinutes", r.SlackEdgeMinutes), ("interruptWeight", r.InterruptWeight),
+        })
+            if (value < 0) v.Error(PopulationFile, "routine." + name, "O valor não pode ser negativo.");
+        if (r.FatigueFullDeficitMinutes <= 0) v.Error(PopulationFile, "routine.fatigueFullDeficitMinutes", "Use mais que zero.");
+        if (r.MinSleepMinutes is < 120 or > 600) v.Error(PopulationFile, "routine.minSleepMinutes", "Use de 120 a 600 minutos.");
+        Range("routine", "sleepDebtTolerance", r.SleepDebtTolerance, 0, 1000, v, PopulationFile);
+        Range("routine", "slackMinutes", r.SlackMinutes, 5, 120, v, PopulationFile);
+        foreach (var kv in r.InterruptCost)
+        {
+            if (!ActivityTypes.All.Contains(kv.Key)) v.Error(PopulationFile, "routine.interruptCost." + kv.Key, "Tipo de atividade desconhecido.");
+            if (kv.Value is < 0 or > 1000) v.Error(PopulationFile, "routine.interruptCost." + kv.Key, "Use 0 a 1000.");
+        }
     }
 
     /// <summary>Localidades (P1): fuso, peso, idiomas e feriados; o servidor aponta uma delas.</summary>
@@ -933,6 +967,8 @@ public static class ContentValidator
             Permille(p, "habit", pr.Habit, v);
             Permille(p, "talent", pr.Talent, v);
             Permille(p, "variety", pr.Variety, v);
+            Permille(p, "extendTendency", pr.ExtendTendency, v);
+            Permille(p, "selfControl", pr.SelfControl, v);
             Range(p, "preferredStartHour", pr.PreferredStartHour, 0, 23, v);
             Range(p, "sessionMinutes", pr.SessionMinutes, 10, 720, v);
             Range(p, "leisureBudgetCentsPerMonth", pr.LeisureBudgetCentsPerMonth, 0, 1_000_000, v);

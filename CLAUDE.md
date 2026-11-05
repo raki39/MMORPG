@@ -52,7 +52,7 @@ tools/perf.ps1   # desempenho do cliente: falha se o p95 do quadro passar de 6,9
 - M0 e teste de viabilidade concluídos. M1 quase concluído (falta a revisão em 1366×768).
 - M2 fechado (D-039): plano da sessão, humor, memória, abandono e retorno (`docs/comportamento.md`); atributos do jogador em `docs/atributos.md`.
 - Roteiro por etapas (backlog):
-  0. Pessoa (`docs/plano-pessoa.md`, proposta): P0 parâmetros → P1 localidade e fuso → P2 obrigações e tempo livre → P3 sono → P4 traits. Reputação com a Etapa 3; finanças no M7.
+  0. Pessoa (`docs/plano-pessoa.md`): P0 a P3 feitas (D-041 a D-044: parâmetros, localidade e fuso, obrigações e tempo livre, sono e jogo no trabalho remoto) → P4 traits. Reputação com a Etapa 3; finanças no M7.
   1. Etapa 1 — personagem (classes, atributos do personagem, itens iniciais, inventário e ouro).
   2. Etapa 2 — combate PvE (M3; recalibrar a curva a/b).
   3. Etapa 3 — PvP e chefe.

@@ -226,7 +226,7 @@ public partial class SidePanel : PanelContainer
     {
         Array.Empty<string>(),
         new[] { "level_up", "region_discovered", "person_registered" },
-        new[] { "session_started", "session_ended" },
+        new[] { "session_started", "session_ended", "session_extended", "stayed_up_late", "work_interruption" },
         new[] { "activity_chosen" },
     };
 
@@ -287,7 +287,13 @@ public partial class SidePanel : PanelContainer
         switch (e.Type)
         {
             case "person_registered": return ($"{who} criou a conta ({e.Detail})", UiTokens.Accent);
-            case "session_started": return ($"{who} conectou", UiTokens.Success);
+            case "session_started":
+                if (e.Causes.Count > 0 && e.Causes[0].Factor == "work_break") return ($"{who} jogou na pausa do trabalho", UiTokens.Success);
+                if (e.Causes.Count > 0 && e.Causes[0].Factor == "during_work") return ($"{who} deu uma escapada no expediente", UiTokens.Warning);
+                return ($"{who} conectou", UiTokens.Success);
+            case "session_extended": return ($"{who} ficou mais um pouco ({e.Detail})", UiTokens.Success.Darkened(0.1f));
+            case "stayed_up_late": return ($"{who} foi dormir {e.Detail} mais tarde por causa do jogo", UiTokens.Warning);
+            case "work_interruption": return ($"{who} saiu por um chamado do trabalho", UiTokens.Warning);
             case "session_ended": return ($"{who} desconectou", UiTokens.TextDisabled);
             case "level_up": return ($"{who} subiu para o {e.Detail}", UiTokens.Accent);
             case "region_discovered": return ($"{who} descobriu {_ctx.ZoneName(e.Detail ?? "")}", UiTokens.Info);
