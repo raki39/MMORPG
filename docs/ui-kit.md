@@ -131,6 +131,42 @@ Referência para qualquer tela nova. Estilo de dossiê de jogo de gestão: escur
 - **Etiquetas com ícone** (`Chip`) para condições.
 - Tudo é desenhado alinhado ao pixel (linhas em meio pixel, retângulos inteiros).
 
+## Como fazer uma tela boa (lições da aba Rotina, aprovada pelo criador)
+
+1. **Cada card responde a uma pergunta.** Antes do gráfico, escrever a pergunta, por exemplo "quanto tempo livre ela tem e quanto se espera que jogue?". O título e o ⓘ dizem isso em linguagem simples.
+2. **A ordem conta uma história:**
+   - primeiro, quem é a pessoa (contexto: onde mora, finanças, vontade);
+   - depois, o padrão (semana típica e ocupação);
+   - por fim, o que aconteceu (últimos 30 dias, sono, motivos).
+3. **O que se lê junto fica lado a lado.** Exemplo: a semana típica ao lado das obrigações que a explicam.
+4. **Gráfico certo para cada dado:**
+   - série diária longa: linha, curva monótona suave, com os pontos nos valores reais;
+   - capacidade × realizado: área para a capacidade e linha para o realizado;
+   - comparação por categoria (dias da semana): barras sólidas agrupadas, lado a lado;
+   - parte de um todo: rosca ou barra única proporcional (ex.: a semana em 168 horas);
+   - perfil: atributos 1–20 com barra fina.
+5. **O que deu errado e não volta:**
+   - agenda em faixas de 24 h (parece Gantt e cansa);
+   - barras com trilho ou fundo vazio, ou com uma série por dentro da outra;
+   - texto espremido entre barras ou sob colunas estreitas;
+   - **agrupar dados que podem ser diferentes**, como "seg–sex". Cada dia é mostrado por si (dia a dia).
+6. **O texto no gráfico é mínimo:**
+   - rótulo curto e valor em cima só quando cabe;
+   - o detalhe vai na leitura ao passar o mouse (`Readout`);
+   - a legenda mostra só o que aparece na tela;
+   - qualquer marca nova (%, losango, faixa) é explicada na legenda ou no ⓘ.
+7. **A mesma cor tem o mesmo sentido na tela inteira.** Azul é tempo livre, verde é dia livre ou bom, dourado é jogo (jogado ou previsto), vermelho é falta ou zero, laranja é atenção.
+8. **Números que aparecem em dois cards usam a mesma definição.** Exemplo: "dias com jogo" na linha dos 30 dias e na rosca dos motivos. Se não baterem, falta uma categoria, como "jogou só no trabalho".
+9. **Card cheio de dado útil, sem espaço morto.** Para ocupar o espaço:
+   - cartões internos (um por dia, com borda dourada no de hoje);
+   - etiquetas com ícone para condições (`Chip`);
+   - mini-indicadores (`MiniStat`);
+   - uma frase de leitura do perfil, como um relatório de olheiro.
+10. **Conferir antes de mostrar:**
+    - captura em 1920×1080 (cards lado a lado) e em 1366×768 (cards empilhados);
+    - texto cortado ou sobreposto é defeito, mesmo que só aconteça numa das larguras;
+    - rodar `tools/perf.ps1`.
+
 ## Interação
 
 - Linhas clicáveis (`HoverRow`): fundo claro e filete dourado no hover, cursor de mão e seta › quando levam a outra página.
