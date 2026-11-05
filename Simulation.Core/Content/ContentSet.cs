@@ -14,6 +14,8 @@ public sealed class ContentSet
     public PopulationDefinition Population { get; set; } = new();
     public ProgressionDefinition Progression { get; set; } = new();
     public QuestCatalog Quests { get; set; } = new();
+    /// <summary>Localidades de residencia (P1).</summary>
+    public List<LocalityDefinition> Localities { get; set; } = new();
 
     /// <summary>Hash do conteudo de origem (calculado por quem carregou os arquivos).</summary>
     public string SourceHash { get; set; } = "";
@@ -34,6 +36,7 @@ public sealed class ContentDatabase
         Items = Index(set.Items);
         Creatures = Index(set.Creatures);
         Profiles = Index(set.Population.Profiles);
+        Localities = Index(set.Localities);
         Quests = Index(set.Quests.Quests);
         QuestBoards = Index(set.Quests.Boards);
         var byActivity = new SortedDictionary<string, QuestBoardDefinition>(StringComparer.Ordinal);
@@ -78,6 +81,11 @@ public sealed class ContentDatabase
     public IReadOnlyDictionary<string, ItemDefinition> Items { get; }
     public IReadOnlyDictionary<string, CreatureDefinition> Creatures { get; }
     public IReadOnlyDictionary<string, PopulationProfileDefinition> Profiles { get; }
+    /// <summary>Localidades por ID (ordem ordinal).</summary>
+    public IReadOnlyDictionary<string, LocalityDefinition> Localities { get; }
+    public IReadOnlyList<LocalityDefinition> LocalitiesOrdered => Localities.Values.ToList();
+    /// <summary>Localidade do servidor (fuso e calendario do relogio global).</summary>
+    public LocalityDefinition ServerLocality => Localities.TryGetValue(World.ServerLocalityId, out var l) ? l : LocalitiesOrdered[0];
 
     /// <summary>Perfis em ordem ordinal de ID (ordem estavel para sorteio ponderado).</summary>
     public IReadOnlyList<PopulationProfileDefinition> ProfilesOrdered => Profiles.Values.ToList();

@@ -169,7 +169,7 @@ public sealed class Person
     }
 
     public int Id { get; }
-    public string Name { get; }
+    public string Name { get; internal set; }
     /// <summary>Perfil de origem (predefinicao); a pessoa nao e um clone dele.</summary>
     public string ProfileId { get; }
     /// <summary>Semente estavel da aparencia, derivada do ID: mesma pessoa, mesmo visual.</summary>
@@ -196,6 +196,16 @@ public sealed class Person
     public int AccountId { get; internal set; }
     /// <summary>Personagem ativo (0 = nenhum). Um por pessoa nesta fase (plano 4.1).</summary>
     public int CharacterId { get; internal set; }
+    // ---- Localidade (P1, D-042) ----
+    /// <summary>Localidade de residencia: fuso e feriados.</summary>
+    public string ResidenceId { get; internal set; } = "";
+    /// <summary>Nacionalidade (contexto; nao decide horario, renda nem personalidade).</summary>
+    public string NationalityId { get; internal set; } = "";
+    /// <summary>Idiomas falados (ordem ordinal); o social do M6 usa.</summary>
+    public IReadOnlyList<string> Languages { get; internal set; } = Array.Empty<string>();
+    /// <summary>Diferenca do horario local para o do servidor (minutos).</summary>
+    public int LocalOffsetMinutes { get; internal set; }
+
     /// <summary>Ultimo dia (indice) em que jogou; -1 = nunca.</summary>
     public long LastPlayedDay { get; internal set; } = -1;
     public bool IsOnline => State == LifecycleState.Online;

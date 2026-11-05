@@ -131,6 +131,9 @@ public static class StateHasher
         h.Int(p.Id); h.Str(p.Name); h.Str(p.ProfileId); h.ULong(p.AppearanceSeed);
         h.Int((int)p.State); h.Int(p.AccountId); h.Int(p.CharacterId); h.Long(p.LastPlayedDay);
         h.Long(p.QuitDay); h.Int(p.TimesQuit); h.Int(p.TimesReturned); h.Int(p.TimesInactive);
+        h.Str(p.ResidenceId); h.Str(p.NationalityId); h.Int(p.LocalOffsetMinutes);
+        h.Int(p.Languages.Count);
+        foreach (var lang in p.Languages) h.Str(lang);
         h.Long(p.LastReturnDay); h.Long(p.NostalgiaSpentTick); h.Int(p.NostalgiaReturns); h.Int(p.Mood.NoveltyDecayCarry);
         var t = p.Traits;
         h.Int(t.Pve); h.Int(t.Pvp); h.Int(t.Trade); h.Int(t.Exploration); h.Int(t.Socializing);

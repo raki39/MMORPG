@@ -54,7 +54,7 @@ Uma etapa por vez, fechada por inteiro (testes, validação, documentação, exp
 1. ~~Fechar o M2: plano da sessão, humor, memória, abandono e retorno~~ (feito: D-037, D-038, D-039, revisão D-039a)
 1b. **Pessoa: rotina de vida e traits** ([plano-pessoa.md](plano-pessoa.md), aprovado com ajustes no D-041):
    - ~~P0: parâmetros da decisão no conteúdo~~ (feito, D-041);
-   - P1: localidade e fuso;
+   - ~~P1: localidade e fuso~~ (feito, D-042);
    - P2: obrigações, tempo livre e vontade de jogar;
    - P3: sono e dificuldade de parar;
    - P4: traits;

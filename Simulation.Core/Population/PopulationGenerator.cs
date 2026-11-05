@@ -15,6 +15,7 @@ public static class PopulationGenerator
 {
     public const string StreamName = "population.person";
     public const string AppearanceStreamName = "population.appearance";
+    public const string NameStreamName = "population.name";
 
     public static Person Generate(int personId, ContentDatabase content, ulong campaignSeed)
     {
@@ -61,7 +62,41 @@ public static class PopulationGenerator
         t.Variety = Roll(rng, profile.Variety, 0, 1000);
 
         ulong appearance = RngStreams.DeriveSeed(campaignSeed, AppearanceStreamName, personId);
-        return new Person(personId, name, profile.Id, appearance, t);
+        var person = new Person(personId, name, profile.Id, appearance, t);
+        AssignLocality(person, content, rng);   // depois dos tracos: nao altera populacoes ja geradas
+        return person;
+    }
+
+    /// <summary>
+    /// Residencia pelo peso de cada localidade; nacionalidade igual, salvo residentes
+    /// estrangeiros; idiomas: o nativo da nacionalidade e os da residencia, pela parcela de
+    /// falantes. A nacionalidade nao decide horario, renda nem personalidade (P1).
+    /// </summary>
+    private static void AssignLocality(Person person, ContentDatabase content, DeterministicRng rng)
+    {
+        var locs = content.LocalitiesOrdered;
+        if (locs.Count == 0) return;
+        var residence = locs[rng.PickWeighted(locs.Select(l => Math.Max(0, l.Weight)).ToList())];
+        var nationality = residence;
+        if (locs.Count > 1 && rng.ChancePermille(residence.ForeignResidentPermille))
+        {
+            var others = locs.Where(l => l.Id != residence.Id).ToList();
+            nationality = others[rng.PickWeighted(others.Select(l => Math.Max(1, l.Weight)).ToList())];
+        }
+        var languages = new SortedSet<string>(StringComparer.Ordinal) { nationality.Languages[0].Id };
+        foreach (var lang in residence.Languages)
+            if (rng.ChancePermille(lang.Permille)) languages.Add(lang.Id);
+        person.ResidenceId = residence.Id;
+        person.NationalityId = nationality.Id;
+        person.Languages = languages.ToArray();
+        person.LocalOffsetMinutes = residence.UtcOffsetMinutes - content.ServerLocality.UtcOffsetMinutes;
+        // Nome da nacionalidade, quando ela tem os seus; fluxo proprio para nao mexer nos outros sorteios.
+        var names = nationality.Names;
+        if (names.FirstNames.Count > 0 && names.LastNames.Count > 0)
+        {
+            var nr = new DeterministicRng(RngStreams.DeriveSeed(person.AppearanceSeed, NameStreamName, person.Id));
+            person.Name = names.FirstNames[nr.NextInt(names.FirstNames.Count)] + " " + names.LastNames[nr.NextInt(names.LastNames.Count)];
+        }
     }
 
     private static int Roll(DeterministicRng rng, TraitRange range, int min, int max)

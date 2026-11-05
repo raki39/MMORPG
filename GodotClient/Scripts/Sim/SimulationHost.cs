@@ -134,6 +134,11 @@ public sealed class PersonInfo
     public PersonTraits Traits { get; init; } = null!;
     /// <summary>Tracos de nascenca (imutaveis): comparacao "era X" e limites (D-036).</summary>
     public PersonTraits BaseTraits { get; init; } = null!;
+    /// <summary>Localidade (P1): residencia, nacionalidade, idiomas e diferenca para o horario do servidor.</summary>
+    public string ResidenceId { get; init; } = "";
+    public string NationalityId { get; init; } = "";
+    public IReadOnlyList<string> Languages { get; init; } = Array.Empty<string>();
+    public int LocalOffsetMinutes { get; init; }
 }
 
 /// <summary>
@@ -197,7 +202,8 @@ public sealed class SimulationHost : IDisposable
         Layout = new ZoneLayout(content);
         _engine = WorldFactory.Create(content, new WorldConfig { Seed = seed, PopulationSize = population });
         Persons = _engine.World.Persons
-            .Select(p => new PersonInfo { Id = p.Id, Name = p.Name, ProfileId = p.ProfileId, AppearanceSeed = p.AppearanceSeed, Traits = p.Traits, BaseTraits = p.BaseTraits })
+            .Select(p => new PersonInfo { Id = p.Id, Name = p.Name, ProfileId = p.ProfileId, AppearanceSeed = p.AppearanceSeed, Traits = p.Traits, BaseTraits = p.BaseTraits,
+                ResidenceId = p.ResidenceId, NationalityId = p.NationalityId, Languages = p.Languages, LocalOffsetMinutes = p.LocalOffsetMinutes })
             .ToArray();
         Calendar = _engine.World.Clock.Calendar;
         _snapshot = BuildSnapshot(-1);

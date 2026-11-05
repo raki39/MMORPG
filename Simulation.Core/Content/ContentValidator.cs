@@ -49,6 +49,7 @@ public static class ContentValidator
     public const string PopulationFile = "population.json";
     public const string ProgressionFile = "progression.json";
     public const string QuestsFile = "quests.json";
+    public const string LocalitiesFile = "localities.json";
 
     private static readonly Regex IdPattern = new("^[a-z][a-z0-9_]*$", RegexOptions.CultureInvariant);
 
@@ -57,6 +58,7 @@ public static class ContentValidator
         var v = new Collector();
 
         ValidateWorld(set, v);
+        ValidateLocalities(set, v);
         var regionIds = CheckIds(set.Regions, RegionsFile, "regions", v);
         var classIds = CheckIds(set.Classes, ClassesFile, "classes", v);
         var abilityIds = CheckIds(set.Abilities, AbilitiesFile, "abilities", v);
@@ -119,12 +121,39 @@ public static class ContentValidator
             if (Math.Abs(diag - g.SpacingX) > g.SpacingX * 0.08)
                 v.Warning(WorldFile, "map.spacingY", $"Vizinhos na diagonal ficam a {diag:0} unidades e na linha a {g.SpacingX}: lotes desiguais.");
         }
-        for (int i = 0; i < w.Holidays.Count; i++)
+    }
+
+    /// <summary>Localidades (P1): fuso, peso, idiomas e feriados; o servidor aponta uma delas.</summary>
+    private static void ValidateLocalities(ContentSet set, Collector v)
+    {
+        var ids = CheckIds(set.Localities, LocalitiesFile, "localities", v);
+        if (set.Localities.Count == 0) v.Error(LocalitiesFile, "localities", "Defina ao menos uma localidade.");
+        if (!ids.Contains(set.World.ServerLocalityId))
+            v.Error(WorldFile, "serverLocalityId", $"Localidade '{set.World.ServerLocalityId}' não existe em {LocalitiesFile}.");
+        if (set.Localities.Count > 0 && set.Localities.Sum(l => Math.Max(0, l.Weight)) <= 0)
+            v.Error(LocalitiesFile, "localities", "A soma dos pesos precisa ser positiva.");
+        for (int i = 0; i < set.Localities.Count; i++)
         {
-            if (TryParseHoliday(w.Holidays[i].Date, out _, out _, out _) == false)
-                v.Error(WorldFile, $"holidays[{i}].date", $"Data '{w.Holidays[i].Date}' inválida; use MM-dd ou yyyy-MM-dd.");
-            if (string.IsNullOrWhiteSpace(w.Holidays[i].Name))
-                v.Error(WorldFile, $"holidays[{i}].name", "Nome do feriado obrigatório.");
+            var l = set.Localities[i];
+            string p = $"localities[{i}]";
+            if (l.UtcOffsetMinutes is < -720 or > 840) v.Error(LocalitiesFile, p + ".utcOffsetMinutes", "Use de -720 (UTC-12) a 840 (UTC+14).");
+            if (l.Weight < 0) v.Error(LocalitiesFile, p + ".weight", "O peso não pode ser negativo.");
+            if (l.ForeignResidentPermille is < 0 or > 1000) v.Error(LocalitiesFile, p + ".foreignResidentPermille", "Use 0 a 1000.");
+            if (l.Languages.Count == 0) v.Error(LocalitiesFile, p + ".languages", "Defina ao menos o idioma nativo.");
+            else if (l.Languages[0].Permille != 1000) v.Error(LocalitiesFile, p + ".languages[0].permille", "O primeiro idioma é o nativo: use 1000.");
+            for (int j = 0; j < l.Languages.Count; j++)
+            {
+                if (string.IsNullOrWhiteSpace(l.Languages[j].Id)) v.Error(LocalitiesFile, $"{p}.languages[{j}].id", "Obrigatório.");
+                if (l.Languages[j].Permille is < 0 or > 1000) v.Error(LocalitiesFile, $"{p}.languages[{j}].permille", "Use 0 a 1000.");
+            }
+            if ((l.Names.FirstNames.Count == 0) != (l.Names.LastNames.Count == 0))
+                v.Error(LocalitiesFile, p + ".names", "Defina nomes e sobrenomes juntos (ou nenhum, para usar os gerais).");
+            for (int j = 0; j < l.Holidays.Count; j++)
+            {
+                if (!TryParseHoliday(l.Holidays[j].Date, out _, out _, out _))
+                    v.Error(LocalitiesFile, $"{p}.holidays[{j}].date", $"Data '{l.Holidays[j].Date}' inválida; use MM-dd ou yyyy-MM-dd.");
+                if (string.IsNullOrWhiteSpace(l.Holidays[j].Name)) v.Error(LocalitiesFile, $"{p}.holidays[{j}].name", "Nome do feriado obrigatório.");
+            }
         }
     }
 

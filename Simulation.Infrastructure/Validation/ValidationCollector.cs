@@ -22,6 +22,8 @@ public sealed class RunMetrics
     /// <summary>Tempo conectado por tipo (ticks), com "travel" (deslocamento) e "idle" (espera).</summary>
     public SortedDictionary<string, long> TimeByType { get; } = new(StringComparer.Ordinal);
     public List<ProfileStats> Profiles { get; } = new();
+    /// <summary>Por localidade (P1): pessoas registradas, sessoes e hora media de inicio local e do servidor.</summary>
+    public List<LocalityStats> Localities { get; } = new();
     /// <summary>Perfis da rodada controlada (humor neutralizado), quando houver (D-039a).</summary>
     public List<ProfileStats> ControlledProfiles { get; } = new();
     /// <summary>Nivel de cada personagem no fim (para diagnosticar atividades com nivel minimo).</summary>
@@ -42,6 +44,18 @@ public sealed class RunMetrics
     public long GreatSessions { get; set; }
     public long BadSessions { get; set; }
     public long RatedSessions { get; set; }
+}
+
+public sealed class LocalityStats
+{
+    public string Id { get; init; } = "";
+    public string Name { get; init; } = "";
+    public int UtcOffsetMinutes { get; init; }
+    public int Persons { get; init; }
+    public int ForeignNationals { get; init; }
+    public long Sessions { get; init; }
+    public double MeanLocalStartHour { get; init; }
+    public double MeanServerStartHour { get; init; }
 }
 
 public sealed class ProfileStats
@@ -87,6 +101,7 @@ public sealed class ValidationCollector
     private readonly List<int> _runs = new();
     private readonly SortedDictionary<string, long> _switchReasons = new(StringComparer.Ordinal);
     private long _great, _bad, _rated, _extended, _rage;
+    private readonly SortedDictionary<string, (long Sessions, long LocalMinutes, long ServerMinutes)> _localities = new(StringComparer.Ordinal);
     private readonly SortedDictionary<string, long> _quitReasons = new(StringComparer.Ordinal);
     private readonly List<int> _quitDays = new(), _quitLevels = new();
 
@@ -120,9 +135,14 @@ public sealed class ValidationCollector
                     if (_lastChoice.Remove(cid, out var prev) && prev.Run > 0 && e.Tick >= _windowStart) _runs.Add(prev.Run);
                     if (e.Tick < _windowStart) break;
                     _sessionsInWindow[pid] = _sessionsInWindow.GetValueOrDefault(pid) + 1;
-                    if (cal.KindOfTick(e.Tick) == DayKind.Weekday)
+                    // Horario e dia local da pessoa (P1): fuso e feriados da residencia.
+                    var person = w.GetPerson((int)pid);
+                    var at = cal.ToDateTime(e.Tick + person.LocalOffsetMinutes * SimTime.TicksPerMinute);
+                    var server = cal.ToDateTime(e.Tick);
+                    var lstat = _localities.GetValueOrDefault(person.ResidenceId);
+                    _localities[person.ResidenceId] = (lstat.Sessions + 1, lstat.LocalMinutes + at.Hour * 60 + at.Minute, lstat.ServerMinutes + server.Hour * 60 + server.Minute);
+                    if (w.CalendarOf(person).KindOf(at.Date) == DayKind.Weekday)
                     {
-                        var at = cal.ToDateTime(e.Tick);
                         int minute = at.Hour * 60 + at.Minute;
                         WeekdaySessionStarts.Add((pid, minute));
                         bool prime = minute >= PrimeTimeFromMinute && minute < PrimeTimeToMinute;
@@ -289,6 +309,18 @@ public sealed class ValidationCollector
             var worst = p.MoodDrivers.Where(kv => kv.Value < 0).OrderBy(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.Ordinal).FirstOrDefault();
             string key = worst.Key ?? "nenhum";
             m.TopComplaints[key] = m.TopComplaints.GetValueOrDefault(key) + 1;
+        }
+        foreach (var l in w.Content.LocalitiesOrdered)
+        {
+            var residents = chars.Select(c => w.GetPerson(c.PersonId)).Where(p => p.ResidenceId == l.Id).ToList();
+            var st = _localities.GetValueOrDefault(l.Id);
+            m.Localities.Add(new LocalityStats
+            {
+                Id = l.Id, Name = l.Name, UtcOffsetMinutes = l.UtcOffsetMinutes, Persons = residents.Count,
+                ForeignNationals = residents.Count(p => p.NationalityId != p.ResidenceId), Sessions = st.Sessions,
+                MeanLocalStartHour = st.Sessions == 0 ? double.NaN : st.LocalMinutes / 60.0 / st.Sessions,
+                MeanServerStartHour = st.Sessions == 0 ? double.NaN : st.ServerMinutes / 60.0 / st.Sessions,
+            });
         }
         foreach (var kv in _quitReasons) m.QuitReasons[kv.Key] = kv.Value;
         m.QuitDays.AddRange(_quitDays);

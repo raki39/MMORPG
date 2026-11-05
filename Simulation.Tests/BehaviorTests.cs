@@ -49,9 +49,12 @@ public class BehaviorTests
         {
             e.AdvanceTo(SimTime.Days(d + 1));
             foreach (var ev in e.World.Events.Drain().Where(x => x.Type == "session_started"))
-                starts.Add(((int)ev.Entities[0].Id, e.World.Clock.Calendar.ToDateTime(ev.Tick)));
+            {
+                var p = e.World.GetPerson((int)ev.Entities[0].Id);   // horario local (P1)
+                starts.Add((p.Id, e.World.Clock.Calendar.ToDateTime(ev.Tick + p.LocalOffsetMinutes * SimTime.TicksPerMinute)));
+            }
         }
-        var weekday = starts.Where(s => e.World.Clock.Calendar.KindOf(s.At.Date) == DayKind.Weekday).ToList();
+        var weekday = starts.Where(s => e.World.CalendarOf(e.World.GetPerson(s.PersonId)).KindOf(s.At.Date) == DayKind.Weekday).ToList();
         Assert.True(weekday.Count > 200, $"amostra pequena: {weekday.Count}");
         int near = weekday.Count(s =>
         {

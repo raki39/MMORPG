@@ -124,6 +124,12 @@ public sealed class WorldState
     public ulong Seed { get; }
     /// <summary>Cenario controlado: humor sem efeito na rotina e na permanencia (D-039a).</summary>
     public bool NeutralMood { get; init; }
+    /// <summary>Calendario de cada localidade (feriados da residencia), P1.</summary>
+    public IReadOnlyDictionary<string, CampaignCalendar> LocalityCalendars { get; init; } = new Dictionary<string, CampaignCalendar>();
+
+    /// <summary>Calendario da residencia da pessoa (o do servidor se nao tiver).</summary>
+    public CampaignCalendar CalendarOf(Person p) =>
+        LocalityCalendars.TryGetValue(p.ResidenceId, out var c) ? c : Clock.Calendar;
     public SimClock Clock { get; }
     public RngStreams Rng { get; }
     public EventScheduler Scheduler { get; } = new();

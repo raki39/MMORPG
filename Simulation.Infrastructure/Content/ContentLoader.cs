@@ -28,6 +28,7 @@ public static class ContentLoader
     public static readonly string[] ContentFiles =
     {
         ContentValidator.WorldFile,
+        ContentValidator.LocalitiesFile,
         ContentValidator.RegionsFile,
         ContentValidator.ClassesFile,
         ContentValidator.AbilitiesFile,
@@ -74,6 +75,7 @@ public static class ContentLoader
         var set = new ContentSet { SourceHash = hash };
         set.World = Parse<WorldFile>(texts, ContentValidator.WorldFile, issues)?.World ?? new WorldDefinition();
         set.Regions = Parse<RegionsFile>(texts, ContentValidator.RegionsFile, issues)?.Regions ?? new();
+        set.Localities = Parse<LocalitiesFile>(texts, ContentValidator.LocalitiesFile, issues)?.Localities ?? new();
         set.Classes = Parse<ClassesFile>(texts, ContentValidator.ClassesFile, issues)?.Classes ?? new();
         set.Abilities = Parse<AbilitiesFile>(texts, ContentValidator.AbilitiesFile, issues)?.Abilities ?? new();
         set.Items = Parse<ItemsFile>(texts, ContentValidator.ItemsFile, issues)?.Items ?? new();
@@ -134,6 +136,11 @@ public static class ContentLoader
 }
 
 // Formatos dos arquivos: envelope com schemaVersion + dados.
+public sealed class LocalitiesFile : VersionedFile
+{
+    public List<LocalityDefinition> Localities { get; set; } = new();
+}
+
 public abstract class VersionedFile
 {
     public int SchemaVersion { get; set; }

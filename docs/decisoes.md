@@ -1084,3 +1084,40 @@ Durante a revisão, o criador acrescentou: falta de conteúdo novo é questão d
   - Só a coluna `state_hash` muda, porque o hash de estado inclui o hash do conteúdo (`Content.SourceHash`) e o `population.json` mudou.
   - Esse é o método para checar mudanças que não deveriam alterar a simulação: comparar os relatórios, não o hash.
 - **Testes:** 164 passam.
+
+## D-042 — P1: localidade, fuso e calendário da residência
+**Data:** 04/11/2026 · **Estado:** aceita
+
+**Decisões:**
+- **Conteúdo novo, `localities.json`:**
+  - Brasil (UTC−3, 76%), Argentina (UTC−3, 9%), Estados Unidos (Leste, UTC−5, 8%) e China (UTC+8, 7%), em pesos configuráveis;
+  - cada localidade tem idiomas com a parcela de falantes, parcela de residentes estrangeiros, feriados e nomes próprios.
+  - **Simplificações registradas:** sem horário de verão; feriados móveis só com as datas de 2027; feriados lunares da China a completar pelo editor.
+- **O servidor tem localidade** (`world.json`: `serverLocalityId` = brasil). Os feriados saíram do `world.json` e passaram para a localidade. O relógio do jogo e o resumo diário usam o fuso e o calendário do servidor.
+- **Pessoa:**
+  - residência pelo peso;
+  - nacionalidade igual à residência, salvo os residentes estrangeiros (ex.: 12% nos EUA);
+  - idiomas: o nativo da nacionalidade mais os da residência, pela parcela de falantes;
+  - diferença para o horário do servidor;
+  - nome da nacionalidade quando ela tem os seus (os brasileiros mantêm os nomes gerais).
+  - Tudo é sorteado depois dos traços (e o nome num fluxo próprio), para não mudar as populações já geradas.
+  - A nacionalidade não decide horário, renda nem personalidade.
+- **Rotina no horário local:**
+  - o planejamento diário roda à meia-noite local de cada localidade (um evento por localidade, com o dia local);
+  - o horário preferido é local;
+  - o tipo do dia (útil, fim de semana, feriado) vem do calendário da residência;
+  - inatividade, humor e retorno contam pelo dia do servidor.
+- **Validação:**
+  - o horário de início e o dia útil são medidos no fuso de cada pessoa;
+  - seção nova "Localidades" no relatório, com pessoas, estrangeiros, sessões e início médio local e no servidor.
+- **Interface:**
+  - card "Onde mora" na aba Rotina (residência, fuso, nacionalidade, idiomas, hora local e diferença do servidor);
+  - gráfico "Horários de jogo" em hora local;
+  - coluna e filtro "País" na lista de jogadores.
+
+**Validação** (90 dias × 1.000 pessoas × 5 seeds):
+- regras do cenário: 7 de 7; provisórias: 8 de 12, como antes;
+- início médio: Brasil 18h36; Argentina 18h33; China 18h40 local, que é 7h51 no servidor; EUA 18h49 local, que é 19h58 no servidor;
+- o pico do servidor agora se espalha pelos fusos.
+
+**Testes:** 7 novos (171 no total): localidades do conteúdo, sorteio de residência, nacionalidade, idiomas e nome, feriados por residência, chineses jogando na noite local (manhã do servidor), planejamento na meia-noite local, validação, determinismo e hash.

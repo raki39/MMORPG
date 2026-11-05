@@ -648,7 +648,7 @@ public partial class PlayerModal : ModalFrame
             {
                 long hourEnd = (t / tph + 1) * tph;
                 long stop = Math.Min(end, hourEnd);
-                int h = _ctx.Calendar.ToDateTime(t).Hour;
+                int h = _ctx.Calendar.ToDateTime(t + _person.LocalOffsetMinutes * tpm).Hour;   // hora local (P1)
                 minutes[h] += (stop - t) / (float)tpm;
                 t = stop;
             }
@@ -1507,11 +1507,29 @@ public partial class PlayerModal : ModalFrame
 
     // ---------------- Rotina ----------------
 
+    public static string LanguageName(string id) => id switch
+    {
+        "pt" => "português", "es" => "espanhol", "en" => "inglês", "zh" => "chinês", _ => id,
+    };
+
+    private string LocalityName(string id) => _ctx.Content.Localities.TryGetValue(id, out var l) ? l.Name : id;
+
     private Control BuildRoutine()
     {
         var t = _person.Traits;
+        int off = _ctx.Content.Localities.TryGetValue(_person.ResidenceId, out var loc) ? loc.UtcOffsetMinutes : 0;
+        long now = _ctx.Snapshot().Tick;
+        var localNow = _ctx.Calendar.ToDateTime(Math.Max(0, now + _person.LocalOffsetMinutes * Simulation.Core.Time.SimTime.TicksPerMinute));
+        string diff = _person.LocalOffsetMinutes == 0 ? "mesmo horário do servidor"
+            : $"{(_person.LocalOffsetMinutes > 0 ? "+" : "−")}{Math.Abs(_person.LocalOffsetMinutes) / 60} h do servidor";
+        var place = Column(4,
+            KeyValue("Mora em", $"{LocalityName(_person.ResidenceId)} (UTC{(off >= 0 ? "+" : "−")}{Math.Abs(off) / 60})"),
+            KeyValue("Nacionalidade", LocalityName(_person.NationalityId) + (_person.NationalityId != _person.ResidenceId ? " (mora fora)" : "")),
+            KeyValue("Idiomas", string.Join(", ", _person.Languages.Select(LanguageName))),
+            KeyValue("Hora local agora", $"{localNow:HH:mm} · {diff}", UiTokens.AccentSoft),
+            Wrap("A rotina vale no horário e nos feriados de onde a pessoa mora; o relógio do jogo é o do servidor. A nacionalidade não decide horário, renda nem personalidade; os idiomas servirão ao social (M6).", UiTokens.FontCaption, UiTokens.TextDisabled));
         var routine = Column(4,
-            KeyValue("Horário preferido", $"{t.PreferredStartHour:00}h"),
+            KeyValue("Horário preferido (local)", $"{t.PreferredStartHour:00}h"),
             KeyValue("Sessão típica", $"{t.SessionMinutes} min"),
             KeyValue("Dias por semana", $"{t.DaysPerWeek}/7"),
             KeyValue("A mais no fim de semana", $"+{t.WeekendBoost / 10}%"));
@@ -1521,7 +1539,7 @@ public partial class PlayerModal : ModalFrame
             KeyValue("Disposição a pagar", $"{pay}/20", UiTokens.AttributeColor(pay)),
             KeyValue("Aversão a vantagem paga", $"{adv}/20", UiTokens.AttributeColor(adv)),
             Wrap("Dinheiro real fictício do tycoon, separado do ouro do MMORPG. Usado pela monetização no M7.", UiTokens.FontCaption, UiTokens.TextDisabled));
-        return Row(12, Card("Rotina", routine, UiTokens.Info), Card("Finanças", money, UiTokens.Accent));
+        return Row(12, Card("Onde mora", place, UiTokens.Info), Card("Rotina", routine, UiTokens.Info), Card("Finanças", money, UiTokens.Accent));
     }
 
     private static Label Wrap(string text, int size = UiTokens.FontSmall, Color? color = null, Font? font = null)

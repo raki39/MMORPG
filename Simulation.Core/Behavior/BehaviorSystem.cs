@@ -86,6 +86,17 @@ public sealed class BehaviorSystem
     private long Now => _w.Clock.Tick;
     private CampaignCalendar Cal => _w.Clock.Calendar;
 
+    // ---- Horario local (P1) ----
+    private static long FloorDiv(long a, long b) => a >= 0 ? a / b : (a - b + 1) / b;
+    private static long OffsetTicks(Person p) => p.LocalOffsetMinutes * SimTime.TicksPerMinute;
+    /// <summary>Dia local da pessoa no instante (indice de dias desde o inicio, no fuso dela).</summary>
+    public static long LocalDay(Person p, long tick) => FloorDiv(tick + OffsetTicks(p), SimTime.TicksPerDay);
+    /// <summary>Instante (do servidor) em que comeca o dia local da pessoa.</summary>
+    public static long LocalDayStart(Person p, long localDay) => localDay * SimTime.TicksPerDay - OffsetTicks(p);
+    /// <summary>Tipo do dia local pela residencia (feriados de onde mora).</summary>
+    private DayKind LocalKind(Person p, long localDay) =>
+        _w.CalendarOf(p).KindOf(Cal.StartDate.AddDays(localDay));
+
     private DeterministicRng Rng(string stream, long entity) =>
         new(RngStreams.DeriveSeed(_w.Seed, stream, entity));
 
@@ -99,8 +110,9 @@ public sealed class BehaviorSystem
             if (p.State != LifecycleState.PotentialInterested) continue;
             var rng = Rng("behavior.register", p.Id);
             int day = rng.PickWeighted(_w.Content.Behavior.RegistrationDayWeights);
-            long dayStart = Cal.StartOfDay(Cal.DayIndex(Now) + day);
-            long at = dayStart + SessionStartMinute(p, rng, Cal.KindOf(Cal.ToDateTime(dayStart).Date)) * SimTime.TicksPerMinute;
+            long localDay = LocalDay(p, Now) + day;
+            long dayStart = LocalDayStart(p, localDay);
+            long at = dayStart + SessionStartMinute(p, rng, LocalKind(p, localDay)) * SimTime.TicksPerMinute;
             if (at <= Now) at = Now + 1 + rng.NextInt((int)SimTime.TicksPerHour);
             _w.Scheduler.Schedule(at, EvRegister, p.Id);
         }
@@ -149,7 +161,7 @@ public sealed class BehaviorSystem
             new[] { new EventCause("launch_interest", 1000) }, $"{nick} · {classId}");
 
         // Primeira sessao comeca no ato do registro.
-        StartSession(p, SessionMinutes(p, rng, Cal.KindOfTick(Now)));
+        StartSession(p, SessionMinutes(p, rng, LocalKind(p, LocalDay(p, Now))));
     }
 
     private string ChooseClass(PersonTraits t, DeterministicRng rng)
@@ -173,16 +185,23 @@ public sealed class BehaviorSystem
 
     // ---------------- Sessoes ----------------
 
-    /// <summary>Meia-noite: cada pessoa registrada decide se e quando joga hoje.</summary>
+    /// <summary>
+    /// Meia-noite local de uma localidade (P1): cada pessoa registrada que mora la decide se e
+    /// quando joga hoje, no horario e nos feriados de onde mora. Inatividade e humor contam pelo
+    /// dia do servidor.
+    /// </summary>
     private void OnDailySessions(ScheduledEvent ev)
     {
-        long day = ev.Payload;
-        long dayStart = Cal.StartOfDay(day);
-        var kind = Cal.KindOf(Cal.ToDateTime(dayStart).Date);
+        var locality = _w.Content.LocalitiesOrdered[(int)ev.TargetId];
+        long localDay = ev.Payload;
+        long day = Cal.DayIndex(Now);
         var rt = _w.Content.Retention;
         foreach (var p in _w.Persons)
         {
             if (p.State is LifecycleState.PotentialInterested or LifecycleState.Banned || p.CharacterId == 0) continue;
+            if (p.ResidenceId.Length > 0 ? p.ResidenceId != locality.Id : (int)ev.TargetId != 0) continue;
+            long dayStart = LocalDayStart(p, localDay);
+            var kind = LocalKind(p, localDay);
             var ch = _w.GetCharacter(p.CharacterId);
             var rng = Rng("behavior.session", p.Id * 100_000L + day);
             if (p.State == LifecycleState.Quit)
@@ -211,7 +230,7 @@ public sealed class BehaviorSystem
             int duration = SessionMinutes(p, rng, kind);
             _w.Scheduler.Schedule(dayStart + minute * SimTime.TicksPerMinute, EvSessionStart, p.Id, duration);
         }
-        _w.Scheduler.Schedule(Cal.StartOfDay(day + 1), EvDailySessions, payload: day + 1);
+        _w.Scheduler.Schedule(Now + SimTime.TicksPerDay, EvDailySessions, ev.TargetId, localDay + 1);
     }
 
     /// <summary>Fator da chance de jogar pelo engajamento (permille), com piso e teto.</summary>

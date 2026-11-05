@@ -1,0 +1,417 @@
+{
+  "schemaVersion": 1,
+  "localities": [
+    {
+      "id": "argentina",
+      "version": 1,
+      "name": "Argentina",
+      "utcOffsetMinutes": -180,
+      "weight": 90,
+      "foreignResidentPermille": 30,
+      "languages": [
+        {
+          "id": "es",
+          "permille": 1000
+        },
+        {
+          "id": "en",
+          "permille": 250
+        },
+        {
+          "id": "pt",
+          "permille": 80
+        }
+      ],
+      "holidays": [
+        {
+          "date": "01-01",
+          "name": "Año Nuevo"
+        },
+        {
+          "date": "2027-02-08",
+          "name": "Carnaval"
+        },
+        {
+          "date": "2027-02-09",
+          "name": "Carnaval"
+        },
+        {
+          "date": "03-24",
+          "name": "Día de la Memoria"
+        },
+        {
+          "date": "2027-03-26",
+          "name": "Viernes Santo"
+        },
+        {
+          "date": "04-02",
+          "name": "Día de Malvinas"
+        },
+        {
+          "date": "05-01",
+          "name": "Día del Trabajador"
+        },
+        {
+          "date": "05-25",
+          "name": "Revolución de Mayo"
+        },
+        {
+          "date": "06-20",
+          "name": "Día de la Bandera"
+        },
+        {
+          "date": "07-09",
+          "name": "Día de la Independencia"
+        },
+        {
+          "date": "12-08",
+          "name": "Inmaculada Concepción"
+        },
+        {
+          "date": "12-25",
+          "name": "Navidad"
+        }
+      ],
+      "names": {
+        "firstNames": [
+          "Agustín",
+          "Bautista",
+          "Benjamín",
+          "Camila",
+          "Catalina",
+          "Delfina",
+          "Facundo",
+          "Florencia",
+          "Franco",
+          "Joaquín",
+          "Julieta",
+          "Lautaro",
+          "Lucía",
+          "Martina",
+          "Mateo",
+          "Micaela",
+          "Nicolás",
+          "Paula",
+          "Santiago",
+          "Sofía",
+          "Tomás",
+          "Valentina"
+        ],
+        "lastNames": [
+          "Acosta",
+          "Benítez",
+          "Castro",
+          "Díaz",
+          "Fernández",
+          "García",
+          "Giménez",
+          "Gómez",
+          "González",
+          "Herrera",
+          "López",
+          "Martínez",
+          "Medina",
+          "Molina",
+          "Pérez",
+          "Romero",
+          "Rodríguez",
+          "Ruiz",
+          "Sánchez",
+          "Sosa",
+          "Torres",
+          "Vázquez"
+        ]
+      }
+    },
+    {
+      "id": "brasil",
+      "version": 1,
+      "name": "Brasil",
+      "utcOffsetMinutes": -180,
+      "weight": 760,
+      "foreignResidentPermille": 20,
+      "languages": [
+        {
+          "id": "pt",
+          "permille": 1000
+        },
+        {
+          "id": "en",
+          "permille": 250
+        },
+        {
+          "id": "es",
+          "permille": 100
+        }
+      ],
+      "holidays": [
+        {
+          "date": "01-01",
+          "name": "Confraternização Universal"
+        },
+        {
+          "date": "04-21",
+          "name": "Tiradentes"
+        },
+        {
+          "date": "05-01",
+          "name": "Dia do Trabalho"
+        },
+        {
+          "date": "09-07",
+          "name": "Independência do Brasil"
+        },
+        {
+          "date": "10-12",
+          "name": "Nossa Senhora Aparecida"
+        },
+        {
+          "date": "11-02",
+          "name": "Finados"
+        },
+        {
+          "date": "11-15",
+          "name": "Proclamação da República"
+        },
+        {
+          "date": "11-20",
+          "name": "Dia da Consciência Negra"
+        },
+        {
+          "date": "12-25",
+          "name": "Natal"
+        },
+        {
+          "date": "2027-02-08",
+          "name": "Carnaval"
+        },
+        {
+          "date": "2027-02-09",
+          "name": "Carnaval"
+        },
+        {
+          "date": "2027-03-26",
+          "name": "Sexta-feira Santa"
+        }
+      ]
+    },
+    {
+      "id": "china",
+      "version": 1,
+      "name": "China",
+      "utcOffsetMinutes": 480,
+      "weight": 70,
+      "foreignResidentPermille": 10,
+      "languages": [
+        {
+          "id": "zh",
+          "permille": 1000
+        },
+        {
+          "id": "en",
+          "permille": 200
+        }
+      ],
+      "holidays": [
+        {
+          "date": "01-01",
+          "name": "Ano Novo"
+        },
+        {
+          "date": "04-05",
+          "name": "Qingming"
+        },
+        {
+          "date": "05-01",
+          "name": "Dia do Trabalho"
+        },
+        {
+          "date": "05-02",
+          "name": "Dia do Trabalho"
+        },
+        {
+          "date": "05-03",
+          "name": "Dia do Trabalho"
+        },
+        {
+          "date": "10-01",
+          "name": "Dia Nacional"
+        },
+        {
+          "date": "10-02",
+          "name": "Dia Nacional"
+        },
+        {
+          "date": "10-03",
+          "name": "Dia Nacional"
+        },
+        {
+          "date": "10-04",
+          "name": "Semana Dourada"
+        },
+        {
+          "date": "10-05",
+          "name": "Semana Dourada"
+        },
+        {
+          "date": "10-06",
+          "name": "Semana Dourada"
+        },
+        {
+          "date": "10-07",
+          "name": "Semana Dourada"
+        }
+      ],
+      "names": {
+        "firstNames": [
+          "Chen",
+          "Huang",
+          "Li",
+          "Lin",
+          "Liu",
+          "Ma",
+          "Sun",
+          "Wang",
+          "Wu",
+          "Xu",
+          "Yang",
+          "Zhang",
+          "Zhao",
+          "Zhou",
+          "Zhu",
+          "Guo"
+        ],
+        "lastNames": [
+          "Fang",
+          "Hao",
+          "Jie",
+          "Jing",
+          "Jun",
+          "Lei",
+          "Li",
+          "Min",
+          "Ming",
+          "Na",
+          "Ning",
+          "Qiang",
+          "Tao",
+          "Wei",
+          "Xin",
+          "Yan",
+          "Yang",
+          "Ying",
+          "Yu",
+          "Yun",
+          "Zhen",
+          "Zihan"
+        ]
+      }
+    },
+    {
+      "id": "eua",
+      "version": 1,
+      "name": "Estados Unidos",
+      "utcOffsetMinutes": -300,
+      "weight": 80,
+      "foreignResidentPermille": 120,
+      "languages": [
+        {
+          "id": "en",
+          "permille": 1000
+        },
+        {
+          "id": "es",
+          "permille": 200
+        }
+      ],
+      "holidays": [
+        {
+          "date": "01-01",
+          "name": "New Year's Day"
+        },
+        {
+          "date": "2027-01-18",
+          "name": "Martin Luther King Jr. Day"
+        },
+        {
+          "date": "2027-02-15",
+          "name": "Presidents' Day"
+        },
+        {
+          "date": "2027-05-31",
+          "name": "Memorial Day"
+        },
+        {
+          "date": "06-19",
+          "name": "Juneteenth"
+        },
+        {
+          "date": "07-04",
+          "name": "Independence Day"
+        },
+        {
+          "date": "2027-09-06",
+          "name": "Labor Day"
+        },
+        {
+          "date": "2027-11-25",
+          "name": "Thanksgiving"
+        },
+        {
+          "date": "12-25",
+          "name": "Christmas"
+        }
+      ],
+      "names": {
+        "firstNames": [
+          "Ashley",
+          "Austin",
+          "Brandon",
+          "Brittany",
+          "Chloe",
+          "Daniel",
+          "Emily",
+          "Ethan",
+          "Hannah",
+          "Jacob",
+          "Jessica",
+          "Justin",
+          "Kayla",
+          "Logan",
+          "Madison",
+          "Megan",
+          "Noah",
+          "Olivia",
+          "Ryan",
+          "Samantha",
+          "Tyler",
+          "Zachary"
+        ],
+        "lastNames": [
+          "Anderson",
+          "Brown",
+          "Clark",
+          "Davis",
+          "Garcia",
+          "Harris",
+          "Jackson",
+          "Johnson",
+          "Jones",
+          "Lee",
+          "Lewis",
+          "Martin",
+          "Miller",
+          "Moore",
+          "Robinson",
+          "Smith",
+          "Taylor",
+          "Thomas",
+          "Thompson",
+          "White",
+          "Williams",
+          "Wilson"
+        ]
+      }
+    }
+  ]
+}

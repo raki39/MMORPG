@@ -231,7 +231,9 @@ public partial class Main : Node
                     : p == "longplan"   // capturas: plano da sessao com o nome mais longo (cards nao podem empilhar)
                         ? Enumerable.Range(1, _host.Snapshot.ByPerson.Length - 1).Where(i => _host.Snapshot.ByPerson[i]?.Plan != null)
                             .OrderByDescending(i => PlanName(_host.Snapshot.ByPerson[i]!.Plan!.FocusKey).Length).FirstOrDefault()
-                        : int.TryParse(p, out var n) ? n : 0;
+                        : p.StartsWith("resident:", StringComparison.Ordinal)   // capturas: primeiro registrado que mora na localidade
+                            ? Enumerable.Range(1, _host.Snapshot.ByPerson.Length - 1).FirstOrDefault(i => _host.Snapshot.ByPerson[i] != null && _ctx.Persons[i - 1].ResidenceId == p[9..])
+                            : int.TryParse(p, out var n) ? n : 0;
             if (id > 0) OpenPerson(id);
             // Capturas: abre outra ficha e volta pelo historico (a evolucao deve carregar).
             if (id > 0 && _args.ContainsKey("back-test"))

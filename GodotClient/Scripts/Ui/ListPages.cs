@@ -103,6 +103,7 @@ public partial class PlayersPage : ListPage
         string Cls(string id) => ctx.Content.Classes.TryGetValue(id, out var c) ? c.Name : id;
         string Prof(int id) => ctx.Content.Profiles.TryGetValue(ctx.Persons[id - 1].ProfileId, out var p) ? p.Name : "";
         string Pers(int id) => PlayerModal.PersonalityOf(ctx.Persons[id - 1].Traits).Label;
+        string Loc(int id) => ctx.Content.Localities.TryGetValue(ctx.Persons[id - 1].ResidenceId, out var l) ? l.Name : "";
         _table = new DataTable<(int Id, CharacterView V)>(new[]
         {
             new Column<(int Id, CharacterView V)> { Title = "Personagem", Text = r => (ctx.Favorites.Contains(r.Id) ? "★ " : "") + r.V.Name, SortKey = r => r.V.Name, Tooltip = r => $"{r.V.Name}\nPessoa|{ctx.Persons[r.Id - 1].Name}\n~Clique para abrir a ficha." },
@@ -110,6 +111,8 @@ public partial class PlayersPage : ListPage
             new Column<(int Id, CharacterView V)> { Title = "Perfil", Width = 100, Text = r => Prof(r.Id), SortKey = r => Prof(r.Id), Color = r => UiTokens.ProfileColor(ctx.Persons[r.Id - 1].ProfileId).Lightened(0.15f) },
             new Column<(int Id, CharacterView V)> { Title = "Personalidade", Width = 110, Text = r => Pers(r.Id), SortKey = r => Pers(r.Id), Color = _ => UiTokens.TextLabel,
                 Tooltip = r => $"{Pers(r.Id)}\n~{PlayerModal.PersonalityOf(ctx.Persons[r.Id - 1].Traits).Text}" },
+            new Column<(int Id, CharacterView V)> { Title = "País", Width = 110, Text = r => Loc(r.Id), SortKey = r => Loc(r.Id), Color = _ => UiTokens.TextSecondary,
+                Tooltip = r => $"{Loc(r.Id)}\nIdiomas|{string.Join(", ", ctx.Persons[r.Id - 1].Languages.Select(PlayerModal.LanguageName))}\n~País onde mora: a rotina vale no horário local." },
             new Column<(int Id, CharacterView V)> { Title = "Classe", Width = 90, Text = r => Cls(r.V.ClassId), SortKey = r => r.V.ClassId },
             new Column<(int Id, CharacterView V)> { Title = "Nível", Width = 54, Right = true, Numeric = true, Text = r => r.V.Level.ToString(), SortKey = r => r.V.Level * 1_000_000L + r.V.Experience },
             new Column<(int Id, CharacterView V)> { Title = "Situação", Width = 250, Text = r => StatusText.Of(r.V, ctx.Content), SortKey = r => (int)r.V.Status, Color = r => r.V.State == LifecycleState.Quit ? UiTokens.Danger : r.V.State == LifecycleState.Inactive ? UiTokens.Warning : r.V.Status == CharacterStatus.Offline ? UiTokens.TextDisabled : UiTokens.TextPrimary },
@@ -117,7 +120,7 @@ public partial class PlayersPage : ListPage
             new Column<(int Id, CharacterView V)> { Title = "Zonas", Width = 54, Right = true, Numeric = true, Text = r => r.V.KnownRegions.ToString(), SortKey = r => r.V.KnownRegions, Tooltip = _ => "Zonas conhecidas" },
             new Column<(int Id, CharacterView V)> { Title = "Missões", Width = 62, Right = true, Numeric = true, Text = r => r.V.CompletedQuests.Sum(c => c.Times).ToString(), SortKey = r => r.V.CompletedQuests.Sum(c => c.Times), Tooltip = _ => "Missões entregues" },
             new Column<(int Id, CharacterView V)> { Title = "XP de missões", Width = 96, Right = true, Numeric = true, Text = r => r.V.XpFromQuests + r.V.XpFromActivities == 0 ? "—" : $"{r.V.XpFromQuests * 100 / (r.V.XpFromQuests + r.V.XpFromActivities)}%", SortKey = r => r.V.XpFromQuests * 1000 / Math.Max(1, r.V.XpFromQuests + r.V.XpFromActivities) },
-        }, sortColumn: 5) { OnClick = r => ctx.OpenPerson(r.Id) };
+        }, sortColumn: 6) { OnClick = r => ctx.OpenPerson(r.Id) };
         _table.OnSortChanged = () => Rebuild(false);
 
         AddTab("Todos", () => Body(_ => true));
@@ -134,10 +137,11 @@ public partial class PlayersPage : ListPage
         var classes = Ctx.Content.Classes.Values.OrderBy(c => c.Name, StringComparer.Ordinal).ToList();
         var pers = Ctx.Persons.Select(p => PlayerModal.PersonalityOf(p.Traits).Label).Distinct().OrderBy(x => x, StringComparer.Ordinal).ToList();
         var zones = Ctx.Content.Regions.Values.OrderBy(z => z.Name, StringComparer.Ordinal).ToList();
+        var locs = Ctx.Content.LocalitiesOrdered;
         return Searchable("Buscar por nome, pessoa, classe, perfil ou zona…", search =>
         {
             var snap = Ctx.Snapshot();
-            int fp = Filter("Perfil"), fc = Filter("Classe"), fq = Filter("Personalidade"), fz = Filter("Zona");
+            int fp = Filter("Perfil"), fc = Filter("Classe"), fq = Filter("Personalidade"), fz = Filter("Zona"), fl = Filter("País");
             var rows = Enumerable.Range(1, snap.ByPerson.Length - 1)
                 .Where(i => snap.ByPerson[i] is { } v && filter(v))
                 .Select(i => (Id: i, V: snap.ByPerson[i]!))
@@ -145,6 +149,7 @@ public partial class PlayersPage : ListPage
                 .Where(r => fc == 0 || r.V.ClassId == classes[fc - 1].Id)
                 .Where(r => fq == 0 || PlayerModal.PersonalityOf(Ctx.Persons[r.Id - 1].Traits).Label == pers[fq - 1])
                 .Where(r => fz == 0 || r.V.RegionId == zones[fz - 1].Id)
+                .Where(r => fl == 0 || Ctx.Persons[r.Id - 1].ResidenceId == locs[fl - 1].Id)
                 .Where(r => Match(search, r.V.Name, Ctx.Persons[r.Id - 1].Name, Ctx.ZoneName(r.V.RegionId),
                     Ctx.Content.Classes.TryGetValue(r.V.ClassId, out var c) ? c.Name : "", Ctx.Content.Profiles.TryGetValue(Ctx.Persons[r.Id - 1].ProfileId, out var p) ? p.Name : ""))
                 .ToList();
@@ -155,7 +160,8 @@ public partial class PlayersPage : ListPage
             ("Perfil", new[] { "Todos os perfis" }.Concat(profiles.Select(p => p.Name)).ToList()),
             ("Classe", new[] { "Todas as classes" }.Concat(classes.Select(c => c.Name)).ToList()),
             ("Personalidade", new[] { "Todas as personalidades" }.Concat(pers).ToList()),
-            ("Zona", new[] { "Todas as zonas" }.Concat(zones.Select(z => z.Name)).ToList()));
+            ("Zona", new[] { "Todas as zonas" }.Concat(zones.Select(z => z.Name)).ToList()),
+            ("País", new[] { "Todos os países" }.Concat(locs.Select(l => l.Name)).ToList()));
     }
 }
 

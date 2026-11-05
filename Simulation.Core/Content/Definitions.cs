@@ -21,7 +21,8 @@ public sealed class WorldDefinition
     public string StartingRegionId { get; set; } = "";
     /// <summary>Raio padrao de todas as zonas (unidades de mapa; 1 unidade = 10 m). Escala unica (D-016).</summary>
     public int ZoneRadius { get; set; }
-    public List<HolidayDefinition> Holidays { get; set; } = new();
+    /// <summary>Localidade do servidor (P1): fuso e calendario do relogio global e dos relatorios diarios.</summary>
+    public string ServerLocalityId { get; set; } = "";
     /// <summary>Grade de lotes do mapa: cada zona ocupa um lote; lotes vazios ficam para expansao.</summary>
     public MapGridDefinition Map { get; set; } = new();
 }
@@ -91,6 +92,41 @@ public sealed class RiverDefinition
     public int Width { get; set; } = 6;
     /// <summary>Quanto o rio serpenteia (permille do raio da zona).</summary>
     public int MeanderPermille { get; set; } = 220;
+}
+
+/// <summary>
+/// Localidade de residencia (P1, D-042): fuso, idiomas, feriados e participacao na populacao.
+/// Fuso em minutos do UTC, inteiro e fixo (sem horario de verao por enquanto).
+/// </summary>
+public sealed class LocalityDefinition : IContentDefinition
+{
+    public string Id { get; set; } = "";
+    public int Version { get; set; }
+    public string Name { get; set; } = "";
+    public int UtcOffsetMinutes { get; set; }
+    /// <summary>Peso relativo de residentes na populacao gerada.</summary>
+    public int Weight { get; set; }
+    /// <summary>Residentes com outra nacionalidade (permille).</summary>
+    public int ForeignResidentPermille { get; set; }
+    /// <summary>Idiomas falados pelos residentes; o primeiro e o idioma nativo de quem tem esta nacionalidade.</summary>
+    public List<LanguageShareDefinition> Languages { get; set; } = new();
+    public List<HolidayDefinition> Holidays { get; set; } = new();
+    /// <summary>Nomes de quem tem esta nacionalidade (vazio = nomes gerais de population.json).</summary>
+    public LocalNamesDefinition Names { get; set; } = new();
+}
+
+/// <summary>Nomes por nacionalidade (P1). Para a China, primeiro o sobrenome (ordem local).</summary>
+public sealed class LocalNamesDefinition
+{
+    public List<string> FirstNames { get; set; } = new();
+    public List<string> LastNames { get; set; } = new();
+}
+
+public sealed class LanguageShareDefinition
+{
+    public string Id { get; set; } = "";
+    /// <summary>Residentes que falam o idioma (permille).</summary>
+    public int Permille { get; set; }
 }
 
 public sealed class HolidayDefinition
