@@ -136,6 +136,16 @@ Três traços separados, todos sorteados por perfil e independentes dentro dele:
   - A agenda registra as sessões no trabalho e os minutos sobre o expediente. Ainda sem consequência profissional.
   - Deslocamento, trabalho presencial e estudo ficam protegidos (teste).
 
+## Coerência dos horários (D-045)
+
+Turno, sono, hora preferida de jogar e tempo livre precisam contar a mesma história.
+- Ninguém acorda de madrugada para um turno diurno; o validador recusa o conteúdo que permitiria isso.
+- A hora natural de dormir se adapta às obrigações: no dia livre, no máximo 1 h depois do dia útil.
+- A hora preferida de jogar cai no tempo livre dos dias com obrigação, pela mesma conta do planejador, e acompanha a vontade de jogar:
+  - quem dá muita importância ao jogo começa logo que chega;
+  - o casual começa mais tarde e segue o próprio horário de lazer;
+  - a sessão típica sempre cabe antes de dormir.
+
 ## Cenário controlado
 
 O runner mede a rotina pura numa segunda rodada com `NeutralMood`: o humor não muda a frequência nem a permanência (sem fator de engajamento, sessões flexíveis, inatividade ou desistência). As metas de classe "regra do cenário" usam essa rodada. Na campanha completa, faltar por desânimo é resultado legítimo.

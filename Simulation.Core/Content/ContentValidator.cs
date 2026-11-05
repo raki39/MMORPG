@@ -137,6 +137,9 @@ public static class ContentValidator
     /// <summary>Indice do dia (mon = 0 .. sun = 6); -1 se invalido.</summary>
     public static int WeekDayIndex(string d) => Array.IndexOf(WeekDays, d);
 
+    /// <summary>Acordar mais cedo que isso so em turno da noite (D-045).</summary>
+    public const int EarliestDayShiftWakeMinute = 4 * 60 + 30;
+
     /// <summary>Ocupacoes (P2): blocos validos, sem sobreposicao no mesmo dia, renda e apoio coerentes.</summary>
     private static void ValidateOccupations(ContentSet set, Collector v)
     {
@@ -157,6 +160,18 @@ public static class ContentValidator
                 v.Error(OccupationsFile, p + ".playDuringWorkFlexibility", "Só faz sentido com algum bloco remoto.");
             Range(p, "income", o.Income, 0, 100_000_000, v, OccupationsFile);
             Range(p, "support", o.Support, 0, 100_000_000, v, OccupationsFile);
+            // Coerencia (D-045): com a variacao de horario e o deslocamento mais longo, ninguem
+            // acorda antes das 04:30 para um turno diurno (turno da noite cruza a meia-noite).
+            var rsv = set.Population.Routine;
+            for (int j = 0; j < o.Blocks.Count; j++)
+            {
+                int bs = ParseClock(o.Blocks[j].Start), be = ParseClock(o.Blocks[j].End);
+                if (bs < 0 || be < 0 || be <= bs) continue;
+                int earliestWake = bs - o.StartVariationMinutes - o.Blocks[j].CommuteMinutes * (1000 + rsv.CommuteVariationPermille) / 1000 - rsv.PrepMinutes;
+                if (earliestWake < EarliestDayShiftWakeMinute)
+                    v.Error(OccupationsFile, $"{p}.blocks[{j}].start",
+                        $"Com a variação de horário (±{o.StartVariationMinutes} min) e o deslocamento, alguém acordaria às {earliestWake / 60:00}:{earliestWake % 60:00} para um turno diurno. Use turnos separados (ex.: manhã e tarde) ou reduza a variação.");
+            }
             var perDay = new List<(int Start, int End)>[7];
             for (int d = 0; d < 7; d++) perDay[d] = new();
             for (int j = 0; j < o.Blocks.Count; j++)
@@ -191,6 +206,24 @@ public static class ContentValidator
         var r = set.Population.Routine;
         Range("routine", "sleepNeedMinutes", r.SleepNeedMinutes, 240, 720, v, PopulationFile);
         Range("routine", "bedtimeMinute", r.BedtimeMinute, 1200, 1800, v, PopulationFile);
+        if (r.BedtimeAdaptMinutes is < 0 or > 240) v.Error(PopulationFile, "routine.bedtimeAdaptMinutes", "Use de 0 a 240 minutos.");
+        if (r.PreferredDelayMaxMinutes is < 0 or > 600) v.Error(PopulationFile, "routine.preferredDelayMaxMinutes", "Use de 0 a 600 minutos.");
+        if (r.FreeTimeDurationBase is < 0 or > 2000) v.Error(PopulationFile, "routine.freeTimeDurationBase", "Use 0 a 2000.");
+        if (r.CommitmentChancePermille is < 0 or > 1000) v.Error(PopulationFile, "routine.commitmentChancePermille", "Use 0 a 1000.");
+        var commitIds = new HashSet<string>(StringComparer.Ordinal);
+        for (int ci = 0; ci < r.Commitments.Count; ci++)
+        {
+            var c = r.Commitments[ci];
+            string cp = $"routine.commitments[{ci}]";
+            if (string.IsNullOrWhiteSpace(c.Id) || !commitIds.Add(c.Id)) v.Error(PopulationFile, cp + ".id", "Id vazio ou repetido.");
+            if (string.IsNullOrWhiteSpace(c.Label)) v.Error(PopulationFile, cp + ".label", "Dê um nome ao compromisso.");
+            int cf = ParseClock(c.StartFrom), ct = ParseClock(c.StartTo);
+            if (cf < 0) v.Error(PopulationFile, cp + ".startFrom", "Use HH:MM.");
+            if (ct < 0) v.Error(PopulationFile, cp + ".startTo", "Use HH:MM.");
+            if (cf >= 0 && ct >= 0 && ct < cf) v.Error(PopulationFile, cp + ".startTo", "O início mais tarde não pode ser antes do mais cedo.");
+            if (c.MinMinutes < 15 || c.MaxMinutes > 720 || c.MinMinutes > c.MaxMinutes) v.Error(PopulationFile, cp + ".minMinutes", "Use 15 ≤ mínimo ≤ máximo ≤ 720 minutos.");
+            if (c.Weight < 0) v.Error(PopulationFile, cp + ".weight", "O peso não pode ser negativo.");
+        }
         foreach (var (name, value) in new (string, int)[]
         {
             ("prepMinutes", r.PrepMinutes), ("arrivalMinutes", r.ArrivalMinutes), ("minWindowMinutes", r.MinWindowMinutes),

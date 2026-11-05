@@ -331,14 +331,14 @@
       "playDuringWorkFlexibility": 600
     },
     {
-      "id": "meio_periodo",
+      "id": "meio_periodo_manha",
       "version": 1,
-      "name": "Meio período",
+      "name": "Meio período (manhã)",
       "kind": "work",
-      "weight": 6,
-      "startVariationMinutes": 240,
+      "weight": 3,
+      "startVariationMinutes": 30,
       "worksHolidays": false,
-      "description": "Quatro horas por dia, de manhã ou à tarde.",
+      "description": "Quatro horas por dia útil, de manhã; a tarde e a noite ficam livres.",
       "blocks": [
         {
           "days": [
@@ -350,6 +350,43 @@
           ],
           "start": "08:00",
           "end": "12:00",
+          "commuteMinutes": 40,
+          "label": "trabalho",
+          "remote": false,
+          "breaks": []
+        }
+      ],
+      "income": {
+        "mean": 150000,
+        "spread": 60000
+      },
+      "supportChancePermille": 400,
+      "support": {
+        "mean": 60000,
+        "spread": 40000
+      },
+      "playDuringWorkFlexibility": 0
+    },
+    {
+      "id": "meio_periodo_tarde",
+      "version": 1,
+      "name": "Meio período (tarde)",
+      "kind": "work",
+      "weight": 3,
+      "startVariationMinutes": 30,
+      "worksHolidays": false,
+      "description": "Quatro horas por dia útil, à tarde; a manhã e a noite ficam livres.",
+      "blocks": [
+        {
+          "days": [
+            "mon",
+            "tue",
+            "wed",
+            "thu",
+            "fri"
+          ],
+          "start": "13:30",
+          "end": "17:30",
           "commuteMinutes": 40,
           "label": "trabalho",
           "remote": false,

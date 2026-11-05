@@ -153,6 +153,8 @@ public sealed class DayPoint
     public Color ReasonColor { get; init; } = UiTokens.TextSecondary;
     /// <summary>Jogou no horario do trabalho remoto (pausa ou escapada).</summary>
     public bool Work { get; init; }
+    /// <summary>Teve um compromisso no dia livre (festa, visita...): marcador roxo no alto.</summary>
+    public bool Commitment { get; init; }
     public string Title { get; init; } = "";
     public IReadOnlyList<(string Text, Color Color)> Lines { get; init; } = Array.Empty<(string, Color)>();
 }
@@ -286,6 +288,14 @@ public partial class DayTrendChart : Control
             DrawPolyline(freeCurve, new Color(UiTokens.Info, 0.85f), 1.5f, true);
             DrawPolyline(playedCurve, UiTokens.Accent, 2.2f, true);
         }
+        // Compromisso do dia livre: marcador roxo no alto da coluna do dia.
+        for (int i = 0; i < n; i++)
+            if (Days[i].Commitment)
+            {
+                var c = new Vector2(Mathf.Round(X(i)), plot.Position.Y + 5);
+                DrawCircle(c, 4.5f, UiTokens.CardBottom);
+                DrawCircle(c, 3.2f, UiTokens.Exceptional);
+            }
         // Pontos: dourado quando jogou; no zero, na cor do motivo, quando nao jogou.
         for (int i = 0; i < n; i++)
         {

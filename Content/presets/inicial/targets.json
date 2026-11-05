@@ -61,8 +61,8 @@
     },
     {
       "id": "horas_hardcore", "kind": "scenario", "name": "Horas por semana — hardcore", "metric": "hours_per_week", "profile": "hardcore",
-      "min": 15, "max": 35, "unit": "h",
-      "rationale": "Cerca de 6 sessões de 4 horas."
+      "min": 15, "max": 45, "unit": "h",
+      "rationale": "Cerca de 6 sessões de 4 a 6 horas; quem tem muito tempo livre e prioriza o jogo chega a 35–45 h (direção do criador, D-045: o hardcore ainda estava abaixo do real)."
     },
     {
       "id": "dau_dia_util", "kind": "scenario", "name": "Jogadores ativos em dia útil / cadastrados", "metric": "dau_ratio", "dayKind": "weekday",

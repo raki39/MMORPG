@@ -46,13 +46,20 @@ public class ValidationTests
                 collector.Consume(e.World.Events.Drain(), e.World);
             }
             var starts = collector.WeekdaySessionStarts;
-            inWindow += starts.Count(s => s.Minute >= 18 * 60 && s.Minute < 23 * 60);
+            // Depois de chegar do trabalho (horario desta pessoa, com deslocamento) e antes das 23h30.
+            int HomeAt(long pid)
+            {
+                var person = e.World.GetPerson((int)pid);
+                var work = Simulation.Core.Behavior.DailySchedule.Obligations(person, content.Occupations[person.OccupationId], 1, false)[0];
+                return work.End + work.Commute;
+            }
+            inWindow += starts.Count(s => s.Minute >= HomeAt(s.PersonId) && s.Minute < 23 * 60 + 30);
             total += starts.Count;
             Assert.DoesNotContain(starts, s => s.Minute >= 8 * 60 + 60 && s.Minute < 17 * 60 - 60);   // nunca no meio do expediente
         }
         Assert.True(total > 1500, $"amostra pequena: {total} sessões");
-        _out.WriteLine($"inícios de dia útil entre 18h e 23h: {inWindow * 100.0 / total:0.0}% de {total}");
-        Assert.True(inWindow * 100 / total >= 90, $"{inWindow}/{total} entre 18h e 23h");
+        _out.WriteLine($"inícios de dia útil depois de chegar do trabalho e antes das 23h30: {inWindow * 100.0 / total:0.0}% de {total}");
+        Assert.True(inWindow * 100 / total >= 90, $"{inWindow}/{total} depois de chegar e antes das 23h30");
     }
 
     /// <summary>

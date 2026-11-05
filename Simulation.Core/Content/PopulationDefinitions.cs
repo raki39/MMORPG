@@ -484,6 +484,28 @@ public sealed class RoutineSettingsDefinition
     public int CommuteVariationPermille { get; set; } = 300;
     /// <summary>Dias de agenda guardados para a ficha.</summary>
     public int PlanHistoryDays { get; set; } = 14;
+    /// <summary>
+    /// Coerencia do sono (D-045): quem acorda cedo para as obrigacoes se acostuma a dormir mais
+    /// cedo; a hora natural de dormir fica no maximo isto depois da hora tipica dos dias de obrigacao.
+    /// </summary>
+    public int BedtimeAdaptMinutes { get; set; } = 60;
+    /// <summary>
+    /// Vontade e horario (D-045): quanto o menos interessado espera depois de ficar livre para
+    /// comecar a jogar (importancia 0); quem tem importancia maxima comeca assim que fica livre.
+    /// </summary>
+    public int PreferredDelayMaxMinutes { get; set; } = 240;
+    /// <summary>
+    /// Tempo livre e duracao (D-045): quanto qualquer pessoa estende a sessao num dia com o tempo
+    /// livre cheio (permille), alem da parte que vem da importancia do jogo.
+    /// </summary>
+    public int FreeTimeDurationBase { get; set; } = 250;
+    /// <summary>
+    /// Compromissos ocasionais nos dias livres (D-046): festa, visita a familia, passeio...
+    /// Chance por dia livre de fim de semana, feriado ou folga (permille), escalada pela
+    /// sociabilidade; o compromisso tira horas do tempo livre daquele dia.
+    /// </summary>
+    public int CommitmentChancePermille { get; set; } = 70;
+    public List<CommitmentDefinition> Commitments { get; set; } = new();
     /// <summary>Cansaco do dia de obrigacoes: chance x (1 - carga * isto / 1000 * (1000 - importancia) / 1000).</summary>
     public int BusyDayPenaltyPermille { get; set; } = 600;
     /// <summary>Minutos de obrigacao (com deslocamento) para a carga contar inteira.</summary>
@@ -537,4 +559,18 @@ public sealed class RoutineSettingsDefinition
     public int WorkInterruptChancePermille { get; set; } = 350;
     /// <summary>Peso do custo de interromper na escolha da atividade em sessao interrompivel.</summary>
     public int InterruptWeight { get; set; } = 300;
+}
+
+/// <summary>Tipo de compromisso de dia livre (D-046): janela de inicio, duracao e peso.</summary>
+public sealed class CommitmentDefinition
+{
+    public string Id { get; set; } = "";
+    public string Label { get; set; } = "";
+    public string StartFrom { get; set; } = "14:00";
+    public string StartTo { get; set; } = "14:00";
+    public int MinMinutes { get; set; } = 60;
+    public int MaxMinutes { get; set; } = 120;
+    public int Weight { get; set; } = 1;
+    /// <summary>Social (festa, passeio): mais comum para quem e sociavel.</summary>
+    public bool Social { get; set; }
 }

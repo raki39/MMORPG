@@ -1293,3 +1293,95 @@ Durante a revisão, o criador acrescentou: falta de conteúdo novo é questão d
 O teste "ninguém começa a sessão durante uma obrigação" agora aceita sobreposição só em bloco remoto: dentro da pausa declarada, ou como escapada de ocupação com flexibilidade. O de extensão do D-039 aceita os dois motivos.
 
 `StateHasher` v11.
+
+## D-045 — Coerência dos horários da pessoa (turno, sono e hora preferida)
+**Data:** 04/11/2026 · **Estado:** aceita
+
+**Contexto:** o criador encontrou uma pessoa de meio período que trabalhava das 04:55 às 08:55, dormia às 19:49 nos dias úteis, preferia jogar às 22h e aparecia como "deita 23:30". Cada número vinha de um sorteio independente, e nada conferia se a história fechava.
+
+**Causas:**
+- **Variação de horário grande demais:** o meio período usava uma variação de ±4 h para representar "manhã ou tarde", e por isso havia gente saindo de casa de madrugada.
+- **Hora preferida sem relação com a rotina:** era sorteada pelo perfil e nunca confrontada com o tempo livre.
+- **Hora natural de dormir sem relação com o turno:** também sorteada à parte, ignorando quem acorda cedo.
+
+**Decisões:**
+- **Turnos reais no conteúdo:** o meio período virou duas ocupações, manhã (08:00–12:00) e tarde (13:30–17:30), com variação de ±30 min, como já era com os estudantes.
+- **Validador:** recusa uma ocupação diurna em que a variação e o deslocamento mais longo fariam alguém acordar antes das 04:30. O turno da noite, que cruza a meia-noite, fica de fora.
+- **Sono que se acostuma às obrigações:** a hora natural de dormir fica no máximo 1 h depois da hora típica (mediana) das noites antes de obrigação. O parâmetro é `routine.bedtimeAdaptMinutes`. O turno da noite segue o próprio ritmo.
+- **Hora preferida que conversa com a rotina e com a vontade de jogar** (pedido do criador: "o viciado que sai às 18h já está jogando; o casual chega e só quer jogar às 21h, 22h, umas 2 horinhas"):
+  - **Alvo de cada dia:** começa na janela livre mais próxima do gosto de horário sorteado pelo perfil.
+    - A espera e o peso do gosto de horário crescem com o **quadrado** da falta de importância. Importância 15/20 começa quase na hora; só o casual espera de verdade.
+    - O teto da espera é `routine.preferredDelayMaxMinutes` (240 min, para importância 0); quem espera mais também segue mais o próprio horário de lazer.
+    - Caso do criador: um hardcore de meio período de manhã, livre às 13:25, preferia 16h; agora prefere 14h.
+  - **A sessão típica cabe inteira até dormir:** a hora preferida nunca é "puxada para antes". Antes, 21h com uma sessão de 2h43 forçava o início às 20:47.
+  - **Dias que definem o hábito:** os dias com obrigação. Neles, a sessão considerada é limitada à maior janela que esses dias têm: o hardcore joga a noite toda depois do trabalho. Uma brecha de 40 min antes do expediente não vira "hora preferida" se outro dia útil tem mais tempo. Sem tempo nos dias úteis, valem os dias livres.
+  - **Hora final:** a hora cheia que funciona no maior número desses dias, pela mesma conta do planejador (`StartsAtPreferred`); em empate, a mais próxima do alvo.
+  - **Exemplos:**
+
+    | Quem | Chega em casa | Começa a jogar |
+    |---|---|---|
+    | Hardcore do horário comercial | 18:35 | ~19h |
+    | Casual do horário comercial | 18:35 | ~21h, por ~1h10 |
+    | Lyrus (meio período à tarde, competitiva, sessão de 2h43) | — | 20h |
+- **Populações preservadas:** nada novo é sorteado; os ajustes só corrigem o que já foi sorteado. A troca de uma ocupação por duas muda quem cai em cada uma.
+- **Duração coerente com o tempo livre:** quem prioriza o jogo joga mais em qualquer dia com muito tempo livre, não só no dia sem obrigações. Exemplo: meio período, ou estudante à tarde. A sessão cresce com importância × tempo livre do dia.
+- **Mais jogo para todos em dia de muito tempo livre** (pedido do criador: o previsto estava baixo para todos os perfis, não só o hardcore). A sessão cresce com uma base para todos (`routine.freeTimeDurationBase`, 250) mais a parte da importância.
+  - No cenário controlado, o casual foi de 3,4 para 4,1 h por semana e o hardcore de 31,6 para 37 h.
+  - A meta do hardcore subiu de 15–35 para 15–45 h por semana, por direção do criador: quem tem muito tempo livre e prioriza o jogo chega a 35–45 h.
+- **Hábito proporcional:** antes, quem não jogou ontem perdia pontos fixos de chance, o que cortava pela metade a chance de quem já tinha pouca. O casual que joga duas vezes por semana era "punido" por não ter jogado ontem. Agora o hábito multiplica a chance: +x% se jogou ontem, −x% se não jogou. Vale no planejador e no previsto.
+- **Casual um pouco mais presente** (pedido do criador, "pra um casual tá meio baixo demais"): importância do jogo 300 → 350 e sessão base 70 → 80 min.
+  - O casual da captura foi de 2,0 para 3,3 h por semana; nos dias úteis, de 8% para 20%.
+  - No cenário controlado, o casual faz 2,9 sessões e 5,6 h por semana.
+- **"Previsto" honesto:** usa a mesma conta do planejador, numa função só (`Expect`) que vale para a semana típica e para o total da semana.
+  - Inclui o **hábito**: quem jogou ontem tende a jogar hoje (frequência de longo prazo da cadeia "jogou ontem?").
+  - Inclui a **segunda sessão** de quem prioriza o jogo.
+  - Fica de fora só o humor.
+  - O hardcore do exemplo foi de 16,7 h para 27 h previstas por semana (33% do tempo livre). O real dos últimos 30 dias aparece ao lado (40%).
+- **Interface:**
+  - O card Vontade de jogar mostra o hábito pela mesma conta do planejador: previsto por semana, a sessão do dia útil (a real, não a base do perfil), e quando **costuma começar** e **costuma sair**.
+  - O card Vontade de jogar mostra a **satisfação com o jogo** e o **engajamento**, com o efeito de agora na chance de jogar (ex.: "+16%"), e as barras "previsto" e "real (30 dias)" do uso do tempo livre.
+  - As etiquetas de condição (presencial, deslocamento, feriado, pausa, escapada) ficam no topo do card de Ocupação, ao lado de "Trabalha".
+  - O card de Ocupação diz o que a pessoa faz ("Trabalha", "Estuda", "Trabalha e estuda", "Cuida da casa e da família", "Aposentado", "Não trabalha nem estuda") e mostra turno, obrigações por semana, dias com obrigação e renda.
+  - O card de sono mostra a hora real de deitar antes de dia de obrigação e antes de dia livre ("dorme de manhã" no turno da noite), em vez da preferência sorteada.
+
+**Testes:** 8 novos.
+- Turno diurno nunca exige acordar antes das 04:30.
+- Hora preferida dentro do tempo livre na maioria dos dias com obrigação, e em todos eles para pelo menos 85% das pessoas.
+- Sono adaptado às obrigações.
+- Exemplo do meio período, sem madrugada e com a sessão típica cabendo depois da hora preferida.
+- Quem prioriza o jogo começa até cerca de 1 h depois de chegar; o casual, mais de 1 h depois disso, e com sessões mais curtas.
+- Hardcore de meio período de manhã joga logo depois do almoço.
+- A sessão desejada cresce com o tempo livre para quem prioriza o jogo.
+- A regra do trabalhador comercial passou a medir "começa depois de chegar do trabalho (horário dele) e antes das 23h30", no lugar das 18h fixas: quem entra às 7h chega às 17:30 e já joga.
+- O validador recusa turno de madrugada.
+
+**Regra para o que vier:** todo parâmetro de horário novo precisa passar por um teste que confira a coerência com o turno, o sono e o tempo livre.
+
+## D-046 — Compromissos ocasionais nos dias livres
+**Data:** 05/11/2026 · **Estado:** aceita
+
+**Contexto:** pedido do criador. Às vezes, num fim de semana ou feriado, quem tem tempo livre ganha um compromisso (ir a uma festa, visitar a mãe). O compromisso em si não importa; importa que exista, com probabilidade bem baixa.
+
+**Decisões:**
+- **Quando:** só em dia livre de fim de semana, feriado ou folga.
+- **Chance:** `routine.commitmentChancePermille` (70) por dia elegível, escalada pela sociabilidade, de 0,6× a 1,4×. Na média, cerca de 7% desses dias.
+- **Tipos** (`routine.commitments`, conteúdo editável), cada um com faixa de início, duração e peso; os sociais pesam mais para quem é sociável:
+
+  | Tipo | Início | Duração | Social |
+  |---|---|---|---|
+  | festa | 20:00–21:30 | 2h30–4h | sim |
+  | visita à família | 11:00–15:00 | 2h30–5h | não |
+  | passeio com amigos | 14:00–17:00 | 2–4h | sim |
+  | resolver pendências | 09:00–12:00 | 1h30–3h | não |
+
+- **Efeito no dia:** o compromisso fica dentro do período acordado e termina antes de dormir. Tira o tempo livre do dia, com a chegada em casa depois dele. Não conta como obrigação (não cansa como um dia de trabalho) e não muda o sono.
+- **Determinismo:** o sorteio é próprio da pessoa e do dia, então o mesmo dia sempre dá o mesmo resultado, não importa quando a agenda é consultada. A agenda guarda o compromisso (`StateHasher` v12).
+- **Interface:** ponto roxo no alto do gráfico dos últimos 30 dias, com o compromisso e o horário na leitura do dia.
+
+**Calibração:** a proporção de ativos no fim de semana ÷ dia útil ficou no limite, com 1,299 numa seed contra o mínimo de 1,3. Os compromissos quase não pesam nisso. O que pesa é a hora preferida coerente (D-045), que espalha as sessões. O cansaço de um dia cheio de obrigações (`busyDayPenaltyPermille`) chegou a ir para 700. Depois da duração com tempo livre e do hábito proporcional (D-045), o fim de semana ganhou folga e o valor voltou a 650.
+
+**Testes:** 4 novos (206 no total, com os da D-045).
+- Só em dia livre, raro (2–15% dos dias livres), e sem sessão durante o compromisso.
+- Determinístico e mais comum para quem é sociável.
+- Tira tempo livre sem invadir o sono.
+- Conteúdo inválido é erro.

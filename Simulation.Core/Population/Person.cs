@@ -263,9 +263,18 @@ public sealed class Person
 /// <summary>Agenda de um dia local (P2): tempo livre, janelas, sessoes planejadas e o motivo.</summary>
 public sealed class DayPlanRecord
 {
+    /// <summary>Compromisso do dia livre (D-046): id e horario local; vazio se nao houve.</summary>
+    public string CommitmentId { get; }
+    public int CommitmentStart { get; }
+    public int CommitmentEnd { get; }
+
     public DayPlanRecord(long localDay, int freeMinutes, int windows, int sessions, string reason, int firstStartMinute, int plannedMinutes, bool freeDay,
-        int sleepMinutes = 0, int deficitMinutes = 0, int workSessions = 0, int workOverlapMinutes = 0)
+        int sleepMinutes = 0, int deficitMinutes = 0, int workSessions = 0, int workOverlapMinutes = 0,
+        string commitmentId = "", int commitmentStart = 0, int commitmentEnd = 0)
     {
+        CommitmentId = commitmentId;
+        CommitmentStart = commitmentStart;
+        CommitmentEnd = commitmentEnd;
         SleepMinutes = sleepMinutes;
         DeficitMinutes = deficitMinutes;
         WorkSessions = workSessions;

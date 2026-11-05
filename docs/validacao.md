@@ -32,7 +32,7 @@ Rodada de 5 seeds × 1.000 pessoas × 90 dias. **9 de 16 metas ficaram dentro da
 | Sessões por semana, casual | 2–4 | 3,1 |
 | Sessões por semana, hardcore | 5–7 | 5,4 |
 | Horas por semana, casual | 2–6 h | 4,3 h |
-| Horas por semana, hardcore | 15–35 h | 25,1 h |
+| Horas por semana, hardcore | 15–45 h (D-045) | 25,1 h |
 | Ativos em dia útil ÷ cadastrados | 30–55% | 52% |
 | Ativos no fim de semana ÷ dia útil | 1,3–2,0× | 1,6× |
 | Pico online ÷ cadastrados | 15–35% | 29% |

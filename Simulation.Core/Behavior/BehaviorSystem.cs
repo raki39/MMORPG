@@ -114,8 +114,29 @@ public sealed class BehaviorSystem
     {
         var cal = _w.CalendarOf(p);
         var date = Cal.StartDate.AddDays(localDay);
-        return DailySchedule.Build(p, OccOf(p), _w.Content.Routine, Dow(date),
-            cal.HolidayOn(date) != null, cal.HolidayOn(date.AddDays(-1)) != null, cal.HolidayOn(date.AddDays(1)) != null);
+        bool hol = cal.HolidayOn(date) != null, prevHol = cal.HolidayOn(date.AddDays(-1)) != null, nextHol = cal.HolidayOn(date.AddDays(1)) != null;
+        var rs = _w.Content.Routine;
+        var day = DailySchedule.Build(p, OccOf(p), rs, Dow(date), hol, prevHol, nextHol);
+        var c = CommitmentOf(p, localDay, day, cal.KindOf(date) != DayKind.Weekday || Dow(date) == p.DayOffIndex);
+        return c == null ? day : DailySchedule.Build(p, OccOf(p), rs, Dow(date), hol, prevHol, nextHol, c);
+    }
+
+    /// <summary>
+    /// Compromisso ocasional de um dia livre (D-046): sorteio proprio por pessoa e dia (o mesmo
+    /// dia da sempre o mesmo resultado), chance baixa e maior para quem e sociavel.
+    /// </summary>
+    private (int Start, int End, string Id)? CommitmentOf(Person p, long localDay, DailySchedule.DayLayout day, bool eligibleDay)
+    {
+        var rs = _w.Content.Routine;
+        if (!day.FreeDay || !eligibleDay || rs.Commitments.Count == 0 || rs.CommitmentChancePermille <= 0) return null;
+        var rng = Rng("routine.commitment", p.Id * 100_000L + localDay);
+        int soc = Math.Clamp(p.Traits.Sociability, 0, 1000);
+        if (!rng.ChancePermille(rs.CommitmentChancePermille * (600 + soc * 800 / 1000) / 1000)) return null;
+        var kind = rs.Commitments[rng.PickWeighted(rs.Commitments.Select(k => Math.Max(0, k.Weight) * (k.Social ? 500 + soc : 1000)).ToList())];
+        int from = ContentValidator.ParseClock(kind.StartFrom), to = ContentValidator.ParseClock(kind.StartTo);
+        int start = rng.NextIntInclusive(from, Math.Max(from, to)) / 5 * 5;
+        int minutes = rng.NextIntInclusive(kind.MinMinutes, Math.Max(kind.MinMinutes, kind.MaxMinutes)) / 5 * 5;
+        return (start, start + minutes, kind.Id);
     }
 
     private int PreferredMinute(Person p, DeterministicRng rng) =>
@@ -303,8 +324,10 @@ public sealed class BehaviorSystem
         var (workSessions, overlap) = p.State == LifecycleState.Inactive ? (0, 0) : PlanWorkTime(p, day, dayStart, rng);
 
         int chance = DailySchedule.BaseChance(p, day, rs);
+        // Habito proporcional (D-045): quem jogou ontem mantem o embalo; quem nao jogou perde um
+        // pouco na mesma proporcao (o casual que joga 2x por semana nao e punido em dobro).
         int streak = p.Traits.Habit * rs.HabitStreakPermille / 1000;
-        chance = Math.Clamp(chance + (p.LastPlayedLocalDay == localDay - 1 ? streak : -streak), 0, 1000);
+        chance = Math.Clamp(chance * (1000 + (p.LastPlayedLocalDay == localDay - 1 ? streak : -streak)) / 1000, 0, 1000);
         if (!_w.NeutralMood) chance = chance * PlayFactor(p.Mood.Engagement, rt) / 1000;   // o humor muda a rotina (D-039)
         if (p.State == LifecycleState.Inactive) chance = chance * rt.InactiveReturnPermille / 1000 * p.Mood.ReturnIntention / 1000;
         chance = chance * (1000 - fatigue * rs.FatigueChancePenalty / 1000) / 1000;   // cansaco (P3)
@@ -314,13 +337,13 @@ public sealed class BehaviorSystem
         desired = Math.Max(rs.MinSessionMinutes, desired * (1000 - fatigue * rs.FatigueDurationPenalty / 1000) / 1000);
         bool fits = DailySchedule.PlaceMain(day, preferred, desired, rs, out int window, out int start, out int minutes);
         bool wants = rng.ChancePermille(chance);
-        if (!fits) { RecordPlan(p, new DayPlanRecord(localDay, day.FreeMinutes, day.Windows.Count, 0, "no_free_time", -1, 0, day.FreeDay, sleep, p.SleepDeficitMinutes, workSessions, overlap)); return; }
+        if (!fits) { RecordPlan(p, new DayPlanRecord(localDay, day.FreeMinutes, day.Windows.Count, 0, "no_free_time", -1, 0, day.FreeDay, sleep, p.SleepDeficitMinutes, workSessions, overlap, CommitId(day), CommitStart(day), CommitEnd(day))); return; }
         if (!wants)
         {
             string reason = p.State == LifecycleState.Inactive ? "inactive"
                 : fatigue >= rs.TiredReasonFatigue ? "tired"
                 : !_w.NeutralMood && p.Mood.Engagement < rt.EngagementNeutral - rs.LowEngagementGap ? "low_engagement" : "other_leisure";
-            RecordPlan(p, new DayPlanRecord(localDay, day.FreeMinutes, day.Windows.Count, 0, reason, -1, 0, day.FreeDay, sleep, p.SleepDeficitMinutes, workSessions, overlap));
+            RecordPlan(p, new DayPlanRecord(localDay, day.FreeMinutes, day.Windows.Count, 0, reason, -1, 0, day.FreeDay, sleep, p.SleepDeficitMinutes, workSessions, overlap, CommitId(day), CommitStart(day), CommitEnd(day)));
             return;
         }
         _w.Scheduler.Schedule(dayStart + start * SimTime.TicksPerMinute, EvSessionStart, p.Id, SessionPayload(minutes, SessionNormal));
@@ -344,7 +367,7 @@ public sealed class BehaviorSystem
                 planned += m2;
             }
         }
-        RecordPlan(p, new DayPlanRecord(localDay, day.FreeMinutes, day.Windows.Count, sessions, "played", start, planned, day.FreeDay, sleep, p.SleepDeficitMinutes, workSessions, overlap));
+        RecordPlan(p, new DayPlanRecord(localDay, day.FreeMinutes, day.Windows.Count, sessions, "played", start, planned, day.FreeDay, sleep, p.SleepDeficitMinutes, workSessions, overlap, CommitId(day), CommitStart(day), CommitEnd(day)));
     }
 
     /// <summary>
@@ -421,6 +444,10 @@ public sealed class BehaviorSystem
         if (finishing) ch.LogoutPending = true;
         else Logout(ch, "work_interruption");
     }
+
+    private static string CommitId(DailySchedule.DayLayout d) => d.Commitments.Count > 0 ? d.Commitments[0].Id : "";
+    private static int CommitStart(DailySchedule.DayLayout d) => d.Commitments.Count > 0 ? d.Commitments[0].Start : 0;
+    private static int CommitEnd(DailySchedule.DayLayout d) => d.Commitments.Count > 0 ? d.Commitments[0].End : 0;
 
     private void RecordPlan(Person p, DayPlanRecord plan)
     {

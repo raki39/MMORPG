@@ -11,7 +11,7 @@ namespace Simulation.Core.World;
 /// </summary>
 public static class StateHasher
 {
-    public const int FormatVersion = 11;
+    public const int FormatVersion = 12;
 
     public static string Compute(WorldState w) => Compute(w, includeContentId: true);
 
@@ -152,6 +152,7 @@ public static class StateHasher
         {
             h.Long(d.LocalDay); h.Int(d.FreeMinutes); h.Int(d.Windows); h.Int(d.Sessions); h.Str(d.Reason); h.Int(d.FirstStartMinute); h.Int(d.PlannedMinutes); h.Bool(d.FreeDay);
             h.Int(d.SleepMinutes); h.Int(d.DeficitMinutes); h.Int(d.WorkSessions); h.Int(d.WorkOverlapMinutes);
+            h.Str(d.CommitmentId); h.Int(d.CommitmentStart); h.Int(d.CommitmentEnd);
         }
         h.Int(p.OpenWindows.Count);
         foreach (var w in p.OpenWindows) { h.Long(w.Start); h.Long(w.End); h.Bool(w.EndsAtBed); }

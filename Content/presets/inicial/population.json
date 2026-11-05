@@ -10,7 +10,7 @@
       "mechanicalSkill": { "mean": 350, "spread": 250 }, "gameKnowledge": { "mean": 300, "spread": 200 }, "coordination": { "mean": 350, "spread": 250 },
       "cheatPropensity": { "mean": 60, "spread": 60 }, "opportunism": { "mean": 250, "spread": 200 },
       "leisureBudgetCentsPerMonth": { "mean": 6000, "spread": 4000 }, "willingnessToPay": { "mean": 400, "spread": 250 }, "paidAdvantageSensitivity": { "mean": 550, "spread": 250 },
-      "preferredStartHour": { "mean": 20, "spread": 3 }, "sessionMinutes": { "mean": 70, "spread": 45 }, "gameImportance": { "mean": 300, "spread": 150 }, "habit": { "mean": 400, "spread": 200 }, "talent": { "mean": 380, "spread": 280 }, "variety": { "mean": 500, "spread": 200 }, "extendTendency": { "mean": 300, "spread": 300 }, "selfControl": { "mean": 600, "spread": 300 }
+      "preferredStartHour": { "mean": 20, "spread": 3 }, "sessionMinutes": { "mean": 80, "spread": 45 }, "gameImportance": { "mean": 350, "spread": 150 }, "habit": { "mean": 400, "spread": 200 }, "talent": { "mean": 380, "spread": 280 }, "variety": { "mean": 500, "spread": 200 }, "extendTendency": { "mean": 300, "spread": 300 }, "selfControl": { "mean": 600, "spread": 300 }
     },
     {
       "id": "competitivo", "version": 1, "name": "Competitivo", "weight": 15,
@@ -149,7 +149,13 @@
     "prepMinutes": 45, "arrivalMinutes": 45, "minWindowMinutes": 30, "minSessionMinutes": 20,
     "freeDayChanceBonus": 350, "fullFreeMinutes": 600, "freeDayDurationPerImportance": 800, "habitStreakPermille": 250,
     "secondSessionFromImportance": 650, "secondSessionPermilleAtMax": 200, "secondSessionDurationPermille": 450, "maxSessionsPerDay": 2,
-    "commuteVariationPermille": 300, "planHistoryDays": 30, "lowEngagementGap": 150, "busyDayPenaltyPermille": 650, "fullLoadMinutes": 600,
+    "commuteVariationPermille": 300, "planHistoryDays": 30, "bedtimeAdaptMinutes": 60, "preferredDelayMaxMinutes": 240, "freeTimeDurationBase": 250, "commitmentChancePermille": 70,
+    "commitments": [
+      { "id": "festa", "label": "festa", "startFrom": "20:00", "startTo": "21:30", "minMinutes": 150, "maxMinutes": 240, "weight": 3, "social": true },
+      { "id": "familia", "label": "visita à família", "startFrom": "11:00", "startTo": "15:00", "minMinutes": 150, "maxMinutes": 300, "weight": 4, "social": false },
+      { "id": "passeio", "label": "passeio com amigos", "startFrom": "14:00", "startTo": "17:00", "minMinutes": 120, "maxMinutes": 240, "weight": 3, "social": true },
+      { "id": "pendencias", "label": "resolver pendências", "startFrom": "09:00", "startTo": "12:00", "minMinutes": 90, "maxMinutes": 180, "weight": 2, "social": false }
+    ], "lowEngagementGap": 150, "busyDayPenaltyPermille": 650, "fullLoadMinutes": 600,
     "sleepDebtTolerance": { "mean": 500, "spread": 200 }, "slackMinutes": { "mean": 25, "spread": 10 },
     "interruptCost": { "boss": 1000, "ambush": 850, "patrol": 700, "hunt": 550, "quest": 400, "recruit": 300, "explore": 300, "train": 150, "gather": 100, "repair": 50, "trade": 0, "socialize": 0 },
     "extendMaxTimesPerSession": 2, "extendMaxMinutes": 180, "extendTendencyBase": 500, "selfControlWeight": 800, "goalClosePermille": 700, "maxSleepCutMinutes": 180, "minSleepMinutes": 240, "maxDeficitMinutes": 900, "recoveryFreeNightMinutes": 120, "recoveryNormalNightMinutes": 20, "fatigueFullDeficitMinutes": 600, "fatigueChancePenalty": 400, "fatigueDurationPenalty": 300, "fatigueMoodWeight": 120, "tiredReasonFatigue": 500, "breakSessionChancePermille": 300, "slackChanceAtMax": 400, "slackEdgeMinutes": 30, "workInterruptChancePermille": 350, "interruptWeight": 300

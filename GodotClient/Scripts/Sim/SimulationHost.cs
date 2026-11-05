@@ -488,15 +488,14 @@ public sealed class SimulationHost : IDisposable
                 foreach (var (bs, be) in r.Breaks) Add(bs, be, "break");
             int sleep = segs.Where(x => x.Kind == "sleep").Sum(x => x.End - x.Start);
             var rs = content.Routine;
-            int chance = Simulation.Core.Behavior.DailySchedule.BaseChance(p, day, rs);
-            bool fits = Simulation.Core.Behavior.DailySchedule.PlaceMain(day, p.Traits.PreferredStartHour * 60,
-                Simulation.Core.Behavior.DailySchedule.DesiredMinutes(p, day, rs), rs, out _, out int pStart, out int pMinutes);
+            var ex = Simulation.Core.Behavior.DailySchedule.Expect(p, day, rs);   // mesma conta do "previsto por semana"
+            bool fits = ex.Start >= 0;
             list.Add(new WeekDayView(dow, obligations, day.Wake, day.Bed, day.Windows.ToArray(), day.FreeMinutes, day.FreeDay)
             {
                 Segments = segs, ObligationMinutes = obligation, CommuteMinutes = commute, SleepMinutes = sleep,
                 Blocks = Simulation.Core.Behavior.DailySchedule.Blocks(p, occ, dow, false).Select(b => (b.Start, b.End, b.Label, b.Def.Remote, b.Commute)).ToArray(),
-                ChancePermille = fits ? chance : 0, PlannedStart = fits ? pStart : -1, PlannedMinutes = fits ? pMinutes : 0,
-                ExpectedMinutes = fits ? pMinutes * chance / 1000 : 0,
+                ChancePermille = ex.ChancePermille, PlannedStart = ex.Start, PlannedMinutes = ex.Minutes,
+                ExpectedMinutes = ex.ExpectedMinutes,
             });
         }
         return list;
