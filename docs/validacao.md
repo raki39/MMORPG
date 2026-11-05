@@ -302,6 +302,11 @@ Medição em quatro versões com as mesmas pessoas (`baselines/progressao-inicia
   - combate: 31,3% → 32,9%;
   - cidade: 26,8% → 24,4%;
   - andando ou esperando: 20,2% → 19,9%.
+- **Com a correção do ciclo das metas (V3b, preset final):**
+  - provisórias 8 de 12 ("andando ou esperando" 19,4%, dentro);
+  - XP de missões 16,8%;
+  - casuais no nível 10 ou mais 96,9%;
+  - regras do cenário 7 de 9, sem mudança.
 
 ## Próximos passos
 

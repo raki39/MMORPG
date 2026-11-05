@@ -1836,7 +1836,7 @@ O criador pediu que o perfil representasse só dedicação e que os gostos fosse
 - **Especialidades:** os benefícios de execução ainda não existem; hoje há só o pequeno reforço nas escolhas.
 
 ## D-055 — Progressão inicial, metas de desbloqueio e descoberta orientada pelo conteúdo
-**Data:** 05/11/2026 · **Estado:** aceita como implementação; resultados para a conferência do criador
+**Data:** 05/11/2026 · **Estado:** aceita e fechada (com a correção do ciclo das metas)
 
 O criador pediu para separar **gosto** (Preferências) de **necessidade de progressão**. A pessoa deve poder cumprir uma etapa de que gosta menos quando ela é necessária para o que quer, e depois voltar ao que prefere, sem mudar a preferência e sem tornar caça ou missões obrigatórias. Detalhes em `progressao-inicial.md`.
 
@@ -1861,3 +1861,19 @@ O criador pediu para separar **gosto** (Preferências) de **necessidade de progr
 - **Abaixo do nível 10 com 20 h ou mais:** de 82 para 35 (0,7%), quase todos com preferência Social, que escolhem a taverna mesmo tendo caminhos.
 - **Metas de desbloqueio:** cerca de 25 mil adotadas, 64% cumpridas.
 - **Descoberta orientada:** quase sem efeito (6 metas) por falta de fontes de informação válidas; o efeito virá com elas.
+
+**Esclarecimentos pedidos pelo criador (fechamento):**
+1. **Rendimento mínimo de 600** (`earlyProgression.minFitPermille`):
+   - **Unidade:** milésimos do rendimento de XP pela diferença entre o nível do personagem e o desafio da atividade (1000 = pleno).
+   - **Significado:** uma atividade conta como progressão adequada se o desafio estiver até 4 níveis abaixo ou até 3 acima do personagem.
+   - **Onde entra:** abaixo de 600, a atividade não recebe o incentivo; acima, a contribuição é o próprio rendimento.
+   - É o mesmo limite das metas de nível. A conta e exemplos estão em `progressao-inicial.md`.
+2. **Ciclo das metas de desbloqueio:**
+   - **O que já valia:** requisito cumprido não gera meta, e há uma meta de desbloqueio por vez.
+   - **Defeito encontrado:** abandonos falsos nos níveis altos (só a subida de nível contava como progresso) e readoção imediata do mesmo alvo. Em uma campanha, 477 readoções sem subir de nível; a meta "chegar a um nível" tinha o mesmo problema.
+   - **Correção:** XP ganho conta como progresso, e uma meta de nível abandonada não volta com o mesmo alvo antes de subir de nível.
+   - **Resultado:** 0 readoções sem subir de nível; desbloqueio cumprido em 91% das metas (antes, 64%).
+
+**Decisão do criador:** manter os parâmetros. Não aumentar artificialmente a participação das missões nem forçar os personagens restantes a chegar ao nível 10: eles têm caminhos disponíveis, e o incentivo não é obrigação. A descoberta orientada fica limitada às informações disponíveis; novas fontes entram com os sistemas correspondentes.
+
+**Estado:** aceita e fechada; próxima etapa, a P4 (traits).

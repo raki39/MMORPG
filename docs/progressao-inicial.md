@@ -30,6 +30,18 @@ Prioridade igual para **todos os personagens abaixo do nível-alvo**, independen
 - **As preferências escolhem o caminho:** o gosto continua na nota, então quem prefere coletar tende a progredir coletando, e quem prefere explorar, explorando.
 - **Depois:** melhorar equipamento e vender excedentes podem entrar quando inventário e economia existirem, pelas necessidades concretas. Hoje esses benefícios não são simulados.
 
+**Rendimento mínimo (`minFitPermille` = 600):**
+- **Unidade:** milésimos (permille) do **rendimento de XP pela diferença de nível** (`ProgressionRules.Efficiency`). 1000 é o rendimento pleno da atividade.
+- **Como o rendimento cai** (`progression.json`, `levelDifference`):
+  - até 2 níveis de diferença: pleno;
+  - conteúdo fraco demais para o personagem: −15% por nível além disso, com piso de 10%;
+  - conteúdo forte demais: −25% por nível além disso.
+- **Significado de 600:** conta como progressão adequada uma atividade com desafio **até 4 níveis abaixo** do personagem (4 abaixo dá 700; 5 abaixo, 550) ou **até 3 níveis acima** (3 acima dá 750; 4 acima, 500).
+- **Onde entra:** é o filtro da contribuição das atividades que dão XP. Abaixo de 600, a contribuição é zero (missões contam à parte, com 1000). Acima, a contribuição é o próprio rendimento.
+  - Exemplo: nível 3, atividade com rendimento 850 → 150 × 1000/1000 × 850/1000 = **127**.
+  - Exemplo: nível 8, rendimento pleno → 150 × 400/1000 × 1000/1000 = **60**.
+- **Mesmo limite das metas:** é o mesmo limite que as metas "chegar a um nível" e de desbloqueio usam para puxar fontes de XP (fixo no código desde o D-036). Na progressão inicial ele é configurável.
+
 ## 2. Metas de desbloqueio (seção `goals`)
 
 Liga uma atividade desejada ao requisito que a libera. Exemplo: "nível 6 para coletar minério na Mina Velha", motivada pela preferência Coleta.
@@ -40,6 +52,11 @@ Liga uma atividade desejada ao requisito que a libera. Exemplo: "nível 6 para c
 - **Escolha:** cada opção vira candidata, com peso `80 + preferência × 0,6`, ao lado das outras metas; a escolha entre elas é ponderada. A pessoa tem no máximo uma meta de desbloqueio por vez.
 - **Na decisão:** a meta puxa qualquer fonte de XP com rendimento adequado e as entregas de missão, com a mesma regra da meta "chegar a um nível". A pessoa escolhe a fonte pelo gosto e pelo rendimento (coleta de nível baixo, exploração, missões ou caça). **A preferência não muda.**
 - **Fim:** a meta termina ao chegar ao nível. Cumprida, ela reforça a especialidade do tema; Coleta não tem especialidade, então não reforça nada.
+- **Sem recriação nem ciclo de abandono:**
+  - **Requisito já cumprido** não gera meta: só entram atividades com nível mínimo acima do atual.
+  - **Uma meta de desbloqueio por vez.**
+  - **XP ganho conta como progresso** (atividade ou missão), também na meta "chegar a um nível". A meta só é abandonada por falta de progresso quando a pessoa passa a janela de abandono sem ganhar XP: 3 a 12 h de jogo, conforme a paciência. Antes, só a subida de nível contava, e a meta era abandonada nos níveis altos mesmo com XP entrando.
+  - **Meta de nível abandonada** (desbloqueio ou "chegar a um nível") **não volta com o mesmo alvo** antes da próxima subida de nível (`BlockedGoals` do personagem).
 
 ## 3. Descoberta orientada pelo conteúdo
 
@@ -113,7 +130,21 @@ Validação padrão (5 seeds × 1.000 pessoas × 90 dias), com as mesmas pessoas
 - **Descoberta orientada por outra preferência:** só 6 metas. Com a regra de informação válida, quase não há pista utilizável. Causa provável, não medida à parte: as etapas das missões aceitas apontam sobretudo para zonas que a pessoa já conhece ou que estão fora da fronteira. O mecanismo funciona (testes), mas depende de novas fontes de informação (conversas, outros jogadores, guildas) para ter efeito.
 - **Missões:** a parcela de XP vinda delas cai de 19,5% para 17,7%, porque as metas de desbloqueio passam a disputar as vagas de meta com as metas de missão.
 
-**Outras medidas** (V0 → V3):
+**Correção depois da primeira medição (V3b, preset final):**
+- **Defeito:** só a subida de nível contava como progresso nas metas de nível. Elas eram abandonadas nos níveis altos mesmo com XP entrando, e readotadas logo depois com o mesmo alvo.
+  - Numa campanha (seed 1), foram 1.799 abandonos de 5.031 metas de desbloqueio, e 477 readoções sem subir de nível.
+  - A meta "chegar a um nível", que já existia, tinha o mesmo defeito: 595 readoções.
+- **Correção** (regras na seção 2): o XP ganho conta como progresso, e uma meta de nível abandonada não volta com o mesmo alvo antes de subir de nível.
+- **Mesma campanha depois:** 238 abandonos de 4.086 metas de desbloqueio, nenhuma readoção sem subir de nível e no máximo 2 readoções do mesmo alvo por personagem. "Chegar a um nível": 283 abandonos, contra 2.445.
+- **Validação com a correção** (V3 → V3b):
+  - metas de desbloqueio cumpridas de 64% para 91% (18.624 de 20.535);
+  - p90 até o nível 10 de 22,6 h para 22,3 h (prefere Social: de 43,3 h para 37,9 h);
+  - abaixo do nível 10 com 20 h ou mais: de 35 para 51 (Social 41). Quem deixa de ganhar XP não fica mais em ciclo de readotar a meta; não há obrigação de chegar ao nível;
+  - XP de missões de 17,7% para 16,8%, porque as metas de nível duram mais e disputam as vagas de meta;
+  - rotina igual (regras do cenário 7 de 9; horas por perfil iguais). "Andando ou esperando" entrou na faixa (19,4%).
+- **Consequência para a comparação:** a correção também muda a meta "chegar a um nível". Com tudo desligado, a simulação não reproduz mais o D-054 exatamente. Isso não foi medido à parte; V0 vale como referência de antes da correção.
+
+**Outras medidas** (V0 → V3, antes da correção):
 - tempo em combate de 31,3% para 32,9%;
 - cidade de 26,8% para 24,4%;
 - casuais no nível 10 ou mais ao fim de 95,3% para 97,5% (a meta provisória de 60 a 95% já estava fora);

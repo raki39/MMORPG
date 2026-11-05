@@ -1234,6 +1234,8 @@ public sealed class BehaviorSystem
         if (xp <= 0 || ch.Level >= p.LevelCap) return;
         int before = ch.Level;
         ch.Experience += xp;
+        // Qualquer XP ganho e progresso das metas de nivel e de desbloqueio (D-055).
+        _goals.OnExperience(ch);
         while (ch.Level < p.LevelCap && ch.Experience >= ProgressionRules.XpToNextLevel(p, ch.Level))
         {
             ch.Experience -= ProgressionRules.XpToNextLevel(p, ch.Level);

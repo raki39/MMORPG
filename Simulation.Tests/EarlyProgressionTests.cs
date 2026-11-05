@@ -161,6 +161,52 @@ public class EarlyProgressionTests
         Assert.Equal(gather, p.Preferences.Gathering);
     }
 
+    /// <summary>
+    /// Ciclo das metas de nivel: requisito cumprido nao gera meta; XP ganho conta como progresso;
+    /// meta abandonada nao volta com o mesmo alvo antes de subir de nivel.
+    /// </summary>
+    [Fact]
+    [Trait("Classe", "Invariante")]
+    public void MetaDeNivel_SemRecriacaoNemCicloDeAbandono()
+    {
+        var (w, p, ch) = Someone();
+        var s = w.Content.GoalSettings;
+        var goals = w.Behavior.Goals;
+        ch.Known.Clear();
+        foreach (var z in new[] { "vila_aurora", "floresta_sussurrante", "colinas_do_vale", "mina_velha" }) ch.Known.Add(z);
+        p.Preferences = new PersonPreferences { Gathering = 800 };
+        p.Traits.Patience = 1000;   // sem desistencia por impaciencia (sorteio)
+        const string target = "mina_velha/coletar_minerio";
+
+        // Requisito ja cumprido (nivel 6 ou mais): a meta nao e criada.
+        ch.Level = 6;
+        Assert.DoesNotContain(GoalSystem.UnlockOptions(p, ch, w.Content, s), o => o.Target == target);
+        ch.Level = 3;
+        Assert.Contains(GoalSystem.UnlockOptions(p, ch, w.Content, s), o => o.Target == target);
+
+        // XP ganho conta como progresso.
+        ch.GoalList.Clear();
+        var g = new PersonalGoal(GoalTypes.UnlockLevel, target, 6, 3, 800, "pref_gathering", 800, w.Clock.Tick, 0);
+        ch.GoalList.Add(g);
+        g.LastProgressPlayedTicks = -1;
+        goals.OnExperience(ch);
+        Assert.Equal(ch.PlayedTicksAt(w.Clock.Tick), g.LastProgressPlayedTicks);
+
+        // Sem progresso por muito tempo: abandonada e bloqueada com o mesmo alvo.
+        g.LastProgressPlayedTicks = long.MinValue / 4;
+        goals.Review(p, ch, new DeterministicRng(3));
+        Assert.DoesNotContain(g, ch.GoalList);
+        Assert.True(GoalSystem.IsBlocked(ch, GoalTypes.UnlockLevel, target, 6));
+        Assert.DoesNotContain(GoalSystem.UnlockOptions(p, ch, w.Content, s), o => o.Target == target);
+        Assert.DoesNotContain(ch.GoalList, x => x.Type == GoalTypes.UnlockLevel && x.Target == target);
+
+        // Subir de nivel e mudanca relevante: o alvo pode voltar.
+        ch.Level = 4;
+        goals.OnLevelUp(p, ch);
+        Assert.False(GoalSystem.IsBlocked(ch, GoalTypes.UnlockLevel, target, 6));
+        Assert.Contains(GoalSystem.UnlockOptions(p, ch, w.Content, s), o => o.Target == target);
+    }
+
     /// <summary>Descoberta: so com pista valida, zona desconhecida da fronteira e tema preferido.</summary>
     [Fact]
     [Trait("Classe", "Invariante")]

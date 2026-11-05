@@ -692,6 +692,12 @@ public sealed class Character
     /// </summary>
     internal SortedSet<string> Hints { get; } = new(StringComparer.Ordinal);
     public IReadOnlyCollection<string> ContentHints => Hints;
+    /// <summary>
+    /// Metas de nivel abandonadas ("tipo|alvo|valor") que nao voltam com o mesmo alvo antes de
+    /// uma mudanca relevante: a proxima subida de nivel limpa a lista (D-055).
+    /// </summary>
+    internal SortedSet<string> BlockedLevelGoals { get; } = new(StringComparer.Ordinal);
+    public IReadOnlyCollection<string> BlockedGoals => BlockedLevelGoals;
     public int DecisionCount { get; internal set; }
     public string LastActivityKey { get; internal set; } = "";
     public int RepeatCount { get; internal set; }

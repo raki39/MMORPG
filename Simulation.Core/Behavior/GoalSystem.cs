@@ -81,7 +81,8 @@ public sealed class GoalSystem
             int k = 1 + (pr.Pve + t.Competitiveness) / 700;
             int target = Math.Min(C.Progression.LevelCap, ch.Level + k);
             string motive = pr.Pve >= t.Competitiveness ? "pref_pve" : "competitiveness";
-            list.Add(new(GoalTypes.ReachLevel, "", target, ch.Level, 150 + pr.Pve * 3 / 10 + t.Competitiveness * 2 / 10 + (1000 - t.Patience) / 10, motive));
+            if (!IsBlocked(ch, GoalTypes.ReachLevel, "", target))
+                list.Add(new(GoalTypes.ReachLevel, "", target, ch.Level, 150 + pr.Pve * 3 / 10 + t.Competitiveness * 2 / 10 + (1000 - t.Patience) / 10, motive));
         }
 
         // Descobrir uma zona vizinha das conhecidas: quem prefere explorar (os competitivos aceitam zonas mais altas).
@@ -137,6 +138,13 @@ public sealed class GoalSystem
         return list;
     }
 
+    /// <summary>Chave de uma meta de nivel para o bloqueio de readocao.</summary>
+    public static string LevelGoalKey(string type, string target, int value) => $"{type}|{target}|{value}";
+
+    /// <summary>Meta de nivel abandonada com o mesmo alvo, sem subida de nivel desde entao (D-055).</summary>
+    public static bool IsBlocked(Character ch, string type, string target, int value) =>
+        ch.BlockedLevelGoals.Contains(LevelGoalKey(type, target, value));
+
     /// <summary>Tipos de atividade que uma preferencia motiva (crafting: nenhum por enquanto).</summary>
     public static IReadOnlyList<string> TypesOf(string preference) => preference switch
     {
@@ -175,7 +183,7 @@ public sealed class GoalSystem
                         || (a.MinLevel == best.A.MinLevel && string.CompareOrdinal(regionId + "/" + a.Id, best.Region + "/" + best.A.Id) < 0))
                         best = (regionId, a);
                 }
-            if (best.A != null)
+            if (best.A != null && !IsBlocked(ch, GoalTypes.UnlockLevel, best.Region + "/" + best.A.Id, best.A.MinLevel))
                 list.Add((best.Region + "/" + best.A.Id, best.A.MinLevel, s.UnlockBaseWeight + pref * s.UnlockPerPreference / 1000, Person.PreferenceMotivePrefix + key));
         }
         return list;
@@ -317,8 +325,21 @@ public sealed class GoalSystem
         }
     }
 
+    /// <summary>
+    /// XP ganho (atividade ou missao) e progresso das metas de nivel e de desbloqueio: elas so sao
+    /// abandonadas por falta de progresso quando a pessoa deixa de ganhar XP (D-055).
+    /// </summary>
+    internal void OnExperience(Character ch)
+    {
+        foreach (var g in ch.GoalList)
+            if (g.Type is GoalTypes.ReachLevel or GoalTypes.UnlockLevel)
+                g.LastProgressPlayedTicks = ch.PlayedTicksAt(Now);
+    }
+
     internal void OnLevelUp(Person p, Character ch)
     {
+        // Subir de nivel e mudanca relevante: metas de nivel abandonadas podem voltar.
+        ch.BlockedLevelGoals.Clear();
         foreach (var g in ch.GoalList.ToList())
         {
             if (g.Type != GoalTypes.ReachLevel && g.Type != GoalTypes.UnlockLevel) continue;
@@ -371,6 +392,8 @@ public sealed class GoalSystem
     private void Abandon(Character ch, PersonalGoal g, string reason)
     {
         ch.GoalList.Remove(g);
+        // Meta de nivel abandonada nao volta com o mesmo alvo antes da proxima subida de nivel.
+        if (g.Type is GoalTypes.ReachLevel or GoalTypes.UnlockLevel) ch.BlockedLevelGoals.Add(LevelGoalKey(g.Type, g.Target, g.TargetValue));
         ch.GoalsAbandoned++;
         Ended?.Invoke(ch, g, false, reason);
         _w.Emit("goal_abandoned", EventImportance.Low, new[] { new EntityRef("character", ch.Id) },
