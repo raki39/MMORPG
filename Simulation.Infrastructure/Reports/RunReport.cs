@@ -35,6 +35,8 @@ public sealed class RunMetadata
     public double ReportTimeMs { get; set; }
     public double SimulatedDaysPerSecond { get; set; }
     public string FinalStateHash { get; set; } = "";
+    /// <summary>Estado completo sem a identificacao do conteudo (comparar mudancas que nao deveriam alterar a simulacao).</summary>
+    public string FinalStateHashWithoutContentId { get; set; } = "";
     public string Runtime { get; set; } = "";
     public string OperatingSystem { get; set; } = "";
     public int ProcessorCount { get; set; }
@@ -294,6 +296,7 @@ public static class RunReportWriter
         sb.AppendLine("## Resultado");
         sb.AppendLine();
         sb.AppendLine($"- Hash final do estado: `{m.FinalStateHash}`");
+        sb.AppendLine($"- Hash final sem a identificação do conteúdo: `{m.FinalStateHashWithoutContentId}`");
         sb.AppendLine($"- Servidor aberto ao fim: {(world.Server.IsOpen ? "sim" : "não")}");
         sb.AppendLine($"- Eventos registrados: {N(events.Count)} · Comandos: {N(world.Commands.History.Count)} ({N(world.Commands.History.Count(c => c.Status == CommandStatus.Rejected))} rejeitados)");
         sb.AppendLine();

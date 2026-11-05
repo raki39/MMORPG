@@ -168,14 +168,14 @@ public static class ValidationReport
         // ---- Localidades (P1) ----
         if (runs[0].Localities.Count > 0)
         {
-            sb.Append("\n## Localidades (média das seeds)\n\nCada pessoa joga no horário e nos feriados de onde mora; o relógio do jogo é o do servidor.\n\n");
+            sb.Append("\n## Localidades (média das seeds)\n\nCada pessoa joga no horário e nos feriados de onde mora; o relógio do jogo é o do servidor. O início médio é uma média circular das horas (a meia-noite não distorce), então local e servidor diferem exatamente pelo fuso.\n\n");
             sb.Append("| Localidade | Fuso | Pessoas | Estrangeiros | Sessões | Início médio (local) | Início médio (servidor) |\n|---|---|---:|---:|---:|---:|---:|\n");
             foreach (var id in runs[0].Localities.Select(l => l.Id))
             {
                 var ls = runs.Select(r => r.Localities.First(l => l.Id == id)).ToList();
                 int off = ls[0].UtcOffsetMinutes;
                 string tz = $"UTC{(off >= 0 ? "+" : "−")}{Math.Abs(off) / 60}";
-                sb.Append($"| {ls[0].Name} | {tz} | {Fmt(ls.Average(l => l.Persons))} | {Fmt(ls.Average(l => l.ForeignNationals))} | {Fmt(ls.Average(l => (double)l.Sessions))} | {Hour(Avg(ls.Select(l => l.MeanLocalStartHour)))} | {Hour(Avg(ls.Select(l => l.MeanServerStartHour)))} |\n");
+                sb.Append($"| {ls[0].Name} | {tz} | {Fmt(ls.Average(l => l.Persons))} | {Fmt(ls.Average(l => l.ForeignNationals))} | {Fmt(ls.Average(l => (double)l.Sessions))} | {Hour(CircAvg(ls.Select(l => l.MeanLocalStartHour)))} | {Hour(CircAvg(ls.Select(l => l.MeanServerStartHour)))} |\n");
             }
         }
 
@@ -364,7 +364,25 @@ public static class ValidationReport
 
     private static double Percentile(List<double> v, double q) => ValidationCollector.Percentile(v, q);
 
-    private static string Hour(double h) => double.IsNaN(h) ? "—" : $"{(int)h:00}h{(int)((h - (int)h) * 60):00}";
+    private static double CircAvg(IEnumerable<double> hours)
+    {
+        double x = 0, y = 0;
+        int n = 0;
+        foreach (var h in hours)
+        {
+            if (double.IsNaN(h)) continue;
+            var (vx, vy) = ValidationCollector.ClockVector((int)Math.Round(h * 60));
+            x += vx; y += vy; n++;
+        }
+        return n == 0 ? double.NaN : ValidationCollector.CircularMeanHour(x, y);
+    }
+
+    private static string Hour(double h)
+    {
+        if (double.IsNaN(h)) return "—";
+        int m = (int)Math.Round(h * 60) % 1440;
+        return $"{m / 60:00}h{m % 60:00}";
+    }
 
     private static string Fmt(double v) => double.IsNaN(v) ? "—" : v.ToString(Math.Abs(v) >= 100 ? "N0" : "N1", PtBr);
     private static string Num(double v) => double.IsNaN(v) ? "" : v.ToString("0.###", Inv);

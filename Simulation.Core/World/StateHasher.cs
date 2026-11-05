@@ -13,11 +13,20 @@ public static class StateHasher
 {
     public const int FormatVersion = 9;
 
-    public static string Compute(WorldState w)
+    public static string Compute(WorldState w) => Compute(w, includeContentId: true);
+
+    /// <summary>
+    /// Estado completo normalizado: tudo o que entra no hash, menos a identificacao do conteudo
+    /// (hash dos arquivos). Serve para verificar mudancas que nao deveriam alterar a simulacao,
+    /// como mover parametros do codigo para o conteudo. O hash original continua o mesmo.
+    /// </summary>
+    public static string ComputeWithoutContentId(WorldState w) => Compute(w, includeContentId: false);
+
+    private static string Compute(WorldState w, bool includeContentId)
     {
         using var h = new Writer();
         h.Int(FormatVersion);
-        h.Str(w.Content.SourceHash);
+        if (includeContentId) h.Str(w.Content.SourceHash);
         h.ULong(w.Seed);
         h.Long(w.Clock.Tick);
 

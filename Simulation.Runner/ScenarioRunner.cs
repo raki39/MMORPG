@@ -165,6 +165,7 @@ public static class ScenarioRunner
             HashTimeMs = hashWatch.Elapsed.TotalMilliseconds,
             SimulatedDaysPerSecond = simWatch.Elapsed.TotalSeconds > 0 ? opt.Days / simWatch.Elapsed.TotalSeconds : 0,
             FinalStateHash = hashes[^1].Hash,
+            FinalStateHashWithoutContentId = StateHasher.ComputeWithoutContentId(world),
             Runtime = RuntimeInformation.FrameworkDescription,
             OperatingSystem = RuntimeInformation.OSDescription,
             ProcessorCount = Environment.ProcessorCount,
@@ -194,7 +195,7 @@ public static class ScenarioRunner
             meta.WallTimeMs = wall.Elapsed.TotalMilliseconds;
         }
 
-        msgs.Add($"OK: {opt.Days} dias, {population} pessoas, seed {opt.Seed}. Hash final {meta.FinalStateHash[..16]}. " +
+        msgs.Add($"OK: {opt.Days} dias, {population} pessoas, seed {opt.Seed}. Hash final {meta.FinalStateHash[..16]} (sem a identificação do conteúdo: {meta.FinalStateHashWithoutContentId[..16]}). " +
                  $"Simulação {meta.SimulationTimeMs:F1} ms; total {meta.WallTimeMs:F1} ms." +
                  (opt.OutDir != null ? $" Relatórios em {Path.GetFullPath(opt.OutDir)}" : ""));
         return new RunResult { ExitCode = ExitOk, Messages = msgs, Metadata = meta };

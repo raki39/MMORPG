@@ -1083,6 +1083,11 @@ Durante a revisão, o criador acrescentou: falta de conteúdo novo é questão d
 - **Verificação:** eventos, população, personagens e o resumo diário ficaram idênticos antes e depois (30 dias × 100 pessoas e 20 dias × 1.000 pessoas).
   - Só a coluna `state_hash` muda, porque o hash de estado inclui o hash do conteúdo (`Content.SourceHash`) e o `population.json` mudou.
   - Esse é o método para checar mudanças que não deveriam alterar a simulação: comparar os relatórios, não o hash.
+- **Verificação completa** (pedido do criador): relatórios podem não cobrir todo o estado interno.
+  - Criei `StateHasher.ComputeWithoutContentId`: o estado completo, tudo o que o hash cobre menos a identificação do conteúdo. O hash original continua igual.
+  - O runner agora mostra os dois hashes, e o `summary.md` e o `metadata.json` registram ambos.
+  - A P0 foi verificada de novo assim, com a versão anterior (`339c95e`) e a da P0 (`06c8aa6`) com o mesmo cálculo: estados idênticos nas duas execuções (`1ec28d15…` com 30 dias × 100 pessoas; `94b45f09…` com 20 dias × 1.000 pessoas). Os hashes originais diferem, como devem.
+  - Para mudanças desse tipo, compare o hash sem a identificação do conteúdo.
 - **Testes:** 164 passam.
 
 ## D-042 — P1: localidade, fuso e calendário da residência
@@ -1117,7 +1122,11 @@ Durante a revisão, o criador acrescentou: falta de conteúdo novo é questão d
 
 **Validação** (90 dias × 1.000 pessoas × 5 seeds):
 - regras do cenário: 7 de 7; provisórias: 8 de 12, como antes;
-- início médio: Brasil 18h36; Argentina 18h33; China 18h40 local, que é 7h51 no servidor; EUA 18h49 local, que é 19h58 no servidor;
+- início médio (média circular): Brasil 18h47; Argentina 18h43; China 18h48 local, que é 7h48 no servidor; EUA 18h56 local, que é 20h56 no servidor;
+- **correção depois da revisão do criador:** a primeira versão do relatório usava a média aritmética das horas e mostrava "18h40 local = 7h51 no servidor" para a China, com 11h11 de diferença em vez de 11h.
+  - Os instantes estavam certos (o teste confere cada sessão: local = servidor + 11 h); o erro era só da média.
+  - Uma sessão à 0h30 local conta como 0,5 no fuso local e 13,5 no servidor, e isso distorce a média aritmética.
+  - Agora o início médio é uma média circular (a meia-noite não distorce): local e servidor diferem exatamente pelo fuso, com teste.
 - o pico do servidor agora se espalha pelos fusos.
 
 **Testes:** 7 novos (171 no total): localidades do conteúdo, sorteio de residência, nacionalidade, idiomas e nome, feriados por residência, chineses jogando na noite local (manhã do servidor), planejamento na meia-noite local, validação, determinismo e hash.

@@ -101,7 +101,8 @@ public sealed class ValidationCollector
     private readonly List<int> _runs = new();
     private readonly SortedDictionary<string, long> _switchReasons = new(StringComparer.Ordinal);
     private long _great, _bad, _rated, _extended, _rage;
-    private readonly SortedDictionary<string, (long Sessions, long LocalMinutes, long ServerMinutes)> _localities = new(StringComparer.Ordinal);
+    /// <summary>Por localidade: sessoes e soma dos vetores das horas de inicio (media circular: a meia-noite nao distorce).</summary>
+    private readonly SortedDictionary<string, (long Sessions, double LocalX, double LocalY, double ServerX, double ServerY)> _localities = new(StringComparer.Ordinal);
     private readonly SortedDictionary<string, long> _quitReasons = new(StringComparer.Ordinal);
     private readonly List<int> _quitDays = new(), _quitLevels = new();
 
@@ -140,7 +141,9 @@ public sealed class ValidationCollector
                     var at = cal.ToDateTime(e.Tick + person.LocalOffsetMinutes * SimTime.TicksPerMinute);
                     var server = cal.ToDateTime(e.Tick);
                     var lstat = _localities.GetValueOrDefault(person.ResidenceId);
-                    _localities[person.ResidenceId] = (lstat.Sessions + 1, lstat.LocalMinutes + at.Hour * 60 + at.Minute, lstat.ServerMinutes + server.Hour * 60 + server.Minute);
+                    var (lx, ly) = ClockVector(at.Hour * 60 + at.Minute);
+                    var (sx, sy) = ClockVector(server.Hour * 60 + server.Minute);
+                    _localities[person.ResidenceId] = (lstat.Sessions + 1, lstat.LocalX + lx, lstat.LocalY + ly, lstat.ServerX + sx, lstat.ServerY + sy);
                     if (w.CalendarOf(person).KindOf(at.Date) == DayKind.Weekday)
                     {
                         int minute = at.Hour * 60 + at.Minute;
@@ -212,6 +215,24 @@ public sealed class ValidationCollector
     }
 
     private static string Zone(string key) => key.Split('/')[0];
+
+    /// <summary>Minuto do dia como vetor no circulo de 24 h (relatorio; nao entra na simulacao).</summary>
+    public static (double X, double Y) ClockVector(int minuteOfDay)
+    {
+        double a = minuteOfDay / 1440.0 * 2 * Math.PI;
+        return (Math.Cos(a), Math.Sin(a));
+    }
+
+    /// <summary>
+    /// Media circular das horas (0 a 24): a media aritmetica de horas do relogio erra quando ha
+    /// horarios dos dois lados da meia-noite. Assim, a diferenca entre as medias local e do
+    /// servidor e exatamente o fuso.
+    /// </summary>
+    public static double CircularMeanHour(double sumX, double sumY)
+    {
+        double h = Math.Atan2(sumY, sumX) / (2 * Math.PI) * 24;
+        return h < 0 ? h + 24 : h;
+    }
 
     private static Dictionary<string, double> MoodOf(List<Simulation.Core.Population.Person> ps)
     {
@@ -318,8 +339,8 @@ public sealed class ValidationCollector
             {
                 Id = l.Id, Name = l.Name, UtcOffsetMinutes = l.UtcOffsetMinutes, Persons = residents.Count,
                 ForeignNationals = residents.Count(p => p.NationalityId != p.ResidenceId), Sessions = st.Sessions,
-                MeanLocalStartHour = st.Sessions == 0 ? double.NaN : st.LocalMinutes / 60.0 / st.Sessions,
-                MeanServerStartHour = st.Sessions == 0 ? double.NaN : st.ServerMinutes / 60.0 / st.Sessions,
+                MeanLocalStartHour = st.Sessions == 0 ? double.NaN : CircularMeanHour(st.LocalX, st.LocalY),
+                MeanServerStartHour = st.Sessions == 0 ? double.NaN : CircularMeanHour(st.ServerX, st.ServerY),
             });
         }
         foreach (var kv in _quitReasons) m.QuitReasons[kv.Key] = kv.Value;

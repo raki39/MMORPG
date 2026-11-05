@@ -129,4 +129,44 @@ public class LocalityTests
         }
         Assert.Equal(Hash(), Hash());
     }
+
+    [Fact]
+    public void InicioMedio_EMediaCircular_ELocalEServidorDiferemPeloFuso()
+    {
+        // Duas sessoes: 23h30 e 0h30. A media aritmetica daria 12h; a circular, meia-noite.
+        var (ax, ay) = Simulation.Infrastructure.Validation.ValidationCollector.ClockVector(23 * 60 + 30);
+        var (bx, by) = Simulation.Infrastructure.Validation.ValidationCollector.ClockVector(30);
+        double mid = Simulation.Infrastructure.Validation.ValidationCollector.CircularMeanHour(ax + bx, ay + by);
+        Assert.True(mid < 0.01 || mid > 23.99, $"{mid}");
+        // Na campanha: chineses (UTC+8) contra o servidor (UTC-3) = 11 h exatas.
+        var e = Opened(seed: 3, population: 600);
+        var collector = new Simulation.Infrastructure.Validation.ValidationCollector(e.World.Content, warmupDays: 2);
+        for (int d = 0; d < 10; d++)
+        {
+            e.AdvanceTo(SimTime.Days(d + 1));
+            collector.Consume(e.World.Events.Drain(), e.World);
+        }
+        var m = collector.Finish(e.World, 3, 10, Array.Empty<Simulation.Infrastructure.Validation.TargetDefinition>());
+        var china = m.Localities.Single(l => l.Id == "china");
+        double diff = (china.MeanLocalStartHour - china.MeanServerStartHour + 24) % 24;
+        Assert.InRange(diff, 10.99, 11.01);
+    }
+
+    [Fact]
+    public void HashSemIdentificacaoDoConteudo_IgnoraSoOHashDosArquivos()
+    {
+        string[] Run(string sourceHash)
+        {
+            var set = TestSupport.FreshPresetSet();
+            set.SourceHash = sourceHash;
+            var e = WorldFactory.Create(ContentDatabase.Create(set), new WorldConfig { Seed = 5, PopulationSize = 40 });
+            e.Submit(new SetServerOpenCommand(true), SimTime.Hours(8));
+            e.AdvanceTo(SimTime.Days(3));
+            return new[] { StateHasher.Compute(e.World), StateHasher.ComputeWithoutContentId(e.World) };
+        }
+        var a = Run("conteudo-a");
+        var b = Run("conteudo-b");
+        Assert.NotEqual(a[0], b[0]);   // o hash original continua identificando o conteudo
+        Assert.Equal(a[1], b[1]);      // o estado completo normalizado e o mesmo
+    }
 }
