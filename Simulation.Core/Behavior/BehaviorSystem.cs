@@ -119,10 +119,10 @@ public sealed class BehaviorSystem
         var date = Cal.StartDate.AddDays(localDay);
         bool hol = cal.HolidayOn(date) != null, prevHol = cal.HolidayOn(date.AddDays(-1)) != null, nextHol = cal.HolidayOn(date.AddDays(1)) != null;
         var rs = _w.Content.Routine;
-        // A recuperacao do dia e decidida no planejamento e fica no registro: o dia montado nao muda
-        // quando o deficit muda depois (ao acordar).
-        int? recovery = null;
-        foreach (var rec in p.PlanList) if (rec.LocalDay == localDay) recovery = rec.RecoveryMinutes;
+        // A recuperacao do dia e decidida uma vez (R2) e fica guardada: o dia montado nao muda quando o
+        // deficit muda depois. Dia passado nunca planejado: sem recuperacao; dia futuro: pelo deficit atual.
+        int? recovery = p.RecoveryByDay.TryGetValue(localDay, out int fixedRecovery) ? fixedRecovery
+            : localDay < LocalDay(p, Now) ? 0 : null;
         var day = DailySchedule.Build(p, OccOf(p), rs, Dow(date), hol, prevHol, nextHol, null, recovery);
         var c = CommitmentOf(p, localDay, day, cal.KindOf(date) != DayKind.Weekday || Dow(date) == p.DayOffIndex);
         return c == null ? day : DailySchedule.Build(p, OccOf(p), rs, Dow(date), hol, prevHol, nextHol, c, recovery);
@@ -168,17 +168,32 @@ public sealed class BehaviorSystem
             int desired = DailySchedule.DesiredMinutes(p, day, rs, jitter);
             if (DailySchedule.PlaceMain(day, preferred, desired, rs, out _, out int start, out int minutes)
                 && dayStart + start * SimTime.TicksPerMinute > notBefore)
+            {
+                FixRecovery(p, d);   // o dia escolhido fica com a recuperacao usada aqui
                 return (dayStart + start * SimTime.TicksPerMinute, minutes);
+            }
             // Hoje a janela preferida ja passou: a proxima janela ainda aberta do mesmo dia.
             foreach (var (s, e) in day.Windows)
             {
                 long ws = Math.Max(dayStart + s * SimTime.TicksPerMinute, notBefore + 1);
                 long we = dayStart + e * SimTime.TicksPerMinute;
                 if (we - ws >= rs.MinSessionMinutes * SimTime.TicksPerMinute)
+                {
+                    FixRecovery(p, d);
                     return (ws, (int)Math.Min(desired, (we - ws) / SimTime.TicksPerMinute));
+                }
             }
         }
         return (notBefore + 1 + SimTime.TicksPerHour, p.Traits.SessionMinutes);
+    }
+
+    /// <summary>Fixa a recuperacao da manha do dia (se ainda nao fixada) e descarta as muito antigas.</summary>
+    private void FixRecovery(Person p, long localDay)
+    {
+        if (!p.RecoveryByDay.ContainsKey(localDay))
+            p.RecoveryByDay[localDay] = Math.Min(p.SleepDeficitMinutes, _w.Content.Routine.RecoveryFreeNightMinutes);
+        while (p.RecoveryByDay.Count > 0 && p.RecoveryByDay.Keys.First() < localDay - _w.Content.Routine.PlanHistoryDays - 7)
+            p.RecoveryByDay.Remove(p.RecoveryByDay.Keys.First());
     }
 
     private DeterministicRng Rng(string stream, long entity) =>
@@ -322,6 +337,7 @@ public sealed class BehaviorSystem
     {
         var rs = _w.Content.Routine;
         var rt = _w.Content.Retention;
+        FixRecovery(p, localDay);
         var day = LayoutOf(p, localDay);
         // Sono (R1): a conta real fecha ao acordar (EvWake). Aqui so a projecao da noite em
         // andamento, para o cansaco de hoje: comeca na hora de deitar ou na saida do jogo, se for depois.

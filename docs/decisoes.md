@@ -1480,14 +1480,19 @@ O teste "ninguém começa a sessão durante uma obrigação" agora aceita sobrep
 
 **Escala 5×2** (pedido do criador: "bem mais comum que a 6×1"):
 - Nova ocupação "Comércio e serviços em escala 5×2", com peso 9 (a 6×1 caiu de 7 para 4).
-- Cinco dias de trabalho, das 09:00 às 18:50, e duas folgas fixas seguidas que nem sempre caem no fim de semana.
-- Novo campo de conteúdo `daysOff` (1 ou 2). A segunda folga é o dia seguinte à primeira, sem sorteio novo. `StateHasher` v15.
+- Cinco dias de trabalho, de segunda a sexta, das 09:00 às 18:50, com folga **sempre no sábado e no domingo** (correção do criador).
+- O campo de conteúdo `daysOff` (1 ou 2, com a segunda folga no dia seguinte à primeira) fica pronto para outras escalas, sem uso no preset atual. `StateHasher` v15.
+
+**Recuperação fixada por dia** (problema real encontrado pelo teste-invariante):
+- **O problema:** no dia do registro (ou da volta) não havia registro de planejamento, então o dia montado era refeito depois com o déficit do momento, e a hora de acordar "andava".
+- **A correção:** a recuperação da manhã agora é decidida **uma vez por dia**, quando o dia é planejado pela primeira vez (planejamento do dia, ou primeira sessão depois do registro ou da volta), e fica guardada (`RecoveryByDay`).
+- **Dia passado nunca planejado:** fica sem recuperação. Assim um dia passado é sempre reconstruído igual. `StateHasher` v16.
 
 **Testes:** 8 novos (226 no total).
 - Semana civil com feriado e turno noturno fecha 168 h.
 - Horas do turno de sexta no sábado civil, com o sono.
 - Cada noite fechada uma vez, com déficit ≥ 0.
-- 5×2: cinco dias, folgas seguidas e mais comum que a 6×1.
+- 5×2: cinco dias de segunda a sexta, folga sempre no fim de semana, mais comum que a 6×1.
 - Nenhuma sessão invade preparo, deslocamento ou obrigação (sono só dentro do corte).
 - Noite com corte mantém o sono mínimo.
 - Chamado do trabalho com tolerância própria.

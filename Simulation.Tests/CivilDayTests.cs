@@ -84,20 +84,18 @@ public class CivilDayTests
     }
 
     [Fact]
-    public void Escala5x2_CincoDiasEDuasFolgasSeguidas_MaisComumQueA6x1()
+    public void Escala5x2_CincoDiasDeSegundaASexta_FolgaSempreNoFimDeSemana_MaisComumQueA6x1()
     {
         var people = Enumerable.Range(1, 6000).Select(i => PopulationGenerator.Generate(i, C, 17)).ToList();
         var five = people.Where(p => p.OccupationId == "escala_5x2").ToList();
         var six = people.Where(p => p.OccupationId == "escala_6x1").ToList();
         Assert.True(five.Count > six.Count * 3 / 2, $"5x2 {five.Count} x 6x1 {six.Count}");
+        var occ = C.Occupations["escala_5x2"];
         foreach (var p in five)
         {
-            var occ = C.Occupations["escala_5x2"];
-            Assert.Equal(5, Enumerable.Range(0, 7).Count(d => DailySchedule.Obligations(p, occ, d, false).Count > 0));
-            Assert.Equal((p.DayOffIndex + 1) % 7, p.DayOff2Index);   // folgas seguidas
+            for (int d = 0; d < 5; d++) Assert.NotEmpty(DailySchedule.Obligations(p, occ, d, false));   // segunda a sexta
+            Assert.Empty(DailySchedule.Obligations(p, occ, 5, false));                                // sabado livre
+            Assert.Empty(DailySchedule.Obligations(p, occ, 6, false));                                // domingo livre
         }
-        Assert.Contains(five, p => p.DayOffIndex == 5);                 // sabado e domingo de folga
-        Assert.Contains(five, p => p.DayOffIndex is >= 0 and <= 3);     // folga no meio da semana
-        Assert.All(six, p => Assert.Equal(-1, p.DayOff2Index));
     }
 }

@@ -33,7 +33,7 @@ A regra que amarra tudo (D-045) é a coerência: turno, sono, hora preferida, du
 | Universitário | 10 | seg–sex 08:00–12:00; ter/qui 14:00–17:30 | 45 | ±60 | não | aula da tarde no campus, direto depois de 1 h de almoço |
 | Home office | 8 | seg–sex 09:00–18:00 | 0 | ±60 | não | remoto, pausa 12:00–13:00, flexibilidade 600 |
 | Sem ocupação | 8 | — | — | — | — | todo dia livre |
-| Escala 5x2 | 9 | 09:00–18:50, cinco dias | 45 | ±90 | sim | duas folgas fixas seguidas, nem sempre no fim de semana |
+| Escala 5x2 | 9 | seg–sex 09:00–18:50 | 45 | ±90 | sim | folga sempre no sábado e no domingo |
 | Escala 6x1 | 4 | 10:00–18:20, seis dias | 45 | ±90 | sim | uma folga fixa em qualquer dia (inclusive domingo) |
 | Trabalha e estuda | 6 | seg–sex 08:00–17:00 + seg–qui 19:00–22:30 | 45 (ida) / 40 (volta da faculdade) | ±30 | não | trabalho → refeição 45 min → transferência 30 min → faculdade → casa |
 | Estudante (tarde) | 5 | seg–sex 13:00–18:00 | 30 | ±20 | não | — |

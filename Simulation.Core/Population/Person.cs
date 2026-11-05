@@ -234,6 +234,12 @@ public sealed class Person
     public int SleepDebtTolerance { get; internal set; } = 500;
     /// <summary>Deficit de sono acumulado (minutos): sobe com noites curtas, cai com sono a mais.</summary>
     public int SleepDeficitMinutes { get; internal set; }
+    /// <summary>
+    /// Recuperacao da manha decidida para cada dia local (R2): fixada na primeira vez que o dia e
+    /// planejado (planejamento do dia ou primeira sessao depois do registro ou da volta), para o
+    /// dia montado nunca mudar depois. Dia passado que nunca foi planejado: sem recuperacao.
+    /// </summary>
+    internal SortedDictionary<long, int> RecoveryByDay { get; } = new();
     /// <summary>Ultima saida do jogo (tick): se passou da hora de deitar, o sono real comeca nela (R1).</summary>
     public long LastLogoutTick { get; internal set; } = -1;
     /// <summary>Sono perdido para o jogo: na ultima noite e no total.</summary>

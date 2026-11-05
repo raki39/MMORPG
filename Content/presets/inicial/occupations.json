@@ -203,7 +203,7 @@
       "weight": 9,
       "startVariationMinutes": 90,
       "worksHolidays": true,
-      "description": "Cinco dias de trabalho e duas folgas seguidas por semana, que nem sempre caem no fim de semana; trabalha em feriado.",
+      "description": "Cinco dias de trabalho, de segunda a sexta, e folga sempre no sábado e no domingo; trabalha em feriado.",
       "blocks": [
         {
           "days": [
@@ -211,15 +211,13 @@
             "tue",
             "wed",
             "thu",
-            "fri",
-            "sat",
-            "sun"
+            "fri"
           ],
           "start": "09:00",
           "end": "18:50",
           "commuteMinutes": 45,
           "label": "trabalho",
-          "personalDayOff": true,
+          "personalDayOff": false,
           "remote": false,
           "breaks": [],
           "route": "home",
@@ -237,7 +235,7 @@
         "spread": 20000
       },
       "playDuringWorkFlexibility": 0,
-      "daysOff": 2
+      "daysOff": 1
     },
     {
       "id": "escala_6x1",
