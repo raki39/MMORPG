@@ -1385,3 +1385,43 @@ O teste "ninguém começa a sessão durante uma obrigação" agora aceita sobrep
 - Determinístico e mais comum para quem é sociável.
 - Tira tempo livre sem invadir o sono.
 - Conteúdo inválido é erro.
+
+## D-047 — R1: contabilidade do dia (dia acordado, sono real, linha do tempo de 24 h)
+**Data:** 05/11/2026 · **Estado:** aceita
+
+**Contexto:** revisão da rotina aprovada pelo criador (R1–R5). A R1 corrige erros de contabilidade antes de qualquer mudança de comportamento. A referência anterior está em `docs/baselines/pre-R1/`.
+
+**Decisões:**
+- **Dia acordado:** cada dia da pessoa vai do início do sono que termina naquele dia (`SleepStart`, pode ser na véspera) até a hora em que ela vai dormir (`Bed`, pode passar da meia-noite).
+  - O dia seguinte começa exatamente onde este termina, então cada minuto pertence a um único dia e a semana fecha 7 × 24 h.
+  - O turno da noite deixa de ser um caso especial: o turno de sexta, das 22h às 06h, faz parte do dia de sexta, e o sono vem depois da volta para casa. O sábado começa no fim desse sono e só fica livre à tarde.
+  - Sair para o turno nunca é tratado como "dormir": `ShiftDeparture` marca a saída e `Bed` só é o fim do dia.
+- **Sono contado uma vez:**
+  - A noite é fechada quando a pessoa acorda (evento `wake`), do início real até agora. O início real é a hora de deitar planejada, ou a saída do jogo se foi depois.
+  - Regra explícita (`DeficitChange`): dormiu menos, o déficit sobe a diferença; dormiu o necessário ou mais, cai o que sobrou mais a recuperação de noite completa (`recoveryNormalNightMinutes`, 20). A saída do jogo não mexe mais no déficit; o evento "foi dormir mais tarde" fica só como informação.
+  - O cansaço do dia usa a projeção da noite em andamento.
+  - A recuperação da manhã é decidida no planejamento e guardada na agenda, então o dia montado não muda depois. `StateHasher` v13.
+- **Linha do tempo de 24 h:**
+  - O dia é montado por partes que não se sobrepõem: preparo, deslocamento, obrigação, refeição, transferência, espera, chegada e compromisso.
+  - As janelas livres são o que sobra. `Timeline()` pinta cada minuto uma vez; "awake" são as brechas curtas.
+  - A "semana em 168 horas" da tela usa essa mesma linha do tempo, com sono, obrigações, deslocamento, cuidados pessoais, espera, compromissos e livre.
+  - O jogo no home office é sobreposição autorizada dentro do trabalho e é contado à parte.
+- **Chegada só depois de voltar para casa:** blocos sem deslocamento (home office, autônomo, cuidando da casa) não têm os 45 min de "chegar e comer". O home office fica livre às 18h.
+- **Trajeto no conteúdo:**
+  - Cada bloco declara `route`: `home` (de casa e volta para casa) ou `fromPrevious` (direto do bloco anterior, com `mealMinutes` de refeição e `transferMinutes` de transferência; o resto é espera fora de casa). Outros trajetos ficam para depois.
+  - Trabalha e estuda: trabalho → refeição 45 min → transferência 30 min → espera → faculdade → casa (40 min).
+  - Universitário: a aula da tarde (ter/qui) é no mesmo campus, depois de 1 h de almoço.
+- **Escala 6×1:** seis dias de trabalho e uma folga fixa, que pode cair em qualquer dia, inclusive domingo. Antes eram 5 dias, porque a folga só caía de segunda a sexta e o domingo ficava livre.
+- **Autônomo:** cinco dias entre segunda e sábado, com uma folga escolhida. Antes, sem querer, eram quatro.
+- **Validador:** confere o trajeto (bloco anterior no mesmo dia, refeição e transferência que cabem). A regra da madrugada não vale para blocos que vêm de outro bloco.
+
+**Testes:** 12 novos (218 no total).
+- Regra do déficit (8 h de necessidade: dormiu 7 h, +60; dormiu 8 h, só a recuperação explícita; dormiu 9 h, −80).
+- Deitar às 02h e acordar às 09h dá 7 h.
+- Ficar jogando depois de deitar entra uma vez só no sono real.
+- A linha do tempo cobre o dia sem buraco nem sobreposição, e os dias se encaixam (7 × 24 h).
+- Trabalho → faculdade direto; home office sem chegada.
+- Escala com 6 dias (folga também no domingo); autônomo com 5.
+- Feriado ou folga amanhã: dorme na hora natural.
+- Turno de sexta → sábado começa depois do sono.
+- Primeiro turno depois da folga, e a saída para o turno não é sono.

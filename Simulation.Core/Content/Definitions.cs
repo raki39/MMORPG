@@ -177,6 +177,16 @@ public sealed class ObligationBlockDefinition
     public bool Remote { get; set; }
     /// <summary>Pausas permitidas dentro do bloco ("HH:mm"), so em blocos remotos.</summary>
     public List<BreakDefinition> Breaks { get; set; } = new();
+    /// <summary>
+    /// Trajeto (R1): "home" (padrao) sai de casa antes e volta para casa depois (commuteMinutes
+    /// cada trecho); "fromPrevious" vem direto do bloco anterior do mesmo dia: refeicao
+    /// (mealMinutes) e transferencia (transferMinutes) logo depois dele, o resto e espera fora de
+    /// casa. A volta para casa depois deste bloco usa commuteMinutes. Outros trajetos depois.
+    /// </summary>
+    public string Route { get; set; } = "home";
+    public int MealMinutes { get; set; }
+    public int TransferMinutes { get; set; }
+    public bool IsFromPrevious() => Route == "fromPrevious";
 }
 
 public sealed class BreakDefinition

@@ -166,7 +166,7 @@ public static class ContentValidator
             for (int j = 0; j < o.Blocks.Count; j++)
             {
                 int bs = ParseClock(o.Blocks[j].Start), be = ParseClock(o.Blocks[j].End);
-                if (bs < 0 || be < 0 || be <= bs) continue;
+                if (bs < 0 || be < 0 || be <= bs || o.Blocks[j].IsFromPrevious()) continue;   // vindo direto de outro bloco: nao sai de casa
                 int earliestWake = bs - o.StartVariationMinutes - o.Blocks[j].CommuteMinutes * (1000 + rsv.CommuteVariationPermille) / 1000 - rsv.PrepMinutes;
                 if (earliestWake < EarliestDayShiftWakeMinute)
                     v.Error(OccupationsFile, $"{p}.blocks[{j}].start",
@@ -183,6 +183,21 @@ public static class ContentValidator
                 if (e < 0) v.Error(OccupationsFile, bp + ".end", "Use HH:mm.");
                 if (s >= 0 && e == s) v.Error(OccupationsFile, bp + ".end", "Início e fim iguais.");
                 if (b.CommuteMinutes is < 0 or > 240) v.Error(OccupationsFile, bp + ".commuteMinutes", "Use de 0 a 240 minutos.");
+                if (b.Route is not ("home" or "fromPrevious")) v.Error(OccupationsFile, bp + ".route", "Use \"home\" ou \"fromPrevious\".");
+                if (b.MealMinutes is < 0 or > 180) v.Error(OccupationsFile, bp + ".mealMinutes", "Use de 0 a 180 minutos.");
+                if (b.TransferMinutes is < 0 or > 240) v.Error(OccupationsFile, bp + ".transferMinutes", "Use de 0 a 240 minutos.");
+                if (b.IsFromPrevious() && s >= 0)
+                {
+                    // Em cada dia do bloco, precisa haver um bloco anterior no mesmo dia que termine a tempo
+                    // da refeicao e da transferencia.
+                    foreach (var day in b.Days)
+                    {
+                        var before = o.Blocks.Where(x => x != b && x.Days.Contains(day) && ParseClock(x.End) >= 0 && ParseClock(x.End) > ParseClock(x.Start) && ParseClock(x.End) <= s)
+                            .Select(x => ParseClock(x.End)).DefaultIfEmpty(-1).Max();
+                        if (before < 0) { v.Error(OccupationsFile, bp + ".route", $"\"fromPrevious\" precisa de um bloco anterior em '{day}'."); break; }
+                        if (before + b.MealMinutes + b.TransferMinutes > s) { v.Error(OccupationsFile, bp + ".route", $"Refeição e transferência não cabem entre o bloco anterior e este em '{day}'."); break; }
+                    }
+                }
                 if (b.Days.Count == 0) v.Error(OccupationsFile, bp + ".days", "Defina ao menos um dia.");
                 if (b.Breaks.Count > 0 && !b.Remote) v.Error(OccupationsFile, bp + ".breaks", "Pausas para jogar só em blocos remotos.");
                 for (int k = 0; k < b.Breaks.Count; k++)

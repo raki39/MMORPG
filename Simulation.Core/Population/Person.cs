@@ -232,6 +232,8 @@ public sealed class Person
     public int SleepDebtTolerance { get; internal set; } = 500;
     /// <summary>Deficit de sono acumulado (minutos): sobe com noites curtas, cai com sono a mais.</summary>
     public int SleepDeficitMinutes { get; internal set; }
+    /// <summary>Ultima saida do jogo (tick): se passou da hora de deitar, o sono real comeca nela (R1).</summary>
+    public long LastLogoutTick { get; internal set; } = -1;
     /// <summary>Sono perdido para o jogo: na ultima noite e no total.</summary>
     public int LastSleepCutMinutes { get; internal set; }
     public int SleepCutTotalMinutes { get; internal set; }
@@ -265,13 +267,16 @@ public sealed class DayPlanRecord
 {
     /// <summary>Compromisso do dia livre (D-046): id e horario local; vazio se nao houve.</summary>
     public string CommitmentId { get; }
+    /// <summary>Recuperacao decidida para este dia (a montagem do dia fica a mesma o dia todo).</summary>
+    public int RecoveryMinutes { get; }
     public int CommitmentStart { get; }
     public int CommitmentEnd { get; }
 
     public DayPlanRecord(long localDay, int freeMinutes, int windows, int sessions, string reason, int firstStartMinute, int plannedMinutes, bool freeDay,
         int sleepMinutes = 0, int deficitMinutes = 0, int workSessions = 0, int workOverlapMinutes = 0,
-        string commitmentId = "", int commitmentStart = 0, int commitmentEnd = 0)
+        string commitmentId = "", int commitmentStart = 0, int commitmentEnd = 0, int recoveryMinutes = 0)
     {
+        RecoveryMinutes = recoveryMinutes;
         CommitmentId = commitmentId;
         CommitmentStart = commitmentStart;
         CommitmentEnd = commitmentEnd;
@@ -301,8 +306,8 @@ public sealed class DayPlanRecord
     /// <summary>Dia sem obrigacoes (folga, fim de semana, feriado ou sem ocupacao).</summary>
     public bool FreeDay { get; }
     /// <summary>Sono da noite anterior (planejado) e deficit depois da conta do dia (P3).</summary>
-    public int SleepMinutes { get; }
-    public int DeficitMinutes { get; }
+    public int SleepMinutes { get; internal set; }
+    public int DeficitMinutes { get; internal set; }
     /// <summary>Sessoes no expediente remoto (pausa ou escapada) e minutos sobrepostos ao trabalho (D-044).</summary>
     public int WorkSessions { get; }
     public int WorkOverlapMinutes { get; }

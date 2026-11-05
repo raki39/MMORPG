@@ -84,8 +84,9 @@ public static class PopulationGenerator
         person.OccupationId = occ.Id;
         person.ShiftOffsetMinutes = occ.StartVariationMinutes == 0 ? 0 : rng.NextIntInclusive(-occ.StartVariationMinutes, occ.StartVariationMinutes) / 5 * 5;
         person.CommutePermille = 1000 + rng.NextIntInclusive(-rs.CommuteVariationPermille, rs.CommuteVariationPermille);
+        // Folga fixa (R1): em qualquer dia dos blocos com folga (a escala 6x1 pode folgar no domingo).
         var dayOffDays = occ.Blocks.Where(b => b.PersonalDayOff).SelectMany(b => b.Days).Select(ContentValidator.WeekDayIndex)
-            .Where(d => d >= 0 && d <= 4).Distinct().OrderBy(d => d).ToList();
+            .Where(d => d >= 0 && d <= 6).Distinct().OrderBy(d => d).ToList();
         person.DayOffIndex = dayOffDays.Count == 0 ? -1 : dayOffDays[rng.NextInt(dayOffDays.Count)];
         person.SleepNeedMinutes = Roll(rng, rs.SleepNeedMinutes, 300, 660);
         person.BedtimeMinute = Roll(rng, rs.BedtimeMinute, 1260, 1680) / 5 * 5;

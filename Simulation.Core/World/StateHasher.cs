@@ -11,7 +11,7 @@ namespace Simulation.Core.World;
 /// </summary>
 public static class StateHasher
 {
-    public const int FormatVersion = 12;
+    public const int FormatVersion = 13;
 
     public static string Compute(WorldState w) => Compute(w, includeContentId: true);
 
@@ -146,13 +146,13 @@ public static class StateHasher
         h.Str(p.OccupationId); h.Int(p.ShiftOffsetMinutes); h.Int(p.CommutePermille); h.Int(p.DayOffIndex);
         h.Int(p.SleepNeedMinutes); h.Int(p.BedtimeMinute); h.Long(p.IncomeCentsPerMonth); h.Long(p.SupportCentsPerMonth);
         h.Int(p.ExpectedWeeklyMinutes); h.Long(p.LastPlayedLocalDay);
-        h.Int(p.SleepDebtTolerance); h.Int(p.SleepDeficitMinutes); h.Int(p.LastSleepCutMinutes); h.Int(p.SleepCutTotalMinutes);
+        h.Int(p.SleepDebtTolerance); h.Int(p.SleepDeficitMinutes); h.Int(p.LastSleepCutMinutes); h.Int(p.SleepCutTotalMinutes); h.Long(p.LastLogoutTick);
         h.Int(p.DayPlans.Count);
         foreach (var d in p.DayPlans)
         {
             h.Long(d.LocalDay); h.Int(d.FreeMinutes); h.Int(d.Windows); h.Int(d.Sessions); h.Str(d.Reason); h.Int(d.FirstStartMinute); h.Int(d.PlannedMinutes); h.Bool(d.FreeDay);
             h.Int(d.SleepMinutes); h.Int(d.DeficitMinutes); h.Int(d.WorkSessions); h.Int(d.WorkOverlapMinutes);
-            h.Str(d.CommitmentId); h.Int(d.CommitmentStart); h.Int(d.CommitmentEnd);
+            h.Str(d.CommitmentId); h.Int(d.CommitmentStart); h.Int(d.CommitmentEnd); h.Int(d.RecoveryMinutes);
         }
         h.Int(p.OpenWindows.Count);
         foreach (var w in p.OpenWindows) { h.Long(w.Start); h.Long(w.End); h.Bool(w.EndsAtBed); }

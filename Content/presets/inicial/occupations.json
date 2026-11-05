@@ -30,7 +30,7 @@
       "weight": 5,
       "startVariationMinutes": 120,
       "worksHolidays": true,
-      "description": "Trabalha por projeto, em horários próprios; às vezes em feriados.",
+      "description": "Trabalha de casa cinco dias por semana entre segunda e sábado, com um dia de folga escolhido; horário flexível e pausa de almoço. Às vezes escapa um pouco no expediente.",
       "blocks": [
         {
           "days": [
@@ -38,7 +38,8 @@
             "tue",
             "wed",
             "thu",
-            "fri"
+            "fri",
+            "sat"
           ],
           "start": "10:00",
           "end": "16:30",
@@ -51,7 +52,10 @@
               "start": "12:30",
               "end": "13:30"
             }
-          ]
+          ],
+          "route": "home",
+          "mealMinutes": 0,
+          "transferMinutes": 0
         }
       ],
       "income": {
@@ -88,7 +92,10 @@
           "commuteMinutes": 50,
           "label": "trabalho",
           "remote": false,
-          "breaks": []
+          "breaks": [],
+          "route": "home",
+          "mealMinutes": 0,
+          "transferMinutes": 0
         }
       ],
       "income": {
@@ -127,7 +134,10 @@
           "commuteMinutes": 0,
           "label": "cuidados",
           "remote": false,
-          "breaks": []
+          "breaks": [],
+          "route": "home",
+          "mealMinutes": 0,
+          "transferMinutes": 0
         },
         {
           "days": [
@@ -144,7 +154,10 @@
           "commuteMinutes": 0,
           "label": "cuidados",
           "remote": false,
-          "breaks": []
+          "breaks": [],
+          "route": "home",
+          "mealMinutes": 0,
+          "transferMinutes": 0
         },
         {
           "days": [
@@ -161,7 +174,10 @@
           "commuteMinutes": 0,
           "label": "cuidados",
           "remote": false,
-          "breaks": []
+          "breaks": [],
+          "route": "home",
+          "mealMinutes": 0,
+          "transferMinutes": 0
         }
       ],
       "income": {
@@ -183,7 +199,7 @@
       "weight": 7,
       "startVariationMinutes": 90,
       "worksHolidays": true,
-      "description": "Seis dias por semana, inclusive sábado, com uma folga fixa durante a semana.",
+      "description": "Seis dias de trabalho e uma folga fixa por semana (que pode cair em qualquer dia, inclusive domingo); trabalha em feriado.",
       "blocks": [
         {
           "days": [
@@ -192,7 +208,8 @@
             "wed",
             "thu",
             "fri",
-            "sat"
+            "sat",
+            "sun"
           ],
           "start": "10:00",
           "end": "18:20",
@@ -200,7 +217,10 @@
           "label": "trabalho",
           "personalDayOff": true,
           "remote": false,
-          "breaks": []
+          "breaks": [],
+          "route": "home",
+          "mealMinutes": 0,
+          "transferMinutes": 0
         }
       ],
       "income": {
@@ -237,7 +257,10 @@
           "commuteMinutes": 30,
           "label": "estudo",
           "remote": false,
-          "breaks": []
+          "breaks": [],
+          "route": "home",
+          "mealMinutes": 0,
+          "transferMinutes": 0
         }
       ],
       "income": {
@@ -274,7 +297,10 @@
           "commuteMinutes": 30,
           "label": "estudo",
           "remote": false,
-          "breaks": []
+          "breaks": [],
+          "route": "home",
+          "mealMinutes": 0,
+          "transferMinutes": 0
         }
       ],
       "income": {
@@ -316,7 +342,10 @@
               "start": "12:00",
               "end": "13:00"
             }
-          ]
+          ],
+          "route": "home",
+          "mealMinutes": 0,
+          "transferMinutes": 0
         }
       ],
       "income": {
@@ -353,7 +382,10 @@
           "commuteMinutes": 40,
           "label": "trabalho",
           "remote": false,
-          "breaks": []
+          "breaks": [],
+          "route": "home",
+          "mealMinutes": 0,
+          "transferMinutes": 0
         }
       ],
       "income": {
@@ -390,7 +422,10 @@
           "commuteMinutes": 40,
           "label": "trabalho",
           "remote": false,
-          "breaks": []
+          "breaks": [],
+          "route": "home",
+          "mealMinutes": 0,
+          "transferMinutes": 0
         }
       ],
       "income": {
@@ -433,7 +468,7 @@
       "weight": 6,
       "startVariationMinutes": 30,
       "worksHolidays": false,
-      "description": "Expediente durante o dia e faculdade de segunda a quinta à noite: pouco tempo livre nos dias úteis.",
+      "description": "Trabalha de dia e, de segunda a quinta, vai direto do trabalho para a faculdade (come algo e se desloca), voltando para casa só no fim da aula. Pouco tempo livre nos dias úteis.",
       "blocks": [
         {
           "days": [
@@ -448,7 +483,10 @@
           "commuteMinutes": 45,
           "label": "trabalho",
           "remote": false,
-          "breaks": []
+          "breaks": [],
+          "route": "home",
+          "mealMinutes": 0,
+          "transferMinutes": 0
         },
         {
           "days": [
@@ -459,10 +497,13 @@
           ],
           "start": "19:00",
           "end": "22:30",
-          "commuteMinutes": 30,
+          "commuteMinutes": 40,
           "label": "estudo",
           "remote": false,
-          "breaks": []
+          "breaks": [],
+          "route": "fromPrevious",
+          "mealMinutes": 45,
+          "transferMinutes": 30
         }
       ],
       "income": {
@@ -499,7 +540,10 @@
           "commuteMinutes": 35,
           "label": "trabalho",
           "remote": false,
-          "breaks": []
+          "breaks": [],
+          "route": "home",
+          "mealMinutes": 0,
+          "transferMinutes": 0
         }
       ],
       "income": {
@@ -536,7 +580,10 @@
           "commuteMinutes": 45,
           "label": "estudo",
           "remote": false,
-          "breaks": []
+          "breaks": [],
+          "route": "home",
+          "mealMinutes": 0,
+          "transferMinutes": 0
         },
         {
           "days": [
@@ -545,10 +592,13 @@
           ],
           "start": "14:00",
           "end": "17:30",
-          "commuteMinutes": 0,
+          "commuteMinutes": 45,
           "label": "estudo",
           "remote": false,
-          "breaks": []
+          "breaks": [],
+          "route": "fromPrevious",
+          "mealMinutes": 60,
+          "transferMinutes": 0
         }
       ],
       "income": {

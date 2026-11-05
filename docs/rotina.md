@@ -30,13 +30,13 @@ A regra que amarra tudo (D-045) é a coerência: turno, sono, hora preferida, du
 |---|---:|---|---:|---:|---|---|
 | Horário comercial | 24 | seg–sex 08:00–17:00 | 50 min | ±60 min | não | — |
 | Estudante (manhã) | 12 | seg–sex 07:00–12:30 | 30 | ±20 | não | — |
-| Universitário | 10 | seg–sex 08:00–12:00; ter/qui 14:00–17:30 | 45 | ±60 | não | — |
+| Universitário | 10 | seg–sex 08:00–12:00; ter/qui 14:00–17:30 | 45 | ±60 | não | aula da tarde no campus, direto depois de 1 h de almoço |
 | Home office | 8 | seg–sex 09:00–18:00 | 0 | ±60 | não | remoto, pausa 12:00–13:00, flexibilidade 600 |
 | Sem ocupação | 8 | — | — | — | — | todo dia livre |
-| Escala 6x1 | 7 | seg–sáb 10:00–18:20 | 45 | ±90 | sim | uma folga fixa entre seg e sex |
-| Trabalha e estuda | 6 | seg–sex 08:00–17:00 + seg–qui 19:00–22:30 | 45 / 30 | ±30 | não | — |
+| Escala 6x1 | 7 | 10:00–18:20, seis dias | 45 | ±90 | sim | uma folga fixa em qualquer dia (inclusive domingo) |
+| Trabalha e estuda | 6 | seg–sex 08:00–17:00 + seg–qui 19:00–22:30 | 45 (ida) / 40 (volta da faculdade) | ±30 | não | trabalho → refeição 45 min → transferência 30 min → faculdade → casa |
 | Estudante (tarde) | 5 | seg–sex 13:00–18:00 | 30 | ±20 | não | — |
-| Autônomo | 5 | seg–sex 10:00–16:30 | 0 | ±120 | sim | remoto, pausa 12:30–13:30, flexibilidade 700, folga fixa |
+| Autônomo | 5 | 10:00–16:30, cinco dias entre seg e sáb | 0 | ±120 | sim | remoto, pausa 12:30–13:30, flexibilidade 700, folga fixa |
 | Turno noturno | 4 | seg–sex 22:00–06:00 | 35 | ±30 | sim | dorme de manhã |
 | Meio período (manhã) | 3 | seg–sex 08:00–12:00 | 40 | ±30 | não | — |
 | Meio período (tarde) | 3 | seg–sex 13:30–17:30 | 40 | ±30 | não | — |
@@ -44,6 +44,7 @@ A regra que amarra tudo (D-045) é a coerência: turno, sono, hora preferida, du
 | Aposentado | 2 | — | — | — | — | todo dia livre |
 
 - **Deslocamento:** varia ±30% por pessoa.
+- **Trajeto de cada bloco** (`route`): `home` sai de casa e volta para casa; `fromPrevious` vem direto do bloco anterior. Neste caso há refeição (`mealMinutes`) e transferência (`transferMinutes`), e o resto é espera fora de casa.
 - **Validador:** nenhum turno diurno pode exigir acordar antes das 04:30, mesmo com a maior variação e o deslocamento mais longo.
 
 ## 3. Criação da pessoa (uma vez)
@@ -85,19 +86,22 @@ A regra que amarra tudo (D-045) é a coerência: turno, sono, hora preferida, du
      | Hardcore de meio período de manhã | 13:25 | ~14h |
 8. **Previsto por semana:** soma do previsto de cada dia (seção 5).
 
-## 4. O dia montado (todo dia, à meia-noite local)
+## 4. O dia montado (todo dia, à meia-noite local) — R1, D-047
 
-`DailySchedule.Build`, em minutos locais desde a meia-noite:
+`DailySchedule.Build` monta o **dia acordado**: do início do sono que termina hoje (`SleepStart`, que pode ser na véspera) até a hora de dormir (`Bed`, que pode passar da meia-noite). O dia seguinte começa onde este termina, então cada minuto pertence a um único dia e a semana fecha 7 × 24 h.
 
-1. **Obrigações do dia:** cada bloco com o deslocamento antes e depois. O turno que atravessa a meia-noite ocupa o começo do dia seguinte.
-2. **Acordar:**
-   - quem trabalhou à noite dorme depois do turno: acorda = fim do turno + deslocamento + 45 min de chegada + sono necessário + recuperação;
-   - os demais acordam a tempo da primeira obrigação (início − deslocamento − 45 min de preparo) ou na hora natural (dormir + sono). Vale o que vier primeiro, mais a recuperação se houver déficit e não houver obrigação cedo.
-3. **Dormir:**
-   - hora natural, mas cedo o bastante para o dia seguinte: início da obrigação de amanhã − deslocamento − preparo − sono necessário;
-   - nunca antes de voltar e comer (fim da última obrigação + 45 min);
-   - quem sai para o turno da noite "dorme" na saída.
-4. **Compromisso do dia livre** (D-046), só em fim de semana, feriado ou folga:
+1. **Início do sono que termina hoje:** é o fim do dia acordado de ontem.
+   - Depois de um turno da noite: fim do turno + deslocamento + chegada (de manhã).
+   - Nos outros dias: a hora natural de dormir, cedo o bastante para a obrigação de hoje, e nunca antes de voltar e comer.
+2. **Acordar:** a tempo da primeira obrigação (início − deslocamento − 45 min de preparo), ou depois do sono necessário. Se sobrar manhã e houver déficit, soma a recuperação (até 2 h, decidida no planejamento e guardada na agenda).
+3. **Obrigações:**
+   - De casa: deslocamento antes, obrigação, deslocamento depois e 45 min de chegada (comer, descansar).
+   - Em sequência direta: refeição, transferência e espera fora de casa até o próximo bloco.
+   - Blocos sem deslocamento (home office, autônomo, cuidando da casa) não têm chegada.
+4. **Fim do dia (`Bed`):**
+   - Depois de um turno da noite, a volta para casa e a chegada.
+   - Nos outros dias, a hora natural de dormir, limitada pela obrigação de amanhã (feriado e folga de amanhã liberam) e nunca antes de voltar e comer.
+5. **Compromisso do dia livre** (D-046), só em fim de semana, feriado ou folga:
 
    | Tipo | Início | Duração | Peso | Social |
    |---|---|---|---:|---|
@@ -106,11 +110,10 @@ A regra que amarra tudo (D-045) é a coerência: turno, sono, hora preferida, du
    | passeio com amigos | 14:00–17:00 | 2–4h | 3 | sim |
    | resolver pendências | 09:00–12:00 | 1h30–3h | 2 | não |
 
-   - Chance: 7% × (0,6 + 0,8 × sociabilidade), ou seja, de 4,2% a 9,8%.
-   - Os tipos sociais pesam mais para quem é sociável.
-   - O sorteio é próprio da pessoa e do dia: o mesmo dia sempre dá o mesmo resultado.
-   - Fica dentro do período acordado e termina 15 min antes de dormir.
-5. **Janelas livres:** do acordar + 45 min de preparo até dormir, menos as obrigações e os compromissos (com 45 min de chegada depois de cada um). Só valem janelas de 30 min ou mais.
+   - Chance: 7% × (0,6 + 0,8 × sociabilidade). O sorteio é próprio da pessoa e do dia.
+   - O compromisso termina 15 min antes de dormir, seguido de chegada.
+   - **Simplificação registrada:** compromissos ainda não cortam sono.
+6. **Partes sem sobreposição e janelas livres:** as partes acordadas (preparo, deslocamento, obrigação, refeição, transferência, espera, chegada, compromisso) nunca se sobrepõem. As janelas livres são o que sobra entre elas (mínimo 30 min). `Timeline()` pinta cada minuto do dia uma única vez; as brechas curtas viram "acordado".
 
 ## 5. Vontade de jogar no dia
 
@@ -155,18 +158,24 @@ Exemplo: o hardcore de meio período (base 152 min, importância 725, folga 1,0)
 | Tinha tempo, preferiu outro lazer | Nenhum dos anteriores |
 | Inativo / Voltou | Situação de retenção |
 
-## 6. Sono, déficit e cansaço (P3)
+## 6. Sono, déficit e cansaço (P3; contabilidade R1)
 
-- **Noite:** sono = acordar de hoje + 24 h − deitar de ontem. Quem dorme de manhã depois do turno conta o sono necessário mais a recuperação.
-- **Déficit:**
-  - sobe com a diferença entre o sono necessário e o dormido;
-  - noite exata recupera 20 min; manhã livre dorme até 2 h a mais;
-  - o sono cortado pelo jogo entra no déficit na saída da sessão;
-  - teto = 15 h × (0,5 + tolerância), entre 7h30 e 22h30.
+- **Noite contada uma vez, ao acordar** (evento `wake`): vai do início real até a hora de acordar. O início real é a hora de deitar planejada, ou a saída do jogo se foi depois. Os horários são ticks absolutos da simulação. A saída do jogo não mexe no déficit; só registra a hora.
+- **Regra do déficit** (`DeficitChange`), para uma necessidade de 8 h:
+
+  | Dormiu | Déficit |
+  |---|---|
+  | 7 h | +60 min |
+  | 8 h | −20 min (recuperação explícita de noite completa, `recoveryNormalNightMinutes`) |
+  | 9 h | −60 − 20 = −80 min |
+
+  - A recuperação de manhã livre faz a pessoa acordar mais tarde, e por isso dormir mais; entra na mesma conta, sem duplicar.
+  - Teto = 15 h × (0,5 + tolerância).
+- **Cansaço de hoje:** usa a projeção da noite em andamento no planejamento. A conta real fecha ao acordar e corrige a agenda.
 - **Cansaço:** déficit ÷ 10 h, até 100%. Efeitos:
   - −40% na chance;
   - −30% na duração;
-  - −12% na nota da sessão;
+  - −12% na nota;
   - motivo "cansado" a partir de 50%.
 
 ## 7. Durante a sessão

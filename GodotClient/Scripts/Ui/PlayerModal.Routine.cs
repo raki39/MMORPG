@@ -123,7 +123,7 @@ public partial class PlayerModal
                 (d.Obligations.Count == 0 ? "Sem obrigações" : string.Join(" · ", d.Obligations.Select(x => $"{x.Label} {Clock(x.Start)}–{Clock(x.End)}")), UiTokens.TextLabel),
             };
             if (d.CommuteMinutes > 0) lines.Add(($"Deslocamento: {d.CommuteMinutes} min no dia", UiTokens.TextSecondary));
-            lines.Add(($"Acorda {Clock(d.Wake)} · dorme {Clock(d.Bed)}", UiTokens.TextSecondary));
+            lines.Add((d.NightShift ? $"Acorda {Clock(d.Wake)} · sai para o turno às {Clock(d.ShiftDeparture)} · dorme às {Clock(d.Bed)} (depois do turno)" : $"Acorda {Clock(d.Wake)} · dorme {Clock(d.Bed)}", UiTokens.TextSecondary));
             lines.Add(($"Tempo livre: {Hours(d.FreeMinutes)}" + (d.Windows.Count > 0 ? $" ({string.Join(", ", d.Windows.Select(w => $"{Clock(w.Start)}–{Clock(w.End)}"))})" : ""), d.FreeDay ? UiTokens.Success : UiTokens.Info));
             var br = d.Segments.Where(s => s.Kind == "break").ToList();
             if (br.Count > 0) lines.Add(($"Pausa do trabalho (pode jogar): {string.Join(", ", br.Select(b => $"{Clock(b.Start)}–{Clock(b.End)}"))}", UiTokens.Info));
@@ -625,7 +625,7 @@ public partial class PlayerModal
         var obligations = d.Blocks.Count == 0 ? "sem obrigações" : string.Join("\n", d.Blocks.Select(b => $"{b.Label}{(b.Remote ? " (remoto)" : "")}|{Clock(b.Start)}–{Clock(b.End)}"));
         tile.TooltipText = $"{DowLong[d.Dow]}{(d.FreeDay ? " · dia livre" : "")}\n{(d.Blocks.Count == 0 ? "Obrigações|nenhuma" : obligations)}"
             + (d.CommuteMinutes > 0 ? $"\nDeslocamento|{d.CommuteMinutes} min no dia" : "")
-            + $"\nAcorda|{Clock(d.Wake)}\nDorme|{Clock(d.Bed)}\nTempo livre|{Hours(d.FreeMinutes)}"
+            + $"\nAcorda|{Clock(d.Wake)}" + (d.NightShift ? $"\nSai para o turno|{Clock(d.ShiftDeparture)}\nDorme|{Clock(d.Bed)} (depois do turno)" : $"\nDorme|{Clock(d.Bed)}") + $"\nTempo livre|{Hours(d.FreeMinutes)}"
             + (d.Windows.Count > 0 ? $"\n~Janelas livres: {string.Join(", ", d.Windows.Select(w => $"{Clock(w.Start)}–{Clock(w.End)}"))}" : "\n~Sem janela livre que comporte uma sessão.");
         return tile;
     }
@@ -634,15 +634,18 @@ public partial class PlayerModal
     private Control WeekSplit()
     {
         var week = _person.Week;
+        // A linha do tempo da simulacao (R1): os trechos se encaixam sem sobra, entao a soma fecha 168 h.
         int sleep = week.Sum(d => d.SleepMinutes), obligations = week.Sum(d => d.ObligationMinutes), commute = week.Sum(d => d.CommuteMinutes);
+        int care = week.Sum(d => d.CareMinutes), wait = week.Sum(d => d.WaitMinutes), commit = week.Sum(d => d.CommitmentMinutes);
         int free = week.Sum(d => d.FreeMinutes);
-        int other = Math.Max(0, 7 * 1440 - sleep - obligations - commute - free);
         var parts = new (string Name, int Minutes, Color Color, string Tip)[]
         {
-            ("Sono", sleep, new Color("#5867A8"), "Sono planejado pela rotina (sem o que o jogo cortou)."),
+            ("Sono", sleep, new Color("#5867A8"), "Sono planejado pela rotina (o que o jogo corta entra no déficit quando a pessoa acorda)."),
             ("Obrigações", obligations, new Color("#8B94A1"), "Trabalho, estudo ou cuidados, no horário desta pessoa."),
-            ("Deslocamento", commute, new Color("#5E6772"), "Ida e volta de cada obrigação."),
-            ("Preparo e chegada", other, new Color("#3A414B"), "Depois de acordar e ao chegar de cada obrigação (comer, se arrumar); não conta como tempo livre."),
+            ("Deslocamento", commute, new Color("#5E6772"), "Ida, volta e transferência direta entre obrigações (ex.: do trabalho para a faculdade)."),
+            ("Cuidados pessoais", care, new Color("#3A414B"), "Preparo depois de acordar, chegada em casa (comer, descansar) e refeição entre obrigações."),
+            ("Espera e brechas", wait, new Color("#2C3138"), "Espera fora de casa antes da próxima obrigação e brechas curtas demais para virar tempo livre."),
+            ("Compromissos", commit, UiTokens.Exceptional, "Compromissos de dia livre (festa, visita...)."),
             ("Livre", free, UiTokens.Success, "Janelas em que a pessoa pode jogar ou fazer outra coisa."),
         };
         var bar = new HBoxContainer { CustomMinimumSize = new Vector2(0, 12) };
