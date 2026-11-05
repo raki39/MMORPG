@@ -1,0 +1,1279 @@
+{
+  "schemaVersion": 1,
+  "profiles": [
+    {
+      "id": "casual",
+      "version": 1,
+      "name": "Casual",
+      "weight": 35,
+      "pve": {
+        "mean": 550,
+        "spread": 250
+      },
+      "pvp": {
+        "mean": 200,
+        "spread": 180
+      },
+      "trade": {
+        "mean": 300,
+        "spread": 200
+      },
+      "exploration": {
+        "mean": 550,
+        "spread": 250
+      },
+      "socializing": {
+        "mean": 450,
+        "spread": 250
+      },
+      "sociability": {
+        "mean": 500,
+        "spread": 250
+      },
+      "aggressiveness": {
+        "mean": 250,
+        "spread": 200
+      },
+      "patience": {
+        "mean": 450,
+        "spread": 250
+      },
+      "loyalty": {
+        "mean": 450,
+        "spread": 250
+      },
+      "riskAversion": {
+        "mean": 650,
+        "spread": 200
+      },
+      "mechanicalSkill": {
+        "mean": 350,
+        "spread": 250
+      },
+      "gameKnowledge": {
+        "mean": 300,
+        "spread": 200
+      },
+      "coordination": {
+        "mean": 350,
+        "spread": 250
+      },
+      "cheatPropensity": {
+        "mean": 60,
+        "spread": 60
+      },
+      "opportunism": {
+        "mean": 250,
+        "spread": 200
+      },
+      "leisureBudgetCentsPerMonth": {
+        "mean": 6000,
+        "spread": 4000
+      },
+      "willingnessToPay": {
+        "mean": 400,
+        "spread": 250
+      },
+      "paidAdvantageSensitivity": {
+        "mean": 550,
+        "spread": 250
+      },
+      "preferredStartHour": {
+        "mean": 20,
+        "spread": 3
+      },
+      "sessionMinutes": {
+        "min": 30,
+        "mode": 70,
+        "max": 240
+      },
+      "gameImportance": {
+        "min": 150,
+        "mode": 300,
+        "max": 800
+      },
+      "habit": {
+        "min": 100,
+        "mode": 350,
+        "max": 850
+      },
+      "talent": {
+        "mean": 380,
+        "spread": 280
+      },
+      "variety": {
+        "mean": 500,
+        "spread": 200
+      },
+      "extendTendency": {
+        "mean": 300,
+        "spread": 300
+      },
+      "selfControl": {
+        "mean": 600,
+        "spread": 300
+      }
+    },
+    {
+      "id": "competitivo",
+      "version": 1,
+      "name": "Competitivo",
+      "weight": 15,
+      "pve": {
+        "mean": 500,
+        "spread": 250
+      },
+      "pvp": {
+        "mean": 800,
+        "spread": 180
+      },
+      "trade": {
+        "mean": 350,
+        "spread": 250
+      },
+      "exploration": {
+        "mean": 300,
+        "spread": 200
+      },
+      "socializing": {
+        "mean": 400,
+        "spread": 250
+      },
+      "sociability": {
+        "mean": 450,
+        "spread": 250
+      },
+      "aggressiveness": {
+        "mean": 600,
+        "spread": 300
+      },
+      "patience": {
+        "mean": 350,
+        "spread": 250
+      },
+      "loyalty": {
+        "mean": 450,
+        "spread": 300
+      },
+      "riskAversion": {
+        "mean": 250,
+        "spread": 200
+      },
+      "mechanicalSkill": {
+        "mean": 650,
+        "spread": 250
+      },
+      "gameKnowledge": {
+        "mean": 650,
+        "spread": 250
+      },
+      "coordination": {
+        "mean": 550,
+        "spread": 250
+      },
+      "cheatPropensity": {
+        "mean": 150,
+        "spread": 140
+      },
+      "opportunism": {
+        "mean": 500,
+        "spread": 250
+      },
+      "leisureBudgetCentsPerMonth": {
+        "mean": 9000,
+        "spread": 6000
+      },
+      "willingnessToPay": {
+        "mean": 500,
+        "spread": 250
+      },
+      "paidAdvantageSensitivity": {
+        "mean": 850,
+        "spread": 150
+      },
+      "preferredStartHour": {
+        "mean": 21,
+        "spread": 2
+      },
+      "sessionMinutes": {
+        "min": 50,
+        "mode": 130,
+        "max": 330
+      },
+      "gameImportance": {
+        "min": 250,
+        "mode": 600,
+        "max": 950
+      },
+      "habit": {
+        "min": 200,
+        "mode": 600,
+        "max": 950
+      },
+      "talent": {
+        "mean": 600,
+        "spread": 280
+      },
+      "variety": {
+        "mean": 450,
+        "spread": 200
+      },
+      "extendTendency": {
+        "mean": 650,
+        "spread": 300
+      },
+      "selfControl": {
+        "mean": 450,
+        "spread": 300
+      }
+    },
+    {
+      "id": "social",
+      "version": 1,
+      "name": "Social",
+      "weight": 20,
+      "pve": {
+        "mean": 500,
+        "spread": 250
+      },
+      "pvp": {
+        "mean": 200,
+        "spread": 180
+      },
+      "trade": {
+        "mean": 350,
+        "spread": 250
+      },
+      "exploration": {
+        "mean": 450,
+        "spread": 250
+      },
+      "socializing": {
+        "mean": 850,
+        "spread": 150
+      },
+      "sociability": {
+        "mean": 800,
+        "spread": 180
+      },
+      "aggressiveness": {
+        "mean": 200,
+        "spread": 180
+      },
+      "patience": {
+        "mean": 600,
+        "spread": 250
+      },
+      "loyalty": {
+        "mean": 700,
+        "spread": 220
+      },
+      "riskAversion": {
+        "mean": 550,
+        "spread": 250
+      },
+      "mechanicalSkill": {
+        "mean": 400,
+        "spread": 250
+      },
+      "gameKnowledge": {
+        "mean": 400,
+        "spread": 250
+      },
+      "coordination": {
+        "mean": 550,
+        "spread": 250
+      },
+      "cheatPropensity": {
+        "mean": 40,
+        "spread": 40
+      },
+      "opportunism": {
+        "mean": 200,
+        "spread": 180
+      },
+      "leisureBudgetCentsPerMonth": {
+        "mean": 7000,
+        "spread": 4500
+      },
+      "willingnessToPay": {
+        "mean": 500,
+        "spread": 250
+      },
+      "paidAdvantageSensitivity": {
+        "mean": 500,
+        "spread": 250
+      },
+      "preferredStartHour": {
+        "mean": 20,
+        "spread": 3
+      },
+      "sessionMinutes": {
+        "min": 50,
+        "mode": 130,
+        "max": 330
+      },
+      "gameImportance": {
+        "min": 250,
+        "mode": 600,
+        "max": 950
+      },
+      "habit": {
+        "min": 200,
+        "mode": 600,
+        "max": 950
+      },
+      "talent": {
+        "mean": 420,
+        "spread": 280
+      },
+      "variety": {
+        "mean": 550,
+        "spread": 200
+      },
+      "extendTendency": {
+        "mean": 500,
+        "spread": 300
+      },
+      "selfControl": {
+        "mean": 550,
+        "spread": 300
+      }
+    },
+    {
+      "id": "comerciante",
+      "version": 1,
+      "name": "Comerciante",
+      "weight": 10,
+      "pve": {
+        "mean": 400,
+        "spread": 250
+      },
+      "pvp": {
+        "mean": 150,
+        "spread": 150
+      },
+      "trade": {
+        "mean": 850,
+        "spread": 150
+      },
+      "exploration": {
+        "mean": 350,
+        "spread": 250
+      },
+      "socializing": {
+        "mean": 500,
+        "spread": 250
+      },
+      "sociability": {
+        "mean": 550,
+        "spread": 250
+      },
+      "aggressiveness": {
+        "mean": 250,
+        "spread": 200
+      },
+      "patience": {
+        "mean": 700,
+        "spread": 200
+      },
+      "loyalty": {
+        "mean": 400,
+        "spread": 250
+      },
+      "riskAversion": {
+        "mean": 700,
+        "spread": 200
+      },
+      "mechanicalSkill": {
+        "mean": 350,
+        "spread": 250
+      },
+      "gameKnowledge": {
+        "mean": 600,
+        "spread": 250
+      },
+      "coordination": {
+        "mean": 400,
+        "spread": 250
+      },
+      "cheatPropensity": {
+        "mean": 120,
+        "spread": 120
+      },
+      "opportunism": {
+        "mean": 650,
+        "spread": 220
+      },
+      "leisureBudgetCentsPerMonth": {
+        "mean": 8000,
+        "spread": 5000
+      },
+      "willingnessToPay": {
+        "mean": 450,
+        "spread": 250
+      },
+      "paidAdvantageSensitivity": {
+        "mean": 600,
+        "spread": 250
+      },
+      "preferredStartHour": {
+        "mean": 19,
+        "spread": 4
+      },
+      "sessionMinutes": {
+        "min": 50,
+        "mode": 130,
+        "max": 330
+      },
+      "gameImportance": {
+        "min": 250,
+        "mode": 600,
+        "max": 950
+      },
+      "habit": {
+        "min": 200,
+        "mode": 600,
+        "max": 950
+      },
+      "talent": {
+        "mean": 500,
+        "spread": 280
+      },
+      "variety": {
+        "mean": 350,
+        "spread": 200
+      },
+      "extendTendency": {
+        "mean": 400,
+        "spread": 300
+      },
+      "selfControl": {
+        "mean": 650,
+        "spread": 300
+      }
+    },
+    {
+      "id": "explorador",
+      "version": 1,
+      "name": "Explorador",
+      "weight": 10,
+      "pve": {
+        "mean": 600,
+        "spread": 220
+      },
+      "pvp": {
+        "mean": 250,
+        "spread": 200
+      },
+      "trade": {
+        "mean": 250,
+        "spread": 200
+      },
+      "exploration": {
+        "mean": 900,
+        "spread": 100
+      },
+      "socializing": {
+        "mean": 350,
+        "spread": 250
+      },
+      "sociability": {
+        "mean": 350,
+        "spread": 250
+      },
+      "aggressiveness": {
+        "mean": 300,
+        "spread": 200
+      },
+      "patience": {
+        "mean": 650,
+        "spread": 250
+      },
+      "loyalty": {
+        "mean": 450,
+        "spread": 250
+      },
+      "riskAversion": {
+        "mean": 350,
+        "spread": 250
+      },
+      "mechanicalSkill": {
+        "mean": 500,
+        "spread": 250
+      },
+      "gameKnowledge": {
+        "mean": 550,
+        "spread": 250
+      },
+      "coordination": {
+        "mean": 400,
+        "spread": 250
+      },
+      "cheatPropensity": {
+        "mean": 50,
+        "spread": 50
+      },
+      "opportunism": {
+        "mean": 250,
+        "spread": 200
+      },
+      "leisureBudgetCentsPerMonth": {
+        "mean": 6500,
+        "spread": 4000
+      },
+      "willingnessToPay": {
+        "mean": 450,
+        "spread": 250
+      },
+      "paidAdvantageSensitivity": {
+        "mean": 500,
+        "spread": 250
+      },
+      "preferredStartHour": {
+        "mean": 15,
+        "spread": 6
+      },
+      "sessionMinutes": {
+        "min": 50,
+        "mode": 130,
+        "max": 330
+      },
+      "gameImportance": {
+        "min": 250,
+        "mode": 600,
+        "max": 950
+      },
+      "habit": {
+        "min": 200,
+        "mode": 600,
+        "max": 950
+      },
+      "talent": {
+        "mean": 520,
+        "spread": 280
+      },
+      "variety": {
+        "mean": 750,
+        "spread": 200
+      },
+      "extendTendency": {
+        "mean": 500,
+        "spread": 300
+      },
+      "selfControl": {
+        "mean": 550,
+        "spread": 300
+      }
+    },
+    {
+      "id": "hardcore",
+      "version": 1,
+      "name": "Hardcore",
+      "weight": 10,
+      "pve": {
+        "mean": 850,
+        "spread": 150
+      },
+      "pvp": {
+        "mean": 550,
+        "spread": 300
+      },
+      "trade": {
+        "mean": 450,
+        "spread": 250
+      },
+      "exploration": {
+        "mean": 450,
+        "spread": 250
+      },
+      "socializing": {
+        "mean": 550,
+        "spread": 250
+      },
+      "sociability": {
+        "mean": 500,
+        "spread": 250
+      },
+      "aggressiveness": {
+        "mean": 450,
+        "spread": 300
+      },
+      "patience": {
+        "mean": 600,
+        "spread": 250
+      },
+      "loyalty": {
+        "mean": 650,
+        "spread": 250
+      },
+      "riskAversion": {
+        "mean": 350,
+        "spread": 250
+      },
+      "mechanicalSkill": {
+        "mean": 700,
+        "spread": 220
+      },
+      "gameKnowledge": {
+        "mean": 800,
+        "spread": 180
+      },
+      "coordination": {
+        "mean": 700,
+        "spread": 220
+      },
+      "cheatPropensity": {
+        "mean": 100,
+        "spread": 100
+      },
+      "opportunism": {
+        "mean": 400,
+        "spread": 250
+      },
+      "leisureBudgetCentsPerMonth": {
+        "mean": 12000,
+        "spread": 7000
+      },
+      "willingnessToPay": {
+        "mean": 650,
+        "spread": 250
+      },
+      "paidAdvantageSensitivity": {
+        "mean": 750,
+        "spread": 200
+      },
+      "preferredStartHour": {
+        "mean": 19,
+        "spread": 4
+      },
+      "sessionMinutes": {
+        "min": 90,
+        "mode": 260,
+        "max": 420
+      },
+      "gameImportance": {
+        "min": 500,
+        "mode": 900,
+        "max": 1000
+      },
+      "habit": {
+        "min": 400,
+        "mode": 850,
+        "max": 1000
+      },
+      "talent": {
+        "mean": 620,
+        "spread": 280
+      },
+      "variety": {
+        "mean": 300,
+        "spread": 200
+      },
+      "extendTendency": {
+        "mean": 800,
+        "spread": 300
+      },
+      "selfControl": {
+        "mean": 400,
+        "spread": 300
+      }
+    },
+    {
+      "id": "devoto",
+      "version": 1,
+      "name": "Devoto",
+      "weight": 2,
+      "pve": {
+        "mean": 850,
+        "spread": 150
+      },
+      "pvp": {
+        "mean": 550,
+        "spread": 300
+      },
+      "trade": {
+        "mean": 450,
+        "spread": 250
+      },
+      "exploration": {
+        "mean": 450,
+        "spread": 250
+      },
+      "socializing": {
+        "mean": 550,
+        "spread": 250
+      },
+      "sociability": {
+        "mean": 500,
+        "spread": 250
+      },
+      "aggressiveness": {
+        "mean": 450,
+        "spread": 300
+      },
+      "patience": {
+        "mean": 600,
+        "spread": 250
+      },
+      "loyalty": {
+        "mean": 750,
+        "spread": 200
+      },
+      "riskAversion": {
+        "mean": 350,
+        "spread": 250
+      },
+      "mechanicalSkill": {
+        "mean": 700,
+        "spread": 220
+      },
+      "gameKnowledge": {
+        "mean": 800,
+        "spread": 180
+      },
+      "coordination": {
+        "mean": 700,
+        "spread": 220
+      },
+      "cheatPropensity": {
+        "mean": 100,
+        "spread": 100
+      },
+      "opportunism": {
+        "mean": 400,
+        "spread": 250
+      },
+      "leisureBudgetCentsPerMonth": {
+        "mean": 12000,
+        "spread": 7000
+      },
+      "willingnessToPay": {
+        "mean": 650,
+        "spread": 250
+      },
+      "paidAdvantageSensitivity": {
+        "mean": 750,
+        "spread": 200
+      },
+      "preferredStartHour": {
+        "mean": 16,
+        "spread": 5
+      },
+      "sessionMinutes": {
+        "min": 180,
+        "mode": 360,
+        "max": 600
+      },
+      "gameImportance": {
+        "min": 800,
+        "mode": 970,
+        "max": 1000
+      },
+      "habit": {
+        "min": 650,
+        "mode": 950,
+        "max": 1000
+      },
+      "talent": {
+        "mean": 620,
+        "spread": 280
+      },
+      "variety": {
+        "mean": 300,
+        "spread": 200
+      },
+      "extendTendency": {
+        "mean": 650,
+        "spread": 350
+      },
+      "selfControl": {
+        "mean": 500,
+        "spread": 350
+      },
+      "occupationWeights": {
+        "sem_ocupacao": 40,
+        "universitario": 25,
+        "estudante_manha": 20,
+        "estudante_tarde": 15
+      }
+    }
+  ],
+  "names": {
+    "firstNames": [
+      "Ana",
+      "Bruno",
+      "Camila",
+      "Diego",
+      "Eduarda",
+      "Felipe",
+      "Gabriela",
+      "Henrique",
+      "Isabela",
+      "João",
+      "Karina",
+      "Lucas",
+      "Mariana",
+      "Nicolas",
+      "Olívia",
+      "Pedro",
+      "Rafaela",
+      "Samuel",
+      "Tatiane",
+      "Vinícius",
+      "Yasmin",
+      "Arthur",
+      "Beatriz",
+      "Caio",
+      "Débora",
+      "Enzo",
+      "Fernanda",
+      "Gustavo",
+      "Helena",
+      "Igor",
+      "Juliana",
+      "Kauã",
+      "Larissa",
+      "Matheus",
+      "Natália",
+      "Otávio",
+      "Priscila",
+      "Rodrigo",
+      "Sofia",
+      "Thiago",
+      "Valentina",
+      "Wesley",
+      "Alice",
+      "Bernardo",
+      "Clara",
+      "Davi",
+      "Elisa",
+      "Fábio",
+      "Giovana",
+      "Heitor"
+    ],
+    "lastNames": [
+      "Silva",
+      "Santos",
+      "Oliveira",
+      "Souza",
+      "Rodrigues",
+      "Ferreira",
+      "Alves",
+      "Pereira",
+      "Lima",
+      "Gomes",
+      "Costa",
+      "Ribeiro",
+      "Martins",
+      "Carvalho",
+      "Almeida",
+      "Lopes",
+      "Soares",
+      "Fernandes",
+      "Vieira",
+      "Barbosa",
+      "Rocha",
+      "Dias",
+      "Nascimento",
+      "Andrade",
+      "Moreira",
+      "Nunes",
+      "Marques",
+      "Machado",
+      "Mendes",
+      "Freitas",
+      "Cardoso",
+      "Ramos",
+      "Gonçalves",
+      "Santana",
+      "Teixeira",
+      "Araújo",
+      "Pinto",
+      "Moura",
+      "Cavalcanti",
+      "Batista"
+    ],
+    "nickPrefixes": [
+      "Kael",
+      "Mira",
+      "Thor",
+      "Lun",
+      "Zar",
+      "Eld",
+      "Vex",
+      "Ara",
+      "Bryn",
+      "Cor",
+      "Dra",
+      "Fen",
+      "Gal",
+      "Hal",
+      "Isk",
+      "Jor",
+      "Kyr",
+      "Lyr",
+      "Mor",
+      "Nyx",
+      "Ori",
+      "Pyr",
+      "Ral",
+      "Syl",
+      "Tor",
+      "Ulf",
+      "Val",
+      "Wyn",
+      "Xan",
+      "Yri"
+    ],
+    "nickSuffixes": [
+      "dor",
+      "wen",
+      "gar",
+      "iel",
+      "ax",
+      "ion",
+      "ara",
+      "uk",
+      "ith",
+      "on",
+      "is",
+      "vyr",
+      "eth",
+      "orn",
+      "a",
+      "im",
+      "ius",
+      "ra",
+      "gon",
+      "lis",
+      "mir",
+      "nar",
+      "oth",
+      "ryn",
+      "sha",
+      "thas",
+      "us",
+      "ven",
+      "zel",
+      "yx"
+    ]
+  },
+  "dynamics": {
+    "rangeSkill": 250,
+    "rangePlaystyle": 200,
+    "rangePersonality": 100,
+    "potentialBase": 250,
+    "potentialPerTalent": 700,
+    "potentialMinHeadroom": 50,
+    "learnCostAtZeroTalent": 1400,
+    "learnCostAtMaxTalent": 600,
+    "nearCeilingSlowdown": 2000,
+    "mechanicalCombatMinutes": 150,
+    "knowledgePlayMinutes": 400,
+    "knowledgeExploreMinutes": 90,
+    "knowledgeNewActivityType": 3,
+    "knowledgePerDiscovery": 2,
+    "knowledgePerQuest": 1,
+    "sociabilitySocialMinutes": 600,
+    "affinityEnjoyedMinutes": 360,
+    "enjoyedMinFitPermille": 600,
+    "riskConfidenceMinutes": 600,
+    "riskConfidenceMinRisk": 300,
+    "explorationPerDiscoveries": 4,
+    "pvpKillPreference": 3,
+    "pvpKillCombatMinutes": 30,
+    "mechanicalDecayAfterDays": 7,
+    "mechanicalDecayPerDay": 1,
+    "knowledgeDecayAfterDays": 14,
+    "knowledgeDecayPerDay": 1,
+    "familiarityWeight": 80,
+    "familiarityFullMinutes": 600,
+    "challengeWeightPerLevel": 40,
+    "travelEstimateErrorAtZero": 300
+  },
+  "goals": {
+    "weight": 200,
+    "maxStackPermille": 1500,
+    "maxActive": 2,
+    "adoptChance": 450,
+    "staleBaseHours": 3,
+    "staleExtraHoursAtMaxPatience": 9,
+    "impatientDropChance": 40,
+    "impatientBelow": 300,
+    "motiveReinforce": 1
+  },
+  "session": {
+    "switchMargin": 60,
+    "commitMargin": 150,
+    "commitBaseMinutes": 30,
+    "commitExtraMinutesAtMaxPatience": 60,
+    "boredomPerHour": 300,
+    "boredomRecoveryPerHour": 400,
+    "boredomKeptBetweenSessions": 300,
+    "boredomWeight": 300,
+    "varietyBase": 600,
+    "varietyPerPreference": 800,
+    "patienceRelief": 500,
+    "enjoymentRelief": 500,
+    "exploreKnownPenalty": 500
+  },
+  "mood": {
+    "initialSatisfaction": 600,
+    "initialNovelty": 1000,
+    "funWeight": 300,
+    "fitWeight": 200,
+    "crowdingWeight": 200,
+    "companyWeight": 150,
+    "boredomWeight": 250,
+    "riskWeight": 150,
+    "progressWeight": 400,
+    "progressCarePve": 500,
+    "progressCareAggressiveness": 300,
+    "progressCarePvp": 200,
+    "noveltyCareBase": 100,
+    "noveltyCareVariety": 500,
+    "noveltyCareExploration": 200,
+    "noveltyCareImpatience": 200,
+    "noveltyClamp": 300,
+    "progressClamp": 200,
+    "progressRatioCap": 2000,
+    "expectationBase": 550,
+    "expectationPerAggressiveness": 300,
+    "expectationAdapt": 100,
+    "expectationFloor": 450,
+    "expectationCeiling": 1100,
+    "noveltyWeight": 300,
+    "noveltyMin": -1000,
+    "frustrationInIntention": 500,
+    "noveltyDecayPerHour": 2,
+    "noveltyPerDiscovery": 60,
+    "noveltyNewActivityType": 80,
+    "noveltyNewActivity": 25,
+    "noveltyPerLevel": 30,
+    "noveltyNewQuest": 40,
+    "eventClamp": 300,
+    "levelUpPoints": 60,
+    "questPoints": 40,
+    "mainQuestPoints": 100,
+    "goalCompletedPoints": 80,
+    "discoveryPoints": 40,
+    "goalAbandonedPoints": 80,
+    "nothingToDoPoints": 60,
+    "goalAbandonedFrustration": 80,
+    "nothingToDoFrustration": 40,
+    "satisfactionAdapt": 250,
+    "fullWeightSessionMinutes": 120,
+    "badSessionBelow": 400,
+    "frustrationFromBadSession": 600,
+    "goodSessionAbove": 600,
+    "frustrationReliefFromGoodSession": 500,
+    "frustrationDecayPerDay": 40,
+    "driverDecayPerDay": 50,
+    "engagementSatisfaction": 7,
+    "engagementCalm": 1,
+    "engagementNovelty": 2,
+    "loyaltyWeight": 200,
+    "investmentPerLevel": 4,
+    "investmentCap": 60
+  },
+  "memory": {
+    "impressionLearn": 300,
+    "impressionDecayPositivePerDay": 15,
+    "impressionDecayNegativePerDay": 40,
+    "decisionWeight": 150,
+    "impressionMinAbs": 50,
+    "maxMemories": 12,
+    "notableValence": 350,
+    "positiveDecayPerDay": 10,
+    "negativeDecayPerDay": 25,
+    "levelMilestoneEvery": 5,
+    "levelMilestoneIntensity": 700,
+    "mainQuestIntensity": 650,
+    "goalCompletedIntensity": 500,
+    "goalAbandonedIntensity": 450,
+    "discoveryIntensity": 300,
+    "nothingToDoIntensity": 300,
+    "greatSessionScore": 780,
+    "badSessionScore": 260,
+    "sessionIntensity": 500
+  },
+  "retention": {
+    "engagementNeutral": 700,
+    "engagementEffect": 1000,
+    "minPlayFactor": 150,
+    "maxPlayFactor": 1300,
+    "inactiveAfterDays": 14,
+    "inactiveReturnPermille": 250,
+    "quitBelow": 420,
+    "quitChancePerDay": 60,
+    "quitAfterInactiveDays": 45,
+    "quitReturnMinDays": 30,
+    "quitReturnChancePerDay": 4,
+    "quitGraceDaysAfterReturn": 14,
+    "extendScoreAbove": 700,
+    "extendChance": 400,
+    "extendPermille": 300,
+    "rageQuitFrustration": 600,
+    "rageQuitChance": 300
+  },
+  "behavior": {
+    "registrationDayWeights": [
+      30,
+      22,
+      16,
+      12,
+      9,
+      6,
+      5
+    ],
+    "sessionStartJitterMinutes": 75,
+    "sessionDurationJitterPermille": 200,
+    "logoutToleranceMinutes": 15,
+    "walkSpeed": 15,
+    "weightAffinity": 450,
+    "weightReward": 300,
+    "weightSocial": 150,
+    "weightRisk": 350,
+    "weightTravel": 250,
+    "weightCrowding": 200,
+    "timeBudgetPenalty": 400,
+    "questOfferWeight": 210,
+    "questDeliverWeight": 220,
+    "questDeliverPerExtra": 90,
+    "questStepWeight": 250,
+    "noise": 50,
+    "activityDurationMin": 800,
+    "activityDurationMax": 1250,
+    "idleRethinkMinutes": 20
+  },
+  "routine": {
+    "sleepNeedMinutes": {
+      "mean": 470,
+      "spread": 45
+    },
+    "bedtimeMinute": {
+      "mean": 1425,
+      "spread": 75
+    },
+    "prepMinutes": 45,
+    "arrivalMinutes": 45,
+    "minWindowMinutes": 30,
+    "minSessionMinutes": 20,
+    "freeDayChanceBonus": 350,
+    "fullFreeMinutes": 600,
+    "habitStreakPermille": 250,
+    "habitHistoryDays": 7,
+    "maxSessionsPerDay": 5,
+    "dispositionSpreadPermille": 200,
+    "satietyHalfLifeSessionsPermille": 1500,
+    "satietyRecoveryHalfLifeMinutes": 120,
+    "continueBlockMinutes": 30,
+    "continueMinMinutes": 5,
+    "continueTendencyWeightPermille": 400,
+    "experienceWeightPermille": 500,
+    "returnPauseMinMinutes": 30,
+    "returnPauseMaxMinutes": 120,
+    "unfinishedBonusPermille": 150,
+    "freeDayMorningMinutes": 60,
+    "earlyStartResistancePerHour": 300,
+    "startStepMinutes": 10,
+    "estimateSamples": 24,
+    "commuteVariationPermille": 300,
+    "planHistoryDays": 30,
+    "bedtimeAdaptMinutes": 60,
+    "preferredDelayMaxMinutes": 240,
+    "workCallToleranceMinutes": 5,
+    "commitmentChancePermille": 70,
+    "commitments": [
+      {
+        "id": "festa",
+        "label": "festa",
+        "startFrom": "20:00",
+        "startTo": "21:30",
+        "minMinutes": 150,
+        "maxMinutes": 240,
+        "weight": 3,
+        "social": true
+      },
+      {
+        "id": "familia",
+        "label": "visita à família",
+        "startFrom": "11:00",
+        "startTo": "15:00",
+        "minMinutes": 150,
+        "maxMinutes": 300,
+        "weight": 4,
+        "social": false
+      },
+      {
+        "id": "passeio",
+        "label": "passeio com amigos",
+        "startFrom": "14:00",
+        "startTo": "17:00",
+        "minMinutes": 120,
+        "maxMinutes": 240,
+        "weight": 3,
+        "social": true
+      },
+      {
+        "id": "pendencias",
+        "label": "resolver pendências",
+        "startFrom": "09:00",
+        "startTo": "12:00",
+        "minMinutes": 90,
+        "maxMinutes": 180,
+        "weight": 2,
+        "social": false
+      }
+    ],
+    "lowEngagementGap": 150,
+    "busyDayPenaltyPermille": 650,
+    "fullLoadMinutes": 600,
+    "sleepDebtTolerance": {
+      "mean": 500,
+      "spread": 200
+    },
+    "slackMinutes": {
+      "mean": 25,
+      "spread": 10
+    },
+    "interruptCost": {
+      "boss": 1000,
+      "ambush": 850,
+      "patrol": 700,
+      "hunt": 550,
+      "quest": 400,
+      "recruit": 300,
+      "explore": 300,
+      "train": 150,
+      "gather": 100,
+      "repair": 50,
+      "trade": 0,
+      "socialize": 0
+    },
+    "extendMaxTimesPerSession": 2,
+    "extendMaxMinutes": 180,
+    "extendTendencyBase": 500,
+    "selfControlWeight": 800,
+    "goalClosePermille": 700,
+    "maxSleepCutMinutes": 180,
+    "minSleepMinutes": 240,
+    "maxDeficitMinutes": 900,
+    "recoveryFreeNightMinutes": 120,
+    "recoveryNormalNightMinutes": 20,
+    "fatigueFullDeficitMinutes": 600,
+    "fatigueChancePenalty": 400,
+    "fatigueDurationPenalty": 300,
+    "fatigueMoodWeight": 120,
+    "tiredReasonFatigue": 500,
+    "breakSessionChancePermille": 300,
+    "slackChanceAtMax": 400,
+    "slackEdgeMinutes": 30,
+    "workInterruptChancePermille": 350,
+    "interruptWeight": 300
+  },
+  "dedication": {
+    "influencePermille": 450
+  }
+}

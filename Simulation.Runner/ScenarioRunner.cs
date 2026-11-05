@@ -252,6 +252,7 @@ public static class ScenarioRunner
             .Concat(scenarioTargets.Count > 0 ? Enumerable.Range(0, seeds.Count).Select(i => (Index: i, Neutral: true)) : Enumerable.Empty<(int, bool)>())
             .ToList();
         var controlled = new RunMetrics?[seeds.Count];
+        var people = new string[seeds.Count];
         Parallel.For(0, jobs.Count, new ParallelOptions { MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount / 2) }, j =>
         {
             var (i, neutral) = jobs[j];
@@ -273,8 +274,9 @@ public static class ScenarioRunner
             var m = collector.Finish(engine.World, seed, opt.Days, neutral ? scenarioTargets : targets.File.Targets);
             m.FinalStateHash = StateHasher.Compute(engine.World);
             m.SimulationSeconds = watch.Elapsed.TotalSeconds;
-            if (neutral) controlled[i] = m; else results[i] = m;
+            if (neutral) controlled[i] = m; else { results[i] = m; people[i] = PeopleRows(engine.World, collector, seed, opt.Days, targets.File.WarmupDays); }
         });
+        WritePeople(opt.OutDir, people);
         for (int i = 0; i < seeds.Count; i++)
         {
             if (controlled[i] is not { } c) continue;
@@ -334,6 +336,42 @@ public static class ScenarioRunner
         msgs.Add($"OK: cenário controlado, {opt.Controlled!.Count} células × {perCell} pessoas × {seeds.Count} seeds × {opt.Days} dias em {wall.Elapsed.TotalSeconds:F1} s. " +
                  $"Relatório em {Path.GetFullPath(Path.Combine(opt.OutDir, "controlled.md"))}");
         return new RunResult { ExitCode = ExitOk, Messages = msgs };
+    }
+
+    private const string PeopleHeader = "seed,person_id,profile,occupation,state,registered,game_importance,session_minutes,habit,expected_h_week,played_h_week,free_h_week,plan_days\n";
+
+    /// <summary>
+    /// Uma linha por pessoa da campanha (people.csv): atributos de dedicacao, horas estimadas na
+    /// criacao, horas jogadas por semana na janela de medicao (mesma conta da validacao; zero para
+    /// quem nao jogou) e tempo livre por semana na agenda guardada.
+    /// </summary>
+    private static string PeopleRows(WorldState w, ValidationCollector collector, ulong seed, int days, int warmupDays)
+    {
+        double weeks = Math.Max(0, days - warmupDays) / 7.0;
+        var inv = System.Globalization.CultureInfo.InvariantCulture;
+        var sb = new System.Text.StringBuilder();
+        foreach (var p in w.Persons.OrderBy(x => x.Id))
+        {
+            var plans = p.DayPlans.GroupBy(r => r.LocalDay).Select(g => g.Last()).ToList();
+            double free = plans.Count == 0 ? double.NaN : plans.Sum(r => (double)r.FreeMinutes) / plans.Count * 7 / 60;
+            double played = weeks > 0 ? collector.PlayedTicksInWindow(p.Id) / (double)SimTime.TicksPerHour / weeks : double.NaN;
+            sb.Append(string.Join(",", new[]
+            {
+                seed.ToString(inv), p.Id.ToString(inv), p.ProfileId, p.OccupationId, p.State.ToString(), p.CharacterId != 0 ? "1" : "0",
+                p.Traits.GameImportance.ToString(inv), p.Traits.SessionMinutes.ToString(inv), p.Traits.Habit.ToString(inv),
+                (p.ExpectedWeeklyMinutes / 60.0).ToString("0.00", inv), played.ToString("0.00", inv), free.ToString("0.00", inv), plans.Count.ToString(inv),
+            }));
+            sb.Append('\n');
+        }
+        return sb.ToString();
+    }
+
+    private static void WritePeople(string outDir, string[] rows)
+    {
+        Directory.CreateDirectory(outDir);
+        var sb = new System.Text.StringBuilder(PeopleHeader);
+        foreach (var r in rows) sb.Append(r);
+        File.WriteAllText(Path.Combine(outDir, "people.csv"), sb.ToString(), new System.Text.UTF8Encoding(false));
     }
 
     private static RunResult Fail(int code, List<string> msgs, string message)

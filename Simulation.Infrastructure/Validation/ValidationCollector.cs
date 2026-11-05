@@ -382,6 +382,9 @@ public sealed class ValidationCollector
         };
     }
 
+    /// <summary>Tempo jogado pela pessoa na janela de medicao, em ticks (ler depois de Finish).</summary>
+    public long PlayedTicksInWindow(long personId) => _playedInWindow.GetValueOrDefault(personId);
+
     private void AddPlayed(long pid, long start, long end)
     {
         long from = Math.Max(start, _windowStart);

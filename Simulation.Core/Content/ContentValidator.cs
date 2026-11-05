@@ -290,6 +290,7 @@ public static class ContentValidator
         if (r.MinSleepMinutes is < 120 or > 600) v.Error(PopulationFile, "routine.minSleepMinutes", "Use de 120 a 600 minutos.");
         Range("routine", "sleepDebtTolerance", r.SleepDebtTolerance, 0, 1000, v, PopulationFile);
         Range("routine", "slackMinutes", r.SlackMinutes, 5, 120, v, PopulationFile);
+        if (r.SlackMinutes.IsTriangular) v.Error(PopulationFile, "routine.slackMinutes", "Este parâmetro só aceita mean e spread.");
         foreach (var kv in r.InterruptCost)
         {
             if (!ActivityTypes.All.Contains(kv.Key)) v.Error(PopulationFile, "routine.interruptCost." + kv.Key, "Tipo de atividade desconhecido.");
@@ -1046,22 +1047,46 @@ public static class ContentValidator
                 if (pr.OccupationWeights.Values.All(w => w <= 0)) v.Error(PopulationFile, p + ".occupationWeights", "Ao menos uma ocupação precisa de peso maior que zero.");
             }
         }
+
+        // Dedicacao compartilhada (experimento): so vale para atributos no formato triangular.
+        int influence = set.Population.Dedication.InfluencePermille;
+        if (influence is < 0 or > 1000) v.Error(PopulationFile, "dedication.influencePermille", "Use de 0 a 1000.");
+        else if (influence > 0)
+            foreach (var pr in set.Population.Profiles.OrderBy(x => x.Id, StringComparer.Ordinal))
+                foreach (var (name, tr) in new[] { ("sessionMinutes", pr.SessionMinutes), ("gameImportance", pr.GameImportance), ("habit", pr.Habit) })
+                    if (!tr.IsTriangular)
+                        v.Error(PopulationFile, $"profiles.{pr.Id}.{name}", "Com dedicação compartilhada (influencePermille acima de 0), os atributos de dedicação precisam do formato min, mode e max.");
     }
 
     private static void Permille(string p, string name, TraitRange t, Collector v) => Range(p, name, t, 0, 1000, v);
 
     private static void Range(string p, string name, TraitRange t, int min, int max, Collector v, string file)
     {
+        if (t.IsTriangular) { Triangular(file, $"{p}.{name}", t, min, max, v); return; }
         if (t.Mean < min || t.Mean > max) v.Error(file, $"{p}.{name}.mean", $"Use de {min} a {max}.");
         if (t.Spread < 0) v.Error(file, $"{p}.{name}.spread", "A variação não pode ser negativa.");
     }
 
     private static void Range(string p, string name, TraitRange t, int min, int max, Collector v)
     {
+        if (t.IsTriangular) { Triangular(PopulationFile, $"{p}.{name}", t, min, max, v); return; }
         if (t.Mean < min || t.Mean > max)
             v.Error(PopulationFile, $"{p}.{name}.mean", $"Média deve estar entre {min} e {max}.");
         if (t.Spread < 0 || t.Spread > (max - min))
             v.Error(PopulationFile, $"{p}.{name}.spread", $"Dispersão deve estar entre 0 e {max - min}.");
+    }
+
+    /// <summary>Formato triangular: min, moda e max presentes, em ordem e dentro dos limites; sem mean/spread.</summary>
+    private static void Triangular(string file, string path, TraitRange t, int min, int max, Collector v)
+    {
+        if (t.Min is not int lo || t.Mode is not int mo || t.Max is not int hi)
+        {
+            v.Error(file, path, "No formato triangular, informe min, mode e max.");
+            return;
+        }
+        if (t.Mean != 0 || t.Spread != 0) v.Error(file, path, "Use um formato só: mean e spread, ou min, mode e max.");
+        if (lo < min || hi > max) v.Error(file, path, $"min e max devem ficar entre {min} e {max}.");
+        if (lo > mo || mo > hi) v.Error(file, path + ".mode", "A moda deve ficar entre min e max.");
     }
 
     /// <summary>

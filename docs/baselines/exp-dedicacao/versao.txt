@@ -1,0 +1,11 @@
+ebf4e31
+ M GodotClient/Scripts/Ui/DataTable.cs
+ M GodotClient/Scripts/Ui/ListPages.cs
+ M Simulation.Core/Content/ContentSet.cs
+ M Simulation.Core/Content/ContentValidator.cs
+ M Simulation.Core/Content/PopulationDefinitions.cs
+ M Simulation.Core/Population/PopulationGenerator.cs
+ M Simulation.Infrastructure/Validation/ValidationCollector.cs
+ M Simulation.Runner/ScenarioRunner.cs
+?? Simulation.Core/Population/TraitDraw.cs
+?? Simulation.Tests/TraitDrawTests.cs

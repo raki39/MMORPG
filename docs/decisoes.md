@@ -1778,3 +1778,27 @@ O criador considerou coerentes os resultados e os perfis apresentados da v3 (D-0
 - **Sem meta própria por enquanto.** O devoto entra nas tabelas do relatório como os outros perfis.
 
 **R5 encerrada**, com os parâmetros sujeitos a ajuste quando houver novas evidências e avaliação jogável.
+
+## D-053 — Sorteio de dedicação: formato triangular e dedicação compartilhada
+**Data:** 05/11/2026 · **Estado:** aceita (o mecanismo); valores em aberto
+
+O criador pediu que a dedicação de cada perfil viesse de uma faixa com tendência para um lado (o hardcore puxa para cima, o casual para baixo), com sobreposição entre perfis, em vez de um centro estreito e simétrico. Método e testes em `dedicacao.md`; resultados em `baselines/exp-dedicacao/`.
+
+**Mecanismo aceito:**
+- **Formato triangular** (mínimo, moda, máximo) para qualquer atributo, ao lado do antigo (média e dispersão).
+  - Moda e mediana são coisas diferentes, e a pessoa de referência do cenário controlado fica na mediana.
+  - O formato consome os mesmos três sorteios do antigo, então trocar o formato não muda os outros atributos de ninguém.
+- **Dedicação compartilhada parcial:** uma posição de dedicação por pessoa, misturada à posição própria de cada atributo de dedicação (importância, sessão normal e hábito).
+  - Uma transformação integral de probabilidade (acumulada do trapézio) mantém a distribuição de cada atributo para qualquer influência.
+  - **Influência 0,45** como referência inicial, configurável: correlação de 0,38 entre os atributos; "interesse alto com sessão curta" continua em 5% a 6% das pessoas (11% se fossem independentes).
+- **Exportação:** a validação com várias seeds grava `people.csv`, com uma linha por pessoa.
+
+**Experimento** (5 seeds × 1.000 pessoas × 90 dias por versão, pareado por seed):
+- **A → B0 (troca de formato com valores equivalentes):** nenhuma diferença de horas fora do ruído; regras do cenário 9 de 9.
+- **B0 → B (dedicação compartilhada):** medianas iguais e caudas um pouco mais longas; 9 de 9.
+- **Valores candidatos (C0 e C):** a variedade e a sobreposição pedidas apareceram, mas as horas e a participação subiram bastante.
+  - Casual de 6,7 para 10,1 h (mediana), com p90 de 11 para 21 h.
+  - Vocações de 12 a 21 h para 19 a 22 h.
+  - Regras do cenário 6 de 9: horas do casual, ativos em dia útil e fim de semana.
+- **Decisão do criador:** os valores candidatos não viram preset. O preset principal segue com os valores e o formato antigos até a separação entre Perfil e Preferências (próximo passo, antes da P4).
+- **Erro corrigido no caminho:** o carregador de JSON não conhecia o campo `dedication`; há um teste novo que carrega o formato pelo arquivo.

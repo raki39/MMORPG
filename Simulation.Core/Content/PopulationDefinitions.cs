@@ -1,10 +1,23 @@
 namespace Simulation.Core.Content;
 
-/// <summary>Faixa de um parametro: media e dispersao (mesma unidade do parametro).</summary>
+/// <summary>
+/// Faixa de um parametro, em um de dois formatos (mesma unidade do parametro):
+/// - media e dispersao (mean, spread): media de 3 uniformes em [mean - spread, mean + spread];
+/// - triangular (min, mode, max): densidade que sobe em linha reta do minimo ate a moda (o valor
+///   mais comum) e desce ate o maximo. A mediana e outra coisa (ver TraitDraw.Median).
+/// O formato triangular consome do fluxo da pessoa o mesmo numero de sorteios que o outro
+/// (tres), para nao mudar os demais atributos (experimento de dedicacao).
+/// </summary>
 public sealed class TraitRange
 {
     public int Mean { get; set; }
     public int Spread { get; set; }
+    public int? Min { get; set; }
+    public int? Mode { get; set; }
+    public int? Max { get; set; }
+
+    /// <summary>Verdadeiro quando o formato e triangular (min, mode, max).</summary>
+    public bool IsTriangular => Min.HasValue || Mode.HasValue || Max.HasValue;
 }
 
 /// <summary>
@@ -102,6 +115,24 @@ public sealed class PopulationDefinition
     public BehaviorSettingsDefinition Behavior { get; set; } = new();
     /// <summary>Planejador da rotina e sono basico (P2, D-043).</summary>
     public RoutineSettingsDefinition Routine { get; set; } = new();
+    /// <summary>Dedicacao compartilhada entre importancia, sessao normal e habito (experimento).</summary>
+    public DedicationSettingsDefinition Dedication { get; set; } = new();
+}
+
+/// <summary>
+/// Dedicacao compartilhada (experimento): cada pessoa sorteia uma posicao de dedicacao, e a
+/// posicao de cada atributo de dedicacao (importancia do jogo, sessao normal e habito) mistura
+/// essa posicao com um sorteio proprio. A transformacao mantem cada atributo com a sua
+/// distribuicao triangular; a influencia so muda como os tres se combinam.
+/// </summary>
+public sealed class DedicationSettingsDefinition
+{
+    /// <summary>
+    /// Peso da posicao de dedicacao (0..1000). 0 = sorteios independentes (como antes);
+    /// 1000 = os tres atributos na mesma posicao. Acima de 0, os tres atributos de dedicacao de
+    /// todos os perfis precisam do formato triangular.
+    /// </summary>
+    public int InfluencePermille { get; set; }
 }
 
 /// <summary>

@@ -16,6 +16,8 @@ public static class PopulationGenerator
     public const string StreamName = "population.person";
     public const string AppearanceStreamName = "population.appearance";
     public const string NameStreamName = "population.name";
+    /// <summary>Fluxo proprio da posicao de dedicacao: nao muda o fluxo dos demais atributos.</summary>
+    public const string DedicationStreamName = "population.dedication";
 
     /// <summary>
     /// Gera a pessoa. Com "cell" (cenario controlado, R4): perfil e ocupacao fixos, tracos e
@@ -36,6 +38,12 @@ public static class PopulationGenerator
         var names = content.Names;
         string name = names.FirstNames[rng.NextInt(names.FirstNames.Count)] + " " +
                       names.LastNames[rng.NextInt(names.LastNames.Count)];
+
+        // Posicao de dedicacao (experimento): fluxo proprio, so quando a influencia e maior que 0.
+        int influence = content.Dedication.InfluencePermille;
+        long? dedication = influence > 0 && !mean
+            ? TraitDraw.Position(new DeterministicRng(RngStreams.DeriveSeed(campaignSeed, DedicationStreamName, personId)))
+            : null;
 
         // Ordem de sorteio fixa: alterar esta ordem muda populacoes geradas (versionar).
         var t = new PersonTraits
@@ -59,11 +67,11 @@ public static class PopulationGenerator
             WillingnessToPay = Roll(rng, mean, profile.WillingnessToPay, 0, 1000),
             PaidAdvantageSensitivity = Roll(rng, mean, profile.PaidAdvantageSensitivity, 0, 1000),
             PreferredStartHour = Roll(rng, mean, profile.PreferredStartHour, 0, 23),
-            SessionMinutes = Roll(rng, mean, profile.SessionMinutes, 10, 720),
+            SessionMinutes = RollDedication(rng, mean, profile.SessionMinutes, 10, 720, dedication, influence),
             // Mesmas posicoes de sorteio dos antigos dias/semana e reforco de fim de semana (P2):
             // talento, variedade e localidade das pessoas nao mudam.
-            GameImportance = Roll(rng, mean, profile.GameImportance, 0, 1000),
-            Habit = Roll(rng, mean, profile.Habit, 0, 1000),
+            GameImportance = RollDedication(rng, mean, profile.GameImportance, 0, 1000, dedication, influence),
+            Habit = RollDedication(rng, mean, profile.Habit, 0, 1000, dedication, influence),
         };
         // Sorteado por ultimo (D-036): nao altera os tracos ja existentes das populacoes.
         t.Talent = Roll(rng, mean, profile.Talent, 0, 1000);
@@ -157,8 +165,28 @@ public static class PopulationGenerator
     }
 
     private static int Roll(DeterministicRng rng, bool mean, TraitRange range, int min, int max)
+        => RollDedication(rng, mean, range, min, max, null, 0);
+
+    /// <summary>
+    /// Sorteia um atributo. No formato triangular: a pessoa de referencia (cenario controlado) fica
+    /// na mediana; as demais usam uma posicao propria (tres sorteios do fluxo da pessoa, como o
+    /// formato de media e dispersao), misturada com a posicao de dedicacao quando houver.
+    /// </summary>
+    private static int RollDedication(DeterministicRng rng, bool mean, TraitRange range, int min, int max, long? dedication, int influence)
     {
-        int value = mean ? range.Mean : range.Mean + rng.NextCenteredNoise(range.Spread);
+        int value;
+        if (range.IsTriangular)
+        {
+            int lo = range.Min ?? range.Mode ?? 0, mo = range.Mode ?? lo, hi = range.Max ?? mo;
+            if (mean) value = TraitDraw.Median(lo, mo, hi);
+            else
+            {
+                long own = TraitDraw.Position(rng);
+                long pos = dedication is long d ? TraitDraw.Combine(d, own, influence) : own;
+                value = TraitDraw.Triangular(pos, lo, mo, hi);
+            }
+        }
+        else value = mean ? range.Mean : range.Mean + rng.NextCenteredNoise(range.Spread);
         return value < min ? min : value > max ? max : value;
     }
 }
