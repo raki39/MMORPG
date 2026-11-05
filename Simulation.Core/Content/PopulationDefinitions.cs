@@ -469,11 +469,34 @@ public sealed class RoutineSettingsDefinition
     /// <summary>Minutos livres no dia para a folga contar inteira.</summary>
     public int FullFreeMinutes { get; set; } = 600;
     /// <summary>
-    /// Sessao planejada (R4): o tempo livre amplia a sessao normal (sessionMinutes) ate este fator
-    /// (permille) com o tempo livre cheio. Hipotese configuravel da ampliacao planejada; nao limita
-    /// extensoes nem sessoes excepcionais. A importancia do jogo nao entra na duracao.
+    /// Saciedade (v3, D-051): cresce enquanto a pessoa joga, a fracao m / (m + tau) do que falta, com
+    /// tau = isto x sessao normal / 1000 (2000 = metade do que falta a cada duas sessoes normais).
+    /// Hipotese configuravel.
     /// </summary>
-    public int MaxPlannedAmplificationPermille { get; set; } = 1500;
+    public int SatietyGrowthSessionsPermille { get; set; } = 2000;
+    /// <summary>Saciedade (v3): na pausa cai a fracao m / (m + isto); metade a cada isto de minutos. Zera ao acordar.</summary>
+    public int SatietyRecoveryMinutes { get; set; } = 120;
+    /// <summary>Continuar (v3): ao chegar a sessao normal, a pessoa decide a cada bloco destes minutos (dentro do tempo livre).</summary>
+    public int ContinueBlockMinutes { get; set; } = 30;
+    /// <summary>Continuar (v3): resto minimo da janela para ainda decidir continuar (o resto menor e coberto pela regra de terminar a atividade).</summary>
+    public int ContinueMinMinutes { get; set; } = 5;
+    /// <summary>Continuar (v3): peso da tendencia a prolongar na vontade de continuar (permille; 400 = +-20%).</summary>
+    public int ContinueTendencyWeightPermille { get; set; } = 400;
+    /// <summary>Experiencia (v3): peso da nota da sessao, em relacao a satisfacao habitual da pessoa, na vontade de jogar.</summary>
+    public int ExperienceWeightPermille { get; set; } = 500;
+    /// <summary>Voltar (v3): pausa antes de reconsiderar, sorteada entre o minimo e o maximo (minutos).</summary>
+    public int ReturnPauseMinMinutes { get; set; } = 30;
+    public int ReturnPauseMaxMinutes { get; set; } = 120;
+    /// <summary>Voltar (v3): vontade de terminar depois de uma sessao interrompida pelo trabalho (permille somado a vontade).</summary>
+    public int UnfinishedBonusPermille { get; set; } = 150;
+    /// <summary>Comecar (v3): no dia livre, a primeira janela comeca depois da manha (cafe, acordar).</summary>
+    public int FreeDayMorningMinutes { get; set; } = 60;
+    /// <summary>Comecar (v3): resistencia a comecar antes do horario de costume, por hora de antecedencia (permille).</summary>
+    public int EarlyStartResistancePerHour { get; set; } = 300;
+    /// <summary>Comecar (v3): passo que arredonda o horario de comecar (a chance e por hora; o passo nao muda a participacao).</summary>
+    public int StartStepMinutes { get; set; } = 10;
+    /// <summary>Estimativa (v3): dias simulados por dia da semana, com sorteio fixo da pessoa.</summary>
+    public int EstimateSamples { get; set; } = 24;
     /// <summary>
     /// Habito (R4): peso do habito na chance. A regularidade recente (dias com oportunidade) vezes o
     /// traco de habito: + habito * isto / 1000 para quem jogou em todos, - para quem faltou em todos.
@@ -481,9 +504,7 @@ public sealed class RoutineSettingsDefinition
     public int HabitStreakPermille { get; set; } = 250;
     /// <summary>Dias recentes que formam a regularidade do habito (R4); so contam os dias com oportunidade.</summary>
     public int HabitHistoryDays { get; set; } = 7;
-    /// <summary>Custo de entrar de novo no mesmo dia (minutos, R4): sai da vontade restante antes de decidir outra sessao.</summary>
-    public int ReentryCostMinutes { get; set; } = 20;
-    /// <summary>Sessoes planejadas por dia, no maximo.</summary>
+    /// <summary>Sessoes normais por dia, no maximo (v3: a primeira e as voltas depois de pausas).</summary>
     public int MaxSessionsPerDay { get; set; } = 2;
     /// <summary>Variacao individual do deslocamento (+-, permille).</summary>
     public int CommuteVariationPermille { get; set; } = 300;
@@ -505,8 +526,6 @@ public sealed class RoutineSettingsDefinition
     /// ou fazer outra coisa mesmo gostando do jogo.
     /// </summary>
     public int DispositionSpreadPermille { get; set; } = 200;
-    /// <summary>Parte do efeito do humor na chance que tambem vale no tempo desejado do dia (permille, R4).</summary>
-    public int MoodDurationWeightPermille { get; set; } = 500;
     /// <summary>Chamado do trabalho durante a escapada (R2): minutos para terminar a atividade antes de sair (0 = sai na hora).</summary>
     public int WorkCallToleranceMinutes { get; set; } = 5;
     /// <summary>

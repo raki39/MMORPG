@@ -66,30 +66,41 @@ public class LocalityTests
         Assert.Equal(DayKind.Holiday, w.Clock.Calendar.KindOf(new DateTime(2027, 4, 21)));
     }
 
+    /// <summary>
+    /// Fuso (P1): o chines segue a rotina do horario local, como o brasileiro segue o dele; no
+    /// relogio do servidor isso aparece deslocado (a noite local cai na manha do servidor). Com o
+    /// modelo de vontade da v3 (D-051) ha sessoes de tarde e voltas, entao compara-se a distribuicao
+    /// local das duas localidades, nao uma faixa fixa.
+    /// </summary>
     [Fact]
     public void Chineses_JogamNaNoiteLocal_QueEManhaNoServidor()
     {
         var e = Opened(seed: 3, population: 600);
-        var local = new List<int>();
-        var server = new List<int>();
+        var local = new Dictionary<string, List<int>> { ["china"] = new(), ["brasil"] = new() };
+        var server = new Dictionary<string, List<int>> { ["china"] = new(), ["brasil"] = new() };
         for (int d = 0; d < 14; d++)
         {
             e.AdvanceTo(SimTime.Days(d + 1));
             foreach (var ev in e.World.Events.Drain().Where(x => x.Type == "session_started"))
             {
                 var p = e.World.GetPerson((int)ev.Entities[0].Id);
-                if (p.ResidenceId != "china" || ev.Tick < SimTime.Days(3)) continue;
+                if (!local.ContainsKey(p.ResidenceId) || ev.Tick < SimTime.Days(3)) continue;
                 var at = e.World.Clock.Calendar.ToDateTime(ev.Tick);
                 var atLocal = e.World.Clock.Calendar.ToDateTime(ev.Tick + p.LocalOffsetMinutes * SimTime.TicksPerMinute);
-                server.Add(at.Hour);
-                local.Add(atLocal.Hour);
-                Assert.Equal((at.Hour + 11) % 24, atLocal.Hour);
+                if (p.ResidenceId == "china") Assert.Equal((at.Hour + 11) % 24, atLocal.Hour);
+                server[p.ResidenceId].Add(at.Hour);
+                local[p.ResidenceId].Add(atLocal.Hour);
             }
         }
-        Assert.True(local.Count > 20, $"amostra pequena: {local.Count}");
-        // A maioria joga no fim da tarde ou a noite local; no servidor isso cai entre a madrugada e o almoco.
-        Assert.True(local.Count(h => h >= 15) * 100 / local.Count >= 70, "sessoes chinesas fora da noite local");
-        Assert.True(server.Count(h => h >= 3 && h < 14) * 100 / server.Count >= 70, "sessoes chinesas deveriam cair na manha do servidor");
+        Assert.True(local["china"].Count > 20, $"amostra pequena: {local["china"].Count}");
+        int Share(List<int> v, Func<int, bool> f) => v.Count(f) * 100 / Math.Max(1, v.Count);
+        // No horario local, chineses e brasileiros jogam nos mesmos periodos (maioria a tarde e a noite).
+        int chinaEvening = Share(local["china"], h => h >= 15), brazilEvening = Share(local["brasil"], h => h >= 15);
+        Assert.True(chinaEvening >= 50, $"sessoes chinesas fora da tarde e noite local: {chinaEvening}%");
+        Assert.InRange(chinaEvening, brazilEvening - 12, brazilEvening + 12);
+        // No relogio do servidor, a noite chinesa cai entre a madrugada e o almoco, bem mais que a brasileira.
+        int chinaMorning = Share(server["china"], h => h >= 3 && h < 14), brazilMorning = Share(server["brasil"], h => h >= 3 && h < 14);
+        Assert.True(chinaMorning >= brazilMorning + 20, $"china {chinaMorning}% x brasil {brazilMorning}% na manha do servidor");
     }
 
     [Fact]

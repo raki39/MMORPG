@@ -111,14 +111,15 @@ Três traços separados, todos sorteados por perfil e independentes dentro dele:
 | Traço | O que decide |
 |---|---|
 | Importância do jogo (P2; R4) | Prioridade do jogo: se joga no dia, se a vontade que sobra vira segunda sessão, jogar na pausa do trabalho e a pressa de começar. Não muda a duração (D-050) |
-| Tendência a prolongar | Chance e tamanho da extensão quando a sessão está boa ou a meta está perto |
-| Autocontrole | Freia a extensão e a escapada no expediente |
+| Tendência a prolongar | Vontade de continuar depois da sessão normal (v3, ±20%) e, na hora de dormir, ficar acordado jogando quando a sessão está boa ou a meta está perto |
+| Autocontrole | Freia ficar acordado jogando e a escapada no expediente |
 
-- **Extensão:** motivo explícito, "gostando da sessão" (nota parcial ≥ 700) ou "perto de concluir a meta" (70% do caminho).
+- **Continuar e voltar (v3, D-051):** a sessão normal é uma preferência; ao chegar nela a pessoa decide continuar ou parar, e depois de uma pausa pode voltar. Saciedade e cansaço pesam contra; ver `rotina.md`.
+- **Ficar acordado (extensão, só na hora de dormir):** motivo explícito, "gostando da sessão" (nota parcial ≥ 700) ou "perto de concluir a meta" (70% do caminho).
   - Chance = 40% × tendência × (1 − autocontrole × 0,8) × (1 − cansaço).
   - Tamanho = 30% da sessão planejada × (0,5 + tendência), mínimo 10 min.
   - Limites explícitos: 2 vezes por sessão e 180 min no total. Nunca na pausa ou na escapada do trabalho nem no cenário controlado.
-  - Usa primeiro o resto da janela livre. Só avança sobre o sono se a janela termina na hora de dormir (nunca antes de uma obrigação nem de um turno da noite).
+  - Só quando a janela termina na hora de dormir e a sessão chegou ao fim dela (nunca antes de uma obrigação nem de um turno da noite); dentro do tempo livre a decisão é continuar.
   - O sono cortado tem três tetos: 180 min por noite, o teto do déficit e um sono mínimo de 4 h.
 - **Sono:** cada pessoa tem necessidade de sono e hora preferida de dormir (P2).
   - O dia se monta a partir das obrigações. Noite mais curta que a necessidade vira **déficit**, e o sono cortado pelo jogo também entra no déficit na saída da sessão (evento `stayed_up_late`, com motivo e minutos).

@@ -495,25 +495,48 @@ public static class ValidationReport
             return free == 0 ? "—" : Pct(played, free);
         }
         {
-            // R4: a segunda sessao planejada e a deixada de lado (ja tinha jogado o que queria).
+            // v3: voltas depois de pausas, motivos de inicio e de fim, e as sessoes mais longas com os motivos.
             var played = runs.SelectMany(r => r.Distribution.Days).Where(d => d.Reason == "played").ToList();
             if (played.Count > 0)
             {
-                int planned2 = played.Count(d => d.Sessions >= 2), skipped = played.Sum(d => d.Skipped);
-                sb.Append($"**Segunda sessão (R4):** planejada em {Pct(planned2, played.Count)} dos dias com jogo (a vontade que sobrou e outra janela); ");
-                sb.Append($"deixada de lado em {skipped.ToString("N0", PtBr)} dias, porque a pessoa já tinha jogado o que queria.\n\n");
+                int withReturn = played.Count(d => d.Returns > 0), declined = played.Sum(d => d.DeclinedReturns), skippedWork = played.Sum(d => d.SkippedAfterWork);
+                var bySittings = played.Where(d => d.Sittings > 0).GroupBy(d => Math.Min(3, d.Sittings)).ToDictionary(g => g.Key, g => g.Count());
+                int withSitting = Math.Max(1, played.Count(d => d.Sittings > 0));
+                sb.Append($"**Voltas depois de uma pausa (v3):** em {Pct(withReturn, played.Count)} dos dias com jogo. Sessões normais por dia com jogo: ");
+                sb.Append($"uma {Pct(bySittings.GetValueOrDefault(1), withSitting)}, duas {Pct(bySittings.GetValueOrDefault(2), withSitting)}, três ou mais {Pct(bySittings.GetValueOrDefault(3), withSitting)}. ");
+                sb.Append($"Voltas consideradas e recusadas: {declined.ToString("N0", PtBr)}. Sessão da noite deixada de lado depois de jogar no trabalho: {skippedWork.ToString("N0", PtBr)} dias.\n\n");
             }
-            // R4: as sessoes mais longas e por que ficaram longas.
-            var longest = runs.SelectMany(r => r.Distribution.Sessions).Where(x => x.Kind == "normal").OrderByDescending(x => x.Minutes).ThenBy(x => x.PersonId).Take(8).ToList();
+            var normalS = runs.SelectMany(r => r.Distribution.Sessions).Where(x => x.Kind == "normal").ToList();
+            if (normalS.Count > 0)
+            {
+                string StartPt(string r) => r switch { "usual_time" => "No horário de costume", "early_choice" => "Antes do horário, por vontade", "return" => "Voltou depois de uma pausa", "first" => "Primeira (cadastro ou volta ao jogo)", _ => "Outro" };
+                string EndPt(string r) => r switch
+                {
+                    "satisfied" => "Decidiu parar (saciedade, cansaço, outras opções)", "window_end" => "Fim do tempo livre (obrigação, preparo, compromisso)",
+                    "bedtime" => "Hora de dormir", "stayed_up" => "Depois de ficar acordado jogando", "frustration" => "Frustração", "server_closed" => "Servidor fechado",
+                    "session_time" => "Fim planejado (sem decisão)", _ => r,
+                };
+                sb.Append("**Por que as sessões começaram e terminaram** (sessões normais, seeds somadas).\n\n| Início | Parcela | | Fim | Parcela |\n|---|---:|---|---|---:|\n");
+                var starts = normalS.GroupBy(x => x.StartReason).OrderByDescending(g => g.Count()).ThenBy(g => g.Key, StringComparer.Ordinal).ToList();
+                var ends = normalS.GroupBy(x => x.EndReason).OrderByDescending(g => g.Count()).ThenBy(g => g.Key, StringComparer.Ordinal).ToList();
+                for (int i = 0; i < Math.Max(starts.Count, ends.Count); i++)
+                {
+                    string l = i < starts.Count ? $"{StartPt(starts[i].Key)} | {Pct(starts[i].Count(), normalS.Count)}" : " | ";
+                    string r = i < ends.Count ? $"{EndPt(ends[i].Key)} | {Pct(ends[i].Count(), normalS.Count)}" : " | ";
+                    sb.Append($"| {l} | | {r} |\n");
+                }
+                sb.Append('\n');
+            }
+            var longest = normalS.OrderByDescending(x => x.Minutes).ThenBy(x => x.PersonId).Take(8).ToList();
             if (longest.Count > 0)
             {
-                sb.Append("**Sessões mais longas e por quê** (as 8 maiores sessões normais, seeds somadas). Resto: terminar a atividade ou a viagem e segunda sessão emendada.\n\n");
-                sb.Append("| Perfil | Ocupação | Duração | Planejada ao começar | Extensões | Resto | Vontade do dia | Disposição | Tempo livre do dia |\n|---|---|---:|---:|---:|---:|---:|---:|---:|\n");
+                sb.Append("**Sessões mais longas e por quê** (as 8 maiores sessões normais, seeds somadas). Resto: terminar a atividade ou a viagem.\n\n");
+                sb.Append("| Perfil | Ocupação | Duração | Ao começar | Continuou | Ficou acordado | Resto | Disposição | Tempo livre do dia |\n|---|---|---:|---:|---:|---:|---:|---:|---:|\n");
                 foreach (var x in longest)
                 {
-                    int rest = x.Minutes - x.Planned - x.ExtendedMinutes;
-                    sb.Append($"| {ProfileName(x.Profile)} | {(content.Occupations.TryGetValue(x.Occupation, out var oc) ? oc.Name : x.Occupation)} | {x.Minutes} min | {x.Planned} min | {x.ExtendedMinutes} min | {rest} min | ");
-                    sb.Append($"{(x.Desired >= 0 ? x.Desired + " min" : "—")} | {(x.Desired >= 0 ? (x.Disposition >= 0 ? "+" : "−") + Math.Abs(x.Disposition) / 10 + "%" : "—")} | {(x.FreeMinutes >= 0 ? Fmt(x.FreeMinutes / 60.0) + " h" : "—")} |\n");
+                    int rest = x.Minutes - x.Planned - x.Continued - x.ExtendedMinutes;
+                    sb.Append($"| {ProfileName(x.Profile)} | {(content.Occupations.TryGetValue(x.Occupation, out var oc) ? oc.Name : x.Occupation)} | {x.Minutes} min | {x.Planned} min | {x.Continued} min | {x.ExtendedMinutes} min | {rest} min | ");
+                    sb.Append($"{(x.Disposition >= 0 ? "+" : "−")}{Math.Abs(x.Disposition) / 10}% | {(x.FreeMinutes >= 0 ? Fmt(x.FreeMinutes / 60.0) + " h" : "—")} |\n");
                 }
                 sb.Append('\n');
             }

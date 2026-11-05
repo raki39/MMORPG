@@ -226,7 +226,7 @@ public partial class SidePanel : PanelContainer
     {
         Array.Empty<string>(),
         new[] { "level_up", "region_discovered", "person_registered" },
-        new[] { "session_started", "session_ended", "session_extended", "stayed_up_late", "work_interruption" },
+        new[] { "session_started", "session_ended", "session_continued", "session_extended", "stayed_up_late", "work_interruption" },
         new[] { "activity_chosen" },
     };
 
@@ -290,8 +290,10 @@ public partial class SidePanel : PanelContainer
             case "session_started":
                 if (e.Causes.Count > 0 && e.Causes[0].Factor == "work_break") return ($"{who} jogou na pausa do trabalho", UiTokens.Success);
                 if (e.Causes.Count > 0 && e.Causes[0].Factor == "during_work") return ($"{who} deu uma escapada no expediente", UiTokens.Warning);
+                if (e.Causes.Count > 1 && e.Causes[1].Factor == "return") return ($"{who} voltou a jogar", UiTokens.Success);
                 return ($"{who} conectou", UiTokens.Success);
-            case "session_extended": return ($"{who} ficou mais um pouco ({e.Detail})", UiTokens.Success.Darkened(0.1f));
+            case "session_continued": return ($"{who} continuou jogando ({e.Detail})", UiTokens.Success.Darkened(0.1f));
+            case "session_extended": return ($"{who} ficou acordado jogando ({e.Detail})", UiTokens.Warning);
             case "stayed_up_late": return ($"{who} foi dormir {e.Detail} mais tarde por causa do jogo", UiTokens.Warning);
             case "work_interruption": return ($"{who} saiu por um chamado do trabalho", UiTokens.Warning);
             case "session_ended": return ($"{who} desconectou", UiTokens.TextDisabled);

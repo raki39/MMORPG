@@ -258,6 +258,15 @@ public sealed class Person
     /// calculado na geracao. O gosto pessoal fica separado, em Traits.PreferredStartHour.
     /// </summary>
     public int HabitualStartHour { get; internal set; } = 20;
+    /// <summary>
+    /// Saciedade (v3, D-051), 0..1000: cresce com o tempo jogado (todo ele, inclusive o interrompido)
+    /// e cai nas pausas; zera ao acordar. Pesa na vontade de parar, de continuar e de voltar.
+    /// </summary>
+    public int Satiety { get; internal set; }
+    /// <summary>Ultima atualizacao da saciedade (tick): jogando desde entao cresce; fora do jogo, cai.</summary>
+    public long SatietyTick { get; internal set; }
+    /// <summary>A ultima sessao foi interrompida pelo trabalho (v3): vontade de terminar na proxima decisao.</summary>
+    public bool Unfinished { get; internal set; }
     /// <summary>Ultimo dia local em que comecou uma sessao (informativo; o habito usa a agenda, R4).</summary>
     public long LastPlayedLocalDay { get; internal set; } = -1;
     /// <summary>Agenda dos ultimos dias (mais recente no fim): tempo livre, sessoes e motivo.</summary>
@@ -294,9 +303,9 @@ public sealed class DayPlanRecord
     public DayPlanRecord(long localDay, int freeMinutes, int windows, int sessions, string reason, int firstStartMinute, int plannedMinutes, bool freeDay,
         int sleepMinutes = 0, int deficitMinutes = 0, int workSessions = 0, int workOverlapMinutes = 0,
         string commitmentId = "", int commitmentStart = 0, int commitmentEnd = 0, int recoveryMinutes = 0,
-        int desiredMinutes = 0, int dispositionPermille = 0, int regularityPermille = 500)
+        int sessionPriority = 0, int dispositionPermille = 0, int regularityPermille = 500)
     {
-        DesiredMinutes = desiredMinutes;
+        SessionPriority = sessionPriority;
         DispositionPermille = dispositionPermille;
         RegularityPermille = regularityPermille;
         RecoveryMinutes = recoveryMinutes;
@@ -334,20 +343,22 @@ public sealed class DayPlanRecord
     /// <summary>Sessoes no expediente remoto (pausa ou escapada) e minutos sobrepostos ao trabalho (D-044).</summary>
     public int WorkSessions { get; }
     public int WorkOverlapMinutes { get; }
-    /// <summary>
-    /// Tempo desejado de jogo no dia (R4): intencao flexivel, de todas as sessoes do dia (inclusive
-    /// no trabalho). 0 = nao quis jogar ou nao coube.
-    /// </summary>
-    public int DesiredMinutes { get; }
+    /// <summary>Prioridade do jogo no dia (v3, 0..1000): importancia e tempo livre, para continuar e voltar.</summary>
+    public int SessionPriority { get; }
     /// <summary>Disposicao do dia (R4, +-permille): sorteio proprio por pessoa e dia.</summary>
     public int DispositionPermille { get; }
     /// <summary>Regularidade recente no planejamento (R4, 0..1000; 500 = sem dias para medir).</summary>
     public int RegularityPermille { get; }
     /// <summary>Minutos jogados nas sessoes planejadas para este dia (todas, inclusive no trabalho).</summary>
     public int PlayedMinutes { get; internal set; }
-    /// <summary>Sessoes normais ja iniciadas para este dia e as desistidas por ja ter jogado o que queria (R4).</summary>
-    public int NormalSessionsStarted { get; internal set; }
-    public int SkippedSessions { get; internal set; }
+    /// <summary>
+    /// O que aconteceu no dia (v3): sessoes normais jogadas, voltas depois de uma pausa, voltas
+    /// recusadas e a sessao da noite deixada de lado porque ja tinha jogado no trabalho.
+    /// </summary>
+    public int Sittings { get; internal set; }
+    public int Returns { get; internal set; }
+    public int DeclinedReturns { get; internal set; }
+    public int SkippedAfterWork { get; internal set; }
 }
 
 /// <summary>Conta no MMORPG (plano 4.1). Criada no registro (M2).</summary>
@@ -592,8 +603,13 @@ public sealed class Character
     /// janela do dia, mais o corte de sono autorizado. Na pausa ou na escapada, o fim planejado.
     /// </summary>
     public long SessionHardEndTick { get; internal set; }
-    /// <summary>Dia local da agenda a que a sessao pertence (R4): o tempo jogado sai da vontade desse dia (-1 = nenhum).</summary>
+    /// <summary>Dia local da agenda a que a sessao pertence (-1 = nenhum): conta o tempo e as voltas desse dia.</summary>
     public long SessionPlanDay { get; internal set; } = -1;
+    /// <summary>Por que a sessao vai terminar (v3): satisfied, window_end, bedtime... vazio = ainda nao decidido.</summary>
+    public string StopReason { get; internal set; } = "";
+    /// <summary>Vezes que decidiu continuar depois da sessao normal e os minutos acrescentados (v3).</summary>
+    public int Continues { get; internal set; }
+    public int ContinuedMinutes { get; internal set; }
     public bool LogoutPending { get; internal set; }
     /// <summary>Tipo da sessao atual (D-044): 0 normal, 1 pausa permitida do trabalho remoto, 2 escapada no expediente.</summary>
     public int SessionKind { get; internal set; }

@@ -58,7 +58,7 @@ Uma etapa por vez, fechada por inteiro (testes, validação, documentação, exp
    - ~~P2: obrigações, tempo livre, vontade de jogar e renda real~~ (feito, D-043);
    - ~~P3: sono e dificuldade de parar, e jogar no horário de trabalho remoto~~ (feito, D-044);
      - depois: eventos dentro do jogo e atualizações grandes também mexem na tendência a prolongar e na volta de quem saiu (M7, com os outros motivos de retorno);
-   - revisão da rotina antes da P4 (aprovada pelo criador): ~~R1 contabilidade do dia~~ (D-047), ~~R2 limites, probabilidade e estimativa~~ (D-048), ~~R3 distribuições e referência pré-R4~~ (D-049), ~~R4 modelo de vontade~~ (D-050), R5 recalibrar depois da medição e reescrever `rotina.md` separando invariantes, regras dos presets e tendências;
+   - revisão da rotina antes da P4 (aprovada pelo criador): ~~R1 contabilidade do dia~~ (D-047), ~~R2 limites, probabilidade e estimativa~~ (D-048), ~~R3 distribuições e referência pré-R4~~ (D-049), ~~R4 modelo de vontade~~ (D-050, corrigido na v3: D-051), R5 recalibrar depois da medição e reescrever `rotina.md` separando invariantes, regras dos presets e tendências;
    - P4: traits;
    - a reputação do personagem entra com a Etapa 3 e as finanças com o M7.
 2. **Etapa 1 — O personagem** (decisões no D-040):

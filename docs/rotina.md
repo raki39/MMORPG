@@ -1,6 +1,6 @@
 # Rotina da pessoa simulada: sistema, cálculos e números
 
-Referência do sistema de rotina, das decisões P1, P2 e P3 até a D-046. Todos os números estão em `Content/presets/inicial/population.json` (seção `routine` e perfis) e em `occupations.json`; o validador confere as faixas. Permille: 1000 = 100%.
+Referência do sistema de rotina, das decisões P1, P2 e P3 até a D-051 (revisão R1 a R4, com a vontade de jogar da v3). Todos os números estão em `Content/presets/inicial/population.json` (seção `routine` e perfis) e em `occupations.json`; o validador confere as faixas. Permille: 1000 = 100%.
 
 ## 1. Visão geral: como as peças se ligam
 
@@ -14,10 +14,10 @@ Ocupação ──► obrigações (horário individual, deslocamento, folga)
    sono · obrigações · deslocamento · preparo · chegada · compromisso
                  │
                  ▼
-          JANELAS LIVRES ──► chance de jogar ──► sessão (início, duração)
-                 │                  ▲                     │
-                 │      humor · hábito · cansaço          ▼
-                 │                               extensão · corte de sono
+          JANELAS LIVRES ──► jogar hoje? ──► quando começar ──► sessão
+                 │                  ▲                               │
+                 │   hábito · disposição · humor · cansaço          ▼
+                 │                          continuar · parar · voltar · ficar acordado
                  ▼                                         │
          AGENDA (30 dias) ◄──────── déficit de sono ◄──────┘
 ```
@@ -151,46 +151,62 @@ A regra que amarra tudo (D-045) é a coerência: turno, sono, hora preferida, du
 
 A importância do jogo entra **só na prioridade**: na chance base, na segunda sessão, na pausa do trabalho e na pressa de começar. Não muda a duração.
 
-**Sessão planejada** (`DesiredMinutes`, R4): a sessão normal da pessoa (`sessionMinutes`, a "sessão base") é uma sessão normal, não uma referência curta.
-- sessão normal × (1 + 0,5 × folga);
-- a ampliação pelo tempo livre vai até **×1,5** com o tempo livre cheio (`maxPlannedAmplificationPermille`, configurável). É uma hipótese da ampliação planejada, não um limite universal: extensões e acontecimentos podem passar disso;
-- mínimo de 20 min.
+A importância do jogo é a **prioridade** dele entre os lazeres. Ela pesa em cada decisão (jogar no dia, começar antes, continuar, voltar, jogar na pausa do trabalho) e não muda a duração normal da sessão.
 
-**Tempo desejado do dia** (`DayIntentMinutes`, R4): uma intenção flexível para o dia inteiro, não uma cota nem um teto rígido.
-- sessão planejada × (1000 + disposição) ÷ 1000. A disposição é a única variação do dia: a variação de ±20% da sessão, de antes, foi retirada do planejamento para não sortear duas vezes a mesma coisa (continua só na primeira sessão do cadastro e da volta, que não têm agenda);
-- × (1000 + (fator do humor − 1000) × 50%) ÷ 1000. Metade do efeito que o humor tem na chance (`moodDurationWeightPermille`);
-- × (1 − cansaço × 0,3);
-- mínimo de 20 min.
+### Decisões ao longo do dia (v3, D-051)
 
-Tudo o que a pessoa joga no dia sai dessa intenção:
-- o jogo planejado no trabalho (pausa e escapada) é descontado da sessão principal;
-- quando uma sessão normal começa, ela desconta o que já foi jogado no mesmo dia da agenda, inclusive a sessão em andamento;
-- a primeira sessão do dia sempre acontece (a escolha já foi feita), com pelo menos 20 min;
-- uma sessão seguinte fica de lado se o que sobrou é menor que 20 min: a pessoa já jogou o que queria e prefere outro lazer (`SkippedSessions` na agenda);
-- a extensão ("só mais um pouco") pode passar da intenção. É um acontecimento da sessão, com os limites da P3/R2.
+Depois de decidir jogar hoje (o sorteio acima, um por dia), a pessoa toma decisões separadas: **quando começar**, **continuar ou parar** e **voltar** depois de uma pausa. Todas usam a mesma comparação:
 
-Exemplo: o hardcore de meio período (sessão normal 152 min, folga 1,0, disposição 0) quer cerca de 3h50 no dia. Antes da R4, com a importância na duração, eram cerca de 4h40.
+> chance = vontade de jogar ÷ (vontade de jogar + outras opções + vontade de parar)
 
-**Início** (`PlaceMain`):
-- horário habitual ± até 75 min de variação diária;
-- vai para a janela que contém essa hora (ou a mais perto; em empate, a maior);
-- começa mais cedo se a sessão não couber;
-- dura o que couber até o fim da janela.
+- **Prioridade dentro do dia** (`SessionPriority`): importância + (1000 − importância) × 35% × folga. É a chance base sem o peso do dia de obrigações, que entra uma vez só, na chance de jogar no dia.
+- **Vontade de jogar** (`Pull`, até 2000): prioridade × disposição do dia × humor (engajamento) × experiência; para continuar, também × tendência a prolongar (±20%).
+  - **A experiência** é a nota da sessão comparada com a satisfação habitual da pessoa: igual ao habitual não muda nada. Assim o humor, que já vem da média das notas, não conta duas vezes.
+  - Os fatores são combinados e limitados uma vez.
+- **Outras opções:** 1000 − prioridade (o resto do lazer).
+- **Vontade de parar** (`StopPressure`): saciedade + cansaço do sono × 40%.
 
-**Segunda sessão** (`SecondSession`, R4): possível para qualquer perfil. Não é um sorteio desligado do resto do dia:
-- vontade restante = tempo desejado − jogo planejado no trabalho − sessão principal;
-- só existe se a vontade restante, menos o custo de entrar de novo (20 min, `reentryCostMinutes`), ainda dá uma sessão mínima e há outra janela livre;
-- chance = importância × min(1, (restante − 20) ÷ sessão normal). A prioridade do jogo decide se a vontade que sobrou vira jogo;
-- vai para a maior outra janela: no fim dela, se é antes da principal (joga um pouco antes de sair), ou no começo, se é depois;
-- dura o que sobrou, até o tamanho da janela.
+Sem saciedade, sem cansaço e com tudo neutro, a chance é a própria prioridade do jogo.
 
-Na prática, sobra vontade quando a janela da sessão principal é curta (manhã antes da aula, sábado cortado por uma visita) ou quando a disposição do dia está alta.
+**Saciedade** (`Satiety`, 0–1000): cresce enquanto a pessoa joga e cai nas pausas. Não existe cota nem total do dia.
+- Jogando: sobe a fração m ÷ (m + τ) do que falta, com τ = 2 sessões normais (`satietyGrowthSessionsPermille` 2000). Depois de uma sessão normal, a saciedade fica em um terço.
+- Em pausa: cai a fração m ÷ (m + 120 min) (`satietyRecoveryMinutes`): metade a cada 2 h.
+- Zera ao acordar.
+- Todo o tempo jogado conta, inclusive no trabalho e o interrompido. A frustração de uma interrupção pelo trabalho entra à parte, como vontade de terminar (+150 na vontade de jogar da próxima decisão).
 
-**Estimativa** (`ExpectWeek`, sem humor, cansaço, jogo no trabalho nem extensões): a mesma regra do planejador, calculada na **semana real, dia a dia**.
-- A chance de cada dia usa a regularidade dos dias anteriores com oportunidade, e a semana se repete até estabilizar. Assim dias úteis e livres recebem chances diferentes.
-- A disposição entra pela sua distribuição (nove faixas), na chance e no tempo desejado.
-- A probabilidade é limitada só no fim.
-- A segunda sessão esperada entra na conta.
+**Quando começar** (`StartMinute`): um sorteio só por dia, num fluxo próprio (`routine.start`), sem tentativas independentes.
+- A vontade de começar vale **por hora** e se acumula no tempo livre, em passos de 10 min (`startStepMinutes`, só arredonda o horário). A pessoa começa quando a chance acumulada passa do valor sorteado.
+- O horário de costume é o gosto no dia livre e o horário habitual no dia de obrigação, cada um com a variação do dia de ±75 min.
+- Antes dele há resistência: +300 na vontade de parar por hora de antecedência (`earlyStartResistancePerHour`).
+- Toda janela livre conta, inclusive a de antes do trabalho (turno da noite, trabalho à tarde). No dia livre, a primeira janela começa depois da manhã (60 min).
+- No horário de costume (ou no primeiro tempo livre depois dele) a pessoa começa. Se ele não cabe no dia, começa no último momento em que ainda cabe a sessão normal.
+- A participação no dia é a chance do dia. O passo e a frequência das avaliações não a mudam: no cenário controlado, os dias com jogo são iguais antes e depois.
+
+**Jogo no trabalho** (pausa e escapada): não desconta minutos da noite. A saciedade que sobrou e a experiência de lá podem fazer a pessoa desistir de jogar à noite (`SkippedAfterWork`), e pesam no continuar e no voltar.
+
+**Continuar ou parar:**
+- A primeira sessão vai até a sessão normal (`sessionMinutes`), ou até o fim da janela. A sessão normal é uma **preferência**, não um limite.
+- Ao chegar nela, e depois a cada 30 min (`continueBlockMinutes`), a pessoa decide pela comparação.
+- Continuar só cabe dentro do tempo livre. Com menos de 5 min de janela (`continueMinMinutes`), a decisão já não cabe, e vale a regra de terminar a atividade.
+- Parar é sempre possível. Motivos de fim: decidiu parar, hora de dormir, fim do tempo livre.
+
+**Ficar acordado jogando** (P3, só no fim do dia): quando a janela acaba na hora de dormir e a pessoa ainda está jogando, ela pode passar dela.
+- Precisa de motivo explícito: gostando (nota parcial ≥ 700) ou perto da meta.
+- Chance: 40% × tendência × (1 − autocontrole × 0,8) × (1 − cansaço).
+- Sempre dentro do corte de sono autorizado (R2/R3).
+- Não existe mais extensão dentro do tempo livre: essa parte é a decisão de continuar.
+
+**Voltar:**
+- Depois de parar (por vontade, fim do tempo livre ou frustração), a pausa é sorteada entre 30 e 120 min (`returnPauseMin/MaxMinutes`).
+- A volta é na mesma janela, se ainda cabe a sessão mínima, ou no começo da próxima (depois da aula, do compromisso).
+- A saciedade caiu na pausa. A decisão usa a experiência da última sessão.
+- Se volta, joga até a sessão normal e decide de novo se continua.
+- Até 5 sessões normais por dia (`maxSessionsPerDay`).
+
+**Estimativa** (`ExpectWeek`, sem humor, cansaço, jogo no trabalho nem corte de sono): a mesma regra do planejador.
+- A chance de cada dia usa a regularidade dos dias anteriores com oportunidade e a disposição amostrada; a semana se repete até estabilizar.
+- Os minutos de um dia com jogo vêm de 24 dias simulados pela regra da v3 (`SimulateDay`: começar, continuar, parar e voltar), com sorteio fixo da pessoa. O resultado é sempre o mesmo.
+- O início e o fim típicos (fim da última sessão) são as medianas.
 
 A tela chama isso de "estimativa".
 
@@ -232,11 +248,12 @@ A tela chama isso de "estimativa".
   - **Sessão normal:** fim da janela livre. Se a janela acaba na hora de deitar, mais o corte de sono autorizado: o menor entre 180 min, o que cabe no teto do déficit e o que mantém 4 h de sono antes do próximo acordar.
   - **Pausa e escapada do trabalho:** o fim planejado.
   - **Adiar a saída**, seja para terminar a atividade (até 15 min), terminar o trecho de viagem, estender ou atender o chamado do trabalho (5 min, `workCallToleranceMinutes`), **só dentro do limite absoluto**. Nunca entra em preparo, deslocamento, obrigação incompatível ou compromisso.
-- **Ficar mais um pouco:**
+- **Continuar** (v3): decisão a cada 30 min depois da sessão normal, só dentro do tempo livre (seção 5).
+- **Ficar acordado jogando** (P3, só na hora de dormir):
   - **Motivo:** gostando (nota parcial ≥ 700) ou perto de concluir a meta (70% do caminho).
   - **Chance:** 40% × tendência × (1 − autocontrole × 0,8) × (1 − cansaço).
-  - **Tamanho:** 30% da sessão planejada × (0,5 + tendência), mínimo 10 min.
-  - **Limites:** 2 vezes e 180 min por sessão, e sempre até o limite absoluto. Não vale na pausa nem na escapada do trabalho.
+  - **Tamanho:** 30% da sessão até ali × (0,5 + tendência), mínimo 10 min.
+  - **Limites:** 2 vezes e 180 min por sessão, e sempre até o limite absoluto. Não vale na pausa nem na escapada do trabalho, nem no cenário controlado.
 - **Trabalho remoto:**
   - **Pausa:** chance de 30% × importância. Sessão de até metade da sessão base, dentro da pausa.
   - **Escapada:** chance de 40% × flexibilidade × importância × (1 − autocontrole) × folga do dia (carga sorteada todo dia). Dura 25 ±10 min, longe do começo e do fim do expediente.
@@ -249,10 +266,10 @@ A tela chama isso de "estimativa".
 |---|---|---|
 | **Onde mora** | Hora local agora, fuso, residência, nacionalidade, idiomas | Localidade (P1) |
 | **Finanças** | Rosca de renda e apoio, orçamento de lazer, disposição a pagar, aversão a vantagem paga | Renda real (P2), sem efeito até o M7 |
-| **Vontade de jogar** | Importância, hábito (com a regularidade dos últimos 7 dias e o efeito de hoje na dica), tendência a prolongar e autocontrole (1–20); satisfação e engajamento com o efeito de agora na chance; disposição de hoje; previsto por semana; sessão do dia útil; gosto de horário × quando costuma começar e sair; barras "previsto" e "real (30 dias)" do uso do tempo livre; frase de leitura do perfil | Traços, humor, `Expect` e agenda |
+| **Vontade de jogar** | Importância, hábito (com a regularidade dos últimos 7 dias e o efeito de hoje na dica), tendência a prolongar e autocontrole (1–20); satisfação e engajamento com o efeito de agora na chance; disposição de hoje; previsto por semana; jogo num dia útil (estimativa, com as voltas); horário preferido × quando costuma começar e sair (fim da última sessão); barras "previsto" e "real (30 dias)" do uso do tempo livre; frase de leitura do perfil | Traços, humor, `Expect` e agenda |
 | **Semana típica** | Por dia: tempo livre (azul; verde em dia livre) × jogo previsto (dourado), chance do dia embaixo; livre na semana, previsto, obrigações, sono por noite | `Build` + `Expect` |
 | **Ocupação** | Nome e o que faz (trabalha, estuda…), etiquetas de condição, turno, horas por semana, dias, renda, cartões dia a dia (horário, tempo livre, maior janela), a semana em 168 horas | Ocupação + semana típica |
-| **Últimos 30 dias** | Linha suave do tempo livre (área) e do jogado; ponto no zero com a cor do motivo; faixas verdes nos dias livres; losango de jogo no trabalho; ponto roxo de compromisso; na dica, o tempo desejado e a disposição do dia, e a segunda sessão deixada de lado | Agenda + registro de sessões |
+| **Últimos 30 dias** | Linha suave do tempo livre (área) e do jogado; ponto no zero com a cor do motivo; faixas verdes nos dias livres; losango de jogo no trabalho; ponto roxo de compromisso; na dica, as sessões do dia, as voltas, as voltas recusadas, a noite deixada de lado depois de jogar no trabalho e a disposição do dia | Agenda + registro de sessões |
 | **Sono e cansaço** | Anel de cansaço, déficit e teto, sono necessário, hora real de deitar (dia útil e livre), sono perdido para o jogo, sono de cada noite contra a necessidade | Sono (P3) |
 | **Como terminaram os dias** | Rosca dos motivos, sequência atual, minutos planejados por dia de jogo | Agenda |
 
@@ -267,10 +284,17 @@ Ordem da página: quem é → o padrão → o que aconteceu.
 | O gosto de horário fica separado do horário habitual | `GostoDeHorario_SeparadoDoHorarioHabitual` |
 | Quem prioriza o jogo começa logo depois de chegar; o casual, bem depois e com sessão menor | `QuemPriorizaOJogo_ComecaLogoQueChega_OCasualMaisTarde` |
 | Hardcore de meio período de manhã joga logo depois do almoço | `Hardcore_DeMeioPeriodoDeManha_JogaLogoDepoisDoAlmoco` |
-| A sessão cresce com o tempo livre, até ×1,5, e a importância não muda a duração | `SessaoDesejada_CresceComTempoLivre_ParaQuemPriorizaOJogo`, `SessaoPlanejada_ImportanciaNaoMudaADuracao_ETempoLivreAmpliaAteUmEMeio` |
-| O tempo desejado do dia limita o planejado e desconta o jogo no trabalho | `VontadeDoDia_LimitaOPlanejado_EDescontaOJogoNoTrabalho` |
-| A sessão seguinte desconta o que já foi jogado e fica de lado se a pessoa já jogou o que queria | `SessaoSeguinte_DescontaOQueJaFoiJogado_EFicaDeLadoSeJaJogouOQueQueria` |
-| A segunda sessão vale para qualquer perfil, pela vontade restante e pela oportunidade | `SegundaSessao_PossivelParaQualquerPerfil_PelaVontadeRestanteEOportunidade` |
+| A sessão normal é preferência; a importância não muda a duração | `SessaoNormal_EPreferencia_ImportanciaNaoMudaADuracao` |
+| Mais tempo livre dá mais jogo estimado a quem prioriza o jogo (pelas voltas e pelo continuar) | `MaisTempoLivre_MaisJogoEstimado_ParaQuemPriorizaOJogo` |
+| Sem saciedade nem cansaço, a decisão é a própria prioridade; saciedade e cansaço reduzem | `Decisao_SemSaciedadeNemCansaco_EAPropriaPrioridade_ESaciedadeReduz` |
+| A saciedade cresce com o tempo jogado, cai na pausa e fica entre 0 e 1000 | `Saciedade_CresceComOTempoJogado_CaiNaPausa_NuncaPassaDosLimites` |
+| Um sorteio por dia para começar; o passo não muda quanto se começa cedo | `Comecar_UmSorteioSoPorDia_OPassoNaoMudaQuantoSeComecaCedo` |
+| A participação é a chance do dia, não o passo de avaliação | `Participacao_ENaChanceDoDia_NaoNoPassoDeAvaliacao` |
+| Continuar só dentro do tempo livre; ficar acordado só passando da hora de dormir | `Continuar_DentroDoTempoLivre_EFicarAcordadoSoPassandoDaHoraDeDormir` |
+| Voltar depois de uma pausa é comum no dia livre; casual pode jogar três vezes | `Voltar_DepoisDeUmaPausa_ComumNoDiaLivre_ECasualPodeJogarTresVezes` |
+| Jogo no trabalho não desconta minutos da noite | `JogoNoTrabalho_NaoDescontaMinutosDaSessaoDaNoite` |
+| No dia de obrigação também se usa a janela antes do trabalho | `DiaDeObrigacao_TambemUsaAJanelaAntesDoTrabalho` |
+| O horário de costume influencia: começa nele ou antes, por vontade | `Sessoes_ComecamNoHorarioDeCostumeOuAntesPorVontade` |
 | Hábito: falta por obrigação é neutra, escolha reduz, sessão interrompida conta | `Habito_FaltaPorObrigacaoENeutra_EscolhaReduz_SessaoInterrompidaConta` |
 | A disposição do dia é reproduzível, pequena e centrada | `DisposicaoDoDia_ReproduzivelPorPessoaEDia_PequenaECentrada` |
 | O sono natural se adapta às obrigações (+1 h no dia livre, no máximo) | `HoraDeDormir_SeAcostumaAsObrigacoes` |
@@ -279,37 +303,36 @@ Ordem da página: quem é → o padrão → o que aconteceu.
 | Compromisso só em dia livre, raro, sem sessão durante | `Compromisso_SoEmDiaLivre_Raro_ESemSessaoDurante` |
 | Importância, tendência e autocontrole são independentes | `ImportanciaTendenciaEAutocontrole_SaoSeparados` |
 
-## 10. Números da validação (5 seeds × 90 dias × 1.000 pessoas, depois da R4, D-050)
+## 10. Números da validação (5 seeds × 90 dias × 1.000 pessoas, v3, D-051)
 
-**Cenário controlado** (rotina pura, sem humor): 7 de 7 regras dentro.
+**Cenário controlado** (rotina pura, sem humor): 4 de 7 regras dentro. As três fora medem o modelo antigo de uma sessão por dia (ver D-051): sessões por semana do casual 4,2 (faixa 2–4) e do hardcore 9,5 (5–7), horas do casual 6,8 h (2–6). Os dias com jogo não mudaram.
 
 | Meta | Faixa | Resultado | Entre seeds |
 |---|---|---|---|
-| Casual: sessões por semana | 2–4 | 2,8 | 2,8–2,8 |
-| Casual: horas por semana | 2–6 h | 5,4 h | 5,4–5,5 |
-| Hardcore: sessões por semana | 5–7 | 6,6 | 6,2–6,9 |
-| Hardcore: horas por semana | 15–45 h | 31,9 h | 30,7–33,0 |
-| Ativos em dia útil | 30–55% | 51,3% | 50,1–52,3 |
+| Casual: sessões por semana | 2–4 | 4,2 | 4,2–4,3 |
+| Casual: horas por semana | 2–6 h | 6,8 h | 6,7–6,9 |
+| Hardcore: sessões por semana | 5–7 | 9,5 | 9,0–10,0 |
+| Hardcore: horas por semana | 15–45 h | 36,8 h | 35,8–38,0 |
+| Ativos em dia útil | 30–55% | 51,4% | 50,3–52,4 |
 | Fim de semana ÷ dia útil | 1,3–2,0× | 1,3× | 1,3–1,4× |
-| Pico online do dia | 15–35% | 25,0% | 24,3–25,7 |
+| Pico online do dia | 15–35% | 24,1% | 22,8–24,7 |
 
 **Campanha completa** (com humor):
 
 | Perfil | Sessões/semana | Horas/semana |
 |---|---:|---:|
-| Casual | 3,0 | 6,0 |
-| Social | 3,9 | 10,4 |
-| Comerciante | 4,6 | 10,0 |
-| Explorador | 4,7 | 13,7 |
-| Competitivo | 5,2 | 18,2 |
-| Hardcore | 6,7 | 33,3 |
+| Casual | 4,5 | 7,2 |
+| Social | 6,1 | 13,1 |
+| Comerciante | 7,7 | 14,6 |
+| Explorador | 7,7 | 17,7 |
+| Competitivo | 7,8 | 21,7 |
+| Hardcore | 9,5 | 37,1 |
 
-As distribuições completas e a comparação com a referência pré-R4 estão em `docs/baselines/pos-R4/` e no D-050.
+As distribuições completas e as comparações com a pré-R4 e a R4 estão em `docs/baselines/pos-R4b/` e no D-051.
 
 **Pendente:** com todos jogando mais, ficam fora as metas de progressão.
-- Horas até o nível 20: 68 h, contra 80–110.
-- Horas até o nível 30: 171 h, instável (uma seed com 169, faixa 170–230).
-- Casuais no nível 10 ou mais: 98,5%.
-- Tempo andando ou esperando: 26%.
+- Horas até o nível 20: 70 h, contra 80–110.
+- Casuais no nível 10 ou mais: 98,9%.
+- Tempo andando ou esperando: 20,8% (faixa até 20%).
 
 Elas são recalibradas com a curva de XP na Etapa 2.

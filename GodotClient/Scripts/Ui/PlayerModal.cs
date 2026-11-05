@@ -1263,6 +1263,7 @@ public partial class PlayerModal : ModalFrame
             case "session_great": icon = "sparkles"; break;
             case "session_bad": icon = "trending-down"; break;
             case "session_extended": icon = "timer"; break;
+            case "session_continued": icon = "timer"; break;
             case "stayed_up_late": icon = "sunrise"; color = UiTokens.Warning; break;
             case "work_interruption": icon = "bell"; color = UiTokens.Warning; break;
             case "player_inactive": icon = "hourglass"; break;
@@ -1470,6 +1471,8 @@ public partial class PlayerModal : ModalFrame
             case "session_started":
                 if (e.Causes.Count > 0 && e.Causes[0].Factor == "work_break") return ($"Jogou na pausa do trabalho ({e.Detail})", UiTokens.Success);
                 if (e.Causes.Count > 0 && e.Causes[0].Factor == "during_work") return ($"Deu uma escapada no expediente ({e.Detail})", UiTokens.Warning);
+                if (e.Causes.Count > 1 && e.Causes[1].Factor == "return") return ($"Voltou a jogar depois de uma pausa ({e.Detail})", UiTokens.Success);
+                if (e.Causes.Count > 1 && e.Causes[1].Factor == "early_choice") return ($"Conectou antes do horário de costume ({e.Detail})", UiTokens.Success);
                 return ($"Conectou ({e.Detail})", UiTokens.Success);
             case "stayed_up_late":
                 return ($"Foi dormir {e.Detail} mais tarde por causa do jogo ({ExtendMotivePt(e.Causes.Count > 0 ? e.Causes[0].Factor : "")})", UiTokens.Warning);
@@ -1503,6 +1506,8 @@ public partial class PlayerModal : ModalFrame
                 string sessWhy = string.Join(", ", e.Causes.Take(2).Select(c => DriverPt(c.Factor).ToLowerInvariant()));
                 return e.Type == "session_great" ? ($"Sessão ótima — {sessWhy}", UiTokens.Success) : ($"Sessão ruim — {sessWhy}", UiTokens.Danger);
             }
+            case "session_continued":
+                return ($"Continuou jogando depois da sessão normal ({e.Detail})", UiTokens.Success);
             case "session_extended":
             {
                 string motive = ExtendMotivePt(e.Causes.Count > 0 ? e.Causes[0].Factor : "");

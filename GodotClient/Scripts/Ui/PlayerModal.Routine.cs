@@ -100,7 +100,7 @@ public partial class PlayerModal
                 (Card("Finanças", MoneyBody(), info: "Dinheiro real fictício do tycoon (P2)\n~Separado do ouro do MMORPG. Sem efeito até a monetização (M7)."), 3),
                 (Card("Vontade de jogar", WillBody(), info: "O que faz a pessoa jogar e parar\n~Importância do jogo, hábito, tendência a prolongar e autocontrole são traços separados: dá para priorizar o jogo e parar na hora, ou ligar pouco e se empolgar.\n~O humor (satisfação e engajamento) muda a vontade de verdade, e a disposição de cada dia varia um pouco (querer descansar ou fazer outra coisa). A estimativa é só a rotina e o hábito; o real inclui humor, cansaço e sessões estendidas."), 6)),
             Grid(12,
-                (Card("Semana típica", AgendaBody(), info: "O que a rotina permite e o que se espera (hora local)\n~Azul (verde em dia livre): o tempo livre do dia, o que sobra depois de sono, obrigações, deslocamento, preparo e chegada. Dourado: o jogo estimado, a chance de jogar no dia (rotina e hábito, calculada na semana real dia a dia) × o tempo desejado do dia que cabe na janela, mais a segunda sessão quando sobra vontade e há outra janela; sem o humor. É uma estimativa. Embaixo de cada dia, a chance de jogar.\n~Passe o mouse num dia para ver os horários."), 6),
+                (Card("Semana típica", AgendaBody(), info: "O que a rotina permite e o que se espera (hora local)\n~Azul (verde em dia livre): o tempo livre do dia, o que sobra depois de sono, obrigações, deslocamento, preparo e chegada. Dourado: o jogo estimado, a chance de jogar no dia (rotina e hábito, calculada na semana real dia a dia) × o tempo desejado do dia que cabe na janela, com as voltas depois de uma pausa e o continuar jogando, pela mesma regra do planejador (dias simulados); sem o humor. É uma estimativa. Embaixo de cada dia, a chance de jogar.\n~Passe o mouse num dia para ver os horários."), 6),
                 (Card("Ocupação", OccupationBody(occ), info: "Obrigações da ocupação\n~Horários individuais (cada pessoa varia um pouco), deslocamento e folgas. No trabalho remoto, a pausa permite jogar; com flexibilidade, às vezes há uma escapada no expediente, curta e interrompível por um chamado do trabalho."), 6)),
             Grid(12,
                 (Card("Últimos 30 dias", DaysBody(detail), info: "O que a pessoa fez com o tempo livre\n~Área azul: tempo livre de cada dia. Linha dourada: tempo jogado. Quando não jogou, o ponto fica no zero com a cor do motivo (sem tempo, outro lazer, cansaço, desânimo). Faixas verdes: dias livres. Losango azul: jogou no horário do trabalho remoto. Ponto roxo no alto: um compromisso no dia livre (festa, visita à família, passeio), que tira horas do tempo livre.\n~A agenda é estado da simulação (30 dias), sem um evento por dia."), 6),
@@ -130,7 +130,7 @@ public partial class PlayerModal
             lines.Add(d.PlannedStart >= 0
                 ? ($"Chance de jogar {d.ChancePermille / 10}% · sessão de {d.PlannedMinutes} min às {Clock(d.PlannedStart)}", UiTokens.AccentSoft)
                 : ("Nenhuma janela comporta uma sessão", UiTokens.Danger));
-            if (d.PlannedStart >= 0) lines.Add(($"Estimativa: {d.ExpectedMinutes} min (chance do dia com o hábito × sessão, mais a segunda sessão quando sobra vontade)", UiTokens.AccentSoft));
+            if (d.PlannedStart >= 0) lines.Add(($"Estimativa: {d.ExpectedMinutes} min (chance do dia com o hábito × o jogo de um dia típico, com as voltas)", UiTokens.AccentSoft));
             var chanceColor = d.ChancePermille >= 600 ? UiTokens.Success : d.ChancePermille >= 300 ? UiTokens.TextLabel : UiTokens.TextSecondary;
             groups.Add(new BarGroup
             {
@@ -216,17 +216,17 @@ public partial class PlayerModal
             }
             int played = detail.DayPlans.Sum(d => playedByDay.TryGetValue(d.LocalDay, out int m) ? m : d.Sessions > 0 ? d.PlannedMinutes : 0);
             int real = freeSum == 0 ? 0 : played * 100 / freeSum;
-            var tip = new TipPanel { TooltipText = $"Uso real do tempo livre\nJogou|{Hours(played)} em {detail.DayPlans.Count} dias\nTempo livre|{Hours(freeSum)}\n~Inclui sessões estendidas, segunda sessão e o efeito do humor; o previsto é só a rotina.", MouseFilter = MouseFilterEnum.Stop };
+            var tip = new TipPanel { TooltipText = $"Uso real do tempo livre\nJogou|{Hours(played)} em {detail.DayPlans.Count} dias\nTempo livre|{Hours(freeSum)}\n~Inclui o continuar jogando, as voltas, ficar acordado e o efeito do humor; o previsto é só a rotina.", MouseFilter = MouseFilterEnum.Stop };
             tip.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
             tip.AddChild(Bar("Real (30 dias)", Math.Min(100, real), 100, UiTokens.Success, $"{real}% do livre", 110));
             realBar = tip;
         }
         var meters = new HBoxContainer();
         meters.AddThemeConstantOverride("separation", 24);
-        var mLeft = Column(12, TraitMeter("Importância do jogo", t.GameImportance, "Importância do jogo\n~Prioridade do jogo entre os lazeres: decide se joga no dia, se volta para uma segunda sessão quando sobra vontade, se joga na pausa do trabalho e a pressa de começar. Não muda a duração da sessão. É o que define o hardcore, não o tempo livre."),
+        var mLeft = Column(12, TraitMeter("Importância do jogo", t.GameImportance, "Importância do jogo\n~Prioridade do jogo entre os lazeres. Pesa em cada decisão: jogar no dia, começar antes do horário de costume, continuar depois da sessão normal, voltar depois de uma pausa e jogar na pausa do trabalho. Não muda a duração normal da sessão. É o que define o hardcore, não o tempo livre."),
             TraitMeter("Hábito", t.Habit, HabitTip()));
-        var mRight = Column(12, TraitMeter("Tendência a prolongar", t.ExtendTendency, "Tendência a prolongar\n~Vontade de ficar \"só mais um pouco\" quando a sessão está boa ou a meta está perto. Até 2 vezes por sessão e 3 h no total; no fim do dia, corta sono."),
-            TraitMeter("Autocontrole", t.SelfControl, "Autocontrole\n~Freia a extensão da sessão e a escapada no expediente. Independe da importância do jogo."));
+        var mRight = Column(12, TraitMeter("Tendência a prolongar", t.ExtendTendency, "Tendência a prolongar\n~Dificuldade de encerrar: aumenta a vontade de continuar depois da sessão normal (até ±20%). Na hora de dormir, quando a sessão está boa ou a meta está perto, pode ficar acordado jogando (até 2 vezes por sessão e 3 h no total, dentro do corte de sono)."),
+            TraitMeter("Autocontrole", t.SelfControl, "Autocontrole\n~Freia ficar acordado jogando depois da hora de dormir e a escapada no expediente. Independe da importância do jogo."));
         mLeft.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         mRight.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         meters.AddChild(mLeft);
@@ -278,15 +278,16 @@ public partial class PlayerModal
             return Row(0, MiniStat(Hours(_person.ExpectedWeeklyMinutes), "Estimativa por semana"), MiniStat("–", "Sem tempo para uma sessão"));
         int start = Median(days.Select(d => d.PlannedStart).ToList());
         int minutes = Median(days.Select(d => d.PlannedMinutes).ToList());
+        int end = Median(days.Select(d => d.PlannedEnd >= 0 ? d.PlannedEnd : d.PlannedStart + d.PlannedMinutes).ToList());
         var row = Row(0,
             MiniStat(Hours(_person.ExpectedWeeklyMinutes), "Estimativa/semana"),
-            MiniStat(minutes >= 60 ? Hours(minutes) : $"{minutes} min", $"Sessão no {which}"),
+            MiniStat(minutes >= 60 ? Hours(minutes) : $"{minutes} min", $"Jogo num {which}"),
             MiniStat($"{t.PreferredStartHour:00}h", "Horário preferido"),
             MiniStat(Clock(start), "Costuma começar"),
-            MiniStat(Clock(start + minutes), "Costuma sair"));
+            MiniStat(Clock(end), "Costuma sair"));
         var tip = new TipPanel
         {
-            TooltipText = $"Hábito de jogo ({which}, hora local)\nHorário preferido|{t.PreferredStartHour:00}h\nCostuma começar|{Clock(start)}\nSai|{Clock(start + minutes)}\nSessão|{minutes} min\nSessão normal da pessoa|{t.SessionMinutes} min\n~Gosto e prática são coisas separadas: a pessoa pode preferir uma hora e a rotina só permitir outra. Quem prioriza o jogo começa logo que fica livre; o casual espera mais.\n~A sessão normal cresce até ×{PtBr.Decimal(_ctx.Content.Routine.MaxPlannedAmplificationPermille / 1000.0, 1)} em dia com muito tempo livre, igual para todos os perfis. Sem o humor e as sessões estendidas.",
+            TooltipText = $"Hábito de jogo ({which}, hora local)\nHorário preferido|{t.PreferredStartHour:00}h\nCostuma começar|{Clock(start)}\nSai (última sessão)|{Clock(end)}\nJogo num dia típico|{minutes} min\nSessão normal da pessoa|{t.SessionMinutes} min\n~Gosto e prática são coisas separadas: a pessoa pode preferir uma hora e a rotina só permitir outra. Quem prioriza o jogo começa logo que fica livre; o casual espera mais.\n~A sessão normal é uma preferência: ao chegar nela, a pessoa decide se continua (vontade de jogar contra saciedade, cansaço e outras opções). Depois de parar, pode voltar após uma pausa. Num dia típico pela estimativa, sem o humor.",
             MouseFilter = MouseFilterEnum.Stop,
         };
         tip.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
@@ -367,9 +368,11 @@ public partial class PlayerModal
             };
             if (d.Sessions > 0 || playedMin > 0)
                 lines.Add(($"Jogou: {playedMin} min{(logged ? "" : " (planejado)")}" + (d.FirstStartMinute >= 0 ? $" · começou {Clock(d.FirstStartMinute)}" : ""), UiTokens.AccentSoft));
-            if (d.DesiredMinutes > 0)
-                lines.Add(($"Queria jogar: {d.DesiredMinutes} min · disposição {(d.DispositionPermille >= 0 ? "+" : "−")}{Math.Abs(d.DispositionPermille) / 10}%", UiTokens.TextSecondary));
-            if (d.SkippedSessions > 0) lines.Add(("Deixou a 2ª sessão de lado: já tinha jogado o que queria", UiTokens.TextSecondary));
+            if (d.Sittings > 0)
+                lines.Add(($"Sessões: {d.Sittings}" + (d.Returns > 0 ? $" (voltou {d.Returns} vez{(d.Returns > 1 ? "es" : "")} depois de uma pausa)" : "")
+                    + $" · disposição {(d.DispositionPermille >= 0 ? "+" : "−")}{Math.Abs(d.DispositionPermille) / 10}%", UiTokens.TextSecondary));
+            if (d.DeclinedReturns > 0) lines.Add(("Pensou em voltar e preferiu outra coisa", UiTokens.TextSecondary));
+            if (d.SkippedAfterWork > 0) lines.Add(("Já tinha jogado no trabalho e não quis jogar à noite", UiTokens.TextSecondary));
             if (d.SleepMinutes > 0) lines.Add(($"Sono na noite anterior: {Hours(d.SleepMinutes)}" + (d.DeficitMinutes > 0 ? $" · déficit {Hours(d.DeficitMinutes)}" : ""), UiTokens.TextSecondary));
             if (d.WorkOverlapMinutes > 0) lines.Add(($"Escapada no expediente: {d.WorkOverlapMinutes} min" + (d.WorkSessions > 1 ? " + pausa" : ""), UiTokens.Warning));
             else if (d.WorkSessions > 0) lines.Add(("Jogou na pausa do trabalho", UiTokens.Info));

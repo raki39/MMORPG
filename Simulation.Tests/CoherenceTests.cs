@@ -87,16 +87,23 @@ public class CoherenceTests
         }
     }
 
-    /// <summary>Quem prioriza o jogo joga mais nos dias com muito tempo livre (nao so no fim de semana).</summary>
+    /// <summary>
+    /// v3 (D-051): o tempo livre nao estica a sessao normal; ele aparece como mais tempo para
+    /// continuar e voltar. A estimativa de quem prioriza o jogo e maior no dia com mais tempo livre.
+    /// </summary>
     [Fact]
-    public void SessaoDesejada_CresceComTempoLivre_ParaQuemPriorizaOJogo()
+    public void MaisTempoLivre_MaisJogoEstimado_ParaQuemPriorizaOJogo()
     {
         var p = People.First(x => x.Traits.GameImportance >= 750);
         var part = DailySchedule.Build(p, C.Occupations["meio_periodo_manha"], RS, 1, false, false, false);
         var full = DailySchedule.Build(p, C.Occupations["comercial"], RS, 1, false, false, false);
         Assert.True(part.FreeMinutes > full.FreeMinutes);
-        Assert.True(DailySchedule.DesiredMinutes(p, part, RS) > DailySchedule.DesiredMinutes(p, full, RS));
-        Assert.True(DailySchedule.DesiredMinutes(p, part, RS) > p.Traits.SessionMinutes);
+        Assert.Equal(DailySchedule.SessionMinutes(p, RS), p.Traits.SessionMinutes);
+        var rng1 = new Simulation.Core.Random.DeterministicRng(7);
+        var rng2 = new Simulation.Core.Random.DeterministicRng(7);
+        int a = 0, b = 0;
+        for (int i = 0; i < 60; i++) { a += DailySchedule.SimulateDay(p, part, 0, rng1, RS).Minutes; b += DailySchedule.SimulateDay(p, full, 0, rng2, RS).Minutes; }
+        Assert.True(a > b, $"meio periodo {a / 60} min/dia x comercial {b / 60}");
     }
 
     [Fact]

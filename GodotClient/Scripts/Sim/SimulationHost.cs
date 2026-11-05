@@ -112,6 +112,8 @@ public sealed record WeekDayView(int Dow, IReadOnlyList<(int Start, int End, str
     public int ChancePermille { get; init; }
     public int PlannedStart { get; init; } = -1;
     public int PlannedMinutes { get; init; }
+    /// <summary>Fim tipico do jogo no dia (fim da ultima sessao, pela estimativa; -1 = sem jogo).</summary>
+    public int PlannedEnd { get; init; } = -1;
     public int ExpectedMinutes { get; init; }
 }
 
@@ -490,7 +492,7 @@ public sealed class SimulationHost : IDisposable
                 CommitmentMinutes = Sum("commitment"),
                 NightShift = day.NightShiftAhead, ShiftDeparture = day.ShiftDeparture,
                 Blocks = Simulation.Core.Behavior.DailySchedule.Blocks(p, occ, dow, false).Select(b => (b.Start, b.End, b.Label, b.Def.Remote, b.Commute)).ToArray(),
-                ChancePermille = ex.ChancePermille, PlannedStart = ex.Start, PlannedMinutes = ex.Minutes,
+                ChancePermille = ex.ChancePermille, PlannedStart = ex.Start, PlannedMinutes = ex.Minutes, PlannedEnd = ex.End,
                 ExpectedMinutes = ex.ExpectedMinutes,
             });
         }

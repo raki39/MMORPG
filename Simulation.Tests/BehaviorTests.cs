@@ -40,32 +40,41 @@ public class BehaviorTests
         Assert.Empty(e.World.Accounts);
     }
 
+    /// <summary>
+    /// v3 (D-051): o horario preferido influencia, nao obriga. Quem nao tem obrigacoes comeca no
+    /// horario de costume (o gosto, com a variacao do dia) ou antes, por vontade; nunca depois dele
+    /// sem motivo (compromisso ou tempo livre que so abre depois).
+    /// </summary>
     [Fact]
-    public void Sessoes_ComecamPertoDoHorarioPreferido()
+    public void Sessoes_ComecamNoHorarioDeCostumeOuAntesPorVontade()
     {
         var e = OpenedWorld();
-        var starts = new List<(int PersonId, DateTime At)>();
+        var starts = new List<(int PersonId, long Tick, string Reason)>();
         for (int d = 0; d < 14; d++)
         {
             e.AdvanceTo(SimTime.Days(d + 1));
-            foreach (var ev in e.World.Events.Drain().Where(x => x.Type == "session_started"))
-            {
-                var p = e.World.GetPerson((int)ev.Entities[0].Id);   // horario local (P1)
-                starts.Add((p.Id, e.World.Clock.Calendar.ToDateTime(ev.Tick + p.LocalOffsetMinutes * SimTime.TicksPerMinute)));
-            }
+            foreach (var ev in e.World.Events.Drain().Where(x => x.Type == "session_started" && x.Causes.Count > 1 && x.Causes[0].Factor == "normal"))
+                starts.Add(((int)ev.Entities[0].Id, ev.Tick, ev.Causes[1].Factor));
         }
-        // Quem nao tem obrigacoes (P2): o horario preferido cabe no tempo livre.
-        var weekday = starts.Where(s => e.World.CalendarOf(e.World.GetPerson(s.PersonId)).KindOf(s.At.Date) == DayKind.Weekday
-            && e.World.GetPerson(s.PersonId).OccupationId is "sem_ocupacao" or "aposentado").ToList();
-        Assert.True(weekday.Count > 20, $"amostra pequena: {weekday.Count}");
-        int near = weekday.Count(s =>
+        var w = e.World;
+        int jitter = TestSupport.Preset.Behavior.SessionStartJitterMinutes, step = TestSupport.Preset.Routine.StartStepMinutes;
+        var free = starts.Where(s => w.GetPerson(s.PersonId).OccupationId is "sem_ocupacao" or "aposentado" && s.Reason is "usual_time" or "early_choice").ToList();
+        Assert.True(free.Count > 20, $"amostra pequena: {free.Count}");
+        int late = 0;
+        foreach (var s in free)
         {
-            int preferred = e.World.GetPerson(s.PersonId).HabitualStartHour * 60;
-            int minute = s.At.Hour * 60 + s.At.Minute;
-            return Math.Abs(minute - preferred) <= TestSupport.Preset.Behavior.SessionStartJitterMinutes + 5;
-        });
-        // Tolerancia: o primeiro acesso (registro) pode cair fora da janela por chegar atrasado.
-        Assert.True(near * 100 / weekday.Count >= 85, $"{near}/{weekday.Count} perto do horário preferido");
+            var p = w.GetPerson(s.PersonId);
+            long cal = BehaviorSystem.LocalDay(p, s.Tick);
+            int minute = (int)((s.Tick - BehaviorSystem.LocalDayStart(p, cal)) / SimTime.TicksPerMinute);
+            var day = w.Behavior.LayoutOf(p, cal);
+            if (minute < day.Wake) { minute += 1440; day = w.Behavior.LayoutOf(p, cal - 1); }
+            int taste = p.Traits.PreferredStartHour * 60 < day.Wake ? p.Traits.PreferredStartHour * 60 + 1440 : p.Traits.PreferredStartHour * 60;
+            bool windowOpensLater = !day.Windows.Any(x => x.Start <= taste - jitter && taste - jitter < x.End);
+            if (minute > taste + jitter + step && !windowOpensLater) late++;
+        }
+        Assert.True(late * 100 / free.Count <= 5, $"{late}/{free.Count} comecaram depois do horario de costume sem motivo");
+        Assert.Contains(free, s => s.Reason == "early_choice");
+        Assert.Contains(free, s => s.Reason == "usual_time");
     }
 
     [Fact]

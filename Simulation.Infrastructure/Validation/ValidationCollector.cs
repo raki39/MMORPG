@@ -56,15 +56,20 @@ public sealed class RunMetrics
 }
 
 /// <summary>Uma sessao fechada na janela de medicao (R3): quem, quando, quanto e quanto foi estendido.</summary>
-/// <summary>Planned: minutos ao comecar; Desired, Disposition e FreeMinutes: da agenda do dia da sessao (-1 = sem agenda).</summary>
+/// <summary>
+/// Uma sessao (R3/v3). Planned: minutos ao comecar (a sessao normal ou o que cabia); Continued: minutos
+/// acrescentados pela decisao de continuar; ExtendedMinutes: ficou acordado jogando (corte de sono);
+/// StartReason e EndReason: os motivos do inicio e do fim; Disposition e FreeMinutes: da agenda do dia.
+/// </summary>
 public sealed record SessionSample(int PersonId, string Profile, string Occupation, string Kind, long Start, long End, int ExtendedMinutes, long LocalDay,
-    int Planned = 0, int Desired = -1, int Disposition = 0, int FreeMinutes = -1)
+    int Planned = 0, int Continued = 0, int Disposition = 0, int FreeMinutes = -1, string StartReason = "", string EndReason = "")
 {
     public int Minutes => (int)((End - Start) / SimTime.TicksPerMinute);
 }
 
 /// <summary>Um dia da agenda (R3), na janela de medicao.</summary>
-public sealed record DaySample(int PersonId, string Profile, string Occupation, long LocalDay, int FreeMinutes, int PlannedMinutes, int Sessions, int WorkSessions, string Reason, bool FreeDay = false, int Skipped = 0, int Desired = 0);
+public sealed record DaySample(int PersonId, string Profile, string Occupation, long LocalDay, int FreeMinutes, int PlannedMinutes, int Sessions, int WorkSessions, string Reason, bool FreeDay = false,
+    int Sittings = 0, int Returns = 0, int DeclinedReturns = 0, int SkippedAfterWork = 0);
 
 /// <summary>Medicao de distribuicoes (R3): referencia antes de mudar a vontade de jogar (R4).</summary>
 public sealed class DistributionData
@@ -174,7 +179,7 @@ public sealed class ValidationCollector
     private readonly Dictionary<long, long> _cutByPerson = new();
     private readonly SortedDictionary<string, double> _sleepWork = new(StringComparer.Ordinal);
     // R3: sessoes abertas (inicio, tipo, minutos estendidos) e fechadas na janela; corte por periodo de sono.
-    private readonly Dictionary<long, (long Start, string Kind, int Extended, int Planned)> _r3Open = new();
+    private readonly Dictionary<long, (long Start, string Kind, int Extended, int Planned, int Continued, string Why)> _r3Open = new();
     private readonly List<SessionSample> _r3Sessions = new();
     private readonly Dictionary<(long Person, long LocalDay), int> _r3CutByNight = new();
     private void CountSleepWork(string key, double amount = 1) => _sleepWork[key] = _sleepWork.GetValueOrDefault(key) + amount;
@@ -206,7 +211,7 @@ public sealed class ValidationCollector
                     long pid = e.Entities[0].Id;
                     _openSession[pid] = e.Tick;
                     _r3Open[pid] = (e.Tick, e.Causes.Count > 0 ? e.Causes[0].Factor : "normal", 0,
-                        int.TryParse((e.Detail ?? "").Split(' ')[0], out int plannedMin) ? plannedMin : 0);
+                        int.TryParse((e.Detail ?? "").Split(' ')[0], out int plannedMin) ? plannedMin : 0, 0, e.Causes.Count > 1 ? e.Causes[1].Factor : "");
                     long cid = w.GetPerson((int)pid).CharacterId;
                     if (_lastChoice.Remove(cid, out var prev) && prev.Run > 0 && e.Tick >= _windowStart) _runs.Add(prev.Run);
                     if (e.Tick < _windowStart) break;
@@ -242,7 +247,7 @@ public sealed class ValidationCollector
                         var rec = who.DayPlans.LastOrDefault(r => r.LocalDay == sday && r.Reason == "played")
                                   ?? who.DayPlans.LastOrDefault(r => r.LocalDay == sday - 1 && r.Reason == "played");
                         _r3Sessions.Add(new SessionSample((int)pid, who.ProfileId, who.OccupationId, r3.Kind, r3.Start, e.Tick, r3.Extended, sday,
-                            r3.Planned, rec?.DesiredMinutes ?? -1, rec?.DispositionPermille ?? 0, rec?.FreeMinutes ?? -1));
+                            r3.Planned, r3.Continued, rec?.DispositionPermille ?? 0, rec?.FreeMinutes ?? -1, r3.Why, e.Causes.Count > 0 ? e.Causes[0].Factor : ""));
                     }
                     if (_openSession.Remove(pid, out long start)) AddPlayed(pid, start, e.Tick);
                     if (e.Tick >= _windowStart) _rated++;
@@ -284,12 +289,16 @@ public sealed class ValidationCollector
                     _quitLevels.Add(c.Level);
                     break;
                 }
+                case "session_continued":
+                    if (_r3Open.TryGetValue(e.Entities[0].Id, out var openC) && int.TryParse((e.Detail ?? "").Trim('+', ' ', 'm', 'i', 'n'), out int contMin))
+                        _r3Open[e.Entities[0].Id] = (openC.Start, openC.Kind, openC.Extended, openC.Planned, openC.Continued + contMin, openC.Why);
+                    break;
                 case "session_extended":
                     if (e.Tick < _windowStart) break;
                     _extended++;
                     _extByPerson[e.Entities[0].Id] = _extByPerson.GetValueOrDefault(e.Entities[0].Id) + 1;
                     if (_r3Open.TryGetValue(e.Entities[0].Id, out var openR3) && int.TryParse((e.Detail ?? "").Trim('+', ' ', 'm', 'i', 'n'), out int extMin))
-                        _r3Open[e.Entities[0].Id] = (openR3.Start, openR3.Kind, openR3.Extended + extMin, openR3.Planned);
+                        _r3Open[e.Entities[0].Id] = (openR3.Start, openR3.Kind, openR3.Extended + extMin, openR3.Planned, openR3.Continued, openR3.Why);
                     if (e.Causes.Count > 0) CountSleepWork("ext_" + e.Causes[0].Factor);
                     if (e.Causes.Any(c => c.Factor == "sleep_cut")) CountSleepWork("ext_sleep_cut");
                     break;
@@ -507,7 +516,7 @@ public sealed class ValidationCollector
             dist.Persons[key] = dist.Persons.GetValueOrDefault(key) + 1;
             foreach (var d in p.DayPlans)
                 if (d.LocalDay >= windowDay)
-                    dist.Days.Add(new DaySample(p.Id, p.ProfileId, p.OccupationId, d.LocalDay, d.FreeMinutes, d.PlannedMinutes, d.Sessions, d.WorkSessions, d.Reason, d.FreeDay, d.SkippedSessions, d.DesiredMinutes));
+                    dist.Days.Add(new DaySample(p.Id, p.ProfileId, p.OccupationId, d.LocalDay, d.FreeMinutes, d.PlannedMinutes, d.Sessions, d.WorkSessions, d.Reason, d.FreeDay, d.Sittings, d.Returns, d.DeclinedReturns, d.SkippedAfterWork));
         }
         foreach (var kv in _sleepWork) m.SleepWork[kv.Key] = kv.Value;
         m.SleepWork["sessions"] = _sessionsInWindow.Values.Sum();

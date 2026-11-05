@@ -53,7 +53,7 @@ tools/perf.ps1 -Quick   # por etapa: abre o jogo uma vez (~15 s); a completa (se
 - M0 e teste de viabilidade concluídos. M1 quase concluído (falta a revisão em 1366×768).
 - M2 fechado (D-039): plano da sessão, humor, memória, abandono e retorno (`docs/comportamento.md`); atributos do jogador em `docs/atributos.md`.
 - Roteiro por etapas (backlog):
-  0. Pessoa (`docs/plano-pessoa.md`): P0 a P3 feitas (D-041 a D-044: parâmetros, localidade e fuso, obrigações e tempo livre, sono e jogo no trabalho remoto); revisão da rotina R1 a R4 feitas (D-047 a D-050) → R5 (recalibrar e reescrever `docs/rotina.md`) → P4 traits. Reputação com a Etapa 3; finanças no M7.
+  0. Pessoa (`docs/plano-pessoa.md`): P0 a P3 feitas (D-041 a D-044: parâmetros, localidade e fuso, obrigações e tempo livre, sono e jogo no trabalho remoto); revisão da rotina R1 a R4 feitas (D-047 a D-051; a vontade de jogar da R4 foi corrigida na v3, D-051) → R5 (recalibrar e reescrever `docs/rotina.md`) → P4 traits. Reputação com a Etapa 3; finanças no M7.
   1. Etapa 1 — personagem (classes, atributos do personagem, itens iniciais, inventário e ouro).
   2. Etapa 2 — combate PvE (M3; recalibrar a curva a/b).
   3. Etapa 3 — PvP e chefe.

@@ -1,4 +1,5 @@
 using Simulation.Core.Content;
+using Simulation.Core.Random;
 using Simulation.Core.Population;
 
 namespace Simulation.Core.Behavior;
@@ -274,30 +275,111 @@ public static class DailySchedule
     }
 
     /// <summary>
-    /// Sessao planejada pela rotina (R4): a sessao normal da pessoa (sessionMinutes, com a variacao
-    /// do dia) ampliada pelo tempo livre, ate maxPlannedAmplificationPermille (x1,5) com o tempo
-    /// livre cheio. A importancia do jogo nao entra: ela decide a prioridade (chance), nao a duracao.
+    /// Sessao normal (v3): a duracao que a pessoa gosta de jogar de uma vez (sessionMinutes). E uma
+    /// preferencia: ao chega-la, a pessoa decide se continua; nao e limite nem e ampliada pelo
+    /// tempo livre. A variacao so vale na primeira sessao do cadastro e da volta (sem agenda).
     /// </summary>
-    public static int DesiredMinutes(Person p, DayLayout day, RoutineSettingsDefinition rs, int jitterPermille = 1000)
+    public static int SessionMinutes(Person p, RoutineSettingsDefinition rs, int jitterPermille = 1000) =>
+        Math.Max(rs.MinSessionMinutes, p.Traits.SessionMinutes * jitterPermille / 1000);
+
+    /// <summary>
+    /// Prioridade do jogo dentro do dia (v3), 0..1000: a importancia e o tempo livre (quem liga pouco
+    /// joga mais quando sobra lazer), sem o peso do dia de obrigacoes, que entra uma vez so, na chance
+    /// de jogar no dia (BaseChance). Usada nas decisoes de comecar, continuar e voltar.
+    /// </summary>
+    public static int SessionPriority(Person p, DayLayout day, RoutineSettingsDefinition rs)
     {
+        int imp = Math.Clamp(p.Traits.GameImportance, 0, 1000);
         int freeness = Math.Min(1000, day.FreeMinutes * 1000 / Math.Max(1, rs.FullFreeMinutes));
-        long m = (long)p.Traits.SessionMinutes * jitterPermille / 1000;
-        m = m * (1000 + (rs.MaxPlannedAmplificationPermille - 1000) * freeness / 1000) / 1000;
-        return (int)Math.Max(rs.MinSessionMinutes, m);
+        return Math.Clamp(imp + (1000 - imp) * rs.FreeDayChanceBonus / 1000 * freeness / 1000, 0, 1000);
     }
 
     /// <summary>
-    /// Tempo desejado de jogo no dia (R4): a sessao planejada com a disposicao do dia, parte do
-    /// efeito do humor e o cansaco, combinados e limitados uma vez no fim. Intencao flexivel: tudo
-    /// o que a pessoa joga no dia (inclusive no trabalho) sai dela, mas extensoes e acontecimentos
-    /// podem passar dela.
+    /// Vontade de jogar agora (v3, permille; 0..2000): a prioridade do jogo no dia vezes a disposicao
+    /// do dia, o humor (engajamento), a experiencia (a sessao em relacao ao que a pessoa costuma
+    /// sentir, para nao contar duas vezes o que o humor ja tem) e, para continuar, a tendencia a
+    /// prolongar. Combinados e limitados uma vez no fim.
     /// </summary>
-    public static int DayIntentMinutes(int plannedSession, int dispositionPermille, int moodFactorPermille, int fatigue, RoutineSettingsDefinition rs)
+    public static int Pull(int priority, int disposition, int moodFactor, int experienceDelta, int tendencyFactor, RoutineSettingsDefinition rs)
     {
-        long m = (long)plannedSession * (1000 + dispositionPermille) / 1000;
-        m = m * (1000 + (moodFactorPermille - 1000) * rs.MoodDurationWeightPermille / 1000) / 1000;
-        m = m * (1000 - fatigue * rs.FatigueDurationPenalty / 1000) / 1000;
-        return (int)Math.Max(rs.MinSessionMinutes, m);
+        long v = (long)priority * (1000 + disposition) / 1000;
+        v = v * moodFactor / 1000;
+        v = v * (1000 + experienceDelta * rs.ExperienceWeightPermille / 1000) / 1000;
+        v = v * tendencyFactor / 1000;
+        return (int)Math.Clamp(v, 0, 2000);
+    }
+
+    /// <summary>Fator da tendencia a prolongar na vontade de continuar (v3, permille; 500 = neutro).</summary>
+    public static int TendencyFactor(Person p, RoutineSettingsDefinition rs) =>
+        1000 + (Math.Clamp(p.Traits.ExtendTendency, 0, 1000) - 500) * rs.ContinueTendencyWeightPermille / 1000;
+
+    /// <summary>Vontade de parar (v3): a saciedade (0..1000) mais o cansaco do sono, com o peso dele na chance.</summary>
+    public static int StopPressure(int satiety, int fatigue, RoutineSettingsDefinition rs) =>
+        Math.Max(0, satiety) + fatigue * rs.FatigueChancePenalty / 1000;
+
+    /// <summary>
+    /// Decisao de jogar agora (v3, permille): a vontade de jogar comparada com as outras opcoes de
+    /// lazer (1000 - prioridade) e a vontade de parar. Sem saciedade nem cansaco, com disposicao,
+    /// humor e experiencia neutros, a chance e a propria prioridade do jogo.
+    /// </summary>
+    public static int Choice(int pull, int priority, int push) =>
+        (int)((long)pull * 1000 / Math.Max(1, pull + (1000 - Math.Clamp(priority, 0, 1000)) + Math.Max(0, push)));
+
+    /// <summary>
+    /// Saciedade depois de jogar "minutes" (v3): sobe a fracao m / (m + tau) do que falta ate 1000,
+    /// com tau = satietyGrowthSessionsPermille x sessao normal (padrao: metade do que falta a cada
+    /// duas sessoes normais). Todo o tempo jogado conta, inclusive o interrompido.
+    /// </summary>
+    public static int SatietyAfterPlay(int satiety, long minutes, int sessionMinutes, RoutineSettingsDefinition rs)
+    {
+        if (minutes <= 0) return satiety;
+        long tau = Math.Max(1, (long)Math.Max(1, sessionMinutes) * rs.SatietyGrowthSessionsPermille / 1000);
+        return (int)(satiety + (1000 - satiety) * minutes / (minutes + tau));
+    }
+
+    /// <summary>Saciedade depois de uma pausa (v3): cai a fracao m / (m + satietyRecoveryMinutes); metade a cada esse tanto.</summary>
+    public static int SatietyAfterPause(int satiety, long minutes, RoutineSettingsDefinition rs)
+    {
+        if (minutes <= 0) return satiety;
+        return (int)(satiety - satiety * minutes / (minutes + Math.Max(1, rs.SatietyRecoveryMinutes)));
+    }
+
+    /// <summary>
+    /// Inicio do dia (v3), com um sorteio so (u em 0..999999), depois que a pessoa decidiu jogar hoje:
+    /// - a vontade de comecar vale por hora e se acumula no tempo livre, em passos de startStepMinutes
+    ///   (o passo so arredonda o horario: nao sao tentativas independentes nem dependem de quantas
+    ///   vezes se avalia);
+    /// - antes do horario de costume ha resistencia (earlyStartResistancePerHour por hora de antecedencia);
+    /// - no horario de costume (ou no primeiro tempo livre depois dele) comeca; se ele nao cabe no dia,
+    ///   no ultimo momento em que ainda da para jogar a sessao normal;
+    /// - no dia livre, a primeira janela comeca depois da manha (freeDayMorningMinutes).
+    /// Devolve -1 se nenhuma janela comporta a sessao minima.
+    /// </summary>
+    public static int StartMinute(DayLayout day, int target, int sessionMinutes, int pull, int priority, int push, int u, RoutineSettingsDefinition rs)
+    {
+        var usable = day.Windows.Where(w => w.End - w.Start >= rs.MinSessionMinutes).ToList();
+        if (usable.Count == 0) return -1;
+        if (target < day.Wake) target += 1440;   // costume de madrugada: depois da meia-noite
+        var last = usable[^1];
+        int latest = last.End - Math.Min(Math.Max(rs.MinSessionMinutes, sessionMinutes), last.End - last.Start);
+        int step = Math.Max(1, rs.StartStepMinutes);
+        long survive = 1_000_000;   // chance (milionesimos) de ainda nao ter comecado
+        for (int i = 0; i < usable.Count; i++)
+        {
+            var (ws, we) = usable[i];
+            bool isLast = i == usable.Count - 1;
+            int t = ws;
+            if (i == 0 && day.FreeDay && ws + rs.FreeDayMorningMinutes <= we - rs.MinSessionMinutes) t = ws + rs.FreeDayMorningMinutes;
+            for (; t <= we - rs.MinSessionMinutes; t += step)
+            {
+                if (isLast && t >= latest) return Math.Max(ws, latest);
+                if (t >= target) return t;
+                int q = Choice(pull, priority, push + (int)Math.Min(100_000, (long)(target - t) * rs.EarlyStartResistancePerHour / 60));
+                survive = survive * (60_000 - (long)q * step) / 60_000;
+                if (1_000_000 - survive > u) return t;
+            }
+        }
+        return Math.Max(last.Start, latest);
     }
 
     /// <summary>
@@ -329,55 +411,6 @@ public static class DailySchedule
     /// </summary>
     public static int HabitFactor(int habit, int regularity, RoutineSettingsDefinition rs) =>
         1000 + habit * rs.HabitStreakPermille / 1000 * (2 * regularity - 1000) / 1000;
-
-    /// <summary>
-    /// Segunda sessao do dia (R4), possivel para qualquer perfil: so se sobrou vontade depois do
-    /// que ja foi planejado (inclusive no trabalho) e ha outra janela. A chance e a vontade
-    /// restante, menos o custo de entrar de novo, comparada a sessao normal da pessoa, vezes a
-    /// prioridade do jogo (importancia). Janela anterior a principal: joga no fim dela (antes de
-    /// sair); posterior: no comeco. Janela -1 = nao ha segunda sessao.
-    /// </summary>
-    public static (int Window, int Start, int Minutes, int ChancePermille) SecondSession(Person p, DayLayout day, int mainWindow, int remaining, RoutineSettingsDefinition rs)
-    {
-        int net = remaining - rs.ReentryCostMinutes;
-        if (rs.MaxSessionsPerDay < 2 || net < rs.MinSessionMinutes || mainWindow < 0) return (-1, 0, 0, 0);
-        int other = -1;
-        for (int i = 0; i < day.Windows.Count; i++)
-        {
-            int len = day.Windows[i].End - day.Windows[i].Start;
-            if (i == mainWindow || len < rs.MinSessionMinutes) continue;
-            if (other < 0 || len > day.Windows[other].End - day.Windows[other].Start) other = i;
-        }
-        if (other < 0) return (-1, 0, 0, 0);
-        var (s, e) = day.Windows[other];
-        int minutes = Math.Min(e - s, remaining);
-        int start = other < mainWindow ? e - minutes : s;
-        int saturation = Math.Min(1000, net * 1000 / Math.Max(1, p.Traits.SessionMinutes));
-        int chance = Math.Clamp(p.Traits.GameImportance, 0, 1000) * saturation / 1000;
-        return (other, start, minutes, chance);
-    }
-
-    /// <summary>
-    /// Pontos da disposicao do dia para a estimativa (R4): a mesma distribuicao do sorteio (media de
-    /// tres uniformes em +-spread), em nove faixas com o peso de cada uma.
-    /// </summary>
-    public static (int Value, double Weight)[] DispositionPoints(int spread)
-    {
-        if (spread <= 0) return new[] { (0, 1.0) };
-        const int K = 9;
-        var pts = new (int, double)[K];
-        double sum = 0;
-        for (int k = 0; k < K; k++)
-        {
-            double u = -1 + (2.0 * k + 1) / K;          // centro da faixa em -1..1
-            double y = 1.5 * (u + 1);                    // soma de tres uniformes 0..1
-            double f = y < 1 ? y * y / 2 : y < 2 ? (-2 * y * y + 6 * y - 3) / 2 : (3 - y) * (3 - y) / 2;
-            pts[k] = ((int)Math.Round(u * spread), f);
-            sum += f;
-        }
-        for (int k = 0; k < K; k++) pts[k].Item2 /= sum;
-        return pts;
-    }
 
     /// <summary>
     /// Escolhe a janela e o inicio: a que contem o horario preferido (ou a mais proxima; empate,
@@ -533,85 +566,135 @@ public static class DailySchedule
     public static int MaxDeficit(Person p, RoutineSettingsDefinition rs) =>
         rs.MaxDeficitMinutes * (500 + p.SleepDebtTolerance) / 1000;
 
-    /// <summary>Estimativa de um dia pela rotina (sem humor): chance, sessao principal e minutos esperados.</summary>
-    public readonly record struct DayExpectation(int ChancePermille, int Start, int Minutes, int ExpectedMinutes);
+    /// <summary>Estimativa de um dia pela rotina (sem humor): chance, inicio e fim tipicos (fim da ultima sessao), minutos num dia com jogo e minutos esperados.</summary>
+    public readonly record struct DayExpectation(int ChancePermille, int Start, int Minutes, int ExpectedMinutes, int End = -1);
+
+    /// <summary>Um dia simulado pela regra da v3 (sem humor, cansaco, jogo no trabalho nem corte de sono): inicio e minutos.</summary>
+    public static (int Start, int Minutes, int Sittings, int End) SimulateDay(Person p, DayLayout day, int disposition, DeterministicRng rng, RoutineSettingsDefinition rs)
+    {
+        int session = SessionMinutes(p, rs);
+        int prio = SessionPriority(p, day, rs);
+        int target = (day.FreeDay ? p.Traits.PreferredStartHour : p.HabitualStartHour) * 60;
+        int start = StartMinute(day, target, session, Pull(prio, disposition, 1000, 0, 1000, rs), prio, 0, rng.NextInt(1_000_000), rs);
+        if (start < 0) return (-1, 0, 0, -1);
+        int pullContinue = Pull(prio, disposition, 1000, 0, TendencyFactor(p, rs), rs);
+        int pullReturn = Pull(prio, disposition, 1000, 0, 1000, rs);
+        int satiety = 0, total = 0, sittings = 0, t = start, last = start;
+        while (true)
+        {
+            int wi = day.Windows.FindIndex(w => w.Start <= t && t < w.End);
+            if (wi < 0) break;
+            int we = day.Windows[wi].End;
+            int end = Math.Min(we, t + session);
+            satiety = SatietyAfterPlay(satiety, end - t, session, rs);
+            while (we - end >= rs.ContinueMinMinutes && rng.ChancePermille(Choice(pullContinue, prio, StopPressure(satiety, 0, rs))))
+            {
+                int b = Math.Min(rs.ContinueBlockMinutes, we - end);
+                satiety = SatietyAfterPlay(satiety, b, session, rs);
+                end += b;
+            }
+            total += end - t;
+            last = end;
+            sittings++;
+            if (sittings >= rs.MaxSessionsPerDay) break;
+            int next = NextReturnMinute(day, end, rng.NextIntInclusive(rs.ReturnPauseMinMinutes, Math.Max(rs.ReturnPauseMinMinutes, rs.ReturnPauseMaxMinutes)), rs);
+            if (next < 0) break;
+            int rested = SatietyAfterPause(satiety, next - end, rs);
+            if (!rng.ChancePermille(Choice(pullReturn, prio, StopPressure(rested, 0, rs)))) break;
+            satiety = rested;
+            t = next;
+        }
+        return (start, total, sittings, last);
+    }
 
     /// <summary>
-    /// Estimativa da semana (R2/R4), a mesma regra do planejador sem o humor e o cansaco, dia a dia:
-    /// - a chance de cada dia usa a regularidade dos dias anteriores com oportunidade (habito), e a
-    ///   semana real e repetida ate estabilizar;
-    /// - a disposicao do dia entra pela sua distribuicao (nove faixas), na chance e no tempo desejado;
-    /// - a segunda sessao, pela vontade que sobra depois da principal;
+    /// Quando a pessoa pode voltar (v3): depois da pausa, se ainda cabe a sessao minima na mesma janela;
+    /// senao no comeco da proxima janela do dia (depois da aula, do compromisso). -1 = sem tempo.
+    /// </summary>
+    public static int NextReturnMinute(DayLayout day, int endMinute, int pauseMinutes, RoutineSettingsDefinition rs)
+    {
+        int at = endMinute + Math.Max(0, pauseMinutes);
+        foreach (var (s, e) in day.Windows)
+        {
+            if (e <= endMinute) continue;
+            int t = Math.Max(s, at);
+            if (e - t >= rs.MinSessionMinutes) return t;
+        }
+        return -1;
+    }
+
+    /// <summary>
+    /// Estimativa da semana (R2/v3), a mesma regra do planejador sem o humor e o cansaco, dia a dia:
+    /// - a chance de cada dia usa a regularidade dos dias anteriores com oportunidade (habito) e a
+    ///   disposicao amostrada; a semana real e repetida ate estabilizar;
+    /// - os minutos de um dia com jogo vem de estimateSamples dias simulados pela regra da v3
+    ///   (comecar, continuar, parar e voltar), com sorteio fixo da pessoa: sempre o mesmo resultado;
     /// - as probabilidades sao combinadas e limitadas a 0..1000 uma vez, como no planejador.
-    /// O jogo no trabalho e as extensoes ficam de fora. E uma estimativa: o humor e o cansaco mudam o real.
+    /// O jogo no trabalho, o corte de sono e o humor ficam de fora. E uma estimativa.
     /// </summary>
     public static DayExpectation[] ExpectWeek(Person p, IReadOnlyList<DayLayout> week, RoutineSettingsDefinition rs)
     {
-        int n = week.Count;
-        var disp = DispositionPoints(rs.DispositionSpreadPermille);
+        int n = week.Count, k = Math.Max(1, rs.EstimateSamples);
         var fits = new bool[n];
-        var start = new int[n];
-        var minutes = new int[n];
         var baseChance = new long[n];
-        var perPlay = new double[n, disp.Length];   // minutos esperados se jogar, por faixa de disposicao
+        var disp = new int[n, k];
+        var minutes = new int[n, k];
+        var starts = new List<int>[n];
+        var ends = new List<int>[n];
         for (int d = 0; d < n; d++)
         {
-            int planned = DesiredMinutes(p, week[d], rs);
-            fits[d] = PlaceMain(week[d], p.HabitualStartHour * 60, planned, rs, out _, out start[d], out minutes[d]);
+            starts[d] = new List<int>();
+            ends[d] = new List<int>();
+            fits[d] = week[d].Windows.Any(w => w.End - w.Start >= rs.MinSessionMinutes);
             if (!fits[d]) continue;
             baseChance[d] = BaseChance(p, week[d], rs);
-            for (int k = 0; k < disp.Length; k++)
+            var rng = new DeterministicRng(RngStreams.DeriveSeed(p.AppearanceSeed, "routine.estimate", d));
+            for (int j = 0; j < k; j++)
             {
-                int intent = DayIntentMinutes(planned, disp[k].Value, 1000, 0, rs);
-                PlaceMain(week[d], p.HabitualStartHour * 60, intent, rs, out int window, out _, out int main);
-                var second = SecondSession(p, week[d], window, intent - main, rs);
-                perPlay[d, k] = main + (second.Window >= 0 ? second.Minutes * second.ChancePermille / 1000.0 : 0);
+                disp[d, j] = rng.NextCenteredNoise(Math.Max(0, rs.DispositionSpreadPermille));
+                var (st, m, _, en) = SimulateDay(p, week[d], disp[d, j], rng, rs);
+                minutes[d, j] = m;
+                if (st >= 0) { starts[d].Add(st); ends[d].Add(en); }
             }
         }
-        // Probabilidade de jogar em cada dia, repetindo a semana ate estabilizar (habito pelos dias anteriores).
-        var played = new double[n];
-        for (int d = 0; d < n; d++) played[d] = fits[d] ? 0.5 : 0;
         int hist = Math.Max(1, rs.HabitHistoryDays);
+        int Reg(double[] played, int d)
+        {
+            double wSum = 0, wPlayed = 0;
+            for (int age = 1; age <= hist; age++)
+            {
+                int prev = ((d - age) % n + n) % n;
+                if (!fits[prev]) continue;   // sem oportunidade: neutro
+                int w = hist - age + 1;
+                wSum += w;
+                wPlayed += w * played[prev];
+            }
+            return wSum == 0 ? 500 : (int)Math.Round(wPlayed * 1000 / wSum);
+        }
+        // Probabilidade de jogar em cada dia, repetindo a semana ate estabilizar (habito pelos dias anteriores).
+        var playedP = new double[n];
+        for (int d = 0; d < n; d++) playedP[d] = fits[d] ? 0.5 : 0;
         for (int it = 0; it < 40; it++)
             for (int d = 0; d < n; d++)
             {
-                if (!fits[d]) { played[d] = 0; continue; }
-                double wSum = 0, wPlayed = 0;
-                for (int age = 1; age <= hist; age++)
-                {
-                    int prev = ((d - age) % n + n) % n;
-                    if (!fits[prev]) continue;   // sem oportunidade: neutro
-                    int w = hist - age + 1;
-                    wSum += w;
-                    wPlayed += w * played[prev];
-                }
-                int reg = wSum == 0 ? 500 : (int)Math.Round(wPlayed * 1000 / wSum);
-                long withHabit = baseChance[d] * HabitFactor(p.Traits.Habit, reg, rs) / 1000;
+                if (!fits[d]) { playedP[d] = 0; continue; }
+                long withHabit = baseChance[d] * HabitFactor(p.Traits.Habit, Reg(playedP, d), rs) / 1000;
                 double prob = 0;
-                foreach (var (value, weight) in disp)
-                    prob += weight * Math.Clamp(withHabit * (1000 + value) / 1000, 0, 1000) / 1000.0;
-                played[d] = prob;
+                for (int j = 0; j < k; j++) prob += Math.Clamp(withHabit * (1000 + disp[d, j]) / 1000, 0, 1000) / 1000.0;
+                playedP[d] = prob / k;
             }
         var result = new DayExpectation[n];
         for (int d = 0; d < n; d++)
         {
             if (!fits[d]) { result[d] = new DayExpectation(0, -1, 0, 0); continue; }
-            // Minutos esperados: em cada faixa de disposicao, a chance dela vezes o que joga se jogar.
-            double wSum = 0, wPlayed = 0;
-            for (int age = 1; age <= hist; age++)
-            {
-                int prev = ((d - age) % n + n) % n;
-                if (!fits[prev]) continue;
-                int w = hist - age + 1;
-                wSum += w;
-                wPlayed += w * played[prev];
-            }
-            int reg = wSum == 0 ? 500 : (int)Math.Round(wPlayed * 1000 / wSum);
-            long withHabit = baseChance[d] * HabitFactor(p.Traits.Habit, reg, rs) / 1000;
+            long withHabit = baseChance[d] * HabitFactor(p.Traits.Habit, Reg(playedP, d), rs) / 1000;
             double expected = 0;
-            for (int k = 0; k < disp.Length; k++)
-                expected += disp[k].Weight * Math.Clamp(withHabit * (1000 + disp[k].Value) / 1000, 0, 1000) / 1000.0 * perPlay[d, k];
-            result[d] = new DayExpectation((int)Math.Round(played[d] * 1000), start[d], minutes[d], (int)Math.Round(expected));
+            for (int j = 0; j < k; j++) expected += Math.Clamp(withHabit * (1000 + disp[d, j]) / 1000, 0, 1000) / 1000.0 * minutes[d, j];
+            var sortedMinutes = Enumerable.Range(0, k).Select(j => minutes[d, j]).OrderBy(x => x).ToList();
+            starts[d].Sort();
+            ends[d].Sort();
+            result[d] = new DayExpectation((int)Math.Round(playedP[d] * 1000), starts[d].Count > 0 ? starts[d][starts[d].Count / 2] : -1,
+                sortedMinutes[k / 2], (int)Math.Round(expected / k), ends[d].Count > 0 ? ends[d][ends[d].Count / 2] : -1);
         }
         return result;
     }

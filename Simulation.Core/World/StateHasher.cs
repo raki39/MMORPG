@@ -11,7 +11,7 @@ namespace Simulation.Core.World;
 /// </summary>
 public static class StateHasher
 {
-    public const int FormatVersion = 18;
+    public const int FormatVersion = 19;
 
     public static string Compute(WorldState w) => Compute(w, includeContentId: true);
 
@@ -56,7 +56,7 @@ public static class StateHasher
             h.Long(c.MoveStartTick); h.Long(c.MoveEndTick); h.Str(c.MoveEntersZone);
             h.Int(c.RemainingWaypoints.Count);
             foreach (var wp in c.RemainingWaypoints) { h.Int(wp.Pos.X); h.Int(wp.Pos.Y); h.Str(wp.EntersZone); }
-            h.Long(c.SessionStartTick); h.Long(c.ActivityStartTick); h.Long(c.ActivityEndTick); h.Long(c.SessionEndTick); h.Long(c.SessionHardEndTick); h.Long(c.SessionPlanDay);
+            h.Long(c.SessionStartTick); h.Long(c.ActivityStartTick); h.Long(c.ActivityEndTick); h.Long(c.SessionEndTick); h.Long(c.SessionHardEndTick); h.Long(c.SessionPlanDay); h.Str(c.StopReason); h.Int(c.Continues); h.Int(c.ContinuedMinutes);
             h.Bool(c.LogoutPending); h.Int(c.SessionKind); h.Int(c.SessionExtensions); h.Int(c.ExtendedMinutes);
             h.Long(c.SleepCutStartTick); h.Str(c.ExtendMotive);
             h.Int(c.KnownRegions.Count);
@@ -145,7 +145,7 @@ public static class StateHasher
         // Rotina de vida (P2).
         h.Str(p.OccupationId); h.Int(p.ShiftOffsetMinutes); h.Int(p.CommutePermille); h.Int(p.DayOffIndex); h.Int(p.DayOff2Index);
         h.Int(p.SleepNeedMinutes); h.Int(p.BedtimeMinute); h.Long(p.IncomeCentsPerMonth); h.Long(p.SupportCentsPerMonth);
-        h.Int(p.ExpectedWeeklyMinutes); h.Long(p.LastPlayedLocalDay); h.Int(p.HabitualStartHour);
+        h.Int(p.ExpectedWeeklyMinutes); h.Long(p.LastPlayedLocalDay); h.Int(p.HabitualStartHour); h.Int(p.Satiety); h.Long(p.SatietyTick); h.Bool(p.Unfinished);
         h.Int(p.SleepDebtTolerance); h.Int(p.SleepDeficitMinutes); h.Int(p.LastSleepCutMinutes); h.Int(p.SleepCutTotalMinutes); h.Long(p.LastLogoutTick); h.Long(p.SleepCutBedTick); h.Int(p.SleepCutUsedMinutes);
         h.Int(p.RecoveryByDay.Count);
         foreach (var (rd, rm) in p.RecoveryByDay) { h.Long(rd); h.Int(rm); }
@@ -155,7 +155,8 @@ public static class StateHasher
             h.Long(d.LocalDay); h.Int(d.FreeMinutes); h.Int(d.Windows); h.Int(d.Sessions); h.Str(d.Reason); h.Int(d.FirstStartMinute); h.Int(d.PlannedMinutes); h.Bool(d.FreeDay);
             h.Int(d.SleepMinutes); h.Int(d.DeficitMinutes); h.Int(d.WorkSessions); h.Int(d.WorkOverlapMinutes);
             h.Str(d.CommitmentId); h.Int(d.CommitmentStart); h.Int(d.CommitmentEnd); h.Int(d.RecoveryMinutes);
-            h.Int(d.DesiredMinutes); h.Int(d.DispositionPermille); h.Int(d.RegularityPermille); h.Int(d.PlayedMinutes); h.Int(d.NormalSessionsStarted); h.Int(d.SkippedSessions);
+            h.Int(d.SessionPriority); h.Int(d.DispositionPermille); h.Int(d.RegularityPermille); h.Int(d.PlayedMinutes);
+            h.Int(d.Sittings); h.Int(d.Returns); h.Int(d.DeclinedReturns); h.Int(d.SkippedAfterWork);
         }
         h.Int(p.OpenWindows.Count);
         foreach (var w in p.OpenWindows) { h.Long(w.Start); h.Long(w.End); h.Bool(w.EndsAtBed); }

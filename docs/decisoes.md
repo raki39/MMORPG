@@ -1639,3 +1639,78 @@ Leitura:
 - **Desempenho do cliente:**
   - Teste rápido: acusou p95 de 8,3 ms numa medição de 5 s.
   - Verificação completa: todas as vistas dentro de 6,9 ms; o mapa com 2000 pessoas deu 219 FPS e p95 de 5,6 ms.
+
+## D-051 — R4 corrigida (v3): começar, continuar, parar e voltar
+**Data:** 05/11/2026 · **Estado:** aceita (implementada; a R5 espera a avaliação do criador)
+
+**Por que:** testando no jogo, o criador sentiu que a R4 (D-050) fazia as pessoas jogarem menos do que a vontade e a disponibilidade justificam.
+- **Diagnóstico** (mesmas pessoas antes e depois): a chance de entrar no dia não mudou; a queda veio toda da duração.
+  - A importância saiu da duração e o tempo livre ficou limitado a ×1,5.
+  - A "vontade do dia" valia uma sessão e virou, na prática, uma cota: a sessão principal absorvia tudo, e parar e voltar não existia (nem antes, nem depois).
+- **Proposta:** foi testada primeiro num laboratório isolado, com as agendas reais, que reproduziu a pré-R4 e a R4 com 0 a 4% de diferença. Depois foi integrada.
+
+**O que mudou** (detalhes e fórmulas em `rotina.md`, seção 5):
+- **Decisões separadas:** jogar no dia (como antes), quando começar, continuar ou parar, e voltar depois de uma pausa. Todas usam a mesma comparação: vontade de jogar ÷ (vontade de jogar + outras opções + vontade de parar).
+  - **Vontade de jogar:** prioridade × disposição × humor × experiência (× tendência a prolongar, para continuar). A experiência é a nota da sessão em relação à satisfação habitual, para não contar duas vezes o que o humor já tem.
+  - **Outras opções:** 1000 − prioridade. Sem saciedade nem cansaço, a chance é a própria prioridade.
+  - **Prioridade dentro do dia:** importância e tempo livre. O peso do dia de obrigações entra uma vez só, na chance de jogar no dia; o laboratório mostrou que ele contava duas vezes.
+- **Saciedade:** cresce com o tempo efetivamente jogado (metade do que falta a cada 2 sessões normais) e cai nas pausas (metade a cada 2 h); zera ao acordar.
+  - É a única medida do "já joguei"; não existe cota nem total do dia.
+  - A interrupção pelo trabalho conta todo o tempo jogado e, à parte, dá vontade de terminar.
+- **Quando começar:** um sorteio por dia, num fluxo próprio. A vontade de começar vale por hora e se acumula no tempo livre, com resistência antes do horário de costume (o gosto no dia livre, o habitual no dia de obrigação). No horário de costume, começa.
+  - Toda janela livre conta, também nos dias de obrigação: turno da noite, trabalho e estudo à tarde.
+  - A participação no dia não depende do passo nem da frequência das avaliações. No cenário controlado, os dias com jogo são iguais na pré-R4, na R4 e na v3 em todas as células.
+- **Continuar:** a sessão normal é preferência. Ao chegar nela, e a cada 30 min, a pessoa decide, só dentro do tempo livre. Parar é sempre possível.
+- **Ficar acordado** (extensão P3): só quando a janela acaba na hora de dormir. Não existe mais extensão dentro do tempo livre, então ela não duplica a decisão de continuar.
+- **Voltar:** pausa de 30 a 120 min, na mesma janela ou na próxima; até 5 sessões normais por dia.
+- **Jogo no trabalho:** não desconta minutos da noite; pesa no começar, no continuar e no voltar, pela saciedade e pela experiência.
+- **Saem:** ampliação ×1,5, vontade do dia, segunda sessão, custo de reentrada e a parte do humor na duração.
+- **Estimativa:** dias simulados pela mesma regra, com sorteio fixo da pessoa; a tela mostra o início e o fim típicos.
+- **Parâmetros novos em `population.json`** (todos hipóteses configuráveis):
+  - saciedade e recuperação;
+  - bloco e mínimo do continuar;
+  - peso da tendência e da experiência;
+  - pausa mínima e máxima;
+  - vontade de terminar;
+  - manhã do dia livre;
+  - resistência a começar cedo;
+  - passo;
+  - amostras da estimativa.
+- **Estado e testes:** `StateHasher` v19; 240 testes (`WillModelTests` reescrito).
+
+**Conferências pedidas pelo criador:**
+- **Segunda-feira do trabalhador dedicado:** janela de 18:17–22:25 (4h08).
+  - A pré-R4 saiu às 22:27 e a R4 às 22:35: terminaram a atividade em andamento (até 15 min, regra da R2), dentro do corte de sono autorizado.
+  - O laboratório parou às 22:20 por causa do bloco mínimo de 10 min.
+  - Na integração, a decisão de continuar cobre o resto da janela, e a v3 saiu às 22:22 (decidiu parar e terminou a atividade).
+- **Rótulo da sessão do cadastro:** aparecia como "no horário de costume"; agora é "primeira".
+- **Pausa de 29 min:** vinha do arredondamento do minuto da saída; agora arredonda para cima.
+
+**Resultado real** (mesmas 2000 pessoas, seed 11, 60 dias, com humor), pré-R4 → R4 → v3:
+
+| Perfil | Horas/semana | Por dia livre (min) | Por dia útil (min) | Dias com 2+ sessões (v3) |
+|---|---|---|---|---:|
+| Casual | 5,6 → 5,7 → 6,9 | 74 → 76 → 99 | 35 → 36 → 39 | 39% |
+| Social | 10,7 → 10,0 → 12,5 | 135 → 122 → 166 | 69 → 67 → 77 | 42% |
+| Comerciante | 10,5 → 9,4 → 14,0 | 122 → 108 → 175 | 72 → 66 → 90 | 49% |
+| Explorador | 13,9 → 13,4 → 17,1 | 170 → 154 → 220 | 92 → 94 → 107 | 47% |
+| Competitivo | 19,9 → 18,1 → 21,7 | 238 → 208 → 276 | 138 → 130 → 142 | 44% |
+| Hardcore | 36,7 → 32,5 → 36,3 | 439 → 360 → 440 | 252 → 238 → 246 | 41% |
+
+- **Ocupações:** todas acima da R4. O turno noturno voltou (hardcore 32,9 → 35,0 h).
+- **Sono:** o déficit médio não piorou. O sono cortado caiu de 0,6% para 0,2% do tempo jogado, porque ficar acordado só acontece na hora de dormir.
+- **Validação** (5 seeds × 1.000 × 90 dias):
+  - **Sessões por dia de jogo:** uma 57%, duas 30%, três ou mais 13%; pausa mediana de 80 min.
+  - **Fim das sessões:** decidiu parar 78%, hora de dormir 16%, fim do tempo livre 5%, ficou acordado 0,5%.
+  - **Início das sessões:** antes do horário, por vontade, 45%; volta depois de pausa 37%; no horário de costume 18%.
+  - **Sessões mais longas:** 745 min. São hardcores em dia de 14 a 16 h livres, que continuaram 400 a 510 min; os motivos estão no relatório.
+- **Metas:**
+  - **Regras do cenário: 4 de 7.** Fora: sessões por semana do casual (4,2, faixa 2–4) e do hardcore (9,5, faixa 5–7), e horas do casual (6,8 h, faixa 2–6). Essas metas foram escritas para uma sessão por dia (na prática, mediam dias de jogo); os dias com jogo não mudaram.
+  - **Para a R5:** separar "dias de jogo por semana" de "sessões por dia de jogo" e rever a faixa de horas do casual.
+  - **Provisórias: 9 de 12** (antes 8); **futuras: 1 de 5**.
+- **Desvio do plano:** nenhum.
+- **Para avaliar (o criador pediu para não cortar antes de olhar):**
+  - sem ocupação: hardcore 52 h, explorador 28 h, casual 12 h por semana (validação);
+  - casuais com três sessões ou mais: 11% dos dias de jogo do casual; nesses dias, 5 h no total (mediana), p90 7 h.
+
+  Duração total, pausas, motivos e sono estão em `docs/baselines/pos-R4b/`.

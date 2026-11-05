@@ -26,13 +26,19 @@ public sealed class BehaviorSystem
     public const string EvWorkInterrupt = "work_interrupt";
     /// <summary>A pessoa acorda (R1): fecha a conta do sono da noite com o inicio e o fim reais.</summary>
     public const string EvWake = "wake";
+    /// <summary>Depois de uma pausa, a pessoa reconsidera voltar a jogar (v3, D-051).</summary>
+    public const string EvConsiderReturn = "consider_return";
+
+    /// <summary>Por que a sessao normal comecou (v3): no horario de costume, antes dele por vontade, de volta depois de uma pausa, primeira (cadastro ou volta).</summary>
+    public const int StartUsual = 0, StartEarly = 1, StartReturn = 2, StartFirst = 3;
+    public static string StartReasonName(int reason) => reason switch { StartEarly => "early_choice", StartReturn => "return", StartFirst => "first", _ => "usual_time" };
 
     /// <summary>Tipos de sessao (D-044): normal, pausa permitida do trabalho remoto, escapada no expediente.</summary>
     public const int SessionNormal = 0, SessionBreak = 1, SessionDuringWork = 2;
 
-    /// <summary>Carga do evento de inicio de sessao: tipo * 1.000.000 + minutos.</summary>
-    /// <summary>Carga do evento de sessao: minutos, tipo e o dia da agenda a que pertence (R4; -1 = nenhum).</summary>
-    public static long SessionPayload(int minutes, int kind, long planDay = -1) => (planDay + 1) * 10_000_000L + kind * 1_000_000L + minutes;
+    /// <summary>Carga do evento de sessao: minutos, tipo, motivo do inicio (v3) e o dia da agenda a que pertence (-1 = nenhum).</summary>
+    public static long SessionPayload(int minutes, int kind, long planDay = -1, int reason = StartUsual) =>
+        (planDay + 1) * 100_000_000L + reason * 10_000_000L + kind * 1_000_000L + minutes;
 
     private readonly WorldState _w;
     private readonly RouteFinder _routes;
@@ -93,6 +99,7 @@ public sealed class BehaviorSystem
         yield return (EvDailySessions, OnDailySessions);
         yield return (EvWorkInterrupt, OnWorkInterrupt);
         yield return (EvWake, OnWake);
+        yield return (EvConsiderReturn, OnConsiderReturn);
     }
 
     private long Now => _w.Clock.Tick;
@@ -181,7 +188,7 @@ public sealed class BehaviorSystem
         {
             var day = LayoutOf(p, d);
             long dayStart = LocalDayStart(p, d);
-            int desired = DailySchedule.DesiredMinutes(p, day, rs, jitter);
+            int desired = DailySchedule.SessionMinutes(p, rs, jitter);
             if (DailySchedule.PlaceMain(day, preferred, desired, rs, out _, out int start, out int minutes)
                 && dayStart + start * SimTime.TicksPerMinute > notBefore)
             {
@@ -277,10 +284,10 @@ public sealed class BehaviorSystem
         // Primeira sessao no ato do registro, limitada a janela livre em que ele cai (P2).
         var today = LayoutOf(p, LocalDay(p, Now));
         int nowMin = (int)((Now - LocalDayStart(p, LocalDay(p, Now))) / SimTime.TicksPerMinute);
-        int firstMinutes = DailySchedule.DesiredMinutes(p, today, _w.Content.Routine, DurationJitter(rng));
+        int firstMinutes = DailySchedule.SessionMinutes(p, _w.Content.Routine, DurationJitter(rng));
         foreach (var (s, e) in today.Windows)
             if (s <= nowMin && nowMin < e) firstMinutes = Math.Max(_w.Content.Routine.MinSessionMinutes, Math.Min(firstMinutes, e - nowMin));
-        StartSession(p, firstMinutes);
+        StartSession(p, firstMinutes, SessionNormal, -1, StartFirst);
     }
 
     private string ChooseClass(PersonTraits t, DeterministicRng rng)
@@ -328,7 +335,7 @@ public sealed class BehaviorSystem
                 _exp.OnDaily(p, ch);
                 if (!TryReturnFromQuit(p, ch, day, rng)) continue;
                 var (backAt, backMinutes) = FirstSessionOf(p, localDay, rng, Now);
-                _w.Scheduler.Schedule(backAt, EvSessionStart, p.Id, SessionPayload(backMinutes, SessionNormal));
+                _w.Scheduler.Schedule(backAt, EvSessionStart, p.Id, SessionPayload(backMinutes, SessionNormal, -1, StartFirst));
                 RecordPlan(p, new DayPlanRecord(localDay, 0, 0, 1, "came_back", (int)((backAt - dayStart) / SimTime.TicksPerMinute), backMinutes, false));
                 continue;
             }
@@ -368,7 +375,7 @@ public sealed class BehaviorSystem
         foreach (var (s, e) in day.Windows)
             p.OpenWindows.Add((dayStart + s * SimTime.TicksPerMinute, dayStart + e * SimTime.TicksPerMinute, e >= day.Bed && !day.NightShiftAhead));
         int fatigue = Math.Min(1000, projectedDeficit * 1000 / Math.Max(1, rs.FatigueFullDeficitMinutes));
-        var (workSessions, overlap, workMinutes) = p.State == LifecycleState.Inactive ? (0, 0, 0) : PlanWorkTime(p, day, dayStart, localDay, rng);
+        var (workSessions, overlap, _) = p.State == LifecycleState.Inactive ? (0, 0, 0) : PlanWorkTime(p, day, dayStart, localDay, rng);
 
         // Probabilidade do dia (R2/R4): a base (0..1000, importancia = prioridade do jogo entre os
         // lazeres) vezes os fatores (permille, 1000 = x1), combinados e limitada a 0..1000 uma unica
@@ -388,35 +395,33 @@ public sealed class BehaviorSystem
         combined = combined * (1000 - fatigue * rs.FatigueChancePenalty / 1000) / 1000;   // cansaco (P3)
         int chance = (int)Math.Clamp(combined, 0, 1000);
 
-        // Tempo desejado do dia (R4): a sessao normal ampliada pelo tempo livre (ate x1,5), com a
-        // disposicao, parte do humor e o cansaco. A variacao do dia e so a disposicao (um sorteio,
-        // nao dois multiplicadores para a mesma coisa). O que ja foi planejado no trabalho sai dele.
-        int preferred = PreferredMinute(p, rng);
-        int planned = DailySchedule.DesiredMinutes(p, day, rs);
-        int intent = DailySchedule.DayIntentMinutes(planned, disposition, moodFactor, fatigue, rs);
-        int forMain = Math.Max(rs.MinSessionMinutes, intent - workMinutes);
-        bool fits = DailySchedule.PlaceMain(day, preferred, forMain, rs, out int window, out int start, out int minutes);
+        // Quando comecar (v3, D-051): a decisao de jogar hoje e o sorteio acima (um por dia); o horario
+        // vem de um sorteio proprio do dia, com a vontade de comecar valendo por hora no tempo livre
+        // e resistencia antes do horario de costume (o gosto no dia livre; o habitual no dia de
+        // obrigacao). Toda janela livre conta, inclusive a de antes do trabalho.
+        int session = DailySchedule.SessionMinutes(p, rs);
+        int target = (day.FreeDay ? p.Traits.PreferredStartHour : p.HabitualStartHour) * 60
+            + rng.NextIntInclusive(-_w.Content.Behavior.SessionStartJitterMinutes, _w.Content.Behavior.SessionStartJitterMinutes);
+        int prio = DailySchedule.SessionPriority(p, day, rs);
+        int pull = DailySchedule.Pull(prio, disposition, moodFactor, 0, 1000, rs);
+        int u = Rng("routine.start", p.Id * 100_000L + localDay).NextInt(1_000_000);
+        int start = DailySchedule.StartMinute(day, target, session, pull, prio, DailySchedule.StopPressure(0, fatigue, rs), u, rs);
         bool wants = rng.ChancePermille(chance);
-        if (!fits) { RecordPlan(p, new DayPlanRecord(localDay, day.FreeMinutes, day.Windows.Count, 0, "no_free_time", -1, 0, day.FreeDay, sleep, projectedDeficit, workSessions, overlap, CommitId(day), CommitStart(day), CommitEnd(day), day.RecoveryMinutes, 0, disposition, regularity)); return; }
+        if (start < 0) { RecordPlan(p, new DayPlanRecord(localDay, day.FreeMinutes, day.Windows.Count, 0, "no_free_time", -1, 0, day.FreeDay, sleep, projectedDeficit, workSessions, overlap, CommitId(day), CommitStart(day), CommitEnd(day), day.RecoveryMinutes, prio, disposition, regularity)); return; }
         if (!wants)
         {
             string reason = p.State == LifecycleState.Inactive ? "inactive"
                 : fatigue >= rs.TiredReasonFatigue ? "tired"
                 : !_w.NeutralMood && p.Mood.Engagement < rt.EngagementNeutral - rs.LowEngagementGap ? "low_engagement" : "other_leisure";
-            RecordPlan(p, new DayPlanRecord(localDay, day.FreeMinutes, day.Windows.Count, 0, reason, -1, 0, day.FreeDay, sleep, projectedDeficit, workSessions, overlap, CommitId(day), CommitStart(day), CommitEnd(day), day.RecoveryMinutes, 0, disposition, regularity));
+            RecordPlan(p, new DayPlanRecord(localDay, day.FreeMinutes, day.Windows.Count, 0, reason, -1, 0, day.FreeDay, sleep, projectedDeficit, workSessions, overlap, CommitId(day), CommitStart(day), CommitEnd(day), day.RecoveryMinutes, prio, disposition, regularity));
             return;
         }
-        _w.Scheduler.Schedule(dayStart + start * SimTime.TicksPerMinute, EvSessionStart, p.Id, SessionPayload(minutes, SessionNormal, localDay));
-        int sessions = 1, plannedTotal = minutes;
-        // Segunda sessao (R4): qualquer perfil, se sobrou vontade e ha outra janela (custo de entrar de novo).
-        var second = DailySchedule.SecondSession(p, day, window, intent - workMinutes - minutes, rs);
-        if (second.Window >= 0 && rng.ChancePermille(second.ChancePermille))
-        {
-            _w.Scheduler.Schedule(dayStart + second.Start * SimTime.TicksPerMinute, EvSessionStart, p.Id, SessionPayload(second.Minutes, SessionNormal, localDay));
-            sessions = 2;
-            plannedTotal += second.Minutes;
-        }
-        RecordPlan(p, new DayPlanRecord(localDay, day.FreeMinutes, day.Windows.Count, sessions, "played", Math.Min(start, sessions > 1 ? second.Start : start), plannedTotal, day.FreeDay, sleep, projectedDeficit, workSessions, overlap, CommitId(day), CommitStart(day), CommitEnd(day), day.RecoveryMinutes, intent, disposition, regularity));
+        // A primeira sessao vai ate a sessao normal (ou o fim da janela); ai a pessoa decide se continua.
+        int windowEnd = day.Windows.First(w => w.Start <= start && start < w.End).End;
+        int minutes = Math.Min(session, windowEnd - start);
+        int startReason = start < target ? StartEarly : StartUsual;
+        _w.Scheduler.Schedule(dayStart + start * SimTime.TicksPerMinute, EvSessionStart, p.Id, SessionPayload(minutes, SessionNormal, localDay, startReason));
+        RecordPlan(p, new DayPlanRecord(localDay, day.FreeMinutes, day.Windows.Count, 1, "played", start, minutes, day.FreeDay, sleep, projectedDeficit, workSessions, overlap, CommitId(day), CommitStart(day), CommitEnd(day), day.RecoveryMinutes, prio, disposition, regularity));
     }
 
     /// <summary>
@@ -441,6 +446,8 @@ public sealed class BehaviorSystem
         if (cut > 0) { p.LastSleepCutMinutes = cut; p.SleepCutTotalMinutes += cut; }
         foreach (var rec in p.PlanList)
             if (rec.LocalDay == localDay) { rec.SleepMinutes = slept; rec.DeficitMinutes = p.SleepDeficitMinutes; }
+        // Dormiu: a saciedade de ontem nao passa para hoje (v3). Quem amanheceu jogando segue com a sua.
+        if (!p.IsOnline) { p.Satiety = 0; p.SatietyTick = Now; p.Unfinished = false; }
     }
 
     /// <summary>
@@ -592,26 +599,23 @@ public sealed class BehaviorSystem
     {
         var p = _w.GetPerson((int)ev.TargetId);
         if (!_w.Server.IsOpen || p.CharacterId == 0 || p.State == LifecycleState.Quit) return;
-        StartSession(p, (int)(ev.Payload % 1_000_000), (int)(ev.Payload / 1_000_000 % 10), ev.Payload / 10_000_000 - 1);
+        StartSession(p, (int)(ev.Payload % 1_000_000), (int)(ev.Payload / 1_000_000 % 10), ev.Payload / 100_000_000 - 1, (int)(ev.Payload / 10_000_000 % 10));
     }
 
-    private void StartSession(Person p, int minutes, int kind = SessionNormal, long planDay = -1)
+    private void StartSession(Person p, int minutes, int kind = SessionNormal, long planDay = -1, int startReason = StartUsual)
     {
         var ch = _w.GetCharacter(p.CharacterId);
-        // Vontade do dia (R4): a sessao normal desconta o que ja foi jogado para o mesmo dia (inclusive
-        // no trabalho e na sessao em andamento). A primeira do dia sempre acontece (a escolha ja foi
-        // feita), com no minimo a sessao minima; uma seguinte e deixada de lado se a pessoa ja jogou o
-        // que queria (prefere outro lazer).
+        var rs = _w.Content.Routine;
+        SatietyToNow(p);
         var plan = planDay >= 0 ? PlanOf(p, planDay) : null;
-        if (plan != null && kind == SessionNormal && plan.DesiredMinutes > 0)
+        // Jogou no trabalho hoje (v3): a saciedade que sobrou e a experiencia de la pesam na vontade de
+        // comecar a noite (sem descontar minutos da sessao). Sem saciedade, nada muda.
+        if (plan != null && kind == SessionNormal && !p.IsOnline && plan.Sittings == 0 && startReason != StartReturn && p.Satiety > 0)
         {
-            var rs = _w.Content.Routine;
-            long ongoing = p.IsOnline && ch.SessionPlanDay == planDay ? (Now - ch.SessionStartTick) / SimTime.TicksPerMinute : 0;
-            int remaining = (int)(plan.DesiredMinutes - plan.PlayedMinutes - ongoing);
-            if (plan.NormalSessionsStarted == 0) minutes = Math.Max(rs.MinSessionMinutes, Math.Min(minutes, remaining));
-            else if (remaining < rs.MinSessionMinutes) { plan.SkippedSessions++; return; }
-            else minutes = Math.Min(minutes, remaining);
-            plan.NormalSessionsStarted++;
+            int pull = PullNow(p, plan, LastExperienceDelta(p), 1000, true);
+            int keep = (int)((long)DailySchedule.Choice(pull, plan.SessionPriority, DailySchedule.StopPressure(p.Satiety, 0, rs)) * 1000
+                / Math.Max(1, DailySchedule.Choice(pull, plan.SessionPriority, 0)));
+            if (!Rng("routine.go", p.Id * 100_000L + planDay).ChancePermille(keep)) { plan.SkippedAfterWork++; return; }
         }
         long end = Now + minutes * SimTime.TicksPerMinute;
         if (p.IsOnline)
@@ -639,6 +643,8 @@ public sealed class BehaviorSystem
         }
         p.State = LifecycleState.Online;
         p.LastPlayedLocalDay = LocalDay(p, Now);
+        p.Unfinished = false;
+        if (plan != null && kind == SessionNormal) { plan.Sittings++; if (startReason == StartReturn) plan.Returns++; }
         _w.OnlineCount++;
         _w.Today.SessionsStarted++;
         _w.Today.PeakOnline = Math.Max(_w.Today.PeakOnline, _w.OnlineCount);
@@ -651,6 +657,9 @@ public sealed class BehaviorSystem
         ch.LogoutPending = false;
         ch.SessionKind = kind;
         ch.SessionPlanDay = planDay;
+        ch.StopReason = "";
+        ch.Continues = 0;
+        ch.ContinuedMinutes = 0;
         ch.SessionHardEndTick = HardEndFor(p, kind, end);
         ch.SessionExtensions = 0;
         ch.ExtendedMinutes = 0;
@@ -664,7 +673,8 @@ public sealed class BehaviorSystem
         _w.Scheduler.Schedule(end, EvSessionEnd, p.Id);
         _w.Emit("session_started", EventImportance.Low, new[] { new EntityRef("person", p.Id) },
             kind == SessionBreak ? new[] { new EventCause("work_break", minutes) }
-            : kind == SessionDuringWork ? new[] { new EventCause("during_work", minutes) } : null,
+            : kind == SessionDuringWork ? new[] { new EventCause("during_work", minutes) }
+            : new[] { new EventCause("normal", 1000), new EventCause(StartReasonName(startReason), 1000) },
             $"{minutes} min");
         // Objetivos pessoais (D-036): revisa ao conectar, antes da primeira decisao.
         _goals.Review(p, ch, Rng("behavior.goals", ch.Id * 1_000_000L + ch.DecisionCount));
@@ -678,7 +688,8 @@ public sealed class BehaviorSystem
         var ch = _w.GetCharacter(p.CharacterId);
         if (ch.SessionEndTick != ev.Tick) return; // sessao foi estendida
 
-        if (TryExtend(p, ch)) return;
+        if (ch.SessionKind == SessionNormal && TryContinue(p, ch)) return;
+        if (ch.SessionKind == SessionNormal && TryStayUp(p, ch)) return;
 
         // Adiar a saida (terminar a atividade ou o trecho de viagem) so cabe dentro do limite absoluto (R2).
         switch (ch.Status)
@@ -708,9 +719,14 @@ public sealed class BehaviorSystem
         // Atividade interrompida pela saida: o tempo gasto conta (sem recompensa).
         if (ch.Status == CharacterStatus.Doing) AddActivityTime(ch, ActivityTypeOf(ch), Now - ch.ActivityStartTick);
         _exp.OnSessionEnd(p, ch, Now);   // nota da sessao, satisfacao e frustracao (D-038)
+        SatietyToNow(p);                 // todo o tempo jogado conta, inclusive o interrompido (v3)
         p.LastLogoutTick = Now;
-        if (ch.SessionPlanDay >= 0 && PlanOf(p, ch.SessionPlanDay) is { } plan)
-            plan.PlayedMinutes += (int)((Now - ch.SessionStartTick) / SimTime.TicksPerMinute);   // sai da vontade do dia (R4)
+        if (reason == "session_time" && ch.StopReason.Length > 0) reason = ch.StopReason;
+        long planDay = ch.SessionPlanDay;
+        int endedKind = ch.SessionKind;
+        if (planDay >= 0 && PlanOf(p, planDay) is { } plan)
+            plan.PlayedMinutes += (int)((Now - ch.SessionStartTick) / SimTime.TicksPerMinute);
+        if (endedKind == SessionDuringWork && reason == "work_interruption") p.Unfinished = true;   // vontade de terminar (v3)
         ch.SessionPlanDay = -1;
         // Corte de sono compartilhado (R3): quanto desta sessao avancou sobre o periodo de sono da janela.
         if (ch.SessionKind == SessionNormal)
@@ -747,6 +763,8 @@ public sealed class BehaviorSystem
         _w.OnlineCount--;
         _w.Emit("session_ended", EventImportance.Low, new[] { new EntityRef("person", p.Id) },
             new[] { new EventCause(reason, 1000) });
+        // Parou por vontade, pelo fim da janela ou frustrado: se o dia ainda tem tempo, pode voltar depois de uma pausa (v3).
+        if (endedKind == SessionNormal && planDay >= 0 && reason is "satisfied" or "window_end" or "frustration") ScheduleReturn(p, planDay);
     }
 
     /// <summary>
@@ -801,17 +819,52 @@ public sealed class BehaviorSystem
     }
 
     /// <summary>
-    /// Dificuldade de parar (P3): estendendo a sessao por estar gostando ou por faltar pouco para
-    /// uma meta. Separados: tendencia a prolongar (puxa), autocontrole (segura) e cansaco (segura).
-    /// Limites explicitos: extensoes e minutos por sessao; primeiro usa o tempo livre; so na
-    /// ultima janela do dia consome o sono, ate o teto por noite, o sono minimo e o teto de
-    /// deficit. Nunca invade obrigacoes (a hora de acordar nao muda). Sem efeito no cenario controlado.
+    /// Continuar (v3, D-051): ao chegar a sessao normal (e depois a cada bloco), a pessoa decide se
+    /// continua jogando dentro do tempo livre. A vontade de jogar (prioridade x disposicao x humor x
+    /// experiencia da sessao x tendencia a prolongar) e comparada com as outras opcoes de lazer e a
+    /// vontade de parar (saciedade e cansaco). Parar e sempre possivel; o fim da janela e o limite.
     /// </summary>
-    private bool TryExtend(Person p, Character ch)
+    private bool TryContinue(Person p, Character ch)
+    {
+        var rs = _w.Content.Routine;
+        var (room, atBed, _) = WindowAfter(p, ch);
+        if (room < rs.ContinueMinMinutes) { if (ch.StopReason.Length == 0) ch.StopReason = atBed ? "bedtime" : "window_end"; return false; }
+        SatietyToNow(p);
+        var plan = ch.SessionPlanDay >= 0 ? PlanOf(p, ch.SessionPlanDay) : null;
+        int prio = plan?.SessionPriority ?? Math.Clamp(p.Traits.GameImportance, 0, 1000);
+        int exp = _w.NeutralMood ? 0 : SessionScoreSoFar(ch) - p.Mood.Satisfaction;
+        int pull = PullNow(p, plan, exp, DailySchedule.TendencyFactor(p, rs), false);
+        int chance = DailySchedule.Choice(pull, prio, DailySchedule.StopPressure(p.Satiety, DailySchedule.Fatigue(p, rs), rs));
+        if (!Rng("routine.continue", ch.Id * 1_000_000L + ch.DecisionCount * 16 + ch.Continues).ChancePermille(chance))
+        {
+            ch.StopReason = "satisfied";
+            return false;
+        }
+        int block = Math.Min(rs.ContinueBlockMinutes, room);
+        ch.Continues++;
+        ch.ContinuedMinutes += block;
+        ch.SessionEndTick += block * SimTime.TicksPerMinute;
+        _w.Scheduler.Schedule(ch.SessionEndTick, EvSessionEnd, p.Id);
+        _w.Emit("session_continued", EventImportance.Low, new[] { new EntityRef("person", p.Id) },
+            new[] { new EventCause("continue", chance), new EventCause("satiety", p.Satiety) }, $"+{block} min");
+        return true;
+    }
+
+    /// <summary>
+    /// Ficar acordado jogando (P3, so no fim do dia): quando o tempo livre acaba na hora de dormir,
+    /// a pessoa pode passar dela, com motivo explicito (gostando da sessao ou perto da meta), pela
+    /// tendencia a prolongar e contra o autocontrole e o cansaco. Nunca antes de uma obrigacao, de
+    /// um turno da noite ou dentro do tempo livre (isso e a decisao de continuar); sempre dentro do
+    /// corte de sono autorizado (R2/R3).
+    /// </summary>
+    private bool TryStayUp(Person p, Character ch)
     {
         var rs = _w.Content.Routine;
         var rt = _w.Content.Retention;
         if (_w.NeutralMood || ch.SessionKind != SessionNormal || ch.SessionExtensions >= rs.ExtendMaxTimesPerSession) return false;
+        var (room, atBed, windowEnd) = WindowAfter(p, ch);
+        if (!atBed && ch.SleepCutStartTick == 0) return false;            // termina por obrigacao, preparo ou compromisso
+        if (room >= rs.ContinueMinMinutes) return false;                  // ainda ha tempo livre: decisao de continuar
         string motive = SessionScoreSoFar(ch) >= rt.ExtendScoreAbove ? "enjoying" : GoalClose(ch) ? "goal_close" : "";
         if (motive.Length == 0) return false;
         int fatigue = DailySchedule.Fatigue(p, rs);
@@ -821,27 +874,96 @@ public sealed class BehaviorSystem
         int planned = (int)((ch.SessionEndTick - ch.SessionStartTick) / SimTime.TicksPerMinute);
         int extra = Math.Min(Math.Max(10, planned * rt.ExtendPermille / 1000 * (rs.ExtendTendencyBase + t.ExtendTendency) / 1000),
             rs.ExtendMaxMinutes - ch.ExtendedMinutes);
-        var (room, atBed, windowEnd) = WindowAfter(p, ch);
-        // Limite absoluto (R2): o resto da janela e, so na ultima janela do dia, o corte de sono
-        // autorizado (teto por noite, teto do deficit e sono minimo antes da proxima obrigacao).
         int toHard = (int)Math.Max(0, (ch.SessionHardEndTick - ch.SessionEndTick) / SimTime.TicksPerMinute);
         int total = Math.Min(extra, toHard);
         if (total < 10) return false;
-        long newEnd = ch.SessionEndTick + total * SimTime.TicksPerMinute;
-        int sleepCut = atBed && newEnd > windowEnd ? (int)((newEnd - Math.Max(windowEnd, ch.SessionEndTick)) / SimTime.TicksPerMinute) : 0;
-        if (sleepCut > 0 && ch.SleepCutStartTick == 0) ch.SleepCutStartTick = Math.Max(windowEnd, ch.SessionEndTick);
+        long cutFrom = Math.Max(windowEnd, ch.SessionEndTick);
+        if (ch.SleepCutStartTick == 0) ch.SleepCutStartTick = cutFrom;
         ch.SessionExtensions++;
         ch.ExtendedMinutes += total;
         ch.ExtendMotive = motive;
+        ch.StopReason = "stayed_up";
         ch.SessionEndTick += total * SimTime.TicksPerMinute;
         _w.Scheduler.Schedule(ch.SessionEndTick, EvSessionEnd, p.Id);
-        var causes = new List<EventCause> { new(motive, motive == "enjoying" ? SessionScoreSoFar(ch) : 1000) };
-        if (sleepCut > 0) causes.Add(new EventCause("sleep_cut", sleepCut));
+        var causes = new List<EventCause> { new(motive, motive == "enjoying" ? SessionScoreSoFar(ch) : 1000), new("sleep_cut", total) };
         _w.Emit("session_extended", EventImportance.Low, new[] { new EntityRef("person", p.Id) }, causes.ToArray(), $"+{total} min");
         return true;
     }
 
-    /// <summary>Alguma meta de curto prazo esta perto de concluir (motivo para estender a sessao).</summary>
+    /// <summary>
+    /// Vontade de jogar agora (v3) para uma decisao do dia: prioridade e disposicao da agenda, humor
+    /// (fora do cenario controlado), experiencia e, se for comecar ou voltar depois de uma sessao
+    /// interrompida pelo trabalho, a vontade de terminar.
+    /// </summary>
+    private int PullNow(Person p, DayPlanRecord? plan, int experienceDelta, int tendencyFactor, bool canFinish)
+    {
+        var rs = _w.Content.Routine;
+        int prio = plan?.SessionPriority ?? Math.Clamp(p.Traits.GameImportance, 0, 1000);
+        int mood = _w.NeutralMood ? 1000 : PlayFactor(p.Mood.Engagement, _w.Content.Retention);
+        int pull = DailySchedule.Pull(prio, plan?.DispositionPermille ?? 0, mood, experienceDelta, tendencyFactor, rs);
+        if (canFinish && p.Unfinished) pull = Math.Min(2000, pull + rs.UnfinishedBonusPermille);
+        return pull;
+    }
+
+    /// <summary>Experiencia da ultima sessao em relacao a satisfacao habitual (0 no cenario controlado).</summary>
+    private int LastExperienceDelta(Person p) => _w.NeutralMood ? 0 : p.Mood.LastSessionScore - p.Mood.Satisfaction;
+
+    /// <summary>Atualiza a saciedade ate agora: jogando ela cresce; fora do jogo, cai (v3).</summary>
+    private void SatietyToNow(Person p)
+    {
+        long minutes = (Now - p.SatietyTick) / SimTime.TicksPerMinute;
+        if (minutes > 0)
+            p.Satiety = p.IsOnline
+                ? DailySchedule.SatietyAfterPlay(p.Satiety, minutes, DailySchedule.SessionMinutes(p, _w.Content.Routine), _w.Content.Routine)
+                : DailySchedule.SatietyAfterPause(p.Satiety, minutes, _w.Content.Routine);
+        p.SatietyTick = Now;
+    }
+
+    /// <summary>
+    /// Depois de parar (v3): se ainda ha tempo no dia, a pessoa reconsidera voltar depois de uma
+    /// pausa, na mesma janela ou na proxima (depois da aula, do compromisso).
+    /// </summary>
+    private void ScheduleReturn(Person p, long planDay)
+    {
+        var rs = _w.Content.Routine;
+        var plan = PlanOf(p, planDay);
+        if (plan == null || plan.Sittings >= rs.MaxSessionsPerDay || !_w.Server.IsOpen) return;
+        var day = LayoutOf(p, planDay);
+        long dayStart = LocalDayStart(p, planDay);
+        int nowMin = (int)((Now - dayStart + SimTime.TicksPerMinute - 1) / SimTime.TicksPerMinute);   // arredonda para cima: a pausa nunca fica menor
+        int pause = Rng("routine.pause", p.Id * 100_000L + planDay * 10 + plan.Sittings)
+            .NextIntInclusive(rs.ReturnPauseMinMinutes, Math.Max(rs.ReturnPauseMinMinutes, rs.ReturnPauseMaxMinutes));
+        int at = DailySchedule.NextReturnMinute(day, nowMin, pause, rs);
+        if (at < 0) return;
+        _w.Scheduler.Schedule(dayStart + at * SimTime.TicksPerMinute, EvConsiderReturn, p.Id, planDay);
+    }
+
+    /// <summary>
+    /// Voltar (v3): depois da pausa, a saciedade caiu; a vontade de jogar (com a experiencia da ultima
+    /// sessao) e comparada com as outras opcoes e a vontade de parar. Se volta, joga ate a sessao normal
+    /// (ou o fim da janela) e decide de novo se continua.
+    /// </summary>
+    private void OnConsiderReturn(ScheduledEvent ev)
+    {
+        var p = _w.GetPerson((int)ev.TargetId);
+        if (!_w.Server.IsOpen || p.CharacterId == 0 || p.IsOnline || p.State is LifecycleState.Quit or LifecycleState.Banned) return;
+        var rs = _w.Content.Routine;
+        long planDay = ev.Payload;
+        var plan = PlanOf(p, planDay);
+        if (plan == null || plan.Sittings >= rs.MaxSessionsPerDay) return;
+        SatietyToNow(p);
+        int pull = PullNow(p, plan, LastExperienceDelta(p), 1000, true);
+        int chance = DailySchedule.Choice(pull, plan.SessionPriority, DailySchedule.StopPressure(p.Satiety, DailySchedule.Fatigue(p, rs), rs));
+        if (!Rng("routine.return", p.Id * 100_000L + planDay * 10 + plan.Sittings).ChancePermille(chance)) { plan.DeclinedReturns++; return; }
+        long windowEnd = -1;
+        foreach (var (s, e, _) in p.OpenWindows)
+            if (s <= Now && Now < e && e > windowEnd) windowEnd = e;
+        if (windowEnd < 0) return;
+        int minutes = (int)Math.Min(DailySchedule.SessionMinutes(p, rs), (windowEnd - Now) / SimTime.TicksPerMinute);
+        if (minutes < rs.MinSessionMinutes) return;
+        StartSession(p, minutes, SessionNormal, planDay, StartReturn);
+    }
+
     private bool GoalClose(Character ch)
     {
         int close = _w.Content.Routine.GoalClosePermille;
