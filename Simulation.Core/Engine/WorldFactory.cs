@@ -16,6 +16,11 @@ public sealed class WorldConfig
     /// engajamento, sessoes flexiveis, inatividade, desistencia). Mede a rotina pura.
     /// </summary>
     public bool NeutralMood { get; set; }
+    /// <summary>
+    /// Cenario controlado (R4): a pessoa N fica na celula (N-1) mod total, com perfil e ocupacao
+    /// fixos e tracos na media. Separa o efeito das regras da mistura de perfis e ocupacoes.
+    /// </summary>
+    public IReadOnlyList<ControlledCell>? ControlledCells { get; set; }
 }
 
 /// <summary>Cria uma campanha nova a partir de conteudo validado e configuracao.</summary>
@@ -32,7 +37,8 @@ public static class WorldFactory
         var engine = new SimulationEngine(world);
 
         for (int id = 1; id <= config.PopulationSize; id++)
-            world.AddPerson(PopulationGenerator.Generate(id, content, config.Seed));
+            world.AddPerson(PopulationGenerator.Generate(id, content, config.Seed,
+                config.ControlledCells is { Count: > 0 } cells ? cells[(id - 1) % cells.Count] : null));
 
         // O dia 0 fecha na meia-noite seguinte (tick = 1 dia).
         world.Scheduler.Schedule(SimTime.TicksPerDay, SimulationEngine.DailyRollupEvent, payload: 0);

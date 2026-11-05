@@ -23,6 +23,9 @@ Opções:
                         Escreve só validation.md e validation.csv (exige --out)
   --targets <arquivo>   Metas da validação (padrão: targets.json da pasta do mundo)
   --no-targets          Não calcula a validação na execução simples
+  --controlled <p:o>    Cenário controlado: perfis × ocupações ("casual,hardcore:sem_ocupacao,escala_5x2"),
+                        pessoas iguais por célula (traços na média), humor neutro. Com --seeds, --days
+                        e --population (pessoas por célula, padrão 100). Escreve controlled.md (exige --out)
   --progression         Mostra a prévia da curva de progressão do mundo e sai
                         (com --out, grava progression.md)
   --help                Mostra esta ajuda
@@ -61,6 +64,7 @@ for (int i = 0; i < args.Length; i++)
             case "--targets": opt.TargetsPath = Next(); break;
             case "--no-targets": opt.NoTargets = true; break;
             case "--progression": progressionOnly = true; break;
+            case "--controlled": opt.Controlled = ParseCells(Next()); break;
             default: throw new ArgumentException($"Opção desconhecida: {a}");
         }
     }
@@ -99,4 +103,14 @@ static List<ulong> ParseSeeds(string text)
     }
     if (seeds.Count == 0) throw new ArgumentException("--seeds vazio.");
     return seeds.Distinct().ToList();
+}
+
+static List<Simulation.Core.Population.ControlledCell> ParseCells(string spec)
+{
+    var parts = spec.Split(':');
+    if (parts.Length != 2) throw new ArgumentException("--controlled espera \"perfis:ocupações\".");
+    var profiles = parts[0].Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    var occs = parts[1].Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    if (profiles.Length == 0 || occs.Length == 0) throw new ArgumentException("--controlled vazio.");
+    return profiles.SelectMany(p => occs.Select(o => new Simulation.Core.Population.ControlledCell(p, o))).ToList();
 }

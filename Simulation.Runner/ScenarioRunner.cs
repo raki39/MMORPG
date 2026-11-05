@@ -29,6 +29,8 @@ public sealed class RunOptions
     /// <summary>Arquivo de metas; nulo = targets.json da pasta do mundo, se existir.</summary>
     public string? TargetsPath { get; set; }
     public bool NoTargets { get; set; }
+    /// <summary>Cenario controlado (R4): celulas perfil x ocupacao; nulo = populacao normal.</summary>
+    public List<Simulation.Core.Population.ControlledCell>? Controlled { get; set; }
 }
 
 public sealed class RunResult
@@ -97,6 +99,8 @@ public static class ScenarioRunner
         if (targetsFailed) return Fail(ExitInvalidScenario, msgs, "Metas inválidas.");
 
         int population = opt.PopulationOverride ?? scenario?.Scenario.PopulationSize ?? 100;
+        if (opt.Controlled is { Count: > 0 })
+            return RunControlled(opt, content, scenario, opt.PopulationOverride ?? 100, msgs, wall);
         if (opt.Seeds is { Count: > 0 })
             return RunBatch(opt, content, scenario, targets, population, msgs, wall);
 
@@ -291,6 +295,44 @@ public static class ScenarioRunner
         msgs.Add($"OK: {results.Length} seeds × {opt.Days} dias × {population} pessoas em {wall.Elapsed.TotalSeconds:F1} s. " +
                  $"Metas dentro da faixa: regras do cenário {Cls(TargetKinds.Scenario)}, provisórias {Cls(TargetKinds.Provisional)}, dependentes de sistemas futuros {Cls(TargetKinds.Future)} (acompanhamento). " +
                  $"Relatório em {Path.GetFullPath(Path.Combine(opt.OutDir, "validation.md"))}");
+        return new RunResult { ExitCode = ExitOk, Messages = msgs };
+    }
+
+    /// <summary>
+    /// Cenario controlado (R4): em cada seed, "perCell" pessoas iguais em cada celula perfil x
+    /// ocupacao, com o humor neutro (sem extensoes, inatividade nem desistencia). Mede so as
+    /// regras de rotina e de vontade; escreve controlled.md e controlled.csv.
+    /// </summary>
+    private static RunResult RunControlled(RunOptions opt, ContentLoadResult content, ScenarioLoadResult? scenario, int perCell, List<string> msgs, Stopwatch wall)
+    {
+        if (opt.OutDir == null) return Fail(ExitUsage, msgs, "--controlled precisa de --out.");
+        var db0 = content.Database!;
+        foreach (var c in opt.Controlled!)
+        {
+            if (!db0.Profiles.ContainsKey(c.Profile)) return Fail(ExitUsage, msgs, $"Perfil desconhecido: {c.Profile}");
+            if (!db0.Occupations.ContainsKey(c.Occupation)) return Fail(ExitUsage, msgs, $"Ocupação desconhecida: {c.Occupation}");
+        }
+        var seeds = opt.Seeds is { Count: > 0 } ? opt.Seeds : new List<ulong> { opt.Seed };
+        var runs = new DistributionData[seeds.Count];
+        int population = perCell * opt.Controlled!.Count;
+        Parallel.For(0, seeds.Count, new ParallelOptions { MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount / 2) }, i =>
+        {
+            var db = ContentLoader.LoadFolder(opt.WorldFolder).Database!;
+            var engine = WorldFactory.Create(db, new WorldConfig { Seed = seeds[i], PopulationSize = population, NeutralMood = true, ControlledCells = opt.Controlled });
+            if (scenario != null)
+                foreach (var c in scenario.Commands.OrderBy(c => c.Tick).Where(c => c.Tick <= SimTime.Days(opt.Days)))
+                    engine.Submit(c.Command, c.Tick);
+            var collector = new ValidationCollector(db, 7);
+            for (int day = 0; day < opt.Days; day++)
+            {
+                engine.AdvanceTo(SimTime.Days(day + 1));
+                collector.Consume(engine.World.Events.Drain(), engine.World);
+            }
+            runs[i] = collector.Finish(engine.World, seeds[i], opt.Days, Array.Empty<TargetDefinition>()).Distribution;
+        });
+        ControlledReport.Write(opt.OutDir, opt.Controlled!, seeds, opt.Days, perCell, SimulatorVersion(), runs);
+        msgs.Add($"OK: cenário controlado, {opt.Controlled!.Count} células × {perCell} pessoas × {seeds.Count} seeds × {opt.Days} dias em {wall.Elapsed.TotalSeconds:F1} s. " +
+                 $"Relatório em {Path.GetFullPath(Path.Combine(opt.OutDir, "controlled.md"))}");
         return new RunResult { ExitCode = ExitOk, Messages = msgs };
     }
 

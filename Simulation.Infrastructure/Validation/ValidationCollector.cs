@@ -62,7 +62,7 @@ public sealed record SessionSample(int PersonId, string Profile, string Occupati
 }
 
 /// <summary>Um dia da agenda (R3), na janela de medicao.</summary>
-public sealed record DaySample(int PersonId, string Profile, string Occupation, long LocalDay, int FreeMinutes, int PlannedMinutes, int Sessions, int WorkSessions, string Reason);
+public sealed record DaySample(int PersonId, string Profile, string Occupation, long LocalDay, int FreeMinutes, int PlannedMinutes, int Sessions, int WorkSessions, string Reason, bool FreeDay = false);
 
 /// <summary>Medicao de distribuicoes (R3): referencia antes de mudar a vontade de jogar (R4).</summary>
 public sealed class DistributionData
@@ -500,7 +500,7 @@ public sealed class ValidationCollector
             dist.Persons[key] = dist.Persons.GetValueOrDefault(key) + 1;
             foreach (var d in p.DayPlans)
                 if (d.LocalDay >= windowDay)
-                    dist.Days.Add(new DaySample(p.Id, p.ProfileId, p.OccupationId, d.LocalDay, d.FreeMinutes, d.PlannedMinutes, d.Sessions, d.WorkSessions, d.Reason));
+                    dist.Days.Add(new DaySample(p.Id, p.ProfileId, p.OccupationId, d.LocalDay, d.FreeMinutes, d.PlannedMinutes, d.Sessions, d.WorkSessions, d.Reason, d.FreeDay));
         }
         foreach (var kv in _sleepWork) m.SleepWork[kv.Key] = kv.Value;
         m.SleepWork["sessions"] = _sessionsInWindow.Values.Sum();
