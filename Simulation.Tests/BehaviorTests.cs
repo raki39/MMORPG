@@ -46,6 +46,7 @@ public class BehaviorTests
     /// sem motivo (compromisso ou tempo livre que so abre depois).
     /// </summary>
     [Fact]
+    [Trait("Classe", "Tendência")]
     public void Sessoes_ComecamNoHorarioDeCostumeOuAntesPorVontade()
     {
         var e = OpenedWorld();

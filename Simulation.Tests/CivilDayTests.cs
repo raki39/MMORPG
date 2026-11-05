@@ -24,6 +24,7 @@ public class CivilDayTests
     }
 
     [Fact]
+    [Trait("Classe", "Invariante")]
     public void SemanaCivil_ComFeriadoETurnoNoturno_Fecha168hSemLacunaNemSobreposicao()
     {
         var people = Enumerable.Range(1, 800).Select(i => PopulationGenerator.Generate(i, C, 13)).ToList();
@@ -38,6 +39,7 @@ public class CivilDayTests
     }
 
     [Fact]
+    [Trait("Classe", "Invariante")]
     public void TurnoDeSexta_AsHorasDepoisDaMeiaNoitePertencemAoSabadoCivil_EOSonoAparece()
     {
         var p = PopulationGenerator.Generate(1, C, 1);
@@ -58,6 +60,7 @@ public class CivilDayTests
     /// exatamente a soma das noites fechadas da agenda (regra explicita, com o piso e o teto a cada noite).
     /// </summary>
     [Fact]
+    [Trait("Classe", "Invariante")]
     public void CadaNoite_FechadaUmaVez_DeficitNuncaNegativo()
     {
         var e = TestSupport.NewEngine(4, 600);
@@ -84,6 +87,7 @@ public class CivilDayTests
     }
 
     [Fact]
+    [Trait("Classe", "Regra do preset")]
     public void Escala5x2_CincoDiasDeSegundaASexta_FolgaSempreNoFimDeSemana_MaisComumQueA6x1()
     {
         var people = Enumerable.Range(1, 6000).Select(i => PopulationGenerator.Generate(i, C, 17)).ToList();

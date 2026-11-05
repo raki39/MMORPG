@@ -19,6 +19,7 @@ public class CoherenceTests
         Enumerable.Range(0, 7).Select(d => DailySchedule.Build(p, C.Occupations[p.OccupationId], RS, d, false, false, false)).ToList();
 
     [Fact]
+    [Trait("Classe", "Regra do preset")]
     public void TurnoDiurno_NinguemAcordaDeMadrugada()
     {
         foreach (var p in People.Where(p => !DailySchedule.HasNightShift(C.Occupations[p.OccupationId])))
@@ -28,6 +29,7 @@ public class CoherenceTests
     }
 
     [Fact]
+    [Trait("Classe", "Tendência")]
     public void HoraPreferida_CaiNoTempoLivreDaRotina()
     {
         int all = 0, total = 0;
@@ -52,6 +54,7 @@ public class CoherenceTests
     /// so joga mais tarde, por menos tempo (exemplo do criador).
     /// </summary>
     [Fact]
+    [Trait("Classe", "Tendência")]
     public void QuemPriorizaOJogo_ComecaLogoQueChega_OCasualMaisTarde()
     {
         static double Delay(Person p)
@@ -74,6 +77,7 @@ public class CoherenceTests
 
     /// <summary>Caso do criador: hardcore de meio periodo de manha, livre as 13:25, ja joga por volta das 14 h.</summary>
     [Fact]
+    [Trait("Classe", "Tendência")]
     public void Hardcore_DeMeioPeriodoDeManha_JogaLogoDepoisDoAlmoco()
     {
         var eager = People.Where(p => p.OccupationId == "meio_periodo_manha" && p.Traits.GameImportance >= 700).ToList();
@@ -92,6 +96,7 @@ public class CoherenceTests
     /// continuar e voltar. A estimativa de quem prioriza o jogo e maior no dia com mais tempo livre.
     /// </summary>
     [Fact]
+    [Trait("Classe", "Tendência")]
     public void MaisTempoLivre_MaisJogoEstimado_ParaQuemPriorizaOJogo()
     {
         var p = People.First(x => x.Traits.GameImportance >= 750);
@@ -107,6 +112,7 @@ public class CoherenceTests
     }
 
     [Fact]
+    [Trait("Classe", "Invariante")]
     public void HoraDeDormir_SeAcostumaAsObrigacoes_EODiaLivreNaoVaiMuitoMaisTarde()
     {
         foreach (var p in People)
@@ -123,6 +129,7 @@ public class CoherenceTests
     }
 
     [Fact]
+    [Trait("Classe", "Regra do preset")]
     public void Exemplo_MeioPeriodo_SemMadrugada_ComJogoAntesDeDormir()
     {
         var part = People.Where(p => p.OccupationId.StartsWith("meio_periodo", StringComparison.Ordinal)).ToList();
@@ -146,6 +153,7 @@ public class CoherenceTests
     }
 
     [Fact]
+    [Trait("Classe", "Regra do preset")]
     public void Validador_RecusaTurnoDiurnoQueExigeAcordarDeMadrugada()
     {
         var set = TestSupport.FreshPresetSet();

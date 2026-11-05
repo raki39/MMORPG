@@ -224,6 +224,36 @@ Mesma rodada: 5 seeds × 1.000 pessoas × 90 dias. **15 de 21 metas dentro da fa
   - em 180 dias a novidade dos hardcore cai a 213, com satisfação de 542;
   - a falta de conteúdo pesa de verdade só depois de 7 a 8 meses sem atualização.
 
+## R5: metas da rotina revistas (D-052, 05/11/2026)
+
+Com a vontade de jogar da v3 (D-051), a pessoa joga, para e volta. A meta antiga "sessões por semana" foi escrita quando havia uma sessão por dia e, na prática, media dias de jogo. Na R5 as medidas foram separadas: **dias de jogo por semana**, **sessões por dia de jogo** e **horas por semana**. Cada faixa foi revista pelo significado da medida, não para acomodar o resultado.
+
+| Meta | Antes (até a R4) | R5 | Por quê |
+|---|---|---|---|
+| Casual: sessões por semana 2–4 | `sessions_per_week` | **Dias de jogo por semana 2–4** (`play_days_per_week`) | Mesma intenção (cerca de 3 dias); a medida agora conta dias, não voltas |
+| Hardcore: sessões por semana 5–7 | `sessions_per_week` | **Dias de jogo por semana 5–7** | Mesma intenção (cerca de 6 dias) |
+| — | — | **Casual: sessões por dia de jogo 1,1–2,0** (`sessions_per_play_day`) | Nova. Uma sessão na maioria dos dias e voltas comuns no dia livre; abaixo de 1,1 a volta quase não existiria |
+| — | — | **Hardcore: sessões por dia de jogo 1,2–2,5** | Nova. Volta mais quando há tempo; a sessão normal longa limita quantas cabem |
+| Casual: horas por semana 2–6 h | "3 sessões de 70 min" | **3–9 h** | Cerca de 3 dias de jogo; no dia livre, 1 ou 2 sessões de 1h30 com pausa (comportamento aprovado pelo criador em 05/11/2026) |
+| Hardcore: horas por semana 15–45 h | — | sem mudança | — |
+| Ativos em dia útil, fim de semana, pico online | — | sem mudança | Medem a população no dia, não as sessões |
+
+**Resultados registrados** (regras do cenário, média das 5 seeds):
+
+| Medida | pré-R4 (R3) | R4 (D-050) | v3 (D-051) | R5 (D-052) |
+|---|---:|---:|---:|---:|
+| Casual: sessões por semana | 2,8 | 2,8 | 4,2 | 4,2 |
+| Casual: dias de jogo por semana | — | — | — | 2,8 |
+| Casual: sessões por dia de jogo | — | — | — | 1,49 |
+| Casual: horas por semana | 5,5 | 5,4 | 6,8 | 6,7 |
+| Hardcore: sessões por semana | 6,5 | 6,6 | 9,5 | 9,4 |
+| Hardcore: dias de jogo por semana | — | — | — | 6,2 |
+| Hardcore: sessões por dia de jogo | — | — | — | 1,52 |
+| Hardcore: horas por semana | 36,8 | 31,9 | 36,8 | 36,5 |
+| Regras do cenário dentro | 7 de 7 | 7 de 7 | 4 de 7 | 9 de 9 |
+
+Os relatórios completos de cada versão estão em `docs/baselines/` (`pre-R4`, `pos-R4`, `pos-R4b`, `pos-R5`).
+
 ## Próximos passos
 
 Roteiro por etapas (backlog):

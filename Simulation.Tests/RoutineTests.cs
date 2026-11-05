@@ -31,6 +31,7 @@ public class RoutineTests
         DailySchedule.Build(p, C.Occupations[p.OccupationId], RS, dow, holiday, false, false);
 
     [Fact]
+    [Trait("Classe", "Regra do preset")]
     public void Comercial_SoTemANoite_EDormeATempoDoDiaSeguinte()
     {
         var day = Day(Standard("comercial"), 0);   // segunda
@@ -43,6 +44,7 @@ public class RoutineTests
     }
 
     [Fact]
+    [Trait("Classe", "Regra do preset")]
     public void Estudante_DaManha_TemATardeEANoiteLivres()
     {
         var day = Day(Standard("estudante_manha"), 1);
@@ -52,6 +54,7 @@ public class RoutineTests
     }
 
     [Fact]
+    [Trait("Classe", "Regra do preset")]
     public void TurnoNoturno_DormeDeDia_EJogaAntesDoTurno()
     {
         var p = Standard("turno_noturno");
@@ -65,6 +68,7 @@ public class RoutineTests
     }
 
     [Fact]
+    [Trait("Classe", "Regra do preset")]
     public void TrabalhaEEstuda_QuaseSemTempoNosDiasUteis()
     {
         var p = Standard("trabalho_estudo");
@@ -75,6 +79,7 @@ public class RoutineTests
     }
 
     [Fact]
+    [Trait("Classe", "Invariante")]
     public void Feriado_SuspendeObrigacoes_SalvoQuemTrabalhaEmFeriado_EFolgaDaEscala()
     {
         Assert.True(Day(Standard("comercial"), 2, holiday: true).FreeDay);
@@ -86,6 +91,7 @@ public class RoutineTests
     }
 
     [Fact]
+    [Trait("Classe", "Invariante")]
     public void SessaoMinimaMesmoNaJanela_EComecaMaisCedoSeNaoCouber()
     {
         var day = Day(Standard("comercial"), 0);   // janela 1115..1345
@@ -104,6 +110,7 @@ public class RoutineTests
     /// flexibilidade da ocupacao). Deslocamento, trabalho presencial e estudo ficam protegidos.
     /// </summary>
     [Fact]
+    [Trait("Classe", "Invariante")]
     public void NinguemComecaASessaoDuranteUmaObrigacao()
     {
         var e = TestSupport.NewEngine(11, 400);
@@ -138,6 +145,7 @@ public class RoutineTests
     }
 
     [Fact]
+    [Trait("Classe", "Tendência")]
     public void TempoLivreNaoEJogar_DedicacaoPesaMaisQueDisponibilidade()
     {
         var e = TestSupport.NewEngine(4, 1500);
@@ -159,6 +167,7 @@ public class RoutineTests
     }
 
     [Fact]
+    [Trait("Classe", "Regra do preset")]
     public void Renda_PelaOcupacaoEPeloPais_ApoioPrincipalmenteParaQuemEstuda()
     {
         var people = Enumerable.Range(1, 3000).Select(i => PopulationGenerator.Generate(i, C, 3)).ToList();
@@ -174,6 +183,7 @@ public class RoutineTests
     }
 
     [Fact]
+    [Trait("Classe", "Invariante")]
     public void OcupacoesInvalidas_SaoErro()
     {
         var set = TestSupport.FreshPresetSet();
@@ -188,6 +198,7 @@ public class RoutineTests
     }
 
     [Fact]
+    [Trait("Classe", "Invariante")]
     public void Rotina_EDeterministica_EEntraNoHash()
     {
         string Hash()

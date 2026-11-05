@@ -44,6 +44,7 @@ public class DayAccountingTests
     }
 
     [Fact]
+    [Trait("Classe", "Invariante")]
     public void DeitarAs2_AcordarAs9_SaoSeteHoras()
     {
         var p = Standard("sem_ocupacao", bedtime: 26 * 60, need: 420);   // deita as 02:00 (26h do dia anterior)
@@ -58,6 +59,7 @@ public class DayAccountingTests
     /// unica vez ao acordar (nada e somado na saida e de novo na noite seguinte).
     /// </summary>
     [Fact]
+    [Trait("Classe", "Invariante")]
     public void FicarJogandoDepoisDeDeitar_EntraUmaVezNoSonoReal()
     {
         var e = TestSupport.NewEngine(2, 800);
@@ -102,6 +104,7 @@ public class DayAccountingTests
     // ---------------- Linha do tempo fechando 24 h ----------------
 
     [Fact]
+    [Trait("Classe", "Invariante")]
     public void LinhaDoTempo_CadaMinutoUmaVez_EOsDiasSeEncaixam()
     {
         var people = Enumerable.Range(1, 600).Select(i => PopulationGenerator.Generate(i, C, 9)).ToList();
@@ -133,6 +136,7 @@ public class DayAccountingTests
     }
 
     [Fact]
+    [Trait("Classe", "Regra do preset")]
     public void TrabalhaEEstuda_VaiDiretoDoTrabalhoParaAFaculdade_EComeNoCaminho()
     {
         var p = Standard("trabalho_estudo");
@@ -146,6 +150,7 @@ public class DayAccountingTests
     }
 
     [Fact]
+    [Trait("Classe", "Regra do preset")]
     public void HomeOffice_SemDeslocamento_NaoTemChegada_LivreAoFimDoExpediente()
     {
         var p = Standard("home_office");
@@ -157,6 +162,7 @@ public class DayAccountingTests
     // ---------------- Escala 6x1 ----------------
 
     [Fact]
+    [Trait("Classe", "Regra do preset")]
     public void Escala6x1_SeisDiasDeTrabalhoEUmaFolga_QuePodeSerDomingo()
     {
         var people = Enumerable.Range(1, 4000).Select(i => PopulationGenerator.Generate(i, C, 11)).Where(p => p.OccupationId == "escala_6x1").ToList();
@@ -172,6 +178,7 @@ public class DayAccountingTests
     // ---------------- O dia de amanha ----------------
 
     [Fact]
+    [Trait("Classe", "Invariante")]
     public void FeriadoOuFolgaAmanha_DormeNaHoraNatural()
     {
         var p = Standard("comercial", bedtime: 25 * 60);   // gosta de deitar a 01:00
@@ -184,6 +191,7 @@ public class DayAccountingTests
     }
 
     [Fact]
+    [Trait("Classe", "Invariante")]
     public void TurnoDaNoiteDeSexta_SabadoComecaDepoisDoSono_NaoInteiramenteLivre()
     {
         var p = Standard("turno_noturno");
@@ -198,6 +206,7 @@ public class DayAccountingTests
     }
 
     [Fact]
+    [Trait("Classe", "Invariante")]
     public void SaidaParaOTurno_NaoESono_EOPrimeiroTurnoDepoisDaFolga()
     {
         var p = Standard("turno_noturno");

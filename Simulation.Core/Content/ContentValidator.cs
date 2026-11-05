@@ -227,7 +227,7 @@ public static class ContentValidator
         if (r.PreferredDelayMaxMinutes is < 0 or > 600) v.Error(PopulationFile, "routine.preferredDelayMaxMinutes", "Use de 0 a 600 minutos.");
         foreach (var (name, value, lo, hi) in new (string, int, int, int)[]
         {
-            ("satietyGrowthSessionsPermille", r.SatietyGrowthSessionsPermille, 100, 10_000), ("satietyRecoveryMinutes", r.SatietyRecoveryMinutes, 10, 1440),
+            ("satietyHalfLifeSessionsPermille", r.SatietyHalfLifeSessionsPermille, 100, 10_000), ("satietyRecoveryHalfLifeMinutes", r.SatietyRecoveryHalfLifeMinutes, 10, 1440),
             ("continueBlockMinutes", r.ContinueBlockMinutes, 5, 240), ("continueMinMinutes", r.ContinueMinMinutes, 1, 60),
             ("continueTendencyWeightPermille", r.ContinueTendencyWeightPermille, 0, 1000), ("experienceWeightPermille", r.ExperienceWeightPermille, 0, 2000),
             ("returnPauseMinMinutes", r.ReturnPauseMinMinutes, 0, 600), ("returnPauseMaxMinutes", r.ReturnPauseMaxMinutes, 0, 720),

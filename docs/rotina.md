@@ -1,6 +1,6 @@
 # Rotina da pessoa simulada: sistema, cálculos e números
 
-Referência do sistema de rotina, das decisões P1, P2 e P3 até a D-051 (revisão R1 a R4, com a vontade de jogar da v3). Todos os números estão em `Content/presets/inicial/population.json` (seção `routine` e perfis) e em `occupations.json`; o validador confere as faixas. Permille: 1000 = 100%.
+Referência do sistema de rotina, das decisões P1, P2 e P3 até a D-052 (revisão R1 a R5, com a vontade de jogar da v3). A seção 9 separa o que é invariante da simulação, o que é regra do preset inicial e o que é tendência estatística. Todos os números estão em `Content/presets/inicial/population.json` (seção `routine` e perfis) e em `occupations.json`; o validador confere as faixas. Permille: 1000 = 100%.
 
 ## 1. Visão geral: como as peças se ligam
 
@@ -168,11 +168,12 @@ Depois de decidir jogar hoje (o sorteio acima, um por dia), a pessoa toma decis�
 
 Sem saciedade, sem cansaço e com tudo neutro, a chance é a própria prioridade do jogo.
 
-**Saciedade** (`Satiety`, 0–1000): cresce enquanto a pessoa joga e cai nas pausas. Não existe cota nem total do dia.
-- Jogando: sobe a fração m ÷ (m + τ) do que falta, com τ = 2 sessões normais (`satietyGrowthSessionsPermille` 2000). Depois de uma sessão normal, a saciedade fica em um terço.
-- Em pausa: cai a fração m ÷ (m + 120 min) (`satietyRecoveryMinutes`): metade a cada 2 h.
-- Zera ao acordar.
-- Todo o tempo jogado conta, inclusive no trabalho e o interrompido. A frustração de uma interrupção pelo trabalho entra à parte, como vontade de terminar (+150 na vontade de jogar da próxima decisão).
+**Saciedade** (`Satiety`, 0–1000): cresce enquanto a pessoa joga e cai nas pausas. Ela **aumenta a vontade de parar**. Não existe cota nem total do dia.
+- **Jogando:** o que falta até 1000 cai pela metade a cada 1,5 sessão normal (`satietyHalfLifeSessionsPermille` 1500). Depois de uma sessão normal, a saciedade fica em 37%; depois de três, em 75%.
+- **Em pausa:** cai pela metade a cada 2 h (`satietyRecoveryHalfLifeMinutes` 120).
+- **Meia-vida (R5):** o resultado não depende de quantas vezes se atualiza, seja por blocos de decisão ou por pausas divididas. A conta é inteira, por uma tabela fixa de 2^(−k/64), e arredonda para o mais próximo.
+- **Ao acordar:** zera.
+- **O que conta:** todo o tempo jogado, inclusive no trabalho e o interrompido. A frustração de uma interrupção pelo trabalho entra à parte, como vontade de terminar (+150 na vontade de jogar da próxima decisão).
 
 **Quando começar** (`StartMinute`): um sorteio só por dia, num fluxo próprio (`routine.start`), sem tentativas independentes.
 - A vontade de começar vale **por hora** e se acumula no tempo livre, em passos de 10 min (`startStepMinutes`, só arredonda o horário). A pessoa começa quando a chance acumulada passa do valor sorteado.
@@ -275,64 +276,128 @@ A tela chama isso de "estimativa".
 
 Ordem da página: quem é → o padrão → o que aconteceu.
 
-## 9. Coerência garantida por testes
+## 9. Invariantes, regras do preset e tendências (R5)
 
-| Regra | Teste |
-|---|---|
-| Turno diurno nunca exige acordar antes das 04:30 | `TurnoDiurno_NinguemAcordaDeMadrugada` |
-| O horário habitual cai no tempo livre e a sessão típica cabe antes de dormir | `HoraPreferida_CaiNoTempoLivreDaRotina` |
-| O gosto de horário fica separado do horário habitual | `GostoDeHorario_SeparadoDoHorarioHabitual` |
-| Quem prioriza o jogo começa logo depois de chegar; o casual, bem depois e com sessão menor | `QuemPriorizaOJogo_ComecaLogoQueChega_OCasualMaisTarde` |
-| Hardcore de meio período de manhã joga logo depois do almoço | `Hardcore_DeMeioPeriodoDeManha_JogaLogoDepoisDoAlmoco` |
-| A sessão normal é preferência; a importância não muda a duração | `SessaoNormal_EPreferencia_ImportanciaNaoMudaADuracao` |
-| Mais tempo livre dá mais jogo estimado a quem prioriza o jogo (pelas voltas e pelo continuar) | `MaisTempoLivre_MaisJogoEstimado_ParaQuemPriorizaOJogo` |
-| Sem saciedade nem cansaço, a decisão é a própria prioridade; saciedade e cansaço reduzem | `Decisao_SemSaciedadeNemCansaco_EAPropriaPrioridade_ESaciedadeReduz` |
-| A saciedade cresce com o tempo jogado, cai na pausa e fica entre 0 e 1000 | `Saciedade_CresceComOTempoJogado_CaiNaPausa_NuncaPassaDosLimites` |
-| Um sorteio por dia para começar; o passo não muda quanto se começa cedo | `Comecar_UmSorteioSoPorDia_OPassoNaoMudaQuantoSeComecaCedo` |
-| A participação é a chance do dia, não o passo de avaliação | `Participacao_ENaChanceDoDia_NaoNoPassoDeAvaliacao` |
-| Continuar só dentro do tempo livre; ficar acordado só passando da hora de dormir | `Continuar_DentroDoTempoLivre_EFicarAcordadoSoPassandoDaHoraDeDormir` |
-| Voltar depois de uma pausa é comum no dia livre; casual pode jogar três vezes | `Voltar_DepoisDeUmaPausa_ComumNoDiaLivre_ECasualPodeJogarTresVezes` |
-| Jogo no trabalho não desconta minutos da noite | `JogoNoTrabalho_NaoDescontaMinutosDaSessaoDaNoite` |
-| No dia de obrigação também se usa a janela antes do trabalho | `DiaDeObrigacao_TambemUsaAJanelaAntesDoTrabalho` |
-| O horário de costume influencia: começa nele ou antes, por vontade | `Sessoes_ComecamNoHorarioDeCostumeOuAntesPorVontade` |
-| Hábito: falta por obrigação é neutra, escolha reduz, sessão interrompida conta | `Habito_FaltaPorObrigacaoENeutra_EscolhaReduz_SessaoInterrompidaConta` |
-| A disposição do dia é reproduzível, pequena e centrada | `DisposicaoDoDia_ReproduzivelPorPessoaEDia_PequenaECentrada` |
-| O sono natural se adapta às obrigações (+1 h no dia livre, no máximo) | `HoraDeDormir_SeAcostumaAsObrigacoes` |
-| Ninguém joga durante obrigações; no trabalho remoto, só na pausa ou na escapada permitida | `NinguemComecaASessaoDuranteUmaObrigacao` |
-| A extensão tem limites e nunca invade obrigação | `Extensao_TemLimites_ConsomeSonoSoNoFimDoDia_ENuncaInvadeObrigacoes` |
-| Compromisso só em dia livre, raro, sem sessão durante | `Compromisso_SoEmDiaLivre_Raro_ESemSessaoDurante` |
-| Importância, tendência e autocontrole são independentes | `ImportanciaTendenciaEAutocontrole_SaoSeparados` |
+Cada regra da rotina é de uma de três classes. Os testes da rotina levam a mesma classe (`[Trait("Classe", ...)]`) e podem rodar separados, por exemplo `dotnet test --filter "Classe=Invariante"`.
 
-## 10. Números da validação (5 seeds × 90 dias × 1.000 pessoas, v3, D-051)
+**Invariantes da simulação** (valem para qualquer conteúdo; falhar é erro de código; 39 testes):
+- **Limites reais:** nenhuma sessão invade sono real, preparo, deslocamento, obrigação incompatível ou compromisso. No trabalho remoto, só na pausa ou na escapada autorizadas.
+- **Corte de sono:** só na janela que termina no sono; até 180 min por período, compartilhados; sono mínimo de 4 h.
+- **Contabilidade:** cada sono é contado uma vez, no despertar. Cada minuto do dia pertence a uma parte só, e a semana civil fecha 168 h. O turno da noite de sexta pertence ao sábado civil.
+- **Probabilidades:** fatores combinados e limitados uma vez; a estimativa usa a mesma política.
+- **Decisões:**
+  - sem saciedade nem cansaço, a chance é a prioridade;
+  - a saciedade cresce com o tempo jogado e cai nas pausas, sem depender da frequência de atualização;
+  - um sorteio por dia para o horário de começar, e a participação não depende do passo;
+  - continuar só dentro do tempo livre; ficar acordado só passando da hora de dormir;
+  - jogo no trabalho não desconta minutos.
+- **Hábito e disposição:** faltar por obrigação é neutro e sessão interrompida conta como jogo; a disposição é reproduzível e centrada.
+- **Determinismo:** mesma seed, mesmo resultado; o estado entra no hash. O validador recusa conteúdo inválido.
 
-**Cenário controlado** (rotina pura, sem humor): 4 de 7 regras dentro. As três fora medem o modelo antigo de uma sessão por dia (ver D-051): sessões por semana do casual 4,2 (faixa 2–4) e do hardcore 9,5 (5–7), horas do casual 6,8 h (2–6). Os dias com jogo não mudaram.
+**Regras do preset inicial** (valem para o conteúdo de `presets/inicial`; outro preset pode mudar; 16 testes):
+- turno diurno nunca exige acordar antes das 04:30;
+- escala 5×2 de segunda a sexta, com folga no fim de semana; 6×1 com folga em qualquer dia;
+- quem trabalha e estuda vai direto do trabalho para a aula e come no caminho;
+- home office sem deslocamento nem chegada;
+- tolerância de 5 min ao chamado do trabalho;
+- horários e rendas das ocupações;
+- o gosto de horário fica separado do horário habitual (quem sai às 18:50 e gosta das 17 h costuma começar depois das 19 h).
+
+**Tendências estatísticas** (comportamento esperado em média, com faixa; 12 testes e as metas de `targets.json`):
+- quem prioriza o jogo começa logo depois de chegar; o casual, mais tarde;
+- mais tempo livre, mais jogo para quem prioriza;
+- voltar depois de uma pausa é comum no dia livre;
+- quem trabalha à tarde ou à noite também usa a janela antes do trabalho;
+- o cansaço reduz o jogo;
+- o horário de costume influencia o começo;
+- chineses jogam na noite local, que é manhã no servidor;
+- dias de jogo, sessões por dia, horas por semana, ativos, fim de semana e pico online (metas, seção 10).
+
+## 10. Números da validação (5 seeds × 90 dias × 1.000 pessoas, R5, D-052)
+
+**Metas da rotina** (rodada controlada, humor neutro): **9 de 9** dentro. Na R5, as medidas foram separadas e as faixas revistas pelo significado (histórico e justificativas em `validacao.md`, seção "R5").
 
 | Meta | Faixa | Resultado | Entre seeds |
 |---|---|---|---|
-| Casual: sessões por semana | 2–4 | 4,2 | 4,2–4,3 |
-| Casual: horas por semana | 2–6 h | 6,8 h | 6,7–6,9 |
-| Hardcore: sessões por semana | 5–7 | 9,5 | 9,0–10,0 |
-| Hardcore: horas por semana | 15–45 h | 36,8 h | 35,8–38,0 |
-| Ativos em dia útil | 30–55% | 51,4% | 50,3–52,4 |
+| Casual: dias de jogo por semana | 2–4 | 2,8 | 2,8–2,8 |
+| Hardcore: dias de jogo por semana | 5–7 | 6,2 | 6,0–6,4 |
+| Casual: sessões por dia de jogo | 1,1–2,0 | 1,5 | 1,5–1,5 |
+| Hardcore: sessões por dia de jogo | 1,2–2,5 | 1,5 | 1,5–1,6 |
+| Casual: horas por semana | 3–9 h | 6,7 h | 6,6–6,8 |
+| Hardcore: horas por semana | 15–45 h | 36,5 h | 35,6–37,7 |
+| Ativos em dia útil | 30–55% | 51,4% | 50,2–52,4 |
 | Fim de semana ÷ dia útil | 1,3–2,0× | 1,3× | 1,3–1,4× |
-| Pico online do dia | 15–35% | 24,1% | 22,8–24,7 |
+| Pico online do dia | 15–35% | 23,9% | 22,7–24,4 |
 
 **Campanha completa** (com humor):
 
-| Perfil | Sessões/semana | Horas/semana |
-|---|---:|---:|
-| Casual | 4,5 | 7,2 |
-| Social | 6,1 | 13,1 |
-| Comerciante | 7,7 | 14,6 |
-| Explorador | 7,7 | 17,7 |
-| Competitivo | 7,8 | 21,7 |
-| Hardcore | 9,5 | 37,1 |
+| Perfil | Dias de jogo/semana | Sessões por dia de jogo | Horas/semana |
+|---|---:|---:|---:|
+| Casual | 2,9 | 1,51 | 7,1 |
+| Social | 3,8 | 1,57 | 12,9 |
+| Comerciante | 4,4 | 1,71 | 14,4 |
+| Explorador | 4,5 | 1,70 | 17,5 |
+| Competitivo | 4,9 | 1,58 | 21,5 |
+| Hardcore | 6,3 | 1,52 | 36,9 |
 
-As distribuições completas e as comparações com a pré-R4 e a R4 estão em `docs/baselines/pos-R4b/` e no D-051.
+- **Sessões por dia de jogo:** uma em 58%, duas em 30%, três ou mais em 12%; pausa mediana de 80 min.
+- **Fim das sessões:** decidiu parar 79%, hora de dormir 16%, fim do tempo livre 5%.
+- **Sono cortado:** 0,2% do tempo jogado.
+- **Referências:** pré-R4, R4, v3 e R5 em `docs/baselines/`.
 
 **Pendente:** com todos jogando mais, ficam fora as metas de progressão.
 - Horas até o nível 20: 70 h, contra 80–110.
 - Casuais no nível 10 ou mais: 98,9%.
-- Tempo andando ou esperando: 20,8% (faixa até 20%).
+- Tempo andando ou esperando: 21,0% (faixa até 20%).
 
 Elas são recalibradas com a curva de XP na Etapa 2.
+
+## 11. Parâmetros e hipóteses (`population.json`, seção `routine`)
+
+São hipóteses configuráveis, a menos que a coluna diga outra coisa. Os valores são os do preset inicial.
+
+| Parâmetro | Valor | O que representa |
+|---|---:|---|
+| `freeDayChanceBonus` | 350 | O tempo livre aumenta a prioridade de quem liga pouco para o jogo |
+| `busyDayPenaltyPermille` | 650 | O dia de obrigações reduz a chance de jogar no dia (só nela) |
+| `habitStreakPermille` · `habitHistoryDays` | 250 · 7 | Peso do hábito e dias da regularidade |
+| `dispositionSpreadPermille` | 200 | Variação da disposição do dia (±; a maioria fica em ±7%) |
+| `satietyHalfLifeSessionsPermille` | 1500 | Meia-vida da saciedade jogando, em sessões normais |
+| `satietyRecoveryHalfLifeMinutes` | 120 | Meia-vida da saciedade em pausa |
+| `continueBlockMinutes` · `continueMinMinutes` | 30 · 5 | Cada quanto se decide continuar e o resto mínimo da janela |
+| `continueTendencyWeightPermille` | 400 | Peso da tendência a prolongar no continuar (±20%) |
+| `experienceWeightPermille` | 500 | Peso da experiência da sessão (em relação ao habitual) |
+| `returnPauseMinMinutes` · `returnPauseMaxMinutes` | 30 · 120 | Pausa antes de reconsiderar voltar |
+| `unfinishedBonusPermille` | 150 | Vontade de terminar depois de uma interrupção pelo trabalho |
+| `freeDayMorningMinutes` | 60 | Manhã do dia livre antes da primeira oportunidade |
+| `earlyStartResistancePerHour` | 300 | Resistência a começar antes do horário de costume, por hora |
+| `startStepMinutes` | 10 | Passo que arredonda o horário de começar (não muda a participação) |
+| `maxSessionsPerDay` | 5 | Teto de sessões normais por dia |
+| `maxSleepCutMinutes` · `minSleepMinutes` | 180 · 240 | Limites do corte de sono (regra de segurança, R2/R3) |
+| `estimateSamples` | 24 | Dias simulados por dia da semana na estimativa (não muda a simulação) |
+
+## 12. Exemplos individuais (mesmas pessoas, seed 11, campanha com humor)
+
+**Semana de 10/04 a 16/04** (detalhes em `docs/baselines/pos-R4b/semanas.md`):
+
+| Pessoa | pré-R4 | R4 | v3 | Como foi na v3 |
+|---|---:|---:|---:|---|
+| Trabalhador dedicado (hardcore, horário comercial) | 37h19 | 34h21 | 43h48 | 4 h por dia útil (a noite toda); sábado e domingo de 10h a 11h30 em 2 ou 3 sessões |
+| Hardcore sem ocupação | 53h52 | 44h04 | 50h44 | De 4h a 11h por dia, 1 ou 2 sessões, começando entre 11h e 17h |
+| Casual em escala 5×2 | — | 3h41 | 4h04 | Só no fim de semana; no domingo, duas sessões com pausa |
+| Social que trabalha e estuda | 3h09 | 7h51 | 10h40 | Sem tempo de segunda a quinta; no sábado, três sessões (6h53) |
+
+**A sessão mais longa da validação** (12h25; seed 1, pessoa 329: hardcore, escala 5×2, dia livre com tempo livre das 08:09 às 23:15):
+- **Traços:** importância 840, sessão normal 225 min, tendência a prolongar 910, autocontrole 198; engajamento 690.
+- **Começo:** às 10:19, antes do horário de costume, por vontade.
+- **Decisões de continuar:** às 14:04, ao fim da sessão normal, a chance era de 70% (saciedade 33%). Depois, a cada 30 min, a saciedade subiu até 76% e a chance caiu até 54%.
+- **Fim:** às 22:44 decidiu parar, 31 min antes de dormir, sem cortar sono. Cansaço 18 de 1000 (descansada).
+- **Leitura:** os mecanismos funcionam. Com uma vontade de jogar acima de 1000 (engajada, gostando, tendência alta), a vontade de parar, que vai no máximo a 1000 + 400 de cansaço, não leva a chance de parar muito acima de 45% por bloco. Por isso existe a cauda de sessões muito longas (D-052).
+
+## 13. Simplificações registradas
+
+- Compromissos não cortam sono.
+- O cansaço é só o do sono (déficit). O desgaste de jogar horas seguidas está na saciedade, que é a única medida do "já joguei" e zera ao acordar.
+- A estimativa da tela não tem humor, cansaço, jogo no trabalho nem corte de sono.
+- O fuso é fixo por localidade, sem horário de verão.
+- Renda e apoio não têm efeito até o M7.

@@ -128,6 +128,9 @@ public sealed class ProfileStats
     public string Name { get; init; } = "";
     public int Persons { get; init; }
     public double SessionsPerWeek { get; init; }
+    /// <summary>Dias de jogo por semana e sessoes por dia de jogo (R5): o "sessoes por semana" separado.</summary>
+    public double PlayDaysPerWeek { get; init; }
+    public double SessionsPerPlayDay { get; init; }
     public double HoursPerWeek { get; init; }
     public double MedianLevel { get; init; }
     public double P90Level { get; init; }
@@ -160,6 +163,9 @@ public sealed class ValidationCollector
     private readonly long _windowStart;
     private readonly Dictionary<long, long> _openSession = new();
     private readonly Dictionary<long, int> _sessionsInWindow = new();
+    /// <summary>Dias locais com jogo por pessoa na janela de medicao (R5) e os ja contados.</summary>
+    private readonly Dictionary<long, int> _playDaysInWindow = new();
+    private readonly HashSet<(long Person, long Day)> _playDaySeen = new();
     private readonly Dictionary<long, long> _playedInWindow = new();
     private readonly Dictionary<long, (int Prime, int Total)> _weekdayStarts = new();
     public const int PrimeTimeFromMinute = 18 * 60, PrimeTimeToMinute = 23 * 60;
@@ -216,6 +222,8 @@ public sealed class ValidationCollector
                     if (_lastChoice.Remove(cid, out var prev) && prev.Run > 0 && e.Tick >= _windowStart) _runs.Add(prev.Run);
                     if (e.Tick < _windowStart) break;
                     _sessionsInWindow[pid] = _sessionsInWindow.GetValueOrDefault(pid) + 1;
+                    if (_playDaySeen.Add((pid, Simulation.Core.Behavior.BehaviorSystem.LocalDay(w.GetPerson((int)pid), e.Tick))))
+                        _playDaysInWindow[pid] = _playDaysInWindow.GetValueOrDefault(pid) + 1;
                     if (e.Causes.Count > 0 && e.Causes[0].Factor == "work_break") { _breakByPerson[pid] = _breakByPerson.GetValueOrDefault(pid) + 1; CountSleepWork("break_sessions"); }
                     if (e.Causes.Count > 0 && e.Causes[0].Factor == "during_work") { _slackByPerson[pid] = _slackByPerson.GetValueOrDefault(pid) + 1; CountSleepWork("slack_sessions"); }
                     // Horario e dia local da pessoa (P1): fuso e feriados da residencia.
@@ -431,6 +439,8 @@ public sealed class ValidationCollector
                 Name = profile.Name,
                 Persons = group.Count,
                 SessionsPerWeek = PerPersonWeekly(group.Select(c => (long)c.PersonId), _sessionsInWindow, weeks, 1),
+                PlayDaysPerWeek = PerPersonWeekly(group.Select(c => (long)c.PersonId), _playDaysInWindow, weeks, 1),
+                SessionsPerPlayDay = PerPlayDay(group.Select(c => (long)c.PersonId)),
                 HoursPerWeek = PerPersonWeekly(group.Select(c => (long)c.PersonId), _playedInWindow, weeks, SimTime.TicksPerHour),
                 MedianLevel = Percentile(levels, 0.5),
                 P90Level = Percentile(levels, 0.9),
@@ -563,6 +573,10 @@ public sealed class ValidationCollector
                 return chars.Count == 0 ? (double.NaN, "") : (chars.Count(c => c.Level >= t.Level) * 100.0 / chars.Count, "");
             case TargetMetrics.SessionsPerWeek:
                 return (PerPersonWeekly(persons, _sessionsInWindow, weeks, 1), "");
+            case TargetMetrics.PlayDaysPerWeek:
+                return (PerPersonWeekly(persons, _playDaysInWindow, weeks, 1), "");
+            case TargetMetrics.SessionsPerPlayDay:
+                return (PerPlayDay(persons), "");
             case TargetMetrics.HoursPerWeek:
                 return (PerPersonWeekly(persons, _playedInWindow, weeks, SimTime.TicksPerHour), "");
             case TargetMetrics.ActivityShare:
@@ -613,6 +627,14 @@ public sealed class ValidationCollector
             default:
                 return (double.NaN, "métrica desconhecida");
         }
+    }
+
+    /// <summary>Sessoes por dia com jogo (R5): todas as sessoes do grupo / dias com jogo do grupo.</summary>
+    private double PerPlayDay(IEnumerable<long> persons)
+    {
+        long sessions = 0, days = 0;
+        foreach (var p in persons) { sessions += _sessionsInWindow.GetValueOrDefault(p); days += _playDaysInWindow.GetValueOrDefault(p); }
+        return days == 0 ? double.NaN : sessions / (double)days;
     }
 
     private static double PerPersonWeekly(IEnumerable<long> persons, Dictionary<long, int> counts, double weeks, long divisor)

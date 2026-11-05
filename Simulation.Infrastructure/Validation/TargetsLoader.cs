@@ -60,6 +60,10 @@ public static class TargetMetrics
     public const string HoursToLevel = "hours_to_level";
     public const string ReachedLevel = "reached_level";
     public const string SessionsPerWeek = "sessions_per_week";
+    /// <summary>Dias locais com pelo menos uma sessao, por pessoa e semana (R5).</summary>
+    public const string PlayDaysPerWeek = "play_days_per_week";
+    /// <summary>Sessoes por dia com jogo (todas as sessoes / dias com jogo, R5).</summary>
+    public const string SessionsPerPlayDay = "sessions_per_play_day";
     public const string HoursPerWeek = "hours_per_week";
     public const string ActivityShare = "activity_share";
     public const string DauRatio = "dau_ratio";
@@ -78,7 +82,7 @@ public static class TargetMetrics
 
     public static readonly string[] All =
     {
-        HoursToLevel, ReachedLevel, SessionsPerWeek, HoursPerWeek, ActivityShare, DauRatio, WeekendLift, PeakOnlineRatio,
+        HoursToLevel, ReachedLevel, SessionsPerWeek, PlayDaysPerWeek, SessionsPerPlayDay, HoursPerWeek, ActivityShare, DauRatio, WeekendLift, PeakOnlineRatio,
         QuestXpShare, QuestsPerCharacter, QuitShare, InactiveShare, ReturnShare,
     };
 

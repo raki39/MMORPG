@@ -12,6 +12,7 @@ public class CommitmentTests
     private static ContentDatabase C => TestSupport.Preset;
 
     [Fact]
+    [Trait("Classe", "Invariante")]
     public void Compromisso_SoEmDiaLivre_Raro_ESemSessaoDurante()
     {
         var e = TestSupport.NewEngine(21, 600);
@@ -41,6 +42,7 @@ public class CommitmentTests
     }
 
     [Fact]
+    [Trait("Classe", "Invariante")]
     public void Compromisso_EDeterministico_EMaisComumParaQuemESociavel()
     {
         var e = TestSupport.NewEngine(5, 2000);
@@ -58,6 +60,7 @@ public class CommitmentTests
     }
 
     [Fact]
+    [Trait("Classe", "Invariante")]
     public void Compromisso_TiraTempoLivre_ENaoInvadeOSono()
     {
         var p = PopulationGenerator.Generate(1, C, 1);
@@ -73,6 +76,7 @@ public class CommitmentTests
     }
 
     [Fact]
+    [Trait("Classe", "Invariante")]
     public void CompromissosInvalidos_SaoErro()
     {
         var set = TestSupport.FreshPresetSet();

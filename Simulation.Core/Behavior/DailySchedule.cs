@@ -325,23 +325,47 @@ public static class DailySchedule
     public static int Choice(int pull, int priority, int push) =>
         (int)((long)pull * 1000 / Math.Max(1, pull + (1000 - Math.Clamp(priority, 0, 1000)) + Math.Max(0, push)));
 
+    /// <summary>2^(-k/64) em milionesimos, k = 0..64: tabela fixa (inteiros) da meia-vida.</summary>
+    private static readonly int[] HalfTable = { 1000000, 989228, 978572, 968031, 957603, 947288, 937084, 926990, 917004, 907126, 897355, 887688, 878126, 868667, 859310, 850053, 840896, 831838, 822878, 814014, 805245, 796571, 787990, 779502, 771105, 762799, 754582, 746454, 738413, 730459, 722590, 714807, 707107, 699490, 691955, 684501, 677128, 669834, 662618, 655481, 648420, 641435, 634525, 627690, 620929, 614240, 607624, 601078, 594604, 588198, 581862, 575595, 569394, 563261, 557193, 551191, 545254, 539380, 533570, 527823, 522137, 516512, 510949, 505445, 500000 };
+
     /// <summary>
-    /// Saciedade depois de jogar "minutes" (v3): sobe a fracao m / (m + tau) do que falta ate 1000,
-    /// com tau = satietyGrowthSessionsPermille x sessao normal (padrao: metade do que falta a cada
-    /// duas sessoes normais). Todo o tempo jogado conta, inclusive o interrompido.
+    /// Fator de meia-vida 2^(-minutos / meia-vida), em milionesimos (R5): inteiro, deterministico e
+    /// composto (aplicar 30 + 30 minutos da o mesmo que 60, a menos de arredondamento), para que o
+    /// resultado nao dependa de quantas vezes se atualiza.
+    /// </summary>
+    public static long HalfLifeFactor(long minutes, long halfLife)
+    {
+        if (minutes <= 0) return 1_000_000;
+        halfLife = Math.Max(1, halfLife);
+        long whole = minutes / halfLife;
+        if (whole >= 40) return 0;
+        long rest = minutes % halfLife;
+        long pos = rest * 64 * 1000 / halfLife;                 // posicao na tabela, em milesimos de faixa
+        int k = (int)(pos / 1000);
+        long frac = pos % 1000;
+        long within = HalfTable[k] + (HalfTable[Math.Min(64, k + 1)] - HalfTable[k]) * frac / 1000;
+        return within >> (int)whole;
+    }
+
+    /// <summary>
+    /// Saciedade depois de jogar "minutes" (v3/R5): o que falta ate 1000 cai pela metade a cada
+    /// satietyHalfLifeSessionsPermille x sessao normal (padrao 1,5 sessao normal). Todo o tempo
+    /// jogado conta, inclusive o interrompido. Meia-vida: nao depende da frequencia das decisoes.
     /// </summary>
     public static int SatietyAfterPlay(int satiety, long minutes, int sessionMinutes, RoutineSettingsDefinition rs)
     {
         if (minutes <= 0) return satiety;
-        long tau = Math.Max(1, (long)Math.Max(1, sessionMinutes) * rs.SatietyGrowthSessionsPermille / 1000);
-        return (int)(satiety + (1000 - satiety) * minutes / (minutes + tau));
+        long half = Math.Max(1, (long)Math.Max(1, sessionMinutes) * rs.SatietyHalfLifeSessionsPermille / 1000);
+        // Arredonda para o mais proximo: truncar a cada atualizacao acumularia vies com atualizacoes frequentes.
+        long remaining = ((1000 - Math.Clamp(satiety, 0, 1000)) * HalfLifeFactor(minutes, half) + 500_000) / 1_000_000;
+        return (int)(1000 - remaining);
     }
 
-    /// <summary>Saciedade depois de uma pausa (v3): cai a fracao m / (m + satietyRecoveryMinutes); metade a cada esse tanto.</summary>
+    /// <summary>Saciedade depois de uma pausa (v3/R5): cai pela metade a cada satietyRecoveryHalfLifeMinutes.</summary>
     public static int SatietyAfterPause(int satiety, long minutes, RoutineSettingsDefinition rs)
     {
         if (minutes <= 0) return satiety;
-        return (int)(satiety - satiety * minutes / (minutes + Math.Max(1, rs.SatietyRecoveryMinutes)));
+        return (int)((Math.Clamp(satiety, 0, 1000) * HalfLifeFactor(minutes, rs.SatietyRecoveryHalfLifeMinutes) + 500_000) / 1_000_000);
     }
 
     /// <summary>

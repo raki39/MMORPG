@@ -46,6 +46,7 @@ public class SleepWorkTests
     }
 
     [Fact]
+    [Trait("Classe", "Invariante")]
     public void ManhaLivre_RecuperaODeficit_DiaDeTrabalhoNao()
     {
         var p = Standard("comercial");
@@ -57,6 +58,7 @@ public class SleepWorkTests
     }
 
     [Fact]
+    [Trait("Classe", "Regra do preset")]
     public void TrabalhaEEstuda_DormeMenosQueOPrecisoNosDiasUteis_EAcumulaDeficit()
     {
         var p = Standard("trabalho_estudo");
@@ -71,6 +73,7 @@ public class SleepWorkTests
     }
 
     [Fact]
+    [Trait("Classe", "Invariante")]
     public void Extensao_TemLimites_ConsomeSonoSoNoFimDoDia_ENuncaInvadeObrigacoes()
     {
         var (e, events) = Run(2, 800, 28);
@@ -96,6 +99,7 @@ public class SleepWorkTests
     }
 
     [Fact]
+    [Trait("Classe", "Invariante")]
     public void CenarioControlado_NaoEstende_ESessaoDoTrabalhoNuncaEstende()
     {
         var e = WorldFactory.Create(C, new WorldConfig { Seed = 2, PopulationSize = 300, NeutralMood = true });
@@ -105,6 +109,7 @@ public class SleepWorkTests
     }
 
     [Fact]
+    [Trait("Classe", "Tendência")]
     public void Cansado_JogaMenos_ComMotivoNaAgenda()
     {
         var e = TestSupport.NewEngine(9, 800);
@@ -128,6 +133,7 @@ public class SleepWorkTests
     }
 
     [Fact]
+    [Trait("Classe", "Tendência")]
     public void ImportanciaTendenciaEAutocontrole_SaoSeparados()
     {
         var people = Enumerable.Range(1, 3000).Select(i => PopulationGenerator.Generate(i, C, 5)).ToList();
@@ -154,6 +160,7 @@ public class SleepWorkTests
     }
 
     [Fact]
+    [Trait("Classe", "Regra do preset")]
     public void TrabalhoRemoto_PausaEEscapada_SoParaQuemPode_ENaoTodoDia()
     {
         var (e, events) = Run(4, 1500, 28);
@@ -178,6 +185,7 @@ public class SleepWorkTests
     }
 
     [Fact]
+    [Trait("Classe", "Tendência")]
     public void SessaoInterrompivel_EvitaAtividadeCaraDeLargar()
     {
         var (e, _) = Run(3, 120, 5);
@@ -194,6 +202,7 @@ public class SleepWorkTests
     }
 
     [Fact]
+    [Trait("Classe", "Invariante")]
     public void PausasEFlexibilidade_InvalidasSaoErro()
     {
         var set = TestSupport.FreshPresetSet();
@@ -209,6 +218,7 @@ public class SleepWorkTests
     }
 
     [Fact]
+    [Trait("Classe", "Invariante")]
     public void SonoETrabalho_SaoDeterministicos_EEntramNoHash()
     {
         string Hash()

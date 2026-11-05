@@ -469,13 +469,13 @@ public sealed class RoutineSettingsDefinition
     /// <summary>Minutos livres no dia para a folga contar inteira.</summary>
     public int FullFreeMinutes { get; set; } = 600;
     /// <summary>
-    /// Saciedade (v3, D-051): cresce enquanto a pessoa joga, a fracao m / (m + tau) do que falta, com
-    /// tau = isto x sessao normal / 1000 (2000 = metade do que falta a cada duas sessoes normais).
-    /// Hipotese configuravel.
+    /// Saciedade (v3/R5, D-051/D-052): enquanto a pessoa joga, o que falta ate 1000 cai pela metade a
+    /// cada isto x sessao normal / 1000 (1500 = uma sessao normal e meia). Meia-vida: o resultado nao
+    /// depende de quantas vezes se decide. Hipotese configuravel.
     /// </summary>
-    public int SatietyGrowthSessionsPermille { get; set; } = 2000;
-    /// <summary>Saciedade (v3): na pausa cai a fracao m / (m + isto); metade a cada isto de minutos. Zera ao acordar.</summary>
-    public int SatietyRecoveryMinutes { get; set; } = 120;
+    public int SatietyHalfLifeSessionsPermille { get; set; } = 1500;
+    /// <summary>Saciedade (v3/R5): na pausa cai pela metade a cada isto de minutos. Zera ao acordar.</summary>
+    public int SatietyRecoveryHalfLifeMinutes { get; set; } = 120;
     /// <summary>Continuar (v3): ao chegar a sessao normal, a pessoa decide a cada bloco destes minutos (dentro do tempo livre).</summary>
     public int ContinueBlockMinutes { get; set; } = 30;
     /// <summary>Continuar (v3): resto minimo da janela para ainda decidir continuar (o resto menor e coberto pela regra de terminar a atividade).</summary>

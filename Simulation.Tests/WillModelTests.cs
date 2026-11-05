@@ -37,6 +37,7 @@ public class WillModelTests
     private static string StartReason(SimEvent ev) => ev.Causes.Count > 1 ? ev.Causes[1].Factor : ev.Causes.Count > 0 ? ev.Causes[0].Factor : "";
 
     [Fact]
+    [Trait("Classe", "Invariante")]
     public void SessaoNormal_EPreferencia_ImportanciaNaoMudaADuracao()
     {
         var p = PopulationGenerator.Generate(1, C, 1);
@@ -54,6 +55,7 @@ public class WillModelTests
     }
 
     [Fact]
+    [Trait("Classe", "Invariante")]
     public void Decisao_SemSaciedadeNemCansaco_EAPropriaPrioridade_ESaciedadeReduz()
     {
         foreach (int prio in new[] { 200, 500, 900 })
@@ -69,12 +71,14 @@ public class WillModelTests
     }
 
     [Fact]
+    [Trait("Classe", "Invariante")]
     public void Saciedade_CresceComOTempoJogado_CaiNaPausa_NuncaPassaDosLimites()
     {
         int s = 120;
-        int tau = s * RS.SatietyGrowthSessionsPermille / 1000;
-        Assert.Equal(500, DailySchedule.SatietyAfterPlay(0, tau, s, RS));                 // metade a cada tau
-        Assert.Equal(250, DailySchedule.SatietyAfterPause(500, RS.SatietyRecoveryMinutes, RS));   // a pausa recupera
+        int half = s * RS.SatietyHalfLifeSessionsPermille / 1000;
+        Assert.Equal(500, DailySchedule.SatietyAfterPlay(0, half, s, RS));                // metade do que falta a cada meia-vida
+        Assert.Equal(750, DailySchedule.SatietyAfterPlay(0, 2 * half, s, RS));
+        Assert.Equal(250, DailySchedule.SatietyAfterPause(500, RS.SatietyRecoveryHalfLifeMinutes, RS));   // a pausa recupera
         Assert.True(DailySchedule.SatietyAfterPlay(0, 10, s, RS) > 0);                    // todo minuto jogado conta
         Assert.InRange(DailySchedule.SatietyAfterPlay(990, 10_000, s, RS), 990, 1000);
         Assert.Equal(0, DailySchedule.SatietyAfterPause(0, 300, RS));
@@ -84,7 +88,29 @@ public class WillModelTests
         Assert.Contains(e.World.Persons, p => p.Satiety > 0);
     }
 
+    /// <summary>R5: a saciedade nao depende de quantas vezes e atualizada (blocos de decisao, pausas divididas).</summary>
     [Fact]
+    [Trait("Classe", "Invariante")]
+    public void Saciedade_NaoDependeDaFrequenciaDasAtualizacoes()
+    {
+        int s = 225;
+        int once = DailySchedule.SatietyAfterPlay(0, 745, s, RS);
+        foreach (int block in new[] { 5, 10, 30, 60 })
+        {
+            int sat = DailySchedule.SatietyAfterPlay(0, s, s, RS);
+            int t = s;
+            while (t + block <= 745) { sat = DailySchedule.SatietyAfterPlay(sat, block, s, RS); t += block; }
+            sat = DailySchedule.SatietyAfterPlay(sat, 745 - t, s, RS);
+            Assert.InRange(sat, once - 3, once + 3);
+        }
+        int pauseOnce = DailySchedule.SatietyAfterPause(800, 240, RS);
+        int pauseSplit = DailySchedule.SatietyAfterPause(DailySchedule.SatietyAfterPause(DailySchedule.SatietyAfterPause(800, 60, RS), 90, RS), 90, RS);
+        Assert.InRange(pauseSplit, pauseOnce - 3, pauseOnce + 3);
+        Assert.InRange(DailySchedule.HalfLifeFactor(60, 120), 707_000, 707_200);
+    }
+
+    [Fact]
+    [Trait("Classe", "Invariante")]
     public void Comecar_UmSorteioSoPorDia_OPassoNaoMudaQuantoSeComecaCedo()
     {
         var p = PopulationGenerator.Generate(5, C, 1);
@@ -112,6 +138,7 @@ public class WillModelTests
     }
 
     [Fact]
+    [Trait("Classe", "Invariante")]
     public void Participacao_ENaChanceDoDia_NaoNoPassoDeAvaliacao()
     {
         double Played(int step)
@@ -129,6 +156,7 @@ public class WillModelTests
     }
 
     [Fact]
+    [Trait("Classe", "Invariante")]
     public void Continuar_DentroDoTempoLivre_EFicarAcordadoSoPassandoDaHoraDeDormir()
     {
         var e = TestSupport.NewEngine(13, 1200);
@@ -145,6 +173,7 @@ public class WillModelTests
     }
 
     [Fact]
+    [Trait("Classe", "Tendência")]
     public void Voltar_DepoisDeUmaPausa_ComumNoDiaLivre_ECasualPodeJogarTresVezes()
     {
         var e = TestSupport.NewEngine(14, 1500);
@@ -170,6 +199,7 @@ public class WillModelTests
     }
 
     [Fact]
+    [Trait("Classe", "Invariante")]
     public void JogoNoTrabalho_NaoDescontaMinutosDaSessaoDaNoite()
     {
         var e = TestSupport.NewEngine(15, 1500);
@@ -195,6 +225,7 @@ public class WillModelTests
     }
 
     [Fact]
+    [Trait("Classe", "Tendência")]
     public void DiaDeObrigacao_TambemUsaAJanelaAntesDoTrabalho()
     {
         var e = TestSupport.NewEngine(16, 2500);
@@ -215,6 +246,7 @@ public class WillModelTests
     }
 
     [Fact]
+    [Trait("Classe", "Invariante")]
     public void DisposicaoDoDia_ReproduzivelPorPessoaEDia_PequenaECentrada()
     {
         var a = TestSupport.NewEngine(5, 200);
@@ -240,6 +272,7 @@ public class WillModelTests
         new(day, 300, 1, sessions, reason, -1, 0, false, workSessions: work);
 
     [Fact]
+    [Trait("Classe", "Invariante")]
     public void Habito_FaltaPorObrigacaoENeutra_EscolhaReduz_SessaoInterrompidaConta()
     {
         const int N = 7;
@@ -257,6 +290,7 @@ public class WillModelTests
     }
 
     [Fact]
+    [Trait("Classe", "Regra do preset")]
     public void GostoDeHorario_SeparadoDoHorarioHabitual()
     {
         var people = Enumerable.Range(1, 1500).Select(id => PopulationGenerator.Generate(id, C, 9)).ToList();
@@ -268,6 +302,7 @@ public class WillModelTests
     }
 
     [Fact]
+    [Trait("Classe", "Invariante")]
     public void Estimativa_MesmaRegra_Deterministica_ESomaDaSemana()
     {
         var p = PopulationGenerator.Generate(3, C, 1);

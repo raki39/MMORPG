@@ -129,19 +129,19 @@ public static class ValidationReport
         // ---- Perfis ----
         if (runs.All(r => r.ControlledProfiles.Count > 0))
         {
-            sb.Append("\n## Rotina pura (rodada controlada, humor neutralizado)\n\n| Perfil | Sessões/semana | Horas/semana |\n|---|---:|---:|\n");
+            sb.Append("\n## Rotina pura (rodada controlada, humor neutralizado)\n\n| Perfil | Dias de jogo/semana | Sessões por dia de jogo | Sessões/semana | Horas/semana |\n|---|---:|---:|---:|---:|\n");
             foreach (var id in runs[0].ControlledProfiles.Select(p => p.Id))
             {
                 var ps = runs.Select(r => r.ControlledProfiles.First(p => p.Id == id)).ToList();
-                sb.Append($"| {ps[0].Name} | {Fmt(Avg(ps.Select(p => p.SessionsPerWeek)))} | {Fmt(Avg(ps.Select(p => p.HoursPerWeek)))} |\n");
+                sb.Append($"| {ps[0].Name} | {Fmt(Avg(ps.Select(p => p.PlayDaysPerWeek)))} | {Fmt2(Avg(ps.Select(p => p.SessionsPerPlayDay)))} | {Fmt(Avg(ps.Select(p => p.SessionsPerWeek)))} | {Fmt(Avg(ps.Select(p => p.HoursPerWeek)))} |\n");
             }
         }
         sb.Append("\n## Perfis na campanha completa (média das seeds)\n\n");
-        sb.Append("| Perfil | Pessoas | Sessões/semana | Horas/semana | Nível mediano no fim | Nível p90 | Sessões em dia útil iniciadas entre 18h e 23h |\n|---|---:|---:|---:|---:|---:|---:|\n");
+        sb.Append("| Perfil | Pessoas | Dias de jogo/semana | Sessões por dia de jogo | Horas/semana | Nível mediano no fim | Nível p90 | Sessões em dia útil iniciadas entre 18h e 23h |\n|---|---:|---:|---:|---:|---:|---:|---:|\n");
         foreach (var id in runs[0].Profiles.Select(p => p.Id))
         {
             var ps = runs.Select(r => r.Profiles.First(p => p.Id == id)).ToList();
-            sb.Append($"| {ps[0].Name} | {Fmt(ps.Average(p => p.Persons))} | {Fmt(Avg(ps.Select(p => p.SessionsPerWeek)))} | {Fmt(Avg(ps.Select(p => p.HoursPerWeek)))} | " +
+            sb.Append($"| {ps[0].Name} | {Fmt(ps.Average(p => p.Persons))} | {Fmt(Avg(ps.Select(p => p.PlayDaysPerWeek)))} | {Fmt2(Avg(ps.Select(p => p.SessionsPerPlayDay)))} | {Fmt(Avg(ps.Select(p => p.HoursPerWeek)))} | " +
                       $"{Fmt(Avg(ps.Select(p => p.MedianLevel)))} | {Fmt(Avg(ps.Select(p => p.P90Level)))} | {Fmt(Avg(ps.Select(p => p.PrimeTimeStartPct)))}% |\n");
         }
 
@@ -626,6 +626,7 @@ public static class ValidationReport
     }
 
     private static string Fmt(double v) => double.IsNaN(v) ? "—" : v.ToString(Math.Abs(v) >= 100 ? "N0" : "N1", PtBr);
+    private static string Fmt2(double v) => double.IsNaN(v) ? "—" : v.ToString("N2", PtBr);
     private static string Num(double v) => double.IsNaN(v) ? "" : v.ToString("0.######", Inv);   // CSV: precisao total para analise
     private static string N(long v) => v.ToString("N0", PtBr);
     private static string Pct(long part, long total) => (part / (double)total).ToString("P1", PtBr);

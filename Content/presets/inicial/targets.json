@@ -45,19 +45,29 @@
       "rationale": "Em 90 dias, um personagem típico deve concluir várias quests (principais, secundárias e algumas diárias)."
     },
     {
-      "id": "sessoes_casual", "kind": "scenario", "name": "Sessões por semana — casual", "metric": "sessions_per_week", "profile": "casual",
+      "id": "dias_casual", "kind": "scenario", "name": "Dias de jogo por semana — casual", "metric": "play_days_per_week", "profile": "casual",
       "min": 2, "max": 4, "unit": "",
-      "rationale": "O perfil casual está configurado com média de 3 dias por semana; a rotina simulada deve respeitar isso."
+      "rationale": "Tendência do perfil: o casual joga em cerca de 3 dias por semana. Mesma faixa da antiga meta de sessões por semana, que na prática media dias quando havia uma sessão por dia (R5, D-052)."
     },
     {
-      "id": "sessoes_hardcore", "kind": "scenario", "name": "Sessões por semana — hardcore", "metric": "sessions_per_week", "profile": "hardcore",
+      "id": "dias_hardcore", "kind": "scenario", "name": "Dias de jogo por semana — hardcore", "metric": "play_days_per_week", "profile": "hardcore",
       "min": 5, "max": 7, "unit": "",
-      "rationale": "O perfil hardcore está configurado com média de 6 dias por semana."
+      "rationale": "Tendência do perfil: o hardcore joga em cerca de 6 dias por semana. Mesma faixa da antiga meta de sessões por semana (R5, D-052)."
+    },
+    {
+      "id": "sessoes_dia_casual", "kind": "scenario", "name": "Sessões por dia de jogo — casual", "metric": "sessions_per_play_day", "profile": "casual",
+      "min": 1.1, "max": 2.0, "unit": "",
+      "rationale": "Tendência (D-051): na maioria dos dias o casual faz uma sessão, e voltar depois de uma pausa é comum, sobretudo no dia livre. Abaixo de 1,1 a volta quase não existiria; acima de 2 jogaria em várias sessões quase todo dia."
+    },
+    {
+      "id": "sessoes_dia_hardcore", "kind": "scenario", "name": "Sessões por dia de jogo — hardcore", "metric": "sessions_per_play_day", "profile": "hardcore",
+      "min": 1.2, "max": 2.5, "unit": "",
+      "rationale": "Tendência (D-051): quem prioriza o jogo volta com mais frequência quando há tempo, mas a sessão normal longa limita quantas cabem no dia."
     },
     {
       "id": "horas_casual", "kind": "scenario", "name": "Horas por semana — casual", "metric": "hours_per_week", "profile": "casual",
-      "min": 2, "max": 6, "unit": "h",
-      "rationale": "Cerca de 3 sessões de 70 minutos, um pouco mais no fim de semana."
+      "min": 3, "max": 9, "unit": "h",
+      "rationale": "Cerca de 3 dias de jogo; no dia livre, 1 ou 2 sessões de 1h30 com pausa (D-051, comportamento aprovado pelo criador em 05/11/2026). A faixa antiga (2–6 h, '3 sessões de 70 minutos') supunha uma sessão por dia (R5, D-052)."
     },
     {
       "id": "horas_hardcore", "kind": "scenario", "name": "Horas por semana — hardcore", "metric": "hours_per_week", "profile": "hardcore",

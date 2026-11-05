@@ -50,6 +50,7 @@ public class SessionLimitTests
     }
 
     [Fact]
+    [Trait("Classe", "Invariante")]
     public void NenhumaSessao_InvadeDeslocamentoPreparoOuObrigacao_ESonoSoDentroDoCorteAutorizado()
     {
         var (sessions, w) = Run(31, 900, 28);
@@ -82,6 +83,7 @@ public class SessionLimitTests
     /// afetam; e so a janela que termina na hora de deitar pode avancar sobre o sono.
     /// </summary>
     [Fact]
+    [Trait("Classe", "Invariante")]
     public void CorteDeSono_CompartilhadoPorPeriodo_ESoNaJanelaQueTerminaNoSono()
     {
         var (sessions, w) = Run(34, 900, 28);
@@ -103,6 +105,7 @@ public class SessionLimitTests
     }
 
     [Fact]
+    [Trait("Classe", "Invariante")]
     public void NoiteComCorteDeSono_MantemOSonoMinimo()
     {
         var (sessions, w) = Run(32, 700, 28);
@@ -125,6 +128,7 @@ public class SessionLimitTests
     }
 
     [Fact]
+    [Trait("Classe", "Regra do preset")]
     public void ChamadoDoTrabalho_ToleranciaPropriaENaoPassaDoLimite()
     {
         Assert.Equal(5, RS.WorkCallToleranceMinutes);
@@ -136,6 +140,7 @@ public class SessionLimitTests
     }
 
     [Fact]
+    [Trait("Classe", "Invariante")]
     public void Probabilidade_CombinaOsFatoresELimitaSoNoFim_EAEstimativaUsaAMesmaPolitica()
     {
         // Um hardcore engajado e com habito alto teria 146% sem limite; a estimativa e o planejador ficam em 100%.

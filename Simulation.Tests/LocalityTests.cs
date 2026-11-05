@@ -73,6 +73,7 @@ public class LocalityTests
     /// local das duas localidades, nao uma faixa fixa.
     /// </summary>
     [Fact]
+    [Trait("Classe", "Tendência")]
     public void Chineses_JogamNaNoiteLocal_QueEManhaNoServidor()
     {
         var e = Opened(seed: 3, population: 600);

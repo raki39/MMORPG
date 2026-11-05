@@ -1714,3 +1714,42 @@ Leitura:
   - casuais com três sessões ou mais: 11% dos dias de jogo do casual; nesses dias, 5 h no total (mediana), p90 7 h.
 
   Duração total, pausas, motivos e sono estão em `docs/baselines/pos-R4b/`.
+
+## D-052 — R5: metas separadas, regras classificadas, saciedade por meia-vida
+**Data:** 05/11/2026 · **Estado:** aceita
+
+O criador aprovou o comportamento integrado da v3 (D-051) e pediu para preservá-lo como referência, sem reduzir horas nem sessões para voltar às faixas antigas.
+
+**Metas** (histórico e justificativas em `validacao.md`, seção "R5"):
+- **Medidas separadas:** "sessões por semana" virou dias de jogo por semana (mesmas faixas: casual 2–4, hardcore 5–7) e sessões por dia de jogo (novas: casual 1,1–2,0, hardcore 1,2–2,5).
+- **Horas do casual:** de 2–6 h para 3–9 h, porque a faixa antiga supunha uma sessão por dia.
+- **Resultado:** regras do cenário 9 de 9; provisórias 9 de 12; futuras 1 de 5.
+- **No relatório:** as tabelas de perfil mostram dias, sessões por dia de jogo e horas.
+
+**Classificação:** cada regra da rotina é invariante da simulação, regra do preset inicial ou tendência estatística (`rotina.md`, seção 9).
+- Os 67 testes da rotina levam a classe (`[Trait("Classe", ...)]`): 39 invariantes, 16 do preset e 12 tendências.
+- É possível rodar uma classe só: `dotnet test --filter "Classe=Invariante"`.
+
+**Saciedade por meia-vida** (problema identificado):
+- **Problema:** a fórmula anterior (fração m ÷ (m + τ)) dependia de quantas vezes era atualizada. Depois de 745 min, dava 62% sem decisões no meio e 76% a 79% com blocos de 60 a 10 min.
+- **Correção:** meia-vida, em conta inteira com uma tabela fixa e arredondamento para o mais próximo. Truncar acumulava viés: +32 com blocos de 5 min.
+- **Valores:** meia-vida de 1,5 sessão normal jogando, escolhida para reproduzir o comportamento aprovado (78% depois de 745 min, como antes), e 2 h em pausa.
+- **Teste:** o resultado é o mesmo com blocos de 5, 10, 30 e 60 min e com pausas divididas.
+- **Efeito nas mesmas 2000 pessoas** (v3 → R5): de 0 a −2% de horas (casual 6,9 → 6,8 h, hardcore 36,3 → 36,3 h). Sessões por dia e voltas praticamente iguais.
+
+**Participação "idêntica" (esclarecimento):** os dias com jogo do cenário controlado não eram idênticos; eram iguais na prática. Os dias com oportunidade são os mesmos nas três versões.
+- **R4 → v3:** diferença média de −0,02 ponto (de −0,19 a +0,32) nas 36 células. A decisão de quando começar não mexe na participação.
+- **Pré-R4 → v3:** média de +0,19 ponto (de −2,8 a +6,3), por dois motivos:
+  - regras novas da R4: o hábito pela regularidade (faltar por obrigação é neutro, o que explica o +6,3 de quem trabalha e estuda) e a disposição do dia;
+  - outro sorteio para cada pessoa: a pré-R4 fazia um sorteio a mais antes do "joga hoje?". A estatística é a mesma, com cerca de ±1 ponto por célula.
+
+**Sessão de 12h25 (conferida):**
+- **A sessão:** hardcore com tendência a prolongar 910 e autocontrole 198, dia livre de 15 h. A saciedade subiu a cada bloco (33% → 76%) e a chance de continuar caiu (70% → 54%). Parou por vontade 31 min antes de dormir, descansada.
+- **Outra sessão, na semana de aquecimento:** 16h32, com 3 h acordada depois da hora de dormir, dentro do corte autorizado de 180 min.
+- **Funcionam:** os limites, a saciedade e o cansaço do sono.
+- **Ponto de desenho:**
+  - A vontade de parar vai no máximo a 1000 de saciedade mais 400 de cansaço. Para quem tem vontade de jogar acima de 1000 (engajado, gostando, tendência alta), a chance de parar por bloco fica perto de 45%, mesmo depois de muitas horas.
+  - Isso explica a cauda de sessões muito longas. Não foi mudado, porque a decisão é do criador.
+  - Opção: um peso configurável da saciedade na vontade de parar. Com o dobro, a chance de parar depois de 12 h iria a cerca de 60% por bloco, mas encurtaria também as sessões comuns.
+
+**Sem recalibração de pesos:** nenhum peso de vontade foi mudado para cumprir faixa.
