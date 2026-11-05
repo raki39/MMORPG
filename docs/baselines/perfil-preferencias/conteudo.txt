@@ -1,0 +1,2 @@
+population.json sha256 6a867d97090286b3a9ab3be2f8f9de6906312dcb9bb50e1cd447a5c15f15ca5a
+código: commit do ramo perfil-preferencias que adicionou a separação (D-054), sobre 778df7e; a simulação não mudou depois das rodadas (só interface, testes e documentos)

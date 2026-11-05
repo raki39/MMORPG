@@ -54,36 +54,40 @@ public sealed class GoalSystem
         if (options.Count == 0) return;
         var pick = options[rng.PickWeighted(options.Select(o => o.Weight).ToList())];
         var g2 = new PersonalGoal(pick.Type, pick.Target, pick.TargetValue, pick.StartValue, CommitmentOf(t),
-            pick.MotiveKey, t.Get(pick.MotiveKey), Now, played);
+            pick.MotiveKey, p.MotiveValue(pick.MotiveKey), Now, played);
         ch.GoalList.Add(g2);
         ch.GoalsSet++;
         _w.Emit("goal_set", EventImportance.Low, new[] { new EntityRef("character", ch.Id) },
-            new[] { new EventCause(pick.MotiveKey, t.Get(pick.MotiveKey)), new EventCause("commitment", g2.Commitment) },
+            new[] { new EventCause(pick.MotiveKey, p.MotiveValue(pick.MotiveKey)), new EventCause("commitment", g2.Commitment) },
             $"{pick.Type}|{pick.Target}|{pick.TargetValue}");
     }
 
     private readonly record struct Candidate(string Type, string Target, int TargetValue, int StartValue, int Weight, string MotiveKey);
 
-    /// <summary>Objetivos possiveis agora, com o peso vindo dos tracos (um por tipo).</summary>
+    /// <summary>
+    /// Objetivos possiveis agora (um por tipo), com o peso vindo das preferencias (gosto), da
+    /// competitividade e da personalidade. Motivos de preferencia usam a chave "pref_x".
+    /// </summary>
     private List<Candidate> Candidates(Person p, Character ch, DeterministicRng rng)
     {
         var t = p.Traits;
+        var pr = p.Preferences;
         var list = new List<Candidate>();
         bool Has(string type) => ch.GoalList.Any(g => g.Type == type);
 
-        // Chegar a um nivel: quem gosta de caca, de desafio, e os impacientes por progresso.
+        // Chegar a um nivel: quem prefere PvE, os competitivos e os impacientes por progresso.
         if (!Has(GoalTypes.ReachLevel) && ch.Level < C.Progression.LevelCap)
         {
-            int k = 1 + (t.Pve + t.Aggressiveness) / 700;
+            int k = 1 + (pr.Pve + t.Competitiveness) / 700;
             int target = Math.Min(C.Progression.LevelCap, ch.Level + k);
-            string motive = t.Pve >= t.Aggressiveness ? "pve" : "aggressiveness";
-            list.Add(new(GoalTypes.ReachLevel, "", target, ch.Level, 150 + t.Pve * 3 / 10 + t.Aggressiveness * 2 / 10 + (1000 - t.Patience) / 10, motive));
+            string motive = pr.Pve >= t.Competitiveness ? "pref_pve" : "competitiveness";
+            list.Add(new(GoalTypes.ReachLevel, "", target, ch.Level, 150 + pr.Pve * 3 / 10 + t.Competitiveness * 2 / 10 + (1000 - t.Patience) / 10, motive));
         }
 
-        // Descobrir uma zona vizinha das conhecidas: exploradores (os agressivos aceitam zonas mais altas).
+        // Descobrir uma zona vizinha das conhecidas: quem prefere explorar (os competitivos aceitam zonas mais altas).
         if (!Has(GoalTypes.DiscoverZone))
         {
-            int maxLevel = ch.Level + 2 + t.Aggressiveness / 250;
+            int maxLevel = ch.Level + 2 + t.Competitiveness / 250;
             var zones = C.Regions.Values
                 .Where(z => !ch.Known.Contains(z.Id) && (z.IsCity || z.LevelMin <= maxLevel))
                 .Where(z => ch.Known.Any(k => C.Regions[k].Connections.Any(c => c.To == z.Id) || z.Connections.Any(c => c.To == k)))
@@ -91,19 +95,19 @@ public sealed class GoalSystem
             if (zones.Count > 0)
             {
                 var z = zones[rng.NextInt(zones.Count)];
-                list.Add(new(GoalTypes.DiscoverZone, z.Id, 1, 0, 100 + t.Exploration * 9 / 10, "exploration"));
+                list.Add(new(GoalTypes.DiscoverZone, z.Id, 1, 0, 100 + pr.Exploration * 9 / 10, "pref_exploration"));
             }
         }
 
         // Concluir uma missao principal: pacientes, quem conhece o jogo e gosta de historia (PvE + exploracao).
         if (!Has(GoalTypes.CompleteQuest) && MainQuestTarget(ch) is { } quest)
         {
-            int w = 120 + (t.Pve + t.Exploration) / 5 + t.Patience / 5 + t.GameKnowledge / 10;
+            int w = 120 + (pr.Pve + pr.Exploration) / 5 + t.Patience / 5 + t.GameKnowledge / 10;
             string motive = t.Patience >= t.GameKnowledge ? "patience" : "gameKnowledge";
             list.Add(new(GoalTypes.CompleteQuest, quest.Id, 1, 0, w, motive));
         }
 
-        // Praticar a atividade preferida: comerciantes, sociaveis, exploradores; meta maior para os pacientes.
+        // Praticar a atividade preferida (pela preferencia); meta maior para os pacientes.
         if (!Has(GoalTypes.PracticeActivity))
         {
             var types = ch.Known.SelectMany(k => C.Regions[k].AllActivities())
@@ -111,22 +115,39 @@ public sealed class GoalSystem
                 .Select(a => a.Type).Distinct().OrderBy(x => x, StringComparer.Ordinal).ToList();
             if (types.Count > 0)
             {
-                string best = types.OrderByDescending(x => ActivityScoring.Affinity(x, t)).ThenBy(x => x, StringComparer.Ordinal).First();
+                string best = types.OrderByDescending(x => ActivityScoring.Affinity(x, pr, t)).ThenBy(x => x, StringComparer.Ordinal).First();
                 string motive = AffinityTraitFor(best)!;
                 int minutes = 120 + t.Patience * 3 / 10;
-                list.Add(new(GoalTypes.PracticeActivity, best, minutes, 0, 100 + t.Get(motive) * 5 / 10 + t.Patience / 5, motive));
+                list.Add(new(GoalTypes.PracticeActivity, best, minutes, 0, 100 + p.MotiveValue(motive) * 5 / 10 + t.Patience / 5, motive));
             }
         }
         return list;
     }
 
+    /// <summary>Preferencia que motiva praticar o tipo (chave de motivo "pref_x").</summary>
     private static string? AffinityTraitFor(string type) => type switch
     {
-        ActivityTypes.Hunt => "pve",
-        ActivityTypes.Gather or ActivityTypes.Trade => "trade",
-        ActivityTypes.Explore => "exploration",
-        ActivityTypes.Socialize => "socializing",
+        ActivityTypes.Hunt => "pref_pve",
+        ActivityTypes.Gather => "pref_gathering",
+        ActivityTypes.Trade => "pref_trade",
+        ActivityTypes.Explore => "pref_exploration",
+        ActivityTypes.Socialize => "pref_social",
         _ => null,
+    };
+
+    /// <summary>
+    /// O que cumprir uma meta reforca: o atributo do motivo; para um motivo de preferencia (estavel),
+    /// a especialidade do mesmo tema, quando existe (coleta e fabricacao nao tem).
+    /// </summary>
+    public static string? ReinforcedBy(string motiveKey) => motiveKey switch
+    {
+        "pref_pve" => "pve",
+        "pref_pvp" => "pvp",
+        "pref_trade" => "trade",
+        "pref_exploration" => "exploration",
+        "pref_social" => "socializing",
+        _ when motiveKey.StartsWith(Person.PreferenceMotivePrefix, StringComparison.Ordinal) => null,
+        _ => motiveKey,
     };
 
     /// <summary>Missao principal ativa ou oferecida por um quadro conhecido; senao, uma secundaria.</summary>
@@ -245,8 +266,8 @@ public sealed class GoalSystem
         Ended?.Invoke(ch, g, true, "goal_completed");
         _w.Emit("goal_completed", EventImportance.Normal, new[] { new EntityRef("character", ch.Id) },
             new[] { new EventCause(g.MotiveKey, g.MotiveValue) }, $"{g.Type}|{g.Target}|{g.TargetValue}");
-        // Conseguir o que queria reforca o gosto que motivou o objetivo.
-        _traits.Adjust(p, g.MotiveKey, S.MotiveReinforce, "goal_completed");
+        // Conseguir o que queria reforca o que motivou o objetivo (a especialidade, se o motivo e uma preferencia).
+        if (ReinforcedBy(g.MotiveKey) is { } reinforced) _traits.Adjust(p, reinforced, S.MotiveReinforce, "goal_completed");
     }
 
     private void Abandon(Character ch, PersonalGoal g, string reason)

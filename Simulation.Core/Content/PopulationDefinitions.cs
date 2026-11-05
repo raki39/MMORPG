@@ -21,8 +21,10 @@ public sealed class TraitRange
 }
 
 /// <summary>
-/// Perfil (predefinicao) de populacao. Gera tendencias, nao clones: cada pessoa recebe
-/// ruido individual em cada parametro. Comportamentais em permille (0..1000).
+/// Perfil de populacao: so a DEDICACAO (Casual, Regular, Hardcore, Devoto). Gera importancia do
+/// jogo, habito e sessao normal (formato triangular, com a dedicacao compartilhada). As horas saem
+/// da disponibilidade e das decisoes; nenhuma regra trata o perfil pelo nome. Gostos ficam nas
+/// Preferencias; os demais atributos vem das distribuicoes da populacao ("traits").
 /// </summary>
 public sealed class PopulationProfileDefinition : IContentDefinition
 {
@@ -31,8 +33,28 @@ public sealed class PopulationProfileDefinition : IContentDefinition
     public string Name { get; set; } = "";
     /// <summary>Peso relativo na populacao gerada.</summary>
     public int Weight { get; set; }
+    /// <summary>Duracao normal da sessao (minutos).</summary>
+    public TraitRange SessionMinutes { get; set; } = new();
+    /// <summary>Importancia do jogo entre os lazeres (permille), P2.</summary>
+    public TraitRange GameImportance { get; set; } = new();
+    /// <summary>Habito: regularidade de jogar quando ha tempo (permille), P2.</summary>
+    public TraitRange Habit { get; set; } = new();
+    /// <summary>
+    /// Ocupacoes possiveis deste perfil e seus pesos (R5, regra do preset). Vazio = o peso geral de
+    /// cada ocupacao, como nos outros perfis. Nao muda a escolha de ocupacao dos demais perfis.
+    /// </summary>
+    public Dictionary<string, int> OccupationWeights { get; set; } = new();
+}
 
-    // Afinidades
+/// <summary>
+/// Atributos da pessoa gerados por distribuicoes gerais da populacao, independentes do perfil.
+/// Especialidade (pve, pvp, trade, exploration, socializing): afinidade desenvolvida e
+/// familiaridade; reforco minimo na escolha e cresce com a pratica. Personalidade, conduta
+/// (inclui a Competitividade), capacidades, financas, rotina e jogador.
+/// </summary>
+public sealed class PopulationTraitsDefinition
+{
+    // Especialidade (afinidade desenvolvida)
     public TraitRange Pve { get; set; } = new();
     public TraitRange Pvp { get; set; } = new();
     public TraitRange Trade { get; set; } = new();
@@ -54,6 +76,8 @@ public sealed class PopulationProfileDefinition : IContentDefinition
     // Conduta
     public TraitRange CheatPropensity { get; set; } = new();
     public TraitRange Opportunism { get; set; } = new();
+    /// <summary>Competitividade: motivacao para disputar, superar outros e ser reconhecido pelo desempenho.</summary>
+    public TraitRange Competitiveness { get; set; } = new();
 
     // Financas
     /// <summary>Orcamento de lazer em centavos (dinheiro real ficticio do tycoon) por mes.</summary>
@@ -64,26 +88,44 @@ public sealed class PopulationProfileDefinition : IContentDefinition
     // Rotina
     /// <summary>Hora preferida de inicio de sessao (0..23).</summary>
     public TraitRange PreferredStartHour { get; set; } = new();
-    public TraitRange SessionMinutes { get; set; } = new();
-    /// <summary>Importancia do jogo entre os lazeres (permille), P2.</summary>
-    public TraitRange GameImportance { get; set; } = new();
-    /// <summary>Habito: regularidade de jogar quando ha tempo (permille), P2.</summary>
-    public TraitRange Habit { get; set; } = new();
+    /// <summary>Tendencia a prolongar a sessao (P3): quanto a sessao "puxa".</summary>
+    public TraitRange ExtendTendency { get; set; } = new();
+    /// <summary>Autocontrole (P3): respeitar o horario planejado e o trabalho.</summary>
+    public TraitRange SelfControl { get; set; } = new();
 
     // Jogador (D-036)
     /// <summary>Talento da pessoa como jogador (permille): potencial e velocidade de aprendizado das capacidades.</summary>
     public TraitRange Talent { get; set; } = new();
     /// <summary>Preferencia por variedade (D-039a), permille.</summary>
     public TraitRange Variety { get; set; } = new();
-    /// <summary>Tendencia a prolongar a sessao (P3): quanto a sessao "puxa". Separada da importancia do jogo.</summary>
-    public TraitRange ExtendTendency { get; set; } = new();
-    /// <summary>Autocontrole (P3): respeitar o horario planejado e o trabalho.</summary>
-    public TraitRange SelfControl { get; set; } = new();
-    /// <summary>
-    /// Ocupacoes possiveis deste perfil e seus pesos (R5, regra do preset). Vazio = o peso geral de
-    /// cada ocupacao, como nos outros perfis. Nao muda a escolha de ocupacao dos demais perfis.
-    /// </summary>
-    public Dictionary<string, int> OccupationWeights { get; set; } = new();
+}
+
+/// <summary>
+/// Preferencias: interesses pessoais (permille), separados do perfil e dos atributos. Dao o peso
+/// principal de gosto nas decisoes, sem obrigar. Cada pessoa pode gostar de varias coisas.
+/// Crafting nao tem atividade ainda: e gerada e mostrada, sem efeito ate a fabricacao existir.
+/// </summary>
+public sealed class PreferencesDefinition
+{
+    public TraitRange Pve { get; set; } = new();
+    public TraitRange Pvp { get; set; } = new();
+    public TraitRange Crafting { get; set; } = new();
+    public TraitRange Trade { get; set; } = new();
+    public TraitRange Gathering { get; set; } = new();
+    public TraitRange Exploration { get; set; } = new();
+    public TraitRange Social { get; set; } = new();
+}
+
+/// <summary>
+/// Ligacao parcial entre dois atributos (mesmo mecanismo da dedicacao compartilhada): a posicao
+/// do alvo mistura a posicao da ancora com a propria, mantendo a distribuicao do alvo. Chaves
+/// "traits.x" ou "preferences.x"; os dois no formato triangular.
+/// </summary>
+public sealed class TraitLinkDefinition
+{
+    public string Trait { get; set; } = "";
+    public string Anchor { get; set; } = "";
+    public int InfluencePermille { get; set; }
 }
 
 public sealed class NamePoolDefinition
@@ -115,8 +157,14 @@ public sealed class PopulationDefinition
     public BehaviorSettingsDefinition Behavior { get; set; } = new();
     /// <summary>Planejador da rotina e sono basico (P2, D-043).</summary>
     public RoutineSettingsDefinition Routine { get; set; } = new();
-    /// <summary>Dedicacao compartilhada entre importancia, sessao normal e habito (experimento).</summary>
+    /// <summary>Dedicacao compartilhada entre importancia, sessao normal e habito (D-053).</summary>
     public DedicationSettingsDefinition Dedication { get; set; } = new();
+    /// <summary>Atributos gerados pela populacao toda, independentes do perfil.</summary>
+    public PopulationTraitsDefinition Traits { get; set; } = new();
+    /// <summary>Preferencias (interesses pessoais).</summary>
+    public PreferencesDefinition Preferences { get; set; } = new();
+    /// <summary>Ligacoes parciais entre atributos (coerencia), configuraveis; vazio = independentes.</summary>
+    public List<TraitLinkDefinition> Links { get; set; } = new();
 }
 
 /// <summary>
@@ -259,9 +307,9 @@ public sealed class MoodSettingsDefinition
     public int RiskWeight { get; set; } = 150;
     /// <summary>Progresso da sessao contra a expectativa.</summary>
     public int ProgressWeight { get; set; } = 400;
-    /// <summary>Quanto liga para evoluir: parcelas de PvE, competitividade e PvP (permille; somam 1000).</summary>
+    /// <summary>Quanto liga para evoluir: parcelas da preferencia PvE, da competitividade e da preferencia PvP (permille; somam 1000).</summary>
     public int ProgressCarePve { get; set; } = 500;
-    public int ProgressCareAggressiveness { get; set; } = 300;
+    public int ProgressCareCompetitiveness { get; set; } = 300;
     public int ProgressCarePvp { get; set; } = 200;
     /// <summary>Quanto precisa de novidade: base + variedade, exploracao e impaciencia (permille).</summary>
     public int NoveltyCareBase { get; set; } = 100;
@@ -276,8 +324,8 @@ public sealed class MoodSettingsDefinition
     public int ProgressRatioCap { get; set; } = 2000;
     /// <summary>Expectativa inicial de progresso (permille da referencia).</summary>
     public int ExpectationBase { get; set; } = 550;
-    /// <summary>Competitivos esperam mais: + agressividade * isto / 1000.</summary>
-    public int ExpectationPerAggressiveness { get; set; } = 300;
+    /// <summary>Competitivos esperam mais: + competitividade * isto / 1000.</summary>
+    public int ExpectationPerCompetitiveness { get; set; } = 300;
     /// <summary>Quanto a expectativa se aproxima do progresso real por sessao (permille).</summary>
     public int ExpectationAdapt { get; set; } = 100;
     /// <summary>Piso da expectativa: progredir mal por dias nao vira satisfatorio.</summary>
@@ -452,6 +500,13 @@ public sealed class BehaviorSettingsDefinition
     public int WalkSpeed { get; set; } = 15;
     /// <summary>Peso do gosto pelo tipo de atividade.</summary>
     public int WeightAffinity { get; set; } = 450;
+    /// <summary>
+    /// Reforco da especialidade no gosto pela atividade (permille da especialidade): pequeno e
+    /// limitado, aplicado so ao termo de afinidade, mostrado como fator proprio ("specialty").
+    /// </summary>
+    public int SpecialtyAffinityPermille { get; set; } = 50;
+    /// <summary>Teto do reforco da especialidade (na escala 0..1000 da afinidade).</summary>
+    public int SpecialtyAffinityCap { get; set; } = 50;
     /// <summary>Peso do encaixe de nivel (recompensa).</summary>
     public int WeightReward { get; set; } = 300;
     /// <summary>Peso da companhia.</summary>

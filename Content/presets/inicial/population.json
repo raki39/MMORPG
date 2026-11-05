@@ -2,84 +2,45 @@
   "schemaVersion": 1,
   "profiles": [
     {
-      "id": "casual", "version": 1, "name": "Casual", "weight": 35,
-      "pve": { "mean": 550, "spread": 250 }, "pvp": { "mean": 200, "spread": 180 }, "trade": { "mean": 300, "spread": 200 },
-      "exploration": { "mean": 550, "spread": 250 }, "socializing": { "mean": 450, "spread": 250 },
-      "sociability": { "mean": 500, "spread": 250 }, "aggressiveness": { "mean": 250, "spread": 200 }, "patience": { "mean": 450, "spread": 250 },
-      "loyalty": { "mean": 450, "spread": 250 }, "riskAversion": { "mean": 650, "spread": 200 },
-      "mechanicalSkill": { "mean": 350, "spread": 250 }, "gameKnowledge": { "mean": 300, "spread": 200 }, "coordination": { "mean": 350, "spread": 250 },
-      "cheatPropensity": { "mean": 60, "spread": 60 }, "opportunism": { "mean": 250, "spread": 200 },
-      "leisureBudgetCentsPerMonth": { "mean": 6000, "spread": 4000 }, "willingnessToPay": { "mean": 400, "spread": 250 }, "paidAdvantageSensitivity": { "mean": 550, "spread": 250 },
-      "preferredStartHour": { "mean": 20, "spread": 3 }, "sessionMinutes": { "mean": 80, "spread": 45 }, "gameImportance": { "mean": 350, "spread": 150 }, "habit": { "mean": 400, "spread": 200 }, "talent": { "mean": 380, "spread": 280 }, "variety": { "mean": 500, "spread": 200 }, "extendTendency": { "mean": 300, "spread": 300 }, "selfControl": { "mean": 600, "spread": 300 }
+      "id": "casual", "version": 2, "name": "Casual", "weight": 35,
+      "gameImportance": { "min": 120, "mode": 280, "max": 750 }, "sessionMinutes": { "min": 30, "mode": 65, "max": 220 }, "habit": { "min": 100, "mode": 320, "max": 800 }
     },
     {
-      "id": "competitivo", "version": 1, "name": "Competitivo", "weight": 15,
-      "pve": { "mean": 500, "spread": 250 }, "pvp": { "mean": 800, "spread": 180 }, "trade": { "mean": 350, "spread": 250 },
-      "exploration": { "mean": 300, "spread": 200 }, "socializing": { "mean": 400, "spread": 250 },
-      "sociability": { "mean": 450, "spread": 250 }, "aggressiveness": { "mean": 600, "spread": 300 }, "patience": { "mean": 350, "spread": 250 },
-      "loyalty": { "mean": 450, "spread": 300 }, "riskAversion": { "mean": 250, "spread": 200 },
-      "mechanicalSkill": { "mean": 650, "spread": 250 }, "gameKnowledge": { "mean": 650, "spread": 250 }, "coordination": { "mean": 550, "spread": 250 },
-      "cheatPropensity": { "mean": 150, "spread": 140 }, "opportunism": { "mean": 500, "spread": 250 },
-      "leisureBudgetCentsPerMonth": { "mean": 9000, "spread": 6000 }, "willingnessToPay": { "mean": 500, "spread": 250 }, "paidAdvantageSensitivity": { "mean": 850, "spread": 150 },
-      "preferredStartHour": { "mean": 21, "spread": 2 }, "sessionMinutes": { "mean": 150, "spread": 80 }, "gameImportance": { "mean": 650, "spread": 150 }, "habit": { "mean": 600, "spread": 200 }, "talent": { "mean": 600, "spread": 280 }, "variety": { "mean": 450, "spread": 200 }, "extendTendency": { "mean": 650, "spread": 300 }, "selfControl": { "mean": 450, "spread": 300 }
+      "id": "regular", "version": 1, "name": "Regular", "weight": 53,
+      "gameImportance": { "min": 220, "mode": 540, "max": 900 }, "sessionMinutes": { "min": 45, "mode": 115, "max": 300 }, "habit": { "min": 180, "mode": 540, "max": 900 }
     },
     {
-      "id": "social", "version": 1, "name": "Social", "weight": 20,
-      "pve": { "mean": 500, "spread": 250 }, "pvp": { "mean": 200, "spread": 180 }, "trade": { "mean": 350, "spread": 250 },
-      "exploration": { "mean": 450, "spread": 250 }, "socializing": { "mean": 850, "spread": 150 },
-      "sociability": { "mean": 800, "spread": 180 }, "aggressiveness": { "mean": 200, "spread": 180 }, "patience": { "mean": 600, "spread": 250 },
-      "loyalty": { "mean": 700, "spread": 220 }, "riskAversion": { "mean": 550, "spread": 250 },
-      "mechanicalSkill": { "mean": 400, "spread": 250 }, "gameKnowledge": { "mean": 400, "spread": 250 }, "coordination": { "mean": 550, "spread": 250 },
-      "cheatPropensity": { "mean": 40, "spread": 40 }, "opportunism": { "mean": 200, "spread": 180 },
-      "leisureBudgetCentsPerMonth": { "mean": 7000, "spread": 4500 }, "willingnessToPay": { "mean": 500, "spread": 250 }, "paidAdvantageSensitivity": { "mean": 500, "spread": 250 },
-      "preferredStartHour": { "mean": 20, "spread": 3 }, "sessionMinutes": { "mean": 110, "spread": 60 }, "gameImportance": { "mean": 500, "spread": 150 }, "habit": { "mean": 550, "spread": 200 }, "talent": { "mean": 420, "spread": 280 }, "variety": { "mean": 550, "spread": 200 }, "extendTendency": { "mean": 500, "spread": 300 }, "selfControl": { "mean": 550, "spread": 300 }
+      "id": "hardcore", "version": 2, "name": "Hardcore", "weight": 10,
+      "gameImportance": { "min": 550, "mode": 900, "max": 1000 }, "sessionMinutes": { "min": 100, "mode": 260, "max": 420 }, "habit": { "min": 450, "mode": 850, "max": 1000 }
     },
     {
-      "id": "comerciante", "version": 1, "name": "Comerciante", "weight": 10,
-      "pve": { "mean": 400, "spread": 250 }, "pvp": { "mean": 150, "spread": 150 }, "trade": { "mean": 850, "spread": 150 },
-      "exploration": { "mean": 350, "spread": 250 }, "socializing": { "mean": 500, "spread": 250 },
-      "sociability": { "mean": 550, "spread": 250 }, "aggressiveness": { "mean": 250, "spread": 200 }, "patience": { "mean": 700, "spread": 200 },
-      "loyalty": { "mean": 400, "spread": 250 }, "riskAversion": { "mean": 700, "spread": 200 },
-      "mechanicalSkill": { "mean": 350, "spread": 250 }, "gameKnowledge": { "mean": 600, "spread": 250 }, "coordination": { "mean": 400, "spread": 250 },
-      "cheatPropensity": { "mean": 120, "spread": 120 }, "opportunism": { "mean": 650, "spread": 220 },
-      "leisureBudgetCentsPerMonth": { "mean": 8000, "spread": 5000 }, "willingnessToPay": { "mean": 450, "spread": 250 }, "paidAdvantageSensitivity": { "mean": 600, "spread": 250 },
-      "preferredStartHour": { "mean": 19, "spread": 4 }, "sessionMinutes": { "mean": 90, "spread": 50 }, "gameImportance": { "mean": 600, "spread": 150 }, "habit": { "mean": 650, "spread": 200 }, "talent": { "mean": 500, "spread": 280 }, "variety": { "mean": 350, "spread": 200 }, "extendTendency": { "mean": 400, "spread": 300 }, "selfControl": { "mean": 650, "spread": 300 }
-    },
-    {
-      "id": "explorador", "version": 1, "name": "Explorador", "weight": 10,
-      "pve": { "mean": 600, "spread": 220 }, "pvp": { "mean": 250, "spread": 200 }, "trade": { "mean": 250, "spread": 200 },
-      "exploration": { "mean": 900, "spread": 100 }, "socializing": { "mean": 350, "spread": 250 },
-      "sociability": { "mean": 350, "spread": 250 }, "aggressiveness": { "mean": 300, "spread": 200 }, "patience": { "mean": 650, "spread": 250 },
-      "loyalty": { "mean": 450, "spread": 250 }, "riskAversion": { "mean": 350, "spread": 250 },
-      "mechanicalSkill": { "mean": 500, "spread": 250 }, "gameKnowledge": { "mean": 550, "spread": 250 }, "coordination": { "mean": 400, "spread": 250 },
-      "cheatPropensity": { "mean": 50, "spread": 50 }, "opportunism": { "mean": 250, "spread": 200 },
-      "leisureBudgetCentsPerMonth": { "mean": 6500, "spread": 4000 }, "willingnessToPay": { "mean": 450, "spread": 250 }, "paidAdvantageSensitivity": { "mean": 500, "spread": 250 },
-      "preferredStartHour": { "mean": 15, "spread": 6 }, "sessionMinutes": { "mean": 120, "spread": 60 }, "gameImportance": { "mean": 550, "spread": 150 }, "habit": { "mean": 500, "spread": 200 }, "talent": { "mean": 520, "spread": 280 }, "variety": { "mean": 750, "spread": 200 }, "extendTendency": { "mean": 500, "spread": 300 }, "selfControl": { "mean": 550, "spread": 300 }
-    },
-    {
-      "id": "hardcore", "version": 1, "name": "Hardcore", "weight": 10,
-      "pve": { "mean": 850, "spread": 150 }, "pvp": { "mean": 550, "spread": 300 }, "trade": { "mean": 450, "spread": 250 },
-      "exploration": { "mean": 450, "spread": 250 }, "socializing": { "mean": 550, "spread": 250 },
-      "sociability": { "mean": 500, "spread": 250 }, "aggressiveness": { "mean": 450, "spread": 300 }, "patience": { "mean": 600, "spread": 250 },
-      "loyalty": { "mean": 650, "spread": 250 }, "riskAversion": { "mean": 350, "spread": 250 },
-      "mechanicalSkill": { "mean": 700, "spread": 220 }, "gameKnowledge": { "mean": 800, "spread": 180 }, "coordination": { "mean": 700, "spread": 220 },
-      "cheatPropensity": { "mean": 100, "spread": 100 }, "opportunism": { "mean": 400, "spread": 250 },
-      "leisureBudgetCentsPerMonth": { "mean": 12000, "spread": 7000 }, "willingnessToPay": { "mean": 650, "spread": 250 }, "paidAdvantageSensitivity": { "mean": 750, "spread": 200 },
-      "preferredStartHour": { "mean": 19, "spread": 4 }, "sessionMinutes": { "mean": 240, "spread": 100 }, "gameImportance": { "mean": 820, "spread": 100 }, "habit": { "mean": 750, "spread": 200 }, "talent": { "mean": 620, "spread": 280 }, "variety": { "mean": 300, "spread": 200 }, "extendTendency": { "mean": 800, "spread": 300 }, "selfControl": { "mean": 400, "spread": 300 }
-    },
-    {
-      "id": "devoto", "version": 1, "name": "Devoto", "weight": 2,
-      "pve": { "mean": 850, "spread": 150 }, "pvp": { "mean": 550, "spread": 300 }, "trade": { "mean": 450, "spread": 250 },
-      "exploration": { "mean": 450, "spread": 250 }, "socializing": { "mean": 550, "spread": 250 },
-      "sociability": { "mean": 500, "spread": 250 }, "aggressiveness": { "mean": 450, "spread": 300 }, "patience": { "mean": 600, "spread": 250 },
-      "loyalty": { "mean": 750, "spread": 200 }, "riskAversion": { "mean": 350, "spread": 250 },
-      "mechanicalSkill": { "mean": 700, "spread": 220 }, "gameKnowledge": { "mean": 800, "spread": 180 }, "coordination": { "mean": 700, "spread": 220 },
-      "cheatPropensity": { "mean": 100, "spread": 100 }, "opportunism": { "mean": 400, "spread": 250 },
-      "leisureBudgetCentsPerMonth": { "mean": 12000, "spread": 7000 }, "willingnessToPay": { "mean": 650, "spread": 250 }, "paidAdvantageSensitivity": { "mean": 750, "spread": 200 },
-      "preferredStartHour": { "mean": 16, "spread": 5 }, "sessionMinutes": { "mean": 360, "spread": 120 }, "gameImportance": { "mean": 930, "spread": 70 }, "habit": { "mean": 900, "spread": 100 }, "talent": { "mean": 620, "spread": 280 }, "variety": { "mean": 300, "spread": 200 },
-      "extendTendency": { "mean": 650, "spread": 350 }, "selfControl": { "mean": 500, "spread": 350 },
+      "id": "devoto", "version": 2, "name": "Devoto", "weight": 2,
+      "gameImportance": { "min": 800, "mode": 970, "max": 1000 }, "sessionMinutes": { "min": 180, "mode": 360, "max": 600 }, "habit": { "min": 650, "mode": 950, "max": 1000 },
       "occupationWeights": { "sem_ocupacao": 40, "universitario": 25, "estudante_manha": 20, "estudante_tarde": 15 }
     }
+  ],
+  "dedication": { "influencePermille": 450 },
+  "traits": {
+    "pve": { "min": 0, "mode": 250, "max": 700 }, "pvp": { "min": 0, "mode": 250, "max": 700 }, "trade": { "min": 0, "mode": 250, "max": 700 }, "exploration": { "min": 0, "mode": 250, "max": 700 }, "socializing": { "min": 0, "mode": 250, "max": 700 },
+    "sociability": { "min": 150, "mode": 540, "max": 930 }, "aggressiveness": { "min": 0, "mode": 320, "max": 700 }, "patience": { "mean": 530, "spread": 420 }, "loyalty": { "mean": 520, "spread": 430 }, "riskAversion": { "mean": 510, "spread": 530 },
+    "mechanicalSkill": { "mean": 460, "spread": 470 }, "gameKnowledge": { "mean": 480, "spread": 570 }, "coordination": { "mean": 470, "spread": 440 },
+    "cheatPropensity": { "mean": 80, "spread": 140 }, "opportunism": { "mean": 330, "spread": 480 }, "competitiveness": { "min": 0, "mode": 250, "max": 950 },
+    "leisureBudgetCentsPerMonth": { "mean": 7590, "spread": 7580 }, "willingnessToPay": { "mean": 470, "spread": 340 }, "paidAdvantageSensitivity": { "mean": 610, "spread": 440 },
+    "preferredStartHour": { "mean": 19, "spread": 6 }, "extendTendency": { "mean": 480, "spread": 580 }, "selfControl": { "mean": 550, "spread": 370 }, "talent": { "mean": 470, "spread": 400 }, "variety": { "min": 160, "mode": 490, "max": 820 }
+  },
+  "preferences": {
+    "pve": { "min": 0, "mode": 680, "max": 1000 }, "pvp": { "min": 0, "mode": 10, "max": 1000 }, "crafting": { "min": 0, "mode": 350, "max": 1000 }, "trade": { "min": 0, "mode": 170, "max": 1000 },
+    "gathering": { "min": 0, "mode": 350, "max": 1000 }, "exploration": { "min": 0, "mode": 520, "max": 1000 }, "social": { "min": 0, "mode": 610, "max": 1000 }
+  },
+  "links": [
+    { "trait": "preferences.social", "anchor": "traits.sociability", "influencePermille": 350 },
+    { "trait": "preferences.pvp", "anchor": "traits.aggressiveness", "influencePermille": 300 },
+    { "trait": "preferences.exploration", "anchor": "traits.variety", "influencePermille": 300 },
+    { "trait": "traits.pve", "anchor": "preferences.pve", "influencePermille": 500 },
+    { "trait": "traits.pvp", "anchor": "preferences.pvp", "influencePermille": 500 },
+    { "trait": "traits.trade", "anchor": "preferences.trade", "influencePermille": 500 },
+    { "trait": "traits.exploration", "anchor": "preferences.exploration", "influencePermille": 500 },
+    { "trait": "traits.socializing", "anchor": "preferences.social", "influencePermille": 500 }
   ],
   "names": {
     "firstNames": [
@@ -127,9 +88,9 @@
   },
   "mood": {
     "initialSatisfaction": 600, "initialNovelty": 1000, "funWeight": 300, "fitWeight": 200, "crowdingWeight": 200,
-    "companyWeight": 150, "boredomWeight": 250, "riskWeight": 150, "progressWeight": 400, "progressCarePve": 500, "progressCareAggressiveness": 300, "progressCarePvp": 200,
+    "companyWeight": 150, "boredomWeight": 250, "riskWeight": 150, "progressWeight": 400, "progressCarePve": 500, "progressCareCompetitiveness": 300, "progressCarePvp": 200,
     "noveltyCareBase": 100, "noveltyCareVariety": 500, "noveltyCareExploration": 200, "noveltyCareImpatience": 200, "noveltyClamp": 300, "progressClamp": 200,
-    "progressRatioCap": 2000, "expectationBase": 550, "expectationPerAggressiveness": 300, "expectationAdapt": 100, "expectationFloor": 450,
+    "progressRatioCap": 2000, "expectationBase": 550, "expectationPerCompetitiveness": 300, "expectationAdapt": 100, "expectationFloor": 450,
     "expectationCeiling": 1100, "noveltyWeight": 300, "noveltyMin": -1000, "frustrationInIntention": 500, "noveltyDecayPerHour": 2, "noveltyPerDiscovery": 60, "noveltyNewActivityType": 80,
     "noveltyNewActivity": 25, "noveltyPerLevel": 30, "noveltyNewQuest": 40, "eventClamp": 300, "levelUpPoints": 60,
     "questPoints": 40, "mainQuestPoints": 100, "goalCompletedPoints": 80, "discoveryPoints": 40, "goalAbandonedPoints": 80,
@@ -152,7 +113,7 @@
   },
   "behavior": {
     "registrationDayWeights": [30, 22, 16, 12, 9, 6, 5],
-    "sessionStartJitterMinutes": 75, "sessionDurationJitterPermille": 200, "logoutToleranceMinutes": 15, "walkSpeed": 15, "weightAffinity": 450,
+    "sessionStartJitterMinutes": 75, "sessionDurationJitterPermille": 200, "logoutToleranceMinutes": 15, "walkSpeed": 15, "weightAffinity": 450, "specialtyAffinityPermille": 50, "specialtyAffinityCap": 50,
     "weightReward": 300, "weightSocial": 150, "weightRisk": 350, "weightTravel": 250, "weightCrowding": 200,
     "timeBudgetPenalty": 400, "questOfferWeight": 210, "questDeliverWeight": 220, "questDeliverPerExtra": 90, "questStepWeight": 250,
     "noise": 50, "activityDurationMin": 800, "activityDurationMax": 1250, "idleRethinkMinutes": 20

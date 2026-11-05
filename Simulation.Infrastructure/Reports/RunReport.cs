@@ -163,16 +163,20 @@ public static class RunReportWriter
         ("leisure_budget_cents_month", t => t.LeisureBudgetCentsPerMonth), ("willingness_to_pay", t => t.WillingnessToPay),
         ("paid_advantage_sensitivity", t => t.PaidAdvantageSensitivity), ("preferred_start_hour", t => t.PreferredStartHour),
         ("session_minutes", t => t.SessionMinutes), ("game_importance", t => t.GameImportance), ("habit", t => t.Habit),
+        ("competitiveness", t => t.Competitiveness), ("extend_tendency", t => t.ExtendTendency), ("self_control", t => t.SelfControl),
+        ("talent", t => t.Talent), ("variety", t => t.Variety),
     };
 
     public static void WritePopulation(string path, IReadOnlyList<Person> persons)
     {
-        var sb = new StringBuilder("person_id,name,profile,appearance_seed,state," + string.Join(",", TraitColumns.Select(c => c.Name)) + "\n");
+        var sb = new StringBuilder("person_id,name,profile,appearance_seed,state," + string.Join(",", TraitColumns.Select(c => c.Name))
+            + "," + string.Join(",", PersonPreferences.Keys.Select(k => "pref_" + k)) + "\n");
         foreach (var p in persons)
         {
             sb.Append(string.Join(",",
                 new[] { p.Id.ToString(Inv), Csv(p.Name), p.ProfileId, p.AppearanceSeed.ToString("x16", Inv), p.State.ToString() }
-                .Concat(TraitColumns.Select(c => c.Get(p.Traits).ToString(Inv)))));
+                .Concat(TraitColumns.Select(c => c.Get(p.Traits).ToString(Inv)))
+                .Concat(PersonPreferences.Keys.Select(k => p.Preferences.Get(k).ToString(Inv)))));
             sb.Append('\n');
         }
         File.WriteAllText(path, sb.ToString(), new UTF8Encoding(false));

@@ -4,9 +4,12 @@ Os atributos são da **pessoa** (o jogador), não do personagem. O personagem te
 
 Cada atributo representa **uma coisa só**:
 
-- **Gostos** (estilo de jogo: PvE, PvP, Comércio, Exploração, Socializar) decidem a **vontade** de fazer algo. Nunca melhoram a execução.
+- **O gosto não é atributo:** fica nas **Preferências** (PvE, PvP, Crafting, Comércio, Coleta, Exploração, Social), um campo da pessoa ao lado do Perfil. Elas dão o peso principal de gosto nas escolhas, sem obrigar (`perfil-preferencias.md`).
+- **Especialidade** (PvE, PvP, Comércio, Exploração, Socializar) é a afinidade desenvolvida e a familiaridade. Dá só um reforço mínimo e limitado no gosto (5%, com teto) e cresce com a prática. Benefícios de execução virão com o combate, a economia e os grupos.
 - **Capacidades** (Mecânica, Conhecimento, Coordenação) decidem a **execução**. Evoluem com prática, talento e potencial.
-- **Personalidade** (Sociabilidade, Agressividade, Paciência, Lealdade, Aversão a risco) e **conduta** (Trapaça, Oportunismo) mudam pouco ou nada.
+- **Personalidade** (Sociabilidade, Agressividade, Paciência, Lealdade, Aversão a risco, Variedade) e **conduta** (Competitividade, Trapaça, Oportunismo) mudam pouco ou nada.
+  - A **Agressividade** é confronto (emboscada, tanque, PvP).
+  - A **Competitividade** é disputar, superar e ser reconhecido (desafio acima do nível, metas de nível, expectativa de progresso).
 
 Todos os números ficam em `population.json`, nas seções `dynamics` (evolução) e `goals` (metas). O jogador, como desenvolvedor do MMORPG, poderá editá-los, e o validador confere as faixas.
 
@@ -22,7 +25,7 @@ Mudanças visíveis (quando o valor 1–20 muda) geram o evento `trait_changed` 
 
 São coisas diferentes:
 
-- **Talento** é o traço fixo da pessoa. Diz quanto e quão rápido ela pode aprender. Vem do perfil (`population.json`, campo `talent`), com variação individual.
+- **Talento** é o traço fixo da pessoa. Diz quanto e quão rápido ela pode aprender. Vem da distribuição da população (`population.json`, `traits.talent`), igual para todos os perfis.
 - **Experiência** é a prática neste jogo (horas jogadas). Ela aparece na ficha e não é um traço. O **Conhecimento** cresce com ela, e quem já jogava o gênero chega com mais Conhecimento.
 
 | Talento | Valor | | Experiência | Horas jogadas |
@@ -110,21 +113,22 @@ Como ler a tabela (seed 1):
 
 | Atributo | Influencia (simulação) | Sobe com | Cai com |
 |---|---|---|---|
-| PvE | Vontade de caçar e enfrentar chefe; gosto por missões; metas de nível | Experiências boas de caça | — (repetir só gera tédio) |
-| PvP | Vontade de patrulhar, emboscar, PvP aberto. **Não melhora a execução** | Experiências boas de PvP; abate de jogador (+3, M3) | — |
-| Comércio | Vontade de coletar e comerciar; metas de praticar | Experiências boas de coleta e comércio | — |
-| Exploração | Vontade de explorar e fazer missões; metas de descobrir zonas; um pouco da necessidade de novidade | Experiências boas explorando; 1 unidade a cada 4 zonas descobertas | — |
-| Socializar | Vontade de ir à taverna e de jogar onde há gente | Experiências boas na taverna | — |
-| Sociabilidade | Valor da companhia na taverna; classe de suporte | Tempo na taverna | — |
-| Agressividade | **Competitividade**: entra no gosto por desafio acima do nível (40%); emboscada; metas de nível; classe tanque | — (personalidade) | — |
-| Paciência | Tolera repetição; **persistência** nas metas (demora mais para desistir); coleta | — (personalidade) | — |
+| PvE (especialidade) | Reforço mínimo no gosto por caça e chefe (5%, teto 50); o gosto vem da preferência PvE | Experiências boas de caça e chefe; metas cumpridas motivadas pela preferência PvE | — (repetir só gera tédio) |
+| PvP (especialidade) | Reforço mínimo no gosto por patrulha e emboscada. **Não melhora a execução** | Experiências boas de PvP; abate de jogador (+3, M3) | — |
+| Comércio (especialidade) | Reforço mínimo no gosto por comerciar. A coleta não usa este atributo | Experiências boas de comércio | — |
+| Exploração (especialidade) | Reforço mínimo no gosto por explorar | Experiências boas explorando; 1 unidade a cada 4 zonas descobertas | — |
+| Socializar (especialidade) | Reforço mínimo no gosto pela taverna | Experiências boas na taverna | — |
+| Sociabilidade | Valor da companhia na taverna; compromissos sociais; classe de suporte; puxa um pouco a preferência Social | Tempo na taverna | — |
+| Agressividade | Confronto: emboscada; classe tanque; puxa um pouco a preferência PvP (PK no futuro). Não é competitividade | — (personalidade) | — |
+| Paciência | Tolera repetição (alivia o tédio); **persistência** nas metas (demora mais para desistir) | — (personalidade) | — |
 | Lealdade | Apego às metas (comprometimento); patrulha; classe tanque. Grupos e guildas no M6 | — (personalidade) | — |
 | Aversão a risco | Pesa contra risco e PvP aberto; reduz o gosto por desafio (30%) | — | Enfrentar risco sem perder; mortes (M3) a farão subir |
 | Mecânica | **Execução**: XP em combate (×0,88–1,12), menos medo do risco, confiança para desafio (30%); no M3, execução em PvE e PvP | Combate; abate de jogador (prática, M3) | Mais de 7 dias sem jogar |
 | Conhecimento | XP geral (×0,95–1,05); **estima melhor o tempo de viagem** (erro de até ±30% com conhecimento zero; o tempo real é igual para todos); decisões mais consistentes (menos ruído) | Jogar, explorar, descobrir, concluir missões, primeira vez num tipo de atividade | Mais de 14 dias sem jogar |
-| Coordenação | Lugares cheios pesam menos na caça e na coleta; chefe; classe tanque; execução em grupo (M6) | **Só atividades cooperativas** (grupos e raides, M6); estável por enquanto | — |
+| Coordenação | Lugares cheios pesam menos na caça e na coleta; classe tanque; execução em grupo (M6) | **Só atividades cooperativas** (grupos e raides, M6); estável por enquanto | — |
 | Trapaça | Sem efeito até os incidentes (M9) | — | — |
 | Oportunismo | Foge mais de lugares disputados; emboscada; incidentes no M9 | — | — |
+| Competitividade | Disputar, superar e ser reconhecido: gosto por desafio acima do nível (40%); metas de nível e zonas mais altas aceitas; expectativa de progresso; quanto liga para evoluir. Não decide agressividade, PK, habilidade nem horas. Rankings e duelos no futuro | — (conduta) | — |
 
 ### Fatores de decisão ligados aos atributos
 
@@ -133,7 +137,7 @@ Como ler a tabela (seed 1):
   - É menor para quem prefere variedade: `× (1 − Variedade / 2)` (D-039a).
   - A lealdade não entra aqui.
 - **Gosto por desafio** (D-036a): conteúdo acima do nível (até 3 níveis, 40 por nível).
-  - Apetite = Agressividade × 0,4 + Mecânica × 0,3 + (1000 − Aversão a risco) × 0,3.
+  - Apetite = Competitividade × 0,4 + Mecânica × 0,3 + (1000 − Aversão a risco) × 0,3.
 - **Distância:** o custo é o tempo real de viagem em relação ao tempo de sessão. O Conhecimento só muda a **precisão da estimativa**.
 
 ## Metas de curto prazo
@@ -143,14 +147,14 @@ São as metas de sessão ou secundárias (chegar a um nível, descobrir uma zona
 - **Adoção:** ao conectar, se houver vaga.
   - Até 2 metas para todos, chance fixa de 45%.
   - Paciência não muda a quantidade nem a chance.
-- **Escolha:** ponderada pelos traços que vêm do perfil:
+- **Escolha:** ponderada pelas preferências, pela Competitividade e pela personalidade (nenhuma depende do perfil):
 
 | Meta | Peso | Alvo |
 |---|---|---|
-| Chegar a um nível | 150 + PvE·0,3 + Agressividade·0,2 + (1000 − Paciência)·0,1 | 1 a 3 níveis acima |
-| Descobrir uma zona | 100 + Exploração·0,9 | Uma zona vizinha das conhecidas, dentro do nível (os competitivos aceitam zonas mais altas) |
-| Concluir uma missão | 120 + (PvE + Exploração)·0,2 + Paciência·0,2 + Conhecimento·0,1 | A principal disponível; senão, uma secundária |
-| Praticar a atividade preferida | 100 + gosto·0,5 + Paciência·0,2 | 120 a 420 minutos |
+| Chegar a um nível | 150 + preferência PvE·0,3 + Competitividade·0,2 + (1000 − Paciência)·0,1 | 1 a 3 níveis acima |
+| Descobrir uma zona | 100 + preferência Exploração·0,9 | Uma zona vizinha das conhecidas, dentro do nível (os competitivos aceitam zonas mais altas) |
+| Concluir uma missão | 120 + (preferências PvE + Exploração)·0,2 + Paciência·0,2 + Conhecimento·0,1 | A principal disponível; senão, uma secundária |
+| Praticar a atividade preferida | 100 + preferência do tipo·0,5 + Paciência·0,2 | 120 a 420 minutos |
 
 - **Influência:** fator "meta pessoal" na decisão.
   - Até 200 × comprometimento (400 + Paciência·0,3 + Lealdade·0,3, em permille).

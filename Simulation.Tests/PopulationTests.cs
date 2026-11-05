@@ -6,12 +6,14 @@ namespace Simulation.Tests;
 public class VarietyTraitTests
 {
     [Fact]
-    public void PreferenciaPorVariedade_VemDoPerfil_ExploradoresVariamMaisQueHardcore()
+    public void PreferenciaPorVariedade_DaPopulacao_IndependenteDoPerfil()
     {
+        // Separacao Perfil x Preferencias: a variedade e personalidade, gerada pela populacao toda.
         var db = TestSupport.Preset;
-        var people = Enumerable.Range(1, 600).Select(i => Simulation.Core.Population.PopulationGenerator.Generate(i, db, 42)).ToList();
+        var people = Enumerable.Range(1, 6000).Select(i => Simulation.Core.Population.PopulationGenerator.Generate(i, db, 42)).ToList();
         double Mean(string profile) => people.Where(p => p.ProfileId == profile).Average(p => p.Traits.Variety);
-        Assert.True(Mean("explorador") > Mean("hardcore") + 200);
+        // Desvio da variedade ~135: com 2.000 casuais e 600 hardcores, 5 erros padrao da diferenca ~ 32.
+        Assert.InRange(Mean("casual") - Mean("hardcore"), -35, 35);
         Assert.Contains(people, p => p.Traits.Variety != p.Traits.Exploration);
         Assert.Equal(people[0].Traits.Variety, people[0].BaseTraits.Variety);
     }
@@ -101,13 +103,16 @@ public class PopulationTests
     public void CorrelacaoControlada_NemTodoCompetitivoEhAgressivo()
     {
         var persons = Generate(3000, 42);
-        double r = Pearson(persons.Select(p => (double)p.Traits.Pvp).ToArray(), persons.Select(p => (double)p.Traits.Aggressiveness).ToArray());
-        // Mistura de perfis cria correlacao positiva, mas longe de identidade.
-        Assert.InRange(r, 0.15, 0.85);
-
-        var pvpLovers = persons.Where(p => p.Traits.Pvp >= 700).ToList();
-        Assert.True(pvpLovers.Count > 100);
-        Assert.Contains(pvpLovers, p => p.Traits.Aggressiveness < 400);
+        // A preferencia PvP e puxada pela agressividade (ligacao parcial 0,30), longe de identidade.
+        double r = Pearson(persons.Select(p => (double)p.Preferences.Pvp).ToArray(), persons.Select(p => (double)p.Traits.Aggressiveness).ToArray());
+        Assert.InRange(r, 0.1, 0.6);
+        var pvpLovers = persons.Where(p => p.Preferences.Pvp >= 650).ToList();
+        Assert.True(pvpLovers.Count > 50);
+        Assert.Contains(pvpLovers, p => p.Traits.Aggressiveness < 300);
+        // Competitividade e independente da agressividade e da preferencia PvP (sorteios separados).
+        // Tolerancia: 5 erros padrao da correlacao, 5 / raiz(3000) ~ 0,09.
+        Assert.InRange(Pearson(persons.Select(p => (double)p.Traits.Competitiveness).ToArray(), persons.Select(p => (double)p.Traits.Aggressiveness).ToArray()), -0.09, 0.09);
+        Assert.InRange(Pearson(persons.Select(p => (double)p.Traits.Competitiveness).ToArray(), persons.Select(p => (double)p.Preferences.Pvp).ToArray()), -0.09, 0.09);
 
         // Dedicado ao jogo nao implica habilidoso.
         var frequent = persons.Where(p => p.Traits.GameImportance >= 700).ToList();

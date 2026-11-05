@@ -860,7 +860,7 @@ public static class ContentValidator
             ("progressClamp", pop.Mood.ProgressClamp),
             ("progressRatioCap", pop.Mood.ProgressRatioCap),
             ("expectationBase", pop.Mood.ExpectationBase),
-            ("expectationPerAggressiveness", pop.Mood.ExpectationPerAggressiveness),
+            ("expectationPerCompetitiveness", pop.Mood.ExpectationPerCompetitiveness),
             ("expectationAdapt", pop.Mood.ExpectationAdapt),
             ("expectationFloor", pop.Mood.ExpectationFloor),
             ("expectationCeiling", pop.Mood.ExpectationCeiling),
@@ -926,7 +926,7 @@ public static class ContentValidator
             }
         foreach (var (name, value) in new (string, int)[]
         {
-            ("progressCarePve", pop.Mood.ProgressCarePve), ("progressCareAggressiveness", pop.Mood.ProgressCareAggressiveness),
+            ("progressCarePve", pop.Mood.ProgressCarePve), ("progressCareCompetitiveness", pop.Mood.ProgressCareCompetitiveness),
             ("progressCarePvp", pop.Mood.ProgressCarePvp), ("noveltyCareBase", pop.Mood.NoveltyCareBase), ("noveltyCareVariety", pop.Mood.NoveltyCareVariety), ("noveltyClamp", pop.Mood.NoveltyClamp),
             ("noveltyCareExploration", pop.Mood.NoveltyCareExploration), ("noveltyCareImpatience", pop.Mood.NoveltyCareImpatience),
         })
@@ -940,6 +940,8 @@ public static class ContentValidator
             ("logoutToleranceMinutes", bh.LogoutToleranceMinutes),
             ("walkSpeed", bh.WalkSpeed),
             ("weightAffinity", bh.WeightAffinity),
+            ("specialtyAffinityPermille", bh.SpecialtyAffinityPermille),
+            ("specialtyAffinityCap", bh.SpecialtyAffinityCap),
             ("weightReward", bh.WeightReward),
             ("weightSocial", bh.WeightSocial),
             ("weightRisk", bh.WeightRisk),
@@ -957,6 +959,9 @@ public static class ContentValidator
         })
             if (value < 0) v.Error(PopulationFile, "behavior." + name, "O valor não pode ser negativo.");
         if (bh.WalkSpeed <= 0) v.Error(PopulationFile, "behavior.walkSpeed", "A velocidade precisa ser maior que zero.");
+        // Reforco da especialidade: pequeno e limitado por definicao (a preferencia e o gosto principal).
+        if (bh.SpecialtyAffinityPermille > 200) v.Error(PopulationFile, "behavior.specialtyAffinityPermille", "Use de 0 a 200 (até 20% da especialidade).");
+        if (bh.SpecialtyAffinityCap > 200) v.Error(PopulationFile, "behavior.specialtyAffinityCap", "Use de 0 a 200 (na escala de 0 a 1000 da afinidade).");
         if (bh.ActivityDurationMin <= 0 || bh.ActivityDurationMin > bh.ActivityDurationMax)
             v.Error(PopulationFile, "behavior.activityDurationMin", "Use um mínimo maior que zero e até o máximo.");
         if (bh.IdleRethinkMinutes <= 0) v.Error(PopulationFile, "behavior.idleRethinkMinutes", "Use 1 minuto ou mais.");
@@ -1011,32 +1016,9 @@ public static class ContentValidator
             string p = $"profiles[{i}]";
             v.Require(PopulationFile, p + ".name", pr.Name);
             if (pr.Weight <= 0) v.Error(PopulationFile, p + ".weight", "Peso deve ser > 0.");
-            Permille(p, "pve", pr.Pve, v);
-            Permille(p, "pvp", pr.Pvp, v);
-            Permille(p, "trade", pr.Trade, v);
-            Permille(p, "exploration", pr.Exploration, v);
-            Permille(p, "socializing", pr.Socializing, v);
-            Permille(p, "sociability", pr.Sociability, v);
-            Permille(p, "aggressiveness", pr.Aggressiveness, v);
-            Permille(p, "patience", pr.Patience, v);
-            Permille(p, "loyalty", pr.Loyalty, v);
-            Permille(p, "riskAversion", pr.RiskAversion, v);
-            Permille(p, "mechanicalSkill", pr.MechanicalSkill, v);
-            Permille(p, "gameKnowledge", pr.GameKnowledge, v);
-            Permille(p, "coordination", pr.Coordination, v);
-            Permille(p, "cheatPropensity", pr.CheatPropensity, v);
-            Permille(p, "opportunism", pr.Opportunism, v);
-            Permille(p, "willingnessToPay", pr.WillingnessToPay, v);
-            Permille(p, "paidAdvantageSensitivity", pr.PaidAdvantageSensitivity, v);
             Permille(p, "gameImportance", pr.GameImportance, v);
             Permille(p, "habit", pr.Habit, v);
-            Permille(p, "talent", pr.Talent, v);
-            Permille(p, "variety", pr.Variety, v);
-            Permille(p, "extendTendency", pr.ExtendTendency, v);
-            Permille(p, "selfControl", pr.SelfControl, v);
-            Range(p, "preferredStartHour", pr.PreferredStartHour, 0, 23, v);
             Range(p, "sessionMinutes", pr.SessionMinutes, 10, 720, v);
-            Range(p, "leisureBudgetCentsPerMonth", pr.LeisureBudgetCentsPerMonth, 0, 1_000_000, v);
             if (pr.OccupationWeights.Count > 0)
             {
                 foreach (var (occId, w) in pr.OccupationWeights.OrderBy(kv => kv.Key, StringComparer.Ordinal))
@@ -1048,7 +1030,19 @@ public static class ContentValidator
             }
         }
 
-        // Dedicacao compartilhada (experimento): so vale para atributos no formato triangular.
+        // Atributos da populacao (independentes do perfil) e preferencias.
+        var popTraits = set.Population.Traits;
+        foreach (var key in new[] { "pve", "pvp", "trade", "exploration", "socializing", "sociability", "aggressiveness", "patience", "loyalty",
+                     "riskAversion", "mechanicalSkill", "gameKnowledge", "coordination", "cheatPropensity", "opportunism", "competitiveness",
+                     "willingnessToPay", "paidAdvantageSensitivity", "extendTendency", "selfControl", "talent", "variety" })
+            Permille("traits", key, Population.PopulationGenerator.TraitRangeOf(popTraits, key), v);
+        Range("traits", "preferredStartHour", popTraits.PreferredStartHour, 0, 23, v);
+        Range("traits", "leisureBudgetCentsPerMonth", popTraits.LeisureBudgetCentsPerMonth, 0, 1_000_000, v);
+        foreach (var key in Population.PersonPreferences.Keys)
+            Permille("preferences", key, Population.PopulationGenerator.PreferenceRangeOf(set.Population.Preferences, key), v);
+        ValidateLinks(set, v);
+
+        // Dedicacao compartilhada (D-053): so vale para atributos no formato triangular.
         int influence = set.Population.Dedication.InfluencePermille;
         if (influence is < 0 or > 1000) v.Error(PopulationFile, "dedication.influencePermille", "Use de 0 a 1000.");
         else if (influence > 0)
@@ -1059,6 +1053,48 @@ public static class ContentValidator
     }
 
     private static void Permille(string p, string name, TraitRange t, Collector v) => Range(p, name, t, 0, 1000, v);
+
+    /// <summary>
+    /// Ligacoes parciais: chaves conhecidas e ligaveis, alvo e ancora no formato triangular,
+    /// influencia de 0 a 1000, um alvo por ligacao e sem ciclos.
+    /// </summary>
+    private static void ValidateLinks(ContentSet set, Collector v)
+    {
+        var links = set.Population.Links;
+        var linkable = Population.PopulationGenerator.LinkableKeys().ToHashSet(StringComparer.Ordinal);
+        TraitRange? RangeOf(string key)
+        {
+            if (key.StartsWith("traits.", StringComparison.Ordinal)) return Population.PopulationGenerator.TraitRangeOf(set.Population.Traits, key["traits.".Length..]);
+            if (key.StartsWith("preferences.", StringComparison.Ordinal)) return Population.PopulationGenerator.PreferenceRangeOf(set.Population.Preferences, key["preferences.".Length..]);
+            return null;
+        }
+        var targets = new HashSet<string>(StringComparer.Ordinal);
+        for (int i = 0; i < links.Count; i++)
+        {
+            var l = links[i];
+            string path = $"links[{i}]";
+            foreach (var (field, key) in new[] { ("trait", l.Trait), ("anchor", l.Anchor) })
+            {
+                if (!linkable.Contains(key)) { v.Error(PopulationFile, $"{path}.{field}", $"Chave desconhecida ou fora das ligações: \"{key}\". Use traits.<atributo> ou preferences.<preferência>; a dedicação, a tendência a prolongar e o autocontrole não entram."); continue; }
+                if (RangeOf(key) is { IsTriangular: false }) v.Error(PopulationFile, $"{path}.{field}", $"\"{key}\" precisa do formato min, mode e max para entrar numa ligação.");
+            }
+            if (l.Trait == l.Anchor) v.Error(PopulationFile, path, "Um atributo não pode se ligar a ele mesmo.");
+            if (l.InfluencePermille is < 0 or > 1000) v.Error(PopulationFile, path + ".influencePermille", "Use de 0 a 1000.");
+            if (!targets.Add(l.Trait)) v.Error(PopulationFile, path + ".trait", $"\"{l.Trait}\" já tem uma ligação (uma âncora por atributo).");
+        }
+        // Sem ciclos: seguir as ancoras a partir de cada alvo.
+        var anchorOf = links.GroupBy(l => l.Trait, StringComparer.Ordinal).ToDictionary(g => g.Key, g => g.First().Anchor, StringComparer.Ordinal);
+        foreach (var start in anchorOf.Keys.OrderBy(k => k, StringComparer.Ordinal))
+        {
+            var seen = new HashSet<string>(StringComparer.Ordinal) { start };
+            string cur = start;
+            while (anchorOf.TryGetValue(cur, out var next))
+            {
+                if (!seen.Add(next)) { v.Error(PopulationFile, "links", $"Ligação circular a partir de \"{start}\"."); break; }
+                cur = next;
+            }
+        }
+    }
 
     private static void Range(string p, string name, TraitRange t, int min, int max, Collector v, string file)
     {

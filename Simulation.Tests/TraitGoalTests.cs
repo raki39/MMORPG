@@ -168,12 +168,12 @@ public class TraitGoalTests
             foreach (var ev in e.World.Events.Drain().Where(x => x.Type == "goal_set"))
             {
                 var ch = e.World.GetCharacter((int)ev.Entities[0].Id);
-                var t = e.World.GetPerson(ch.PersonId).BaseTraits;
-                if (t.Exploration is > 350 and < 650) continue;
-                bool explorer = t.Exploration >= 650;
+                var pr = e.World.GetPerson(ch.PersonId).Preferences;
+                if (pr.Exploration is > 350 and < 650) continue;
+                bool explorer = pr.Exploration >= 650;
                 var (g, disc) = discover[explorer];
-                // O motivo do objetivo (1a causa) e o traco que mais pesou na escolha.
-                discover[explorer] = (g + 1, disc + (ev.Causes[0].Factor == "exploration" ? 1 : 0));
+                // O motivo do objetivo (1a causa) e o que mais pesou na escolha (aqui, a preferencia).
+                discover[explorer] = (g + 1, disc + (ev.Causes[0].Factor == "pref_exploration" ? 1 : 0));
             }
         }
         Assert.True(discover[true].Goals > 20 && discover[false].Goals > 20, $"amostra pequena: {discover[true].Goals}/{discover[false].Goals}");
@@ -294,12 +294,15 @@ public class TraitGoalTests
     [Fact]
     public void GostoPorDesafio_CombinaCompetitividadeConfiancaERisco()
     {
-        var bold = new PersonTraits { Aggressiveness = 500, MechanicalSkill = 800, RiskAversion = 200 };
-        var timid = new PersonTraits { Aggressiveness = 500, MechanicalSkill = 200, RiskAversion = 800 };
+        var bold = new PersonTraits { Competitiveness = 500, MechanicalSkill = 800, RiskAversion = 200 };
+        var timid = new PersonTraits { Competitiveness = 500, MechanicalSkill = 200, RiskAversion = 800 };
         Assert.True(ActivityScoring.ChallengeAppetite(bold) > ActivityScoring.ChallengeAppetite(timid));
-        var competitive = new PersonTraits { Aggressiveness = 900, MechanicalSkill = 500, RiskAversion = 500 };
-        var calm = new PersonTraits { Aggressiveness = 100, MechanicalSkill = 500, RiskAversion = 500 };
+        var competitive = new PersonTraits { Competitiveness = 900, MechanicalSkill = 500, RiskAversion = 500 };
+        var calm = new PersonTraits { Competitiveness = 100, MechanicalSkill = 500, RiskAversion = 500 };
         Assert.True(ActivityScoring.ChallengeAppetite(competitive) > ActivityScoring.ChallengeAppetite(calm));
+        // A agressividade continua existindo, mas e confronto: nao entra no gosto por desafio.
+        Assert.Equal(ActivityScoring.ChallengeAppetite(new PersonTraits { Aggressiveness = 0, Competitiveness = 500 }),
+            ActivityScoring.ChallengeAppetite(new PersonTraits { Aggressiveness = 1000, Competitiveness = 500 }));
     }
 
     [Fact]

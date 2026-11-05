@@ -50,16 +50,11 @@ public sealed class TraitDynamics
     /// <summary>Escala 1–20 da interface (mesma conta do cliente).</summary>
     public static int Scale20(int permille) => Math.Clamp((permille * 19 + 500) / 1000 + 1, 1, 20);
 
-    /// <summary>Gosto (estilo de jogo) reforcado por um tipo de atividade.</summary>
-    public static string? AffinityTrait(string activityType) => activityType switch
-    {
-        ActivityTypes.Hunt or ActivityTypes.Boss => "pve",
-        ActivityTypes.Gather or ActivityTypes.Trade => "trade",
-        ActivityTypes.Explore => "exploration",
-        ActivityTypes.Socialize => "socializing",
-        ActivityTypes.Patrol or ActivityTypes.Ambush => "pvp",
-        _ => null,
-    };
+    /// <summary>
+    /// Especialidade que a pratica do tipo faz crescer (afinidade desenvolvida). A coleta nao
+    /// alimenta mais o comercio (sao coisas separadas) e nao tem especialidade propria.
+    /// </summary>
+    public static string? AffinityTrait(string activityType) => ActivityScoring.SpecialtyOf(activityType);
 
     /// <summary>Muda o traco dentro da faixa; devolve a mudanca efetiva.</summary>
     public int Adjust(Person p, string trait, int delta, string cause)

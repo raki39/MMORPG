@@ -102,7 +102,10 @@ public partial class PlayerModal : ModalFrame
             Fact("Status", stText, stColor, stTip, "activity");
             Fact("Zona", _ctx.ZoneName(v.RegionId), UiTokens.TextSecondary, "", "map-pin");
             Fact("Conhece", $"{v.KnownRegions}/{_ctx.Content.Regions.Count}", UiTokens.TextSecondary, "Zonas conhecidas\n~Só zonas conhecidas entram nas decisões. Viajar e explorar revelam mais.", "compass");
-            Fact("Perfil", ProfileName, color, $"Perfil {ProfileName}\n~{ProfileHint(_person.ProfileId)} Tendência de origem; a pessoa não é um clone do perfil.", "user");
+            Fact("Perfil", ProfileName, color, $"Perfil {ProfileName} · dedicação\n~{ProfileHint(_person.ProfileId)}\n~O perfil gera importância do jogo, hábito e duração normal da sessão, com variação individual e sobreposição entre perfis. As horas saem do tempo livre e das decisões.", "user");
+            var prefs = _person.Preferences;
+            var main = PreferenceInfo.Predominant(prefs);
+            Fact("Preferências", PreferenceInfo.Summary(prefs), UiTokens.AccentSoft, PreferencesTip(prefs), PreferenceInfo.ByKey[main[0]].Icon);
             var (picon, plabel, ptext) = MainPersonality();
             Fact("Personalidade", plabel, UiTokens.AccentSoft, $"{plabel}\n~{ptext}", picon);
             int talent = _person.Traits.Talent;
@@ -526,11 +529,11 @@ public partial class PlayerModal : ModalFrame
         p.AddChild(new Icon(picon, 18, UiTokens.AccentSoft));
         p.AddChild(Column(1, ThemeFactory.Text(plabel, UiTokens.FontBody, UiTokens.TextPrimary, UiFonts.SemiBold), Wrap(ptext, UiTokens.FontSmall, UiTokens.TextSecondary)));
         col.AddChild(p);
-        col.AddChild(Wrap($"Perfil {ProfileName}: {ProfileHint(_person.ProfileId)}", UiTokens.FontSmall, UiTokens.TextSecondary));
+        col.AddChild(Wrap($"Perfil {ProfileName}: {ProfileHint(_person.ProfileId)} Preferências: {PreferenceInfo.Summary(_person.Preferences)}.", UiTokens.FontSmall, UiTokens.TextSecondary));
 
         col.AddChild(Section("Metas", ThemeFactory.Text($"{v.GoalsCompleted} concluídas · {v.GoalsAbandoned} abandonadas", UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Numbers)));
         if (v.Goals.Count == 0)
-            col.AddChild(Wrap("Sem meta agora. Nem todo jogador tem uma o tempo todo; ao conectar, pode adotar uma conforme o perfil e a personalidade.", UiTokens.FontSmall, UiTokens.TextSecondary));
+            col.AddChild(Wrap("Sem meta agora. Nem todo jogador tem uma o tempo todo; ao conectar, pode adotar uma conforme as preferências, a competitividade e a personalidade.", UiTokens.FontSmall, UiTokens.TextSecondary));
         foreach (var g in v.Goals)
         {
             var (icon, text, progress) = GoalText(v, g);
@@ -846,15 +849,23 @@ public partial class PlayerModal : ModalFrame
 
     private static string ProfileHint(string profileId) => profileId switch
     {
-        "casual" => "joga pouco por dia e sem pressa.",
-        "competitivo" => "busca desafio e ranking.",
-        "social" => "joga pela companhia.",
-        "comerciante" => "prefere coletar e negociar.",
-        "explorador" => "quer ver o mundo inteiro.",
-        "hardcore" => "joga muitas horas e quer evoluir rápido.",
-        "devoto" => "vive o jogo: prioriza acima de tudo e aproveita cada janela livre.",
-        _ => "perfil de origem.",
+        "casual" => "dedicação baixa: o jogo é um lazer entre outros, com sessões mais curtas e menos regulares (há casuais que jogam bastante).",
+        "regular" => "dedicação média: joga com frequência, sem que o jogo seja a prioridade.",
+        "hardcore" => "dedicação alta: o jogo é prioridade, com sessões longas e regulares.",
+        "devoto" => "dedicação extrema: prioriza o jogo acima de tudo e aproveita cada janela livre.",
+        _ => "dedicação de origem.",
     };
+
+    /// <summary>Dica das preferencias: todas, com nivel e escala 1-20; as decisoes usam os valores.</summary>
+    private static string PreferencesTip(Simulation.Core.Population.PersonPreferences pr)
+    {
+        var sb = new System.Text.StringBuilder("Preferências · interesses pessoais\n");
+        foreach (var k in Simulation.Core.Population.PersonPreferences.Keys.OrderByDescending(pr.Get).ThenBy(x => x, StringComparer.Ordinal))
+            sb.Append($"{PreferenceInfo.ByKey[k].Name}|{UiTokens.To20(pr.Get(k))} · {PreferenceInfo.Level(pr.Get(k))}\n");
+        sb.Append("~Dão o peso principal de gosto nas escolhas, sem obrigar: viagem, risco, tédio, metas, lotação e tempo podem fazer outra opção vencer. Os atributos de especialidade só reforçam um pouco.");
+        sb.Append("\n~Crafting ainda não tem efeito (a fabricação não existe no jogo).");
+        return sb.ToString();
+    }
 
     // ----- Forma (minutos por dia + ultimas sessoes) -----
 
@@ -1106,10 +1117,10 @@ public partial class PlayerModal : ModalFrame
         row.AddThemeConstantOverride("separation", 24);
         foreach (var g in new[]
         {
-            Group("Estilo de jogo", new[] { "pve", "pvp", "trade", "exploration", "socializing" }),
+            Group("Especialidade", new[] { "pve", "pvp", "trade", "exploration", "socializing" }),
             Group("Personalidade", new[] { "sociability", "aggressiveness", "patience", "loyalty", "riskAversion", "variety" }),
             Group("Capacidade", new[] { "mechanicalSkill", "gameKnowledge", "coordination" }),
-            Group("Conduta", new[] { "cheatPropensity", "opportunism" }),
+            Group("Conduta", new[] { "competitiveness", "cheatPropensity", "opportunism" }),
         })
         {
             g.SizeFlagsHorizontal = SizeFlags.ExpandFill;
@@ -1125,11 +1136,15 @@ public partial class PlayerModal : ModalFrame
         var candidates = new List<(int Score, string Icon, string Title, string Text)>();
         void High(int value, string icon, string title, string text) { int v20 = UiTokens.To20(value); if (v20 >= 14) candidates.Add((v20, icon, title, text)); }
         void Low(int value, string icon, string title, string text) { int v20 = UiTokens.To20(value); if (v20 <= 6) candidates.Add((27 - v20, icon, title, text)); }
-        High(t.Pve, "sword", "Caçador", "Prefere caçar criaturas; áreas de caça pesam mais nas escolhas.");
-        High(t.Pvp, "swords", "Gosta de PvP", "Procura combate contra jogadores (o PvP chega no M3).");
-        High(t.Trade, "coins", "Mercador", "Gosta de coletar, comprar e vender.");
-        High(t.Exploration, "compass", "Explorador", "Tende a descobrir zonas novas cedo.");
-        High(t.Socializing, "users", "Sociável", "Gosta de lugares com gente e de estar em grupo.");
+        var pr = _person.Preferences;
+        High(pr.Pve, "sword", "Caçador", "Prefere caçar criaturas; áreas de caça pesam mais nas escolhas.");
+        High(pr.Pvp, "swords", "Gosta de PvP", "Procura combate contra jogadores (o PvP chega na Etapa 3).");
+        High(pr.Trade, "coins", "Mercador", "Gosta de comprar e vender.");
+        High(pr.Gathering, "pickaxe", "Coletor", "Gosta de coletar materiais.");
+        High(pr.Crafting, "hammer", "Artesão", "Gosta de fabricar (ainda sem efeito: a fabricação não existe).");
+        High(pr.Exploration, "compass", "Explorador", "Tende a descobrir zonas novas cedo.");
+        High(pr.Social, "users", "Sociável", "Gosta de atividades sociais e de jogar onde há gente.");
+        High(t.Competitiveness, "trophy", "Competitivo", "Quer superar os outros: busca desafio acima do nível e metas de nível.");
         High(t.Patience, "hourglass", "Paciente", "Repete a mesma atividade sem cansar tão cedo.");
         High(t.RiskAversion, "shield", "Cauteloso", "Evita perigo, PvP e conteúdo acima do nível.");
         High(t.Loyalty, "heart-handshake", "Leal", "Tende a ficar com grupos e guildas (M6).");
@@ -1324,15 +1339,17 @@ public partial class PlayerModal : ModalFrame
         "goal" => "Meta pessoal",
         "familiarity" => "Zona familiar",
         "challenge" => "Gosto por desafio",
+        "specialty" => "Especialidade",
         "interruption" => "Sessão interrompível",
         _ => key,
     };
 
     private static string FactorHint(string key) => key switch
     {
-        "affinity" => "Traços da pessoa combinados com o tipo de atividade.",
+        "affinity" => "Preferências da pessoa combinadas com o tipo de atividade (no PvP, também personalidade e conduta).",
+        "specialty" => "Reforço mínimo da familiaridade com o tipo de atividade (atributo de especialidade): 5% do valor, com teto.",
         "level_fit" => "Conteúdo dentro da faixa de nível da zona rende mais.",
-        "company" => "Outros jogadores no lugar (sociabilidade).",
+        "company" => "Outros jogadores no lugar (sociabilidade na taverna; preferência Social nas demais).",
         "crowding" => "Caça e coleta disputadas rendem menos.",
         "risk" => "Risco da atividade, PvP e nível × aversão a risco.",
         "travel" => "Tempo andando até lá em relação ao tempo de sessão.",
@@ -1346,7 +1363,7 @@ public partial class PlayerModal : ModalFrame
         "quest_step" => "Fazer isto avança a etapa atual de uma missão em andamento.",
         "goal" => "Ajuda uma meta de curto prazo; o peso cresce com o comprometimento (paciência e lealdade).",
         "familiarity" => "Zona onde já passou bastante tempo; quem gosta de variedade (exploração) sente menos essa atração.",
-        "challenge" => "Conteúdo acima do nível: competitividade (agressividade), confiança (mecânica) e pouca aversão a risco.",
+        "challenge" => "Conteúdo acima do nível: competitividade, confiança (mecânica) e pouca aversão a risco.",
         "interruption" => "Sessão na pausa ou no expediente pode ser cortada a qualquer momento: atividades caras de largar (chefe, emboscada, patrulha) perdem para comércio, coleta e conversa.",
         _ => "Pequena aleatoriedade reproduzível.",
     };

@@ -173,6 +173,8 @@ public sealed class PersonInfo
     public PersonTraits Traits { get; init; } = null!;
     /// <summary>Tracos de nascenca (imutaveis): comparacao "era X" e limites (D-036).</summary>
     public PersonTraits BaseTraits { get; init; } = null!;
+    /// <summary>Preferencias (interesses pessoais), ao lado do perfil; estaveis.</summary>
+    public PersonPreferences Preferences { get; init; } = null!;
     /// <summary>Localidade (P1): residencia, nacionalidade, idiomas e diferenca para o horario do servidor.</summary>
     public string ResidenceId { get; init; } = "";
     public string NationalityId { get; init; } = "";
@@ -253,7 +255,7 @@ public sealed class SimulationHost : IDisposable
         Layout = new ZoneLayout(content);
         _engine = WorldFactory.Create(content, new WorldConfig { Seed = seed, PopulationSize = population });
         Persons = _engine.World.Persons
-            .Select(p => new PersonInfo { Id = p.Id, Name = p.Name, ProfileId = p.ProfileId, AppearanceSeed = p.AppearanceSeed, Traits = p.Traits, BaseTraits = p.BaseTraits,
+            .Select(p => new PersonInfo { Id = p.Id, Name = p.Name, ProfileId = p.ProfileId, AppearanceSeed = p.AppearanceSeed, Traits = p.Traits, BaseTraits = p.BaseTraits, Preferences = p.Preferences,
                 ResidenceId = p.ResidenceId, NationalityId = p.NationalityId, Languages = p.Languages, LocalOffsetMinutes = p.LocalOffsetMinutes,
                 OccupationId = p.OccupationId, SleepNeedMinutes = p.SleepNeedMinutes, BedtimeMinute = p.BedtimeMinute,
                 IncomeCentsPerMonth = p.IncomeCentsPerMonth, SupportCentsPerMonth = p.SupportCentsPerMonth, ExpectedWeeklyMinutes = p.ExpectedWeeklyMinutes,

@@ -5,7 +5,8 @@ namespace GodotClient.Ui;
 /// <summary>
 /// O que cada atributo do jogador (a pessoa, nao o personagem) faz na simulacao e como muda
 /// (D-036). Texto ao jogador; deve acompanhar ActivityScoring, TraitDynamics e GoalSystem.
-/// Referencia completa em docs/atributos.md.
+/// Referencia completa em docs/atributos.md. Preferencias (interesses) ficam em PreferenceInfo:
+/// sao um campo ao lado do Perfil, nao um grupo de atributos.
 /// </summary>
 public static class AttributeInfo
 {
@@ -13,27 +14,27 @@ public static class AttributeInfo
 
     public static readonly IReadOnlyDictionary<string, Entry> ByKey = new Dictionary<string, Entry>(StringComparer.Ordinal)
     {
-        // Gostos (estilo de jogo): decidem a vontade de fazer, nunca a qualidade da execucao.
-        ["pve"] = new("PvE", "Vontade de caçar e enfrentar chefes; entra no gosto por missões e em metas de nível. Não melhora a execução.",
-            "Sobe devagar com experiências boas e persistentes de caça. Repetir demais gera tédio na hora de decidir, mas não muda o gosto.", false),
-        ["pvp"] = new("PvP", "Vontade de patrulhar, emboscar e entrar em PvP. Não melhora a execução: no combate (M3), quem decide é Mecânica, Conhecimento e Coordenação.",
-            "Sobe com experiências boas de PvP e ao abater jogadores (M3).", false),
-        ["trade"] = new("Comércio", "Vontade de coletar, comprar e vender; puxa metas de praticar coleta ou comércio.",
-            "Sobe com experiências boas de coleta ou comércio.", false),
-        ["exploration"] = new("Exploração", "Vontade de explorar e de fazer missões; puxa metas de descobrir zonas e pesa um pouco na necessidade de novidade. A vontade de variar é outro traço (Variedade).",
+        // Especialidade: afinidade desenvolvida e familiaridade. O gosto e da Preferencia.
+        ["pve"] = new("PvE", "Familiaridade com caça e chefes. Dá um reforço mínimo no gosto por essas atividades (5% do valor, no máximo +50 na escala de 0 a 1000 da afinidade); o gosto principal vem da preferência PvE. Benefícios de execução só com o combate.",
+            "Sobe com experiências boas de caça e chefes e ao concluir metas motivadas pela preferência PvE.", false),
+        ["pvp"] = new("PvP", "Familiaridade com patrulha e emboscada. Reforço mínimo no gosto por elas; o gosto principal vem da preferência PvP. Benefícios de execução só com o PvP (Etapa 3).",
+            "Sobe com experiências boas de PvP e ao abater jogadores (Etapa 3).", false),
+        ["trade"] = new("Comércio", "Familiaridade com comprar e vender. Reforço mínimo no gosto pelo comércio; o gosto principal vem da preferência Comércio. A coleta é outra coisa e não usa este atributo.",
+            "Sobe com experiências boas de comércio.", false),
+        ["exploration"] = new("Exploração", "Familiaridade com explorar. Reforço mínimo no gosto por explorar; o gosto principal vem da preferência Exploração.",
             "Sobe com experiências boas de exploração e a cada 4 zonas descobertas.", false),
-        ["socializing"] = new("Socializar", "Vontade de ir à taverna e de jogar onde há gente.",
+        ["socializing"] = new("Socializar", "Familiaridade com a vida social do jogo. Reforço mínimo no gosto pela taverna; o gosto principal vem da preferência Social.",
             "Sobe com experiências boas na taverna.", false),
         // Personalidade.
-        ["sociability"] = new("Sociabilidade", "Quanto valoriza companhia na taverna; pesa na escolha de classe de suporte.",
+        ["sociability"] = new("Sociabilidade", "Como a pessoa se relaciona: valoriza companhia na taverna, aceita mais compromissos sociais fora do jogo e pesa na classe de suporte. Puxa um pouco a preferência Social, sem decidir por ela.",
             "Sobe bem devagar com tempo na taverna.", false),
-        ["aggressiveness"] = new("Agressividade", "Competitividade. Junto com a confiança (Mecânica) e a pouca aversão a risco, forma o gosto por desafio acima do nível; pesa em emboscadas, metas de nível e na classe tanque.",
+        ["aggressiveness"] = new("Agressividade", "Confronto: pesa na emboscada e na classe tanque e puxa um pouco a preferência PvP. Não é competitividade (outro atributo, em Conduta). PK no futuro.",
             "Traço de personalidade: estável por enquanto.", false),
-        ["patience"] = new("Paciência", "Tolera repetir a mesma atividade e persiste nas metas por mais tempo antes de desistir; pesa na coleta. Não muda quantas metas a pessoa tem.",
+        ["patience"] = new("Paciência", "Tolera repetir a mesma atividade (alivia o tédio) e persiste nas metas por mais tempo antes de desistir. Não muda quantas metas a pessoa tem.",
             "Traço de personalidade: estável por enquanto.", false),
         ["loyalty"] = new("Lealdade", "Apego às metas assumidas; pesa na patrulha e na classe tanque. Fidelidade a grupos e guildas no M6.",
             "Traço de personalidade: estável por enquanto.", false),
-        ["variety"] = new("Variedade", "Preferência por variedade: cansa mais rápido de repetir o mesmo tipo de atividade, sente menos atração pelas zonas familiares e precisa mais de novidade. Quem tem pouca repete o que funciona sem se cansar.",
+        ["variety"] = new("Variedade", "Preferência por variedade: cansa mais rápido de repetir o mesmo tipo de atividade, sente menos atração pelas zonas familiares e precisa mais de novidade. Puxa um pouco a preferência Exploração.",
             "Traço de personalidade: estável por enquanto.", false),
         ["riskAversion"] = new("Aversão a risco", "Pesa contra atividades arriscadas e PvP aberto e reduz o gosto por desafio acima do nível.",
             "Cai devagar ao enfrentar risco sem perder; mortes (M3) a farão subir.", false),
@@ -42,16 +43,15 @@ public static class AttributeInfo
             "Sobe com tempo em combate: cerca de 130 h por ponto com talento moderado, mais rápido com talento alto e mais devagar perto do potencial. Cai depois de 7 dias sem jogar.", true),
         ["gameKnowledge"] = new("Conhecimento", "Rendimento geral (×0,95 a ×1,05), estimativa mais precisa do tempo de viagem (o tempo real é o mesmo para todos) e decisões mais consistentes.",
             "Sobe jogando, explorando, descobrindo zonas e concluindo missões. Cai depois de 14 dias sem jogar (atualizações no M7).", true),
-        ["coordination"] = new("Coordenação", "Convive melhor com lugares cheios na caça e na coleta; pesa em chefes e na classe tanque. Execução em grupo no M6.",
+        ["coordination"] = new("Coordenação", "Convive melhor com lugares cheios na caça e na coleta; pesa na classe tanque. Execução em grupo no M6.",
             "Evolui só em atividades cooperativas (grupos e raides, M6): por enquanto estável.", true),
+        // Conduta.
         ["cheatPropensity"] = new("Trapaça", "Sem efeito até os incidentes (M9).", "Estável.", false),
         ["opportunism"] = new("Oportunismo", "Foge mais de lugares disputados; pesa na emboscada. Incidentes no M9.", "Estável por enquanto.", false),
+        ["competitiveness"] = new("Competitividade", "Motivação para disputar, superar outros e ser reconhecido pelo desempenho: gosto por desafio acima do nível, metas de nível (e aceitar zonas mais altas), expectativa de progresso e quanto liga para evoluir. Não decide agressividade, PK, habilidade nem horas jogadas. Rankings e duelos no futuro.",
+            "Estável por enquanto.", false),
     };
 
-    /// <summary>
-    /// Faixa de talento do jogador (a pessoa): potencial e velocidade de aprender as capacidades.
-    /// Talento nao e experiencia: a experiencia vem da pratica (ExperienceTier).
-    /// </summary>
     /// <summary>Texto corrido em marcadores do RichTip ("- item" por frase ou oracao), sem ponto final.</summary>
     public static string Bullets(string text)
     {
@@ -65,9 +65,9 @@ public static class AttributeInfo
     /// <summary>Grupo do atributo na ficha (subtitulo da dica).</summary>
     public static string GroupOf(string key) => key switch
     {
-        "pve" or "pvp" or "trade" or "exploration" or "socializing" => "Estilo de jogo · gosto, não execução",
+        "pve" or "pvp" or "trade" or "exploration" or "socializing" => "Especialidade · afinidade desenvolvida",
         "mechanicalSkill" or "gameKnowledge" or "coordination" => "Capacidade · evolui com prática e talento",
-        "cheatPropensity" or "opportunism" => "Conduta",
+        "cheatPropensity" or "opportunism" or "competitiveness" => "Conduta",
         _ => "Personalidade",
     };
 
@@ -116,7 +116,56 @@ public static class AttributeInfo
         _ => cause,
     };
 
-    public static string Name(string key) => ByKey.TryGetValue(key, out var e) ? e.Name : key;
+    /// <summary>Nome de um atributo ou de um motivo de meta ("pref_x" = preferencia).</summary>
+    public static string Name(string key) =>
+        key.StartsWith(Person.PreferenceMotivePrefix, StringComparison.Ordinal) && PreferenceInfo.ByKey.TryGetValue(key[Person.PreferenceMotivePrefix.Length..], out var p)
+            ? $"{p.Name} (preferência)"
+            : ByKey.TryGetValue(key, out var e) ? e.Name : key;
 
     public static int Get(PersonTraits t, string key) => t.Get(key);
+}
+
+/// <summary>
+/// Preferencias: interesses pessoais (campo ao lado do Perfil). Dao o peso principal de gosto
+/// nas decisoes, sem obrigar: viagem, risco, tedio, metas, lotacao e tempo competem com elas.
+/// </summary>
+public static class PreferenceInfo
+{
+    public sealed record Entry(string Name, string Icon, string Influences);
+
+    public static readonly IReadOnlyDictionary<string, Entry> ByKey = new Dictionary<string, Entry>(StringComparer.Ordinal)
+    {
+        ["pve"] = new("PvE", "sword", "Gosto por caçar, enfrentar chefes e fazer missões; pesa em metas de nível e no cuidado com o progresso."),
+        ["pvp"] = new("PvP", "swords", "Gosto por patrulhar, emboscar e lutar contra jogadores (o PvP chega na Etapa 3); pesa na classe de dano."),
+        ["crafting"] = new("Crafting", "hammer", "Gosto por fabricar. Ainda sem efeito: a fabricação não existe no jogo. Não implica gostar de vender nem de coletar."),
+        ["trade"] = new("Comércio", "coins", "Gosto por comprar e vender."),
+        ["gathering"] = new("Coleta", "pickaxe", "Gosto por coletar materiais, separado do comércio e da fabricação."),
+        ["exploration"] = new("Exploração", "compass", "Gosto por explorar e descobrir zonas; pesa nas missões, nas metas de descoberta e na necessidade de novidade."),
+        ["social"] = new("Social", "users", "Gosto por atividades sociais e por jogar onde há gente; pesa na classe de suporte."),
+    };
+
+    /// <summary>Nivel de uma preferencia (permille) em palavras.</summary>
+    public static string Level(int v) => v switch
+    {
+        >= 750 => "muito forte",
+        >= 550 => "forte",
+        >= 350 => "moderada",
+        >= 150 => "fraca",
+        _ => "quase nenhuma",
+    };
+
+    /// <summary>
+    /// Uma ou duas preferencias predominantes (para destacar na ficha e filtrar). A segunda so
+    /// aparece se estiver perto da primeira; as decisoes usam todos os valores, nao este resumo.
+    /// </summary>
+    public static IReadOnlyList<string> Predominant(PersonPreferences pr)
+    {
+        var order = PersonPreferences.Keys.OrderByDescending(pr.Get).ThenBy(k => k, StringComparer.Ordinal).ToList();
+        int top = pr.Get(order[0]);
+        var list = new List<string> { order[0] };
+        if (order.Count > 1 && pr.Get(order[1]) >= 450 && top - pr.Get(order[1]) <= 120) list.Add(order[1]);
+        return list;
+    }
+
+    public static string Summary(PersonPreferences pr) => string.Join(" e ", Predominant(pr).Select(k => ByKey[k].Name));
 }

@@ -138,8 +138,9 @@ public class QuestTests
         ch.Position = routes.Layout.Hub("vila_aurora");
         ch.SessionEndTick = long.MaxValue / 4;
         foreach (var r in C.Regions.Keys) ch.Known.Add(r);
-        var t = new PersonTraits { Pve = 600, Exploration = 500, Patience = 500 };
-        List<string> Keys() => ActivityScoring.Evaluate(ch, t, C, routes, (_, _) => 0, 0, new DeterministicRng(3), q).Select(o => o.Key).ToList();
+        var t = new PersonTraits { Patience = 500 };
+        var pr = new PersonPreferences { Pve = 600, Exploration = 500 };
+        List<string> Keys() => ActivityScoring.Evaluate(ch, t, pr, C, routes, (_, _) => 0, 0, new DeterministicRng(3), q).Select(o => o.Key).ToList();
 
         Assert.Contains("vila_aurora/quadro_de_missoes", Keys());          // ha oferta
         Assert.DoesNotContain("floresta_sussurrante/entrega_lenhador", Keys());   // sem visita pendente
@@ -150,7 +151,7 @@ public class QuestTests
         // Etapa de visita pendente: o ponto de missao aparece, com o fator de quest.
         ch.ActiveQuestList.Clear();
         ch.ActiveQuestList.Add(new ActiveQuest("vila_principal_1", 0, 0) { StepIndex = 1 });
-        var opts = ActivityScoring.Evaluate(ch, t, C, routes, (_, _) => 0, 0, new DeterministicRng(3), q);
+        var opts = ActivityScoring.Evaluate(ch, t, pr, C, routes, (_, _) => 0, 0, new DeterministicRng(3), q);
         var visit = opts.First(o => o.Key == "floresta_sussurrante/entrega_lenhador");
         Assert.Contains(visit.Factors, f => f.Key == "quest_step" && f.Contribution > 0);
     }

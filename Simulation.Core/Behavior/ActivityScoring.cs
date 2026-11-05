@@ -39,7 +39,7 @@ public static class ActivityScoring
     /// <summary>Tipos fora das decisoes individuais ate existirem grupos (M6).</summary>
     private static readonly string[] NeedsGroupSystem = { ActivityTypes.Recruit };
 
-    public static List<ScoredOption> Evaluate(Character ch, PersonTraits t, ContentDatabase content, RouteFinder routes,
+    public static List<ScoredOption> Evaluate(Character ch, PersonTraits t, PersonPreferences pr, ContentDatabase content, RouteFinder routes,
         Func<string, string, int> occupancy, long now, DeterministicRng rng, QuestSystem? quests = null, GoalSystem? goals = null,
         IReadOnlyDictionary<string, int>? impressions = null)
     {
@@ -89,8 +89,11 @@ public static class ActivityScoring
                 int travel = plan.Minutes;
 
                 var f = new List<DecisionFactor>();
-                int affinity = Affinity(a.Type, t);
+                // Gosto (Preferencias) e o reforco minimo da especialidade, como fatores separados.
+                int affinity = Affinity(a.Type, pr, t);
                 f.Add(new DecisionFactor("affinity", affinity * content.Behavior.WeightAffinity / 1000));
+                if (SpecialtyBonus(a.Type, t, content.Behavior) is > 0 and var spec)
+                    f.Add(new DecisionFactor("specialty", spec * content.Behavior.WeightAffinity / 1000));
                 // Explorar sem nada novo ao alcance perde parte da graca (D-037): o gosto de explorar
                 // e descobrir; terreno ja conhecido so rende XP.
                 if (a.Type == ActivityTypes.Explore && !ExploreRevealsSomething(ch, region, content))
@@ -103,8 +106,8 @@ public static class ActivityScoring
                 if (yieldsXp)
                 {
                     f.Add(new DecisionFactor("level_fit", (fit - 500) * content.Behavior.WeightReward / 1000));
-                    // Gosto por desafio acima do nivel (D-036a): competitividade (agressividade),
-                    // confianca (mecanica) e pouca aversao a risco.
+                    // Gosto por desafio acima do nivel (D-036a): competitividade, confianca
+                    // (mecanica) e pouca aversao a risco.
                     if (challenge > ch.Level)
                     {
                         f.Add(new DecisionFactor("challenge", ChallengeAppetite(t) * Math.Min(3, challenge - ch.Level) * content.Dynamics.ChallengeWeightPerLevel / 1000));
@@ -122,7 +125,7 @@ public static class ActivityScoring
                     f.Add(new DecisionFactor("crowding", -crowd * crowdWeight / 1000));
                 }
                 else if (count > 0)
-                    f.Add(new DecisionFactor("company", t.Socializing * Math.Min(count, 5) / 5 * content.Behavior.WeightSocial / 3000));
+                    f.Add(new DecisionFactor("company", pr.Social * Math.Min(count, 5) / 5 * content.Behavior.WeightSocial / 3000));
 
                 // Risco percebido: mecanica alta da confianca (D-036).
                 int risk = RiskOf(region, a, challenge, ch.Level) * (1150 - t.MechanicalSkill * 3 / 10) / 1000;
@@ -191,11 +194,12 @@ public static class ActivityScoring
     }
 
     /// <summary>
-    /// Gosto por desafio acima do nivel (permille, D-036a): competitividade (agressividade 40%),
-    /// confianca na propria mecanica (30%) e pouca aversao a risco (30%).
+    /// Gosto por desafio acima do nivel (permille, D-036a): competitividade (40%), confianca na
+    /// propria mecanica (30%) e pouca aversao a risco (30%). A agressividade nao entra (ela e
+    /// confronto: tanque, emboscada, PvP), so a vontade de superar.
     /// </summary>
     public static int ChallengeAppetite(PersonTraits t) =>
-        (t.Aggressiveness * 4 + t.MechanicalSkill * 3 + (1000 - t.RiskAversion) * 3) / 10;
+        (t.Competitiveness * 4 + t.MechanicalSkill * 3 + (1000 - t.RiskAversion) * 3) / 10;
 
     /// <summary>
     /// Atracao pela zona onde ja passou tempo (permille, D-036a): cresce com os minutos ali ate
@@ -238,20 +242,46 @@ public static class ActivityScoring
         return combat ? k * (880 + t.MechanicalSkill * 24 / 100) / 1000 : k;
     }
 
-    /// <summary>Quanto o perfil gosta do tipo de atividade (permille).</summary>
-    public static int Affinity(string type, PersonTraits t) => type switch
+    /// <summary>
+    /// Quanto a pessoa gosta do tipo de atividade (permille). O gosto vem das Preferencias; no PvP
+    /// a personalidade e a conduta completam (patrulha: lealdade e pouco oportunismo; emboscada:
+    /// agressividade e oportunismo); no treino pesa a necessidade de aprender. Coleta tem
+    /// preferencia propria, separada do comercio e da fabricacao.
+    /// </summary>
+    public static int Affinity(string type, PersonPreferences pr, PersonTraits t) => type switch
     {
-        ActivityTypes.Hunt => t.Pve,
-        ActivityTypes.Quest => (t.Pve * 6 + t.Exploration * 4) / 10,
-        ActivityTypes.Explore => t.Exploration,
-        ActivityTypes.Gather => (t.Trade * 5 + t.Patience * 3 + t.Exploration * 2) / 10,
-        ActivityTypes.Trade => t.Trade,
-        ActivityTypes.Socialize => t.Socializing,
-        ActivityTypes.Train => ((1000 - t.GameKnowledge) * 5 + t.Pve * 2) / 10,
+        ActivityTypes.Hunt => pr.Pve,
+        ActivityTypes.Quest => (pr.Pve * 6 + pr.Exploration * 4) / 10,
+        ActivityTypes.Explore => pr.Exploration,
+        ActivityTypes.Gather => pr.Gathering,
+        ActivityTypes.Trade => pr.Trade,
+        ActivityTypes.Socialize => pr.Social,
+        ActivityTypes.Train => ((1000 - t.GameKnowledge) * 5 + pr.Pve * 2) / 10,
         ActivityTypes.Repair => 150,
-        ActivityTypes.Patrol => (t.Pvp * 5 + t.Loyalty * 3 + (1000 - t.Opportunism) * 2) / 10,
-        ActivityTypes.Ambush => (t.Pvp * 5 + t.Aggressiveness * 3 + t.Opportunism * 2) / 10,
-        ActivityTypes.Boss => (t.Pve * 6 + t.Coordination * 4) / 10,
+        ActivityTypes.Patrol => (pr.Pvp * 5 + t.Loyalty * 3 + (1000 - t.Opportunism) * 2) / 10,
+        ActivityTypes.Ambush => (pr.Pvp * 5 + t.Aggressiveness * 3 + t.Opportunism * 2) / 10,
+        ActivityTypes.Boss => pr.Pve,
         _ => 200,
     };
+
+    /// <summary>
+    /// Especialidade ligada ao tipo de atividade (afinidade desenvolvida); null quando o tipo nao
+    /// tem uma (coleta, missao, treino, reparo). A mesma ligacao decide o que a pratica faz crescer.
+    /// </summary>
+    public static string? SpecialtyOf(string type) => type switch
+    {
+        ActivityTypes.Hunt or ActivityTypes.Boss => "pve",
+        ActivityTypes.Trade => "trade",
+        ActivityTypes.Explore => "exploration",
+        ActivityTypes.Socialize => "socializing",
+        ActivityTypes.Patrol or ActivityTypes.Ambush => "pvp",
+        _ => null,
+    };
+
+    /// <summary>
+    /// Reforco minimo da especialidade no gosto pela atividade (escala 0..1000 da afinidade):
+    /// especialidade x percentual, com teto, ambos do conteudo. Aparece como fator "specialty".
+    /// </summary>
+    public static int SpecialtyBonus(string type, PersonTraits t, BehaviorSettingsDefinition b) =>
+        SpecialtyOf(type) is { } key ? Math.Min(b.SpecialtyAffinityCap, t.Get(key) * b.SpecialtyAffinityPermille / 1000) : 0;
 }

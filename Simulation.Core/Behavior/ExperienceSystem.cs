@@ -43,7 +43,7 @@ public sealed class ExperienceSystem
         int fit, bool yieldsXp, int risk, bool firstTimeType)
     {
         if (minutes <= 0) return 0;
-        var parts = Components(p.Traits, ch, region, a, fit, yieldsXp, risk, _w.OccupancyOf(region.Id, a.Id), M);
+        var parts = Components(p.Traits, p.Preferences, ch, region, a, fit, yieldsXp, risk, _w.OccupancyOf(region.Id, a.Id), M);
         int valence = 0;
         foreach (var (key, value) in parts)
         {
@@ -66,7 +66,7 @@ public sealed class ExperienceSystem
     }
 
     /// <summary>Componentes da experiencia de uma atividade (pontos da nota, +-).</summary>
-    public static (string Key, int Value)[] Components(PersonTraits t, Character ch, RegionDefinition region,
+    public static (string Key, int Value)[] Components(PersonTraits t, PersonPreferences pr, Character ch, RegionDefinition region,
         ActivityDefinition a, int fit, bool yieldsXp, int risk, int others, MoodSettingsDefinition m)
     {
         int cap = Math.Max(5, region.Capacity / Math.Max(1, region.AllActivities().Count()));
@@ -74,10 +74,10 @@ public sealed class ExperienceSystem
         int crowd = disputed ? Math.Min(1000, others * 1000 / cap) : 0;
         int company = a.Type == ActivityTypes.Socialize
             ? t.Sociability * Math.Min(others, 10) / 10
-            : t.Socializing * Math.Min(others, 5) / 5 / 3;
+            : pr.Social * Math.Min(others, 5) / 5 / 3;
         return new[]
         {
-            (Fun, (ActivityScoring.Affinity(a.Type, t) - 500) * m.FunWeight / 1000),
+            (Fun, (ActivityScoring.Affinity(a.Type, pr, t) - 500) * m.FunWeight / 1000),
             (Fit, yieldsXp ? (fit - 600) * m.FitWeight / 1000 : 0),
             (Crowding, -crowd * m.CrowdingWeight / 1000 * (1150 - t.Coordination * 3 / 10) / 1000),
             (Company, company * m.CompanyWeight / 1000),
@@ -123,8 +123,8 @@ public sealed class ExperienceSystem
         mood.Novelty = Math.Max(m.NoveltyMin, mood.Novelty - spent);
         var parts = new SortedDictionary<string, int>(StringComparer.Ordinal);
         foreach (var kv in L.Sums) parts[kv.Key] = (int)(kv.Value / Math.Max(1, L.Minutes));
-        parts[Progress] = ProgressTerm(p, ch, minutes) * ProgressCare(p.Traits, m) / 1000;
-        parts[Novelty] = NoveltyTerm(mood.Novelty, p.Traits, m);
+        parts[Progress] = ProgressTerm(p, ch, minutes) * ProgressCare(p.Traits, p.Preferences, m) / 1000;
+        parts[Novelty] = NoveltyTerm(mood.Novelty, p.Traits, p.Preferences, m);
         parts[Events] = Math.Clamp(L.Points, -m.EventClamp, m.EventClamp);
         int fatigue = DailySchedule.Fatigue(p, _w.Content.Routine);   // cansaco (P3)
         if (fatigue > 0) parts[Fatigue] = -fatigue * _w.Content.Routine.FatigueMoodWeight / 1000;
@@ -179,27 +179,27 @@ public sealed class ExperienceSystem
     }
 
     /// <summary>
-    /// Quanto a pessoa liga para evoluir o personagem (permille): PvE, competitividade e PvP.
-    /// Quem joga para socializar ou negociar sente pouco a falta de XP (plano 4.4: pesos individuais).
+    /// Quanto a pessoa liga para evoluir o personagem (permille): preferencia PvE, competitividade e
+    /// preferencia PvP. Quem joga para socializar ou negociar sente pouco a falta de XP (plano 4.4).
     /// </summary>
-    public static int ProgressCare(PersonTraits t, MoodSettingsDefinition m) =>
-        Math.Clamp((t.Pve * m.ProgressCarePve + t.Aggressiveness * m.ProgressCareAggressiveness + t.Pvp * m.ProgressCarePvp) / 1000, 0, 1000);
+    public static int ProgressCare(PersonTraits t, PersonPreferences pr, MoodSettingsDefinition m) =>
+        Math.Clamp((pr.Pve * m.ProgressCarePve + t.Competitiveness * m.ProgressCareCompetitiveness + pr.Pvp * m.ProgressCarePvp) / 1000, 0, 1000);
 
     /// <summary>
     /// Quanto a pessoa precisa de coisas novas (permille, D-039a): sobretudo a preferencia por
-    /// variedade; depois a exploracao e a impaciencia. Quem gosta de repetir sente pouco.
+    /// variedade; depois a preferencia por explorar e a impaciencia. Quem gosta de repetir sente pouco.
     /// </summary>
-    public static int NoveltyCare(PersonTraits t, MoodSettingsDefinition m) =>
-        Math.Clamp(m.NoveltyCareBase + (t.Variety * m.NoveltyCareVariety + t.Exploration * m.NoveltyCareExploration
+    public static int NoveltyCare(PersonTraits t, PersonPreferences pr, MoodSettingsDefinition m) =>
+        Math.Clamp(m.NoveltyCareBase + (t.Variety * m.NoveltyCareVariety + pr.Exploration * m.NoveltyCareExploration
             + (1000 - t.Patience) * m.NoveltyCareImpatience) / 1000, 0, 1000);
 
     /// <summary>Novidade na nota da sessao: (novidade - 500) * peso, com limite, vezes a necessidade de novidade.</summary>
-    public static int NoveltyTerm(int novelty, PersonTraits t, MoodSettingsDefinition m) =>
-        Math.Clamp((novelty - 500) * m.NoveltyWeight / 1000, -m.NoveltyClamp, m.NoveltyClamp) * NoveltyCare(t, m) / 1000;
+    public static int NoveltyTerm(int novelty, PersonTraits t, PersonPreferences pr, MoodSettingsDefinition m) =>
+        Math.Clamp((novelty - 500) * m.NoveltyWeight / 1000, -m.NoveltyClamp, m.NoveltyClamp) * NoveltyCare(t, pr, m) / 1000;
 
     /// <summary>Expectativa inicial de progresso: competitivos esperam mais (permille da referencia).</summary>
     public static int InitialExpectation(PersonTraits t, MoodSettingsDefinition m) =>
-        Math.Clamp(m.ExpectationBase + t.Aggressiveness * m.ExpectationPerAggressiveness / 1000, m.ExpectationFloor, m.ExpectationCeiling);
+        Math.Clamp(m.ExpectationBase + t.Competitiveness * m.ExpectationPerCompetitiveness / 1000, m.ExpectationFloor, m.ExpectationCeiling);
 
     /// <summary>
     /// Engajamento (vontade de jogar) e intencao de continuar: satisfacao, frustracao e

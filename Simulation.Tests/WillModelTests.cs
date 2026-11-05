@@ -296,9 +296,21 @@ public class WillModelTests
         var people = Enumerable.Range(1, 1500).Select(id => PopulationGenerator.Generate(id, C, 9)).ToList();
         Assert.Equal(people.Select(p => p.Traits.PreferredStartHour), people.Select(p => p.BaseTraits.PreferredStartHour));
         Assert.Contains(people, p => p.HabitualStartHour != p.Traits.PreferredStartHour);
+        // Quem gosta de jogar durante o expediente (5x2, 9h-18h50) nunca tem o habito no horario de
+        // trabalho: o horario habitual cai numa janela livre dos dias de obrigacao. A maioria joga
+        // depois do expediente; quem tem turno tarde (variacao de ate 90 min) e sessao longa pode
+        // ter a manha como a janela que comporta a sessao (D-045, sem mudanca de regra).
         var shift = people.Where(p => p.OccupationId == "escala_5x2" && p.Traits.PreferredStartHour <= 17).ToList();
         Assert.NotEmpty(shift);
-        Assert.All(shift, p => Assert.True(p.HabitualStartHour >= 19, $"gosta das {p.Traits.PreferredStartHour}h, costuma {p.HabitualStartHour}h"));
+        var occ = C.Occupations["escala_5x2"];
+        foreach (var p in shift)
+        {
+            var workdays = Enumerable.Range(0, 7).Select(d => DailySchedule.Build(p, occ, RS, d, false, false, false)).Where(d => !d.FreeDay).ToList();
+            int h = p.HabitualStartHour * 60;
+            Assert.True(workdays.Any(d => d.Windows.Any(w => w.Start <= h + 59 && h < w.End)),
+                $"gosta das {p.Traits.PreferredStartHour}h, costuma {p.HabitualStartHour}h: fora das janelas livres");
+        }
+        Assert.True(shift.Count(p => p.HabitualStartHour >= 19) * 10 >= shift.Count * 8, "a maioria joga depois do expediente");
     }
 
     [Fact]

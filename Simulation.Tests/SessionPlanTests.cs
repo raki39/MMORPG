@@ -33,11 +33,12 @@ public class SessionPlanTests
     public void Tedio_CresceNoTipo_AliviaOsOutros_ESeDissipaEntreSessoes()
     {
         var ch = new Character(1, 1, "x", "mago");
-        var t = new PersonTraits { Exploration = 500, Pve = 500, Trade = 500 };
-        SessionRules.AccrueBoredom(ch, t, ActivityTypes.Hunt, 120, S);
+        var t = new PersonTraits();
+        var pr = new PersonPreferences { Exploration = 500, Pve = 500, Trade = 500, Gathering = 500 };
+        SessionRules.AccrueBoredom(ch, t, pr, ActivityTypes.Hunt, 120, S);
         int hunt = ch.BoredomByType[ActivityTypes.Hunt];
         Assert.True(hunt > 0);
-        SessionRules.AccrueBoredom(ch, t, ActivityTypes.Gather, 30, S);
+        SessionRules.AccrueBoredom(ch, t, pr, ActivityTypes.Gather, 30, S);
         Assert.True(ch.BoredomByType[ActivityTypes.Hunt] < hunt);   // fazer outra coisa alivia
         int before = ch.BoredomByType[ActivityTypes.Hunt];
         SessionRules.FadeBoredomBetweenSessions(ch, S);
@@ -47,16 +48,16 @@ public class SessionPlanTests
     [Fact]
     public void Tedio_MaisRapidoParaQuemGostaDeVariedade_EMaisLentoParaQuemGostaDoTipo()
     {
-        int Gain(PersonTraits t)
+        int Gain(int variety, int likesHunt, int likesExploring = 500)
         {
             var ch = new Character(1, 1, "x", "mago");
-            SessionRules.AccrueBoredom(ch, t, ActivityTypes.Hunt, 90, S);
+            SessionRules.AccrueBoredom(ch, new PersonTraits { Variety = variety }, new PersonPreferences { Pve = likesHunt, Exploration = likesExploring }, ActivityTypes.Hunt, 90, S);
             return ch.BoredomByType.GetValueOrDefault(ActivityTypes.Hunt);
         }
-        Assert.True(Gain(new PersonTraits { Variety = 900, Pve = 500 }) > Gain(new PersonTraits { Variety = 100, Pve = 500 }));
-        Assert.True(Gain(new PersonTraits { Variety = 500, Pve = 900 }) < Gain(new PersonTraits { Variety = 500, Pve = 100 }));
-        // A exploracao (gosto por explorar) nao e mais a preferencia por variedade (D-039a).
-        Assert.Equal(Gain(new PersonTraits { Variety = 500, Pve = 500, Exploration = 900 }), Gain(new PersonTraits { Variety = 500, Pve = 500, Exploration = 100 }));
+        Assert.True(Gain(900, 500) > Gain(100, 500));
+        Assert.True(Gain(500, 900) < Gain(500, 100));   // quem gosta do tipo (preferencia) cansa mais devagar
+        // A preferencia por explorar nao e a preferencia por variedade (D-039a).
+        Assert.Equal(Gain(500, 500, 900), Gain(500, 500, 100));
     }
 
     [Fact]

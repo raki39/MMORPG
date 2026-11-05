@@ -196,29 +196,28 @@ public class TraitDrawTests
 
     private static readonly string[] DedicationTraits = { nameof(PersonTraits.SessionMinutes), nameof(PersonTraits.GameImportance), nameof(PersonTraits.Habit) };
 
-    /// <summary>Preset com os atributos de dedicacao em triangulares equivalentes (mesmo centro e dispersao).</summary>
-    private static ContentDatabase TriangularPreset(int influence)
+    /// <summary>Preset com outra dedicacao: faixas deslocadas e a influencia dada (o resto igual).</summary>
+    private static ContentDatabase DedicationVariant(int influence, int shift)
     {
         var set = TestSupport.FreshPresetSet();
         foreach (var p in set.Population.Profiles)
         {
-            p.SessionMinutes = Equivalent(p.SessionMinutes, 10, 720);
-            p.GameImportance = Equivalent(p.GameImportance, 0, 1000);
-            p.Habit = Equivalent(p.Habit, 0, 1000);
+            p.SessionMinutes = Shift(p.SessionMinutes, shift, 10, 720);
+            p.GameImportance = Shift(p.GameImportance, shift, 0, 1000);
+            p.Habit = Shift(p.Habit, shift, 0, 1000);
         }
         set.Population.Dedication.InfluencePermille = influence;
         return ContentDatabase.Create(set);
     }
 
-    private static TraitRange Equivalent(TraitRange t, int lo, int hi)
+    private static TraitRange Shift(TraitRange t, int d, int lo, int hi) => new()
     {
-        int h = t.Spread * 816 / 1000;
-        return new TraitRange { Min = Math.Max(lo, t.Mean - h), Mode = t.Mean, Max = Math.Min(hi, t.Mean + h) };
-    }
+        Min = Math.Clamp(t.Min!.Value + d, lo, hi), Mode = Math.Clamp(t.Mode!.Value + d, lo, hi), Max = Math.Clamp(t.Max!.Value + d, lo, hi),
+    };
 
     /// <summary>
-    /// Comparacao pareada: trocar o formato dos atributos de dedicacao (e ligar a dedicacao
-    /// compartilhada) nao muda nenhum outro atributo de nenhuma pessoa.
+    /// Comparacao pareada: mudar a dedicacao (faixas e influencia) nao muda nenhum outro atributo,
+    /// preferencia ou ocupacao de nenhuma pessoa.
     /// </summary>
     [Fact]
     [Trait("Classe", "Invariante")]
@@ -227,7 +226,7 @@ public class TraitDrawTests
         var baseDb = TestSupport.Preset;
         foreach (int influence in new[] { 0, 450 })
         {
-            var tri = TriangularPreset(influence);
+            var tri = DedicationVariant(influence, 20);
             int changedDedication = 0;
             for (int id = 1; id <= 3000; id++)
             {
@@ -248,6 +247,7 @@ public class TraitDrawTests
                 Assert.Equal(a.IncomeCentsPerMonth, b.IncomeCentsPerMonth);
                 Assert.Equal(a.SupportCentsPerMonth, b.SupportCentsPerMonth);
                 Assert.Equal(a.SleepDebtTolerance, b.SleepDebtTolerance);
+                foreach (var k in PersonPreferences.Keys) Assert.Equal(a.Preferences.Get(k), b.Preferences.Get(k));
                 foreach (var f in typeof(PersonTraits).GetFields(BindingFlags.Public | BindingFlags.Instance))
                 {
                     if (DedicationTraits.Contains(f.Name)) { if (!Equals(f.GetValue(a.Traits), f.GetValue(b.Traits))) changedDedication++; continue; }
@@ -262,7 +262,7 @@ public class TraitDrawTests
     [Trait("Classe", "Invariante")]
     public void FormatoTriangular_DentroDaFaixaDeterministicoEMedianaNaReferencia()
     {
-        var db = TriangularPreset(450);
+        var db = TestSupport.Preset;   // dedicacao triangular com influencia 450
         for (int id = 1; id <= 2000; id++)
         {
             var p = PopulationGenerator.Generate(id, db, 5);
@@ -328,8 +328,17 @@ public class TraitDrawTests
         Assert.NotEmpty(Errors(s => Casual(s).GameImportance = new TraitRange { Min = 150 }));
         Assert.NotEmpty(Errors(s => Casual(s).GameImportance = new TraitRange { Mean = 350, Spread = 100, Min = 150, Mode = 300, Max = 800 }));
         Assert.NotEmpty(Errors(s => s.Population.Dedication.InfluencePermille = 1001));
-        // Influencia acima de 0 com atributos de dedicacao ainda no formato de media e dispersao.
-        Assert.Contains(Errors(s => s.Population.Dedication.InfluencePermille = 450), e => e.Path.Contains("gameImportance"));
+        // Influencia acima de 0 (preset: 450) com um atributo de dedicacao no formato de media e dispersao.
+        Assert.Contains(Errors(s => Casual(s).GameImportance = new TraitRange { Mean = 350, Spread = 100 }), e => e.Path.Contains("gameImportance"));
+        // Ligacoes: chave desconhecida, ancora fora do formato triangular, dedicacao, alvo repetido e ciclo.
+        static TraitLinkDefinition L(string t, string a, int w = 300) => new() { Trait = t, Anchor = a, InfluencePermille = w };
+        Assert.Empty(Errors(_ => { }));
+        Assert.Contains(Errors(s => s.Population.Links.Add(L("preferences.dance", "traits.sociability"))), e => e.Path.Contains("links"));
+        Assert.Contains(Errors(s => s.Population.Links.Add(L("preferences.crafting", "traits.patience"))), e => e.Path.Contains("links"));
+        Assert.Contains(Errors(s => s.Population.Links.Add(L("traits.habit", "preferences.pve"))), e => e.Path.Contains("links"));
+        Assert.Contains(Errors(s => s.Population.Links.Add(L("preferences.social", "traits.variety"))), e => e.Path.Contains("links"));
+        Assert.Contains(Errors(s => s.Population.Links.Add(L("traits.sociability", "preferences.social"))), e => e.Path.Contains("links"));
+        Assert.Contains(Errors(s => s.Population.Links.Add(L("preferences.crafting", "traits.competitiveness", 1200))), e => e.Path.Contains("links"));
         Assert.NotEmpty(Errors(s => s.Population.Routine.SlackMinutes = new TraitRange { Min = 10, Mode = 20, Max = 40 }));
     }
 }

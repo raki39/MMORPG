@@ -228,7 +228,7 @@ public class BehaviorTests
             var ch = new Character(1, 1, "Teste", "guerreiro");
             SetupCharacter(ch, routes.Layout.Center("vila_aurora"));
             var t = new PersonTraits { Pve = 800, RiskAversion = riskAversion, Patience = 500, Sociability = 500, Socializing = 500 };
-            var opts = ActivityScoring.Evaluate(ch, t, content, routes, (_, _) => 0, 0, new DeterministicRng(7));
+            var opts = ActivityScoring.Evaluate(ch, t, new PersonPreferences { Pve = 800, Social = 500 }, content, routes, (_, _) => 0, 0, new DeterministicRng(7));
             int ruins = opts.First(o => o.Key == "ruinas_sombrias/cacar_mortos_vivos").Utility;
             int mine = opts.First(o => o.Key == "mina_velha/cacar_goblins").Utility;
             return mine - ruins; // quanto a mina (segura) fica a frente das ruinas (PvP)

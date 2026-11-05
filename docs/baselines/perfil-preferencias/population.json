@@ -1,0 +1,139 @@
+{
+  "schemaVersion": 1,
+  "profiles": [
+    {
+      "id": "casual", "version": 2, "name": "Casual", "weight": 35,
+      "gameImportance": { "min": 120, "mode": 280, "max": 750 }, "sessionMinutes": { "min": 30, "mode": 65, "max": 220 }, "habit": { "min": 100, "mode": 320, "max": 800 }
+    },
+    {
+      "id": "regular", "version": 1, "name": "Regular", "weight": 53,
+      "gameImportance": { "min": 220, "mode": 540, "max": 900 }, "sessionMinutes": { "min": 45, "mode": 115, "max": 300 }, "habit": { "min": 180, "mode": 540, "max": 900 }
+    },
+    {
+      "id": "hardcore", "version": 2, "name": "Hardcore", "weight": 10,
+      "gameImportance": { "min": 550, "mode": 900, "max": 1000 }, "sessionMinutes": { "min": 100, "mode": 260, "max": 420 }, "habit": { "min": 450, "mode": 850, "max": 1000 }
+    },
+    {
+      "id": "devoto", "version": 2, "name": "Devoto", "weight": 2,
+      "gameImportance": { "min": 800, "mode": 970, "max": 1000 }, "sessionMinutes": { "min": 180, "mode": 360, "max": 600 }, "habit": { "min": 650, "mode": 950, "max": 1000 },
+      "occupationWeights": { "sem_ocupacao": 40, "universitario": 25, "estudante_manha": 20, "estudante_tarde": 15 }
+    }
+  ],
+  "dedication": { "influencePermille": 450 },
+  "traits": {
+    "pve": { "min": 0, "mode": 250, "max": 700 }, "pvp": { "min": 0, "mode": 250, "max": 700 }, "trade": { "min": 0, "mode": 250, "max": 700 }, "exploration": { "min": 0, "mode": 250, "max": 700 }, "socializing": { "min": 0, "mode": 250, "max": 700 },
+    "sociability": { "min": 150, "mode": 540, "max": 930 }, "aggressiveness": { "min": 0, "mode": 320, "max": 700 }, "patience": { "mean": 530, "spread": 420 }, "loyalty": { "mean": 520, "spread": 430 }, "riskAversion": { "mean": 510, "spread": 530 },
+    "mechanicalSkill": { "mean": 460, "spread": 470 }, "gameKnowledge": { "mean": 480, "spread": 570 }, "coordination": { "mean": 470, "spread": 440 },
+    "cheatPropensity": { "mean": 80, "spread": 140 }, "opportunism": { "mean": 330, "spread": 480 }, "competitiveness": { "min": 0, "mode": 250, "max": 950 },
+    "leisureBudgetCentsPerMonth": { "mean": 7590, "spread": 7580 }, "willingnessToPay": { "mean": 470, "spread": 340 }, "paidAdvantageSensitivity": { "mean": 610, "spread": 440 },
+    "preferredStartHour": { "mean": 19, "spread": 6 }, "extendTendency": { "mean": 480, "spread": 580 }, "selfControl": { "mean": 550, "spread": 370 }, "talent": { "mean": 470, "spread": 400 }, "variety": { "min": 160, "mode": 490, "max": 820 }
+  },
+  "preferences": {
+    "pve": { "min": 0, "mode": 680, "max": 1000 }, "pvp": { "min": 0, "mode": 10, "max": 1000 }, "crafting": { "min": 0, "mode": 350, "max": 1000 }, "trade": { "min": 0, "mode": 170, "max": 1000 },
+    "gathering": { "min": 0, "mode": 350, "max": 1000 }, "exploration": { "min": 0, "mode": 520, "max": 1000 }, "social": { "min": 0, "mode": 610, "max": 1000 }
+  },
+  "links": [
+    { "trait": "preferences.social", "anchor": "traits.sociability", "influencePermille": 350 },
+    { "trait": "preferences.pvp", "anchor": "traits.aggressiveness", "influencePermille": 300 },
+    { "trait": "preferences.exploration", "anchor": "traits.variety", "influencePermille": 300 },
+    { "trait": "traits.pve", "anchor": "preferences.pve", "influencePermille": 500 },
+    { "trait": "traits.pvp", "anchor": "preferences.pvp", "influencePermille": 500 },
+    { "trait": "traits.trade", "anchor": "preferences.trade", "influencePermille": 500 },
+    { "trait": "traits.exploration", "anchor": "preferences.exploration", "influencePermille": 500 },
+    { "trait": "traits.socializing", "anchor": "preferences.social", "influencePermille": 500 }
+  ],
+  "names": {
+    "firstNames": [
+      "Ana", "Bruno", "Camila", "Diego", "Eduarda", "Felipe", "Gabriela", "Henrique", "Isabela", "João",
+      "Karina", "Lucas", "Mariana", "Nicolas", "Olívia", "Pedro", "Rafaela", "Samuel", "Tatiane", "Vinícius",
+      "Yasmin", "Arthur", "Beatriz", "Caio", "Débora", "Enzo", "Fernanda", "Gustavo", "Helena", "Igor",
+      "Juliana", "Kauã", "Larissa", "Matheus", "Natália", "Otávio", "Priscila", "Rodrigo", "Sofia", "Thiago",
+      "Valentina", "Wesley", "Alice", "Bernardo", "Clara", "Davi", "Elisa", "Fábio", "Giovana", "Heitor"
+    ],
+    "lastNames": [
+      "Silva", "Santos", "Oliveira", "Souza", "Rodrigues", "Ferreira", "Alves", "Pereira", "Lima", "Gomes",
+      "Costa", "Ribeiro", "Martins", "Carvalho", "Almeida", "Lopes", "Soares", "Fernandes", "Vieira", "Barbosa",
+      "Rocha", "Dias", "Nascimento", "Andrade", "Moreira", "Nunes", "Marques", "Machado", "Mendes", "Freitas",
+      "Cardoso", "Ramos", "Gonçalves", "Santana", "Teixeira", "Araújo", "Pinto", "Moura", "Cavalcanti", "Batista"
+    ],
+    "nickPrefixes": [
+      "Kael", "Mira", "Thor", "Lun", "Zar", "Eld", "Vex", "Ara", "Bryn", "Cor", "Dra", "Fen", "Gal", "Hal", "Isk",
+      "Jor", "Kyr", "Lyr", "Mor", "Nyx", "Ori", "Pyr", "Ral", "Syl", "Tor", "Ulf", "Val", "Wyn", "Xan", "Yri"
+    ],
+    "nickSuffixes": [
+      "dor", "wen", "gar", "iel", "ax", "ion", "ara", "uk", "ith", "on", "is", "vyr", "eth", "orn", "a",
+      "im", "ius", "ra", "gon", "lis", "mir", "nar", "oth", "ryn", "sha", "thas", "us", "ven", "zel", "yx"
+    ]
+  },
+  "dynamics": {
+    "rangeSkill": 250, "rangePlaystyle": 200, "rangePersonality": 100,
+    "potentialBase": 250, "potentialPerTalent": 700, "potentialMinHeadroom": 50,
+    "learnCostAtZeroTalent": 1400, "learnCostAtMaxTalent": 600, "nearCeilingSlowdown": 2000,
+    "mechanicalCombatMinutes": 150, "knowledgePlayMinutes": 400, "knowledgeExploreMinutes": 90,
+    "knowledgeNewActivityType": 3, "knowledgePerDiscovery": 2, "knowledgePerQuest": 1,
+    "sociabilitySocialMinutes": 600, "affinityEnjoyedMinutes": 360, "enjoyedMinFitPermille": 600,
+    "riskConfidenceMinutes": 600, "riskConfidenceMinRisk": 300, "explorationPerDiscoveries": 4,
+    "pvpKillPreference": 3, "pvpKillCombatMinutes": 30,
+    "mechanicalDecayAfterDays": 7, "mechanicalDecayPerDay": 1, "knowledgeDecayAfterDays": 14, "knowledgeDecayPerDay": 1,
+    "familiarityWeight": 80, "familiarityFullMinutes": 600, "challengeWeightPerLevel": 40, "travelEstimateErrorAtZero": 300
+  },
+  "goals": {
+    "weight": 200, "maxStackPermille": 1500, "maxActive": 2, "adoptChance": 450,
+    "staleBaseHours": 3, "staleExtraHoursAtMaxPatience": 9, "impatientDropChance": 40, "impatientBelow": 300, "motiveReinforce": 1
+  },
+  "session": {
+    "switchMargin": 60, "commitMargin": 150, "commitBaseMinutes": 30, "commitExtraMinutesAtMaxPatience": 60,
+    "boredomPerHour": 300, "boredomRecoveryPerHour": 400, "boredomKeptBetweenSessions": 300, "boredomWeight": 300,
+    "varietyBase": 600, "varietyPerPreference": 800, "patienceRelief": 500, "enjoymentRelief": 500, "exploreKnownPenalty": 500
+  },
+  "mood": {
+    "initialSatisfaction": 600, "initialNovelty": 1000, "funWeight": 300, "fitWeight": 200, "crowdingWeight": 200,
+    "companyWeight": 150, "boredomWeight": 250, "riskWeight": 150, "progressWeight": 400, "progressCarePve": 500, "progressCareCompetitiveness": 300, "progressCarePvp": 200,
+    "noveltyCareBase": 100, "noveltyCareVariety": 500, "noveltyCareExploration": 200, "noveltyCareImpatience": 200, "noveltyClamp": 300, "progressClamp": 200,
+    "progressRatioCap": 2000, "expectationBase": 550, "expectationPerCompetitiveness": 300, "expectationAdapt": 100, "expectationFloor": 450,
+    "expectationCeiling": 1100, "noveltyWeight": 300, "noveltyMin": -1000, "frustrationInIntention": 500, "noveltyDecayPerHour": 2, "noveltyPerDiscovery": 60, "noveltyNewActivityType": 80,
+    "noveltyNewActivity": 25, "noveltyPerLevel": 30, "noveltyNewQuest": 40, "eventClamp": 300, "levelUpPoints": 60,
+    "questPoints": 40, "mainQuestPoints": 100, "goalCompletedPoints": 80, "discoveryPoints": 40, "goalAbandonedPoints": 80,
+    "nothingToDoPoints": 60, "goalAbandonedFrustration": 80, "nothingToDoFrustration": 40, "satisfactionAdapt": 250, "fullWeightSessionMinutes": 120,
+    "badSessionBelow": 400, "frustrationFromBadSession": 600, "goodSessionAbove": 600, "frustrationReliefFromGoodSession": 500, "frustrationDecayPerDay": 40,
+    "driverDecayPerDay": 50, "engagementSatisfaction": 7, "engagementCalm": 1, "engagementNovelty": 2, "loyaltyWeight": 200,
+    "investmentPerLevel": 4, "investmentCap": 60
+  },
+  "memory": {
+    "impressionLearn": 300, "impressionDecayPositivePerDay": 15, "impressionDecayNegativePerDay": 40, "decisionWeight": 150, "impressionMinAbs": 50,
+    "maxMemories": 12, "notableValence": 350, "positiveDecayPerDay": 10, "negativeDecayPerDay": 25, "levelMilestoneEvery": 5,
+    "levelMilestoneIntensity": 700, "mainQuestIntensity": 650, "goalCompletedIntensity": 500, "goalAbandonedIntensity": 450, "discoveryIntensity": 300,
+    "nothingToDoIntensity": 300, "greatSessionScore": 780, "badSessionScore": 260, "sessionIntensity": 500
+  },
+  "retention": {
+    "engagementNeutral": 700, "engagementEffect": 1000, "minPlayFactor": 150, "maxPlayFactor": 1300, "inactiveAfterDays": 14,
+    "inactiveReturnPermille": 250, "quitBelow": 420, "quitChancePerDay": 60, "quitAfterInactiveDays": 45, "quitReturnMinDays": 30,
+    "quitReturnChancePerDay": 4, "quitGraceDaysAfterReturn": 14, "extendScoreAbove": 700, "extendChance": 400,
+    "extendPermille": 300, "rageQuitFrustration": 600, "rageQuitChance": 300
+  },
+  "behavior": {
+    "registrationDayWeights": [30, 22, 16, 12, 9, 6, 5],
+    "sessionStartJitterMinutes": 75, "sessionDurationJitterPermille": 200, "logoutToleranceMinutes": 15, "walkSpeed": 15, "weightAffinity": 450, "specialtyAffinityPermille": 50, "specialtyAffinityCap": 50,
+    "weightReward": 300, "weightSocial": 150, "weightRisk": 350, "weightTravel": 250, "weightCrowding": 200,
+    "timeBudgetPenalty": 400, "questOfferWeight": 210, "questDeliverWeight": 220, "questDeliverPerExtra": 90, "questStepWeight": 250,
+    "noise": 50, "activityDurationMin": 800, "activityDurationMax": 1250, "idleRethinkMinutes": 20
+  },
+  "routine": {
+    "sleepNeedMinutes": { "mean": 470, "spread": 45 }, "bedtimeMinute": { "mean": 1425, "spread": 75 },
+    "prepMinutes": 45, "arrivalMinutes": 45, "minWindowMinutes": 30, "minSessionMinutes": 20,
+    "freeDayChanceBonus": 350, "fullFreeMinutes": 600, "habitStreakPermille": 250, "habitHistoryDays": 7,
+    "maxSessionsPerDay": 5, "dispositionSpreadPermille": 200,
+    "satietyHalfLifeSessionsPermille": 1500, "satietyRecoveryHalfLifeMinutes": 120, "continueBlockMinutes": 30, "continueMinMinutes": 5, "continueTendencyWeightPermille": 400, "experienceWeightPermille": 500,
+    "returnPauseMinMinutes": 30, "returnPauseMaxMinutes": 120, "unfinishedBonusPermille": 150, "freeDayMorningMinutes": 60, "earlyStartResistancePerHour": 300, "startStepMinutes": 10, "estimateSamples": 24,
+    "commuteVariationPermille": 300, "planHistoryDays": 30, "bedtimeAdaptMinutes": 60, "preferredDelayMaxMinutes": 240, "workCallToleranceMinutes": 5, "commitmentChancePermille": 70,
+    "commitments": [
+      { "id": "festa", "label": "festa", "startFrom": "20:00", "startTo": "21:30", "minMinutes": 150, "maxMinutes": 240, "weight": 3, "social": true },
+      { "id": "familia", "label": "visita à família", "startFrom": "11:00", "startTo": "15:00", "minMinutes": 150, "maxMinutes": 300, "weight": 4, "social": false },
+      { "id": "passeio", "label": "passeio com amigos", "startFrom": "14:00", "startTo": "17:00", "minMinutes": 120, "maxMinutes": 240, "weight": 3, "social": true },
+      { "id": "pendencias", "label": "resolver pendências", "startFrom": "09:00", "startTo": "12:00", "minMinutes": 90, "maxMinutes": 180, "weight": 2, "social": false }
+    ], "lowEngagementGap": 150, "busyDayPenaltyPermille": 650, "fullLoadMinutes": 600,
+    "sleepDebtTolerance": { "mean": 500, "spread": 200 }, "slackMinutes": { "mean": 25, "spread": 10 },
+    "interruptCost": { "boss": 1000, "ambush": 850, "patrol": 700, "hunt": 550, "quest": 400, "recruit": 300, "explore": 300, "train": 150, "gather": 100, "repair": 50, "trade": 0, "socialize": 0 },
+    "extendMaxTimesPerSession": 2, "extendMaxMinutes": 180, "extendTendencyBase": 500, "selfControlWeight": 800, "goalClosePermille": 700, "maxSleepCutMinutes": 180, "minSleepMinutes": 240, "maxDeficitMinutes": 900, "recoveryFreeNightMinutes": 120, "recoveryNormalNightMinutes": 20, "fatigueFullDeficitMinutes": 600, "fatigueChancePenalty": 400, "fatigueDurationPenalty": 300, "fatigueMoodWeight": 120, "tiredReasonFatigue": 500, "breakSessionChancePermille": 300, "slackChanceAtMax": 400, "slackEdgeMinutes": 30, "workInterruptChancePermille": 350, "interruptWeight": 300
+  }
+}

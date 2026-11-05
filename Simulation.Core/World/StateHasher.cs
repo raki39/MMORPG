@@ -11,7 +11,7 @@ namespace Simulation.Core.World;
 /// </summary>
 public static class StateHasher
 {
-    public const int FormatVersion = 19;
+    public const int FormatVersion = 20;
 
     public static string Compute(WorldState w) => Compute(w, includeContentId: true);
 
@@ -167,7 +167,9 @@ public static class StateHasher
         h.Int(t.Pve); h.Int(t.Pvp); h.Int(t.Trade); h.Int(t.Exploration); h.Int(t.Socializing);
         h.Int(t.Sociability); h.Int(t.Aggressiveness); h.Int(t.Patience); h.Int(t.Loyalty); h.Int(t.RiskAversion);
         h.Int(t.MechanicalSkill); h.Int(t.GameKnowledge); h.Int(t.Coordination);
-        h.Int(t.CheatPropensity); h.Int(t.Opportunism);
+        h.Int(t.CheatPropensity); h.Int(t.Opportunism); h.Int(t.Competitiveness);
+        // Preferencias (separacao Perfil x Preferencias).
+        foreach (var k in PersonPreferences.Keys) h.Int(p.Preferences.Get(k));
         h.Int(t.LeisureBudgetCentsPerMonth); h.Int(t.WillingnessToPay); h.Int(t.PaidAdvantageSensitivity);
         h.Int(t.PreferredStartHour); h.Int(t.SessionMinutes); h.Int(t.GameImportance); h.Int(t.Habit); h.Int(t.ExtendTendency); h.Int(t.SelfControl); h.Int(t.Talent); h.Int(t.Variety);
         // Atributos vivos (D-036): base de nascenca e pratica acumulada.

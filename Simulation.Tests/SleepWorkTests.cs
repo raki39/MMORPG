@@ -193,11 +193,11 @@ public class SleepWorkTests
         var p = w.Persons.First(x => x.CharacterId > 0 && !x.IsOnline);
         var ch = w.GetCharacter(p.CharacterId);
         ch.SessionKind = BehaviorSystem.SessionDuringWork;
-        var opts = ActivityScoring.Evaluate(ch, p.Traits, C, w.Behavior.Routes, w.OccupancyOf, w.Clock.Tick, new DeterministicRng(1), w.Behavior.Quests, w.Behavior.Goals, p.PlaceImpressions);
+        var opts = ActivityScoring.Evaluate(ch, p.Traits, p.Preferences, C, w.Behavior.Routes, w.OccupancyOf, w.Clock.Tick, new DeterministicRng(1), w.Behavior.Quests, w.Behavior.Goals, p.PlaceImpressions);
         int Penalty(string type) => opts.Where(o => o.Activity.Type == type).SelectMany(o => o.Factors).Where(f => f.Key == "interruption").Select(f => f.Contribution).DefaultIfEmpty(0).Min();
         Assert.True(Penalty(ActivityTypes.Hunt) < Penalty(ActivityTypes.Trade));
         ch.SessionKind = BehaviorSystem.SessionNormal;
-        var normal = ActivityScoring.Evaluate(ch, p.Traits, C, w.Behavior.Routes, w.OccupancyOf, w.Clock.Tick, new DeterministicRng(1), w.Behavior.Quests, w.Behavior.Goals, p.PlaceImpressions);
+        var normal = ActivityScoring.Evaluate(ch, p.Traits, p.Preferences, C, w.Behavior.Routes, w.OccupancyOf, w.Clock.Tick, new DeterministicRng(1), w.Behavior.Quests, w.Behavior.Goals, p.PlaceImpressions);
         Assert.DoesNotContain(normal.SelectMany(o => o.Factors), f => f.Key == "interruption");
     }
 

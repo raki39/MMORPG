@@ -256,7 +256,7 @@ public sealed class BehaviorSystem
         }
         var rng = Rng("behavior.character", p.Id);
         var account = _w.AddAccount(p.Id, Now);
-        string classId = ChooseClass(p.Traits, rng);
+        string classId = ChooseClass(p.Traits, p.Preferences, rng);
         string nick = MakeNickname(rng);
         string start = _w.Content.World.StartingRegionId;
         var ch = _w.AddCharacter(account.Id, p.Id, nick, classId, start);
@@ -290,14 +290,19 @@ public sealed class BehaviorSystem
         StartSession(p, firstMinutes, SessionNormal, -1, StartFirst);
     }
 
-    private string ChooseClass(PersonTraits t, DeterministicRng rng)
+    /// <summary>
+    /// Classe pelo papel: tanque pela personalidade (agressividade, coordenacao, lealdade); dano
+    /// pelas preferencias PvP e PvE e pela mecanica; suporte pela sociabilidade, paciencia e pela
+    /// preferencia social.
+    /// </summary>
+    private string ChooseClass(PersonTraits t, PersonPreferences pr, DeterministicRng rng)
     {
         var classes = _w.Content.Classes.Values.ToList();
         var weights = classes.Select(c => c.Role switch
         {
             ClassRoles.Tank => 100 + t.Aggressiveness * 4 / 10 + t.Coordination * 3 / 10 + t.Loyalty * 3 / 10,
-            ClassRoles.Damage => 100 + t.Pvp * 4 / 10 + t.MechanicalSkill * 4 / 10 + t.Pve * 2 / 10,
-            ClassRoles.Support => 100 + t.Sociability * 5 / 10 + t.Patience * 3 / 10 + t.Socializing * 2 / 10,
+            ClassRoles.Damage => 100 + pr.Pvp * 4 / 10 + t.MechanicalSkill * 4 / 10 + pr.Pve * 2 / 10,
+            ClassRoles.Support => 100 + t.Sociability * 5 / 10 + t.Patience * 3 / 10 + pr.Social * 2 / 10,
             _ => 300,
         }).ToList();
         return classes[rng.PickWeighted(weights)].Id;
@@ -992,7 +997,7 @@ public sealed class BehaviorSystem
     {
         var rng = Rng("behavior.decision", ch.Id * 1_000_000L + ch.DecisionCount);
         ch.DecisionCount++;
-        var options = ActivityScoring.Evaluate(ch, p.Traits, _w.Content, _routes, _w.OccupancyOf, Now, rng, _quests, _goals, p.PlaceImpressions);
+        var options = ActivityScoring.Evaluate(ch, p.Traits, p.Preferences, _w.Content, _routes, _w.OccupancyOf, Now, rng, _quests, _goals, p.PlaceImpressions);
 
         if (options.Count == 0)
         {
@@ -1161,7 +1166,7 @@ public sealed class BehaviorSystem
             _traits.OnActivity(p, ch, a, minutes, fit, ActivityScoring.RiskOf(region, a, challenge, levelBefore), firstTimeType);
             _goals.OnActivity(p, ch, a, minutes);
             ch.ZoneMinutes[region.Id] = (ch.ZoneMinutes.TryGetValue(region.Id, out int zm) ? zm : 0) + minutes;
-            SessionRules.AccrueBoredom(ch, p.Traits, a.Type, minutes, _w.Content.Session);
+            SessionRules.AccrueBoredom(ch, p.Traits, p.Preferences, a.Type, minutes, _w.Content.Session);
             int valence = _exp.OnActivity(p, ch, region, a, minutes, fit, fit > 0, ActivityScoring.RiskOf(region, a, challenge, levelBefore), firstTimeType);
             // Frustracao alta e mais uma experiencia ruim: pode largar a sessao na hora (D-039).
             var rt = _w.Content.Retention;
@@ -1194,7 +1199,7 @@ public sealed class BehaviorSystem
         var p = _w.GetPerson(ch.PersonId);
         RequestPlanReview(ch, "zone_discovered");
         var md = _w.Content.Mood;
-        int curiosity = 500 + p.Traits.Exploration;   // exploradores valorizam mais a descoberta
+        int curiosity = 500 + p.Preferences.Exploration;   // quem prefere explorar valoriza mais a descoberta
         _exp.OnAchievement(p, ch, "discovery", zoneId, md.DiscoveryPoints * curiosity / 1000, md.NoveltyPerDiscovery,
             _w.Content.Memory.DiscoveryIntensity * curiosity / 1000);
         _traits.OnRegionDiscovered(p);

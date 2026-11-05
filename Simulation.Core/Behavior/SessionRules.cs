@@ -13,7 +13,7 @@ public static class SessionRules
     /// Fim de uma atividade: o tedio do tipo cresce com os minutos (mais rapido para quem prefere
     /// variedade, mais devagar para quem gosta muito daquele tipo) e o dos outros se alivia.
     /// </summary>
-    public static void AccrueBoredom(Character ch, PersonTraits t, string type, int minutes, SessionSettingsDefinition s)
+    public static void AccrueBoredom(Character ch, PersonTraits t, PersonPreferences pr, string type, int minutes, SessionSettingsDefinition s)
     {
         if (minutes <= 0) return;
         int variety = s.VarietyBase + t.Variety * s.VarietyPerPreference / 1000;
@@ -25,7 +25,7 @@ public static class SessionRules
             if (left > 0) ch.Boredom[key] = left; else ch.Boredom.Remove(key);
         }
         // Quem gosta muito do que faz cansa mais devagar daquilo (gosto 1000 = -EnjoymentRelief/2).
-        int enjoyment = 1000 - (ActivityScoring.Affinity(type, t) - 500) * s.EnjoymentRelief / 1000;
+        int enjoyment = 1000 - (ActivityScoring.Affinity(type, pr, t) - 500) * s.EnjoymentRelief / 1000;
         int gain = minutes * s.BoredomPerHour / 60 * variety / 1000 * enjoyment / 1000;
         int now = (ch.Boredom.TryGetValue(type, out int b) ? b : 0) + gain;
         if (now > 0) ch.Boredom[type] = Math.Min(1000, now);

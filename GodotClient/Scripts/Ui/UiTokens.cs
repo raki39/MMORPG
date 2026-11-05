@@ -71,10 +71,7 @@ public static class UiTokens
     public static Color ProfileColor(string profileId) => profileId switch
     {
         "casual" => new Color("#7FB8EE"),
-        "competitivo" => new Color("#EE6A63"),
-        "social" => new Color("#F2A85E"),
-        "comerciante" => new Color("#E9CF5A"),
-        "explorador" => new Color("#6FDB93"),
+        "regular" => new Color("#6FDB93"),
         "hardcore" => new Color("#B48CF2"),
         "devoto" => new Color("#E36FC4"),
         _ => TextSecondary,

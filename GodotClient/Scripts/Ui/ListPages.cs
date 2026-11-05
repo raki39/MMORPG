@@ -107,6 +107,14 @@ public partial class PlayersPage : ListPage
         string Cls(string id) => ctx.Content.Classes.TryGetValue(id, out var c) ? c.Name : id;
         string Prof(int id) => ctx.Content.Profiles.TryGetValue(ctx.Persons[id - 1].ProfileId, out var p) ? p.Name : "";
         string Pers(int id) => PlayerModal.PersonalityOf(ctx.Persons[id - 1].Traits).Label;
+        string Pref(int id) => PreferenceInfo.Summary(ctx.Persons[id - 1].Preferences);
+        string PrefTip(int id)
+        {
+            var pr = ctx.Persons[id - 1].Preferences;
+            return "Preferências\n" + string.Join("\n", Simulation.Core.Population.PersonPreferences.Keys.OrderByDescending(pr.Get).ThenBy(k => k, StringComparer.Ordinal)
+                .Select(k => $"{PreferenceInfo.ByKey[k].Name}|{UiTokens.To20(pr.Get(k))} · {PreferenceInfo.Level(pr.Get(k))}"))
+                + "\n~Interesses pessoais: o peso principal de gosto nas escolhas, sem obrigar.";
+        }
         string Loc(int id) => ctx.Content.Localities.TryGetValue(ctx.Persons[id - 1].ResidenceId, out var l) ? l.Name : "";
         string Occ(int id) => ctx.Content.Occupations.TryGetValue(ctx.Persons[id - 1].OccupationId, out var o) ? o.Name : "";
         _table = new DataTable<(int Id, CharacterView V)>(new[]
@@ -114,6 +122,7 @@ public partial class PlayersPage : ListPage
             new Column<(int Id, CharacterView V)> { Title = "Personagem", MinWidth = 88, Text = r => (ctx.Favorites.Contains(r.Id) ? "★ " : "") + r.V.Name, SortKey = r => r.V.Name, Tooltip = r => $"{r.V.Name}\nPessoa|{ctx.Persons[r.Id - 1].Name}\n~Clique para abrir a ficha." },
             new Column<(int Id, CharacterView V)> { Title = "Pessoa", Width = 150, MinWidth = 70, Text = r => ctx.Persons[r.Id - 1].Name, SortKey = r => ctx.Persons[r.Id - 1].Name, Color = _ => UiTokens.TextSecondary },
             new Column<(int Id, CharacterView V)> { Title = "Perfil", Width = 100, MinWidth = 76, Text = r => Prof(r.Id), SortKey = r => Prof(r.Id), Color = r => UiTokens.ProfileColor(ctx.Persons[r.Id - 1].ProfileId).Lightened(0.15f) },
+            new Column<(int Id, CharacterView V)> { Title = "Preferências", Width = 130, MinWidth = 96, Text = r => Pref(r.Id), SortKey = r => Pref(r.Id), Color = _ => UiTokens.TextLabel, Tooltip = r => PrefTip(r.Id) },
             new Column<(int Id, CharacterView V)> { Title = "Personalidade", Width = 110, MinWidth = 96, Text = r => Pers(r.Id), SortKey = r => Pers(r.Id), Color = _ => UiTokens.TextLabel,
                 Tooltip = r => $"{Pers(r.Id)}\n~{PlayerModal.PersonalityOf(ctx.Persons[r.Id - 1].Traits).Text}" },
             new Column<(int Id, CharacterView V)> { Title = "País", Width = 110, MinWidth = 58, Text = r => Loc(r.Id), SortKey = r => Loc(r.Id), Color = _ => UiTokens.TextSecondary,
@@ -124,9 +133,8 @@ public partial class PlayersPage : ListPage
             new Column<(int Id, CharacterView V)> { Title = "Nível", Width = 48, Right = true, Numeric = true, Text = r => r.V.Level.ToString(), SortKey = r => r.V.Level * 1_000_000L + r.V.Experience },
             new Column<(int Id, CharacterView V)> { Title = "Situação", Width = 250, MinWidth = 80, Text = r => StatusText.Of(r.V, ctx.Content), SortKey = r => (int)r.V.Status, Color = r => r.V.State == LifecycleState.Quit ? UiTokens.Danger : r.V.State == LifecycleState.Inactive ? UiTokens.Warning : r.V.Status == CharacterStatus.Offline ? UiTokens.TextDisabled : UiTokens.TextPrimary },
             new Column<(int Id, CharacterView V)> { Title = "Zona", Width = 150, MinWidth = 70, Text = r => ctx.ZoneName(r.V.RegionId), SortKey = r => ctx.ZoneName(r.V.RegionId), Color = _ => UiTokens.TextSecondary },
-            new Column<(int Id, CharacterView V)> { Title = "Zonas", Width = 50, Right = true, Numeric = true, Text = r => r.V.KnownRegions.ToString(), SortKey = r => r.V.KnownRegions, Tooltip = _ => "Zonas conhecidas" },
             new Column<(int Id, CharacterView V)> { Title = "Missões", Width = 62, Right = true, Numeric = true, Text = r => r.V.CompletedQuests.Sum(c => c.Times).ToString(), SortKey = r => r.V.CompletedQuests.Sum(c => c.Times), Tooltip = _ => "Missões entregues" },
-        }, sortColumn: 7) { OnClick = r => ctx.OpenPerson(r.Id), Gap = 14 };
+        }, sortColumn: 8) { OnClick = r => ctx.OpenPerson(r.Id), Gap = 14 };
         _table.OnSortChanged = () => Rebuild(false);
 
         AddTab("Todos", () => Body(_ => true));
@@ -142,30 +150,34 @@ public partial class PlayersPage : ListPage
         var profiles = Ctx.Content.ProfilesOrdered.ToList();
         var classes = Ctx.Content.Classes.Values.OrderBy(c => c.Name, StringComparer.Ordinal).ToList();
         var pers = Ctx.Persons.Select(p => PlayerModal.PersonalityOf(p.Traits).Label).Distinct().OrderBy(x => x, StringComparer.Ordinal).ToList();
+        var prefKeys = Simulation.Core.Population.PersonPreferences.Keys.ToList();
         var zones = Ctx.Content.Regions.Values.OrderBy(z => z.Name, StringComparer.Ordinal).ToList();
         var locs = Ctx.Content.LocalitiesOrdered;
         var occs = Ctx.Content.OccupationsOrdered.OrderBy(o => o.Name, StringComparer.Ordinal).ToList();
-        return Searchable("Buscar por nome, pessoa, classe, perfil ou zona…", search =>
+        return Searchable("Buscar por nome, pessoa, classe, perfil, preferência ou zona…", search =>
         {
             var snap = Ctx.Snapshot();
-            int fp = Filter("Perfil"), fc = Filter("Classe"), fq = Filter("Personalidade"), fz = Filter("Zona"), fl = Filter("País"), fo = Filter("Ocupação");
+            int fp = Filter("Perfil"), fe = Filter("Preferência"), fc = Filter("Classe"), fq = Filter("Personalidade"), fz = Filter("Zona"), fl = Filter("País"), fo = Filter("Ocupação");
             var rows = Enumerable.Range(1, snap.ByPerson.Length - 1)
                 .Where(i => snap.ByPerson[i] is { } v && filter(v))
                 .Select(i => (Id: i, V: snap.ByPerson[i]!))
                 .Where(r => fp == 0 || Ctx.Persons[r.Id - 1].ProfileId == profiles[fp - 1].Id)
+                .Where(r => fe == 0 || PreferenceInfo.Predominant(Ctx.Persons[r.Id - 1].Preferences).Contains(prefKeys[fe - 1]))
                 .Where(r => fc == 0 || r.V.ClassId == classes[fc - 1].Id)
                 .Where(r => fq == 0 || PlayerModal.PersonalityOf(Ctx.Persons[r.Id - 1].Traits).Label == pers[fq - 1])
                 .Where(r => fz == 0 || r.V.RegionId == zones[fz - 1].Id)
                 .Where(r => fl == 0 || Ctx.Persons[r.Id - 1].ResidenceId == locs[fl - 1].Id)
                 .Where(r => fo == 0 || Ctx.Persons[r.Id - 1].OccupationId == occs[fo - 1].Id)
                 .Where(r => Match(search, r.V.Name, Ctx.Persons[r.Id - 1].Name, Ctx.ZoneName(r.V.RegionId),
-                    Ctx.Content.Classes.TryGetValue(r.V.ClassId, out var c) ? c.Name : "", Ctx.Content.Profiles.TryGetValue(Ctx.Persons[r.Id - 1].ProfileId, out var p) ? p.Name : ""))
+                    Ctx.Content.Classes.TryGetValue(r.V.ClassId, out var c) ? c.Name : "", Ctx.Content.Profiles.TryGetValue(Ctx.Persons[r.Id - 1].ProfileId, out var p) ? p.Name : "",
+                    PreferenceInfo.Summary(Ctx.Persons[r.Id - 1].Preferences)))
                 .ToList();
             var col = Column(6, _table.Build(rows.Take(MaxRows)));
             col.AddChild(ThemeFactory.Text(rows.Count > MaxRows ? $"Mostrando {MaxRows} de {PtBr.Int(rows.Count)} pela ordem atual; refine com a busca ou os filtros." : $"{PtBr.Int(rows.Count)} personagens", UiTokens.FontCaption, UiTokens.TextDisabled));
             return col;
         }, "O tempo está pausado nesta tela.",
             ("Perfil", new[] { "Todos os perfis" }.Concat(profiles.Select(p => p.Name)).ToList()),
+            ("Preferência", new[] { "Todas as preferências" }.Concat(prefKeys.Select(k => PreferenceInfo.ByKey[k].Name)).ToList()),
             ("Classe", new[] { "Todas as classes" }.Concat(classes.Select(c => c.Name)).ToList()),
             ("Personalidade", new[] { "Todas as personalidades" }.Concat(pers).ToList()),
             ("Zona", new[] { "Todas as zonas" }.Concat(zones.Select(z => z.Name)).ToList()),

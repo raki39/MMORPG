@@ -92,8 +92,14 @@ public sealed class ContentDatabase
     public IReadOnlyList<OccupationDefinition> OccupationsOrdered => Occupations.Values.ToList();
     /// <summary>Planejador da rotina e sono basico (P2).</summary>
     public RoutineSettingsDefinition Routine => Set.Population.Routine;
-    /// <summary>Dedicacao compartilhada entre os atributos de dedicacao (experimento).</summary>
+    /// <summary>Dedicacao compartilhada entre os atributos de dedicacao (D-053).</summary>
     public DedicationSettingsDefinition Dedication => Set.Population.Dedication;
+    /// <summary>Atributos gerados pela populacao toda (independentes do perfil).</summary>
+    public PopulationTraitsDefinition PopulationTraits => Set.Population.Traits;
+    /// <summary>Distribuicoes das preferencias.</summary>
+    public PreferencesDefinition PreferenceRanges => Set.Population.Preferences;
+    /// <summary>Ligacoes parciais entre atributos.</summary>
+    public IReadOnlyList<TraitLinkDefinition> TraitLinks => Set.Population.Links;
     /// <summary>Localidade do servidor (fuso e calendario do relogio global).</summary>
     public LocalityDefinition ServerLocality => Localities.TryGetValue(World.ServerLocalityId, out var l) ? l : LocalitiesOrdered[0];
 

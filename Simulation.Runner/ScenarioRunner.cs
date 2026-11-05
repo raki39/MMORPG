@@ -1,8 +1,10 @@
 using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using Simulation.Core.Content;
 using Simulation.Core.Engine;
 using Simulation.Core.Events;
+using Simulation.Core.Population;
 using Simulation.Core.Random;
 using Simulation.Core.Time;
 using Simulation.Core.World;
@@ -338,7 +340,19 @@ public static class ScenarioRunner
         return new RunResult { ExitCode = ExitOk, Messages = msgs };
     }
 
-    private const string PeopleHeader = "seed,person_id,profile,occupation,state,registered,game_importance,session_minutes,habit,expected_h_week,played_h_week,free_h_week,plan_days\n";
+    private static readonly string[] PeopleActivityTypes =
+    {
+        ActivityTypes.Hunt, ActivityTypes.Boss, ActivityTypes.Quest, ActivityTypes.Explore, ActivityTypes.Gather, ActivityTypes.Trade,
+        ActivityTypes.Socialize, ActivityTypes.Train, ActivityTypes.Repair, ActivityTypes.Patrol, ActivityTypes.Ambush,
+    };
+    private static readonly string[] PeopleTraitKeys =
+        { "pve", "pvp", "trade", "exploration", "socializing", "sociability", "aggressiveness", "variety", "competitiveness" };
+
+    private static readonly string PeopleHeader =
+        "seed,person_id,profile,occupation,state,registered,game_importance,session_minutes,habit,expected_h_week,played_h_week,free_h_week,plan_days,class,level,"
+        + string.Join(",", PeopleTraitKeys.Select(k => "t_" + k)) + ","
+        + string.Join(",", PersonPreferences.Keys.Select(k => "pref_" + k)) + ","
+        + string.Join(",", PeopleActivityTypes.Select(k => "min_" + k)) + "\n";
 
     /// <summary>
     /// Uma linha por pessoa da campanha (people.csv): atributos de dedicacao, horas estimadas na
@@ -350,8 +364,10 @@ public static class ScenarioRunner
         double weeks = Math.Max(0, days - warmupDays) / 7.0;
         var inv = System.Globalization.CultureInfo.InvariantCulture;
         var sb = new System.Text.StringBuilder();
+        var chars = w.Characters.ToDictionary(c => c.Id);
         foreach (var p in w.Persons.OrderBy(x => x.Id))
         {
+            chars.TryGetValue(p.CharacterId, out var ch);
             var plans = p.DayPlans.GroupBy(r => r.LocalDay).Select(g => g.Last()).ToList();
             double free = plans.Count == 0 ? double.NaN : plans.Sum(r => (double)r.FreeMinutes) / plans.Count * 7 / 60;
             double played = weeks > 0 ? collector.PlayedTicksInWindow(p.Id) / (double)SimTime.TicksPerHour / weeks : double.NaN;
@@ -360,7 +376,11 @@ public static class ScenarioRunner
                 seed.ToString(inv), p.Id.ToString(inv), p.ProfileId, p.OccupationId, p.State.ToString(), p.CharacterId != 0 ? "1" : "0",
                 p.Traits.GameImportance.ToString(inv), p.Traits.SessionMinutes.ToString(inv), p.Traits.Habit.ToString(inv),
                 (p.ExpectedWeeklyMinutes / 60.0).ToString("0.00", inv), played.ToString("0.00", inv), free.ToString("0.00", inv), plans.Count.ToString(inv),
-            }));
+                ch?.ClassId ?? "", (ch?.Level ?? 0).ToString(inv),
+            }
+            .Concat(PeopleTraitKeys.Select(k => p.Traits.Get(k).ToString(inv)))
+            .Concat(PersonPreferences.Keys.Select(k => p.Preferences.Get(k).ToString(inv)))
+            .Concat(PeopleActivityTypes.Select(k => ch == null ? "0" : (ch.ActivityTicksByType.GetValueOrDefault(k) / SimTime.TicksPerMinute).ToString(inv)))));
             sb.Append('\n');
         }
         return sb.ToString();

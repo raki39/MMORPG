@@ -1802,3 +1802,24 @@ O criador pediu que a dedicação de cada perfil viesse de uma faixa com tendên
   - Regras do cenário 6 de 9: horas do casual, ativos em dia útil e fim de semana.
 - **Decisão do criador:** os valores candidatos não viram preset. O preset principal segue com os valores e o formato antigos até a separação entre Perfil e Preferências (próximo passo, antes da P4).
 - **Erro corrigido no caminho:** o carregador de JSON não conhecia o campo `dedication`; há um teste novo que carrega o formato pelo arquivo.
+
+## D-054 — Perfil (dedicação), Preferências e atributos separados
+**Data:** 05/11/2026 · **Estado:** em avaliação (ramo `perfil-preferencias`; a `main` segue com a estrutura anterior)
+
+O criador pediu que o perfil representasse só dedicação e que os gostos fossem um campo próprio, ao lado do perfil. Detalhes em `perfil-preferencias.md`.
+
+**Estrutura:**
+- **Perfil:** Casual, Regular, Hardcore e Devoto, gerando importância do jogo, hábito e sessão normal pelo D-053.
+- **Preferências:** PvE, PvP, Crafting, Comércio, Coleta (a 7ª, pedida pelo criador), Exploração e Social. São um campo da pessoa e dão o gosto principal nas escolhas, sem obrigar.
+- **Especialidade:** os antigos PvE, PvP, Comércio, Exploração e Socializar viram afinidade desenvolvida, com reforço mínimo (5%, teto de 50 na afinidade) mostrado como fator próprio. Os benefícios de execução ficam para o combate, a economia e os grupos.
+- **Competitividade** em Conduta: assume o papel competitivo que a agressividade fazia (desafio, metas de nível, expectativa, cuidado com o progresso). A agressividade continua, com o efeito de confronto.
+- **Atributos da população toda:** tendência a prolongar e autocontrole, independentes do perfil, com os efeitos na rotina iguais. O mesmo vale para personalidade, capacidades e talento.
+- **Ligações parciais configuráveis** para coerência (mesma transformação do D-053).
+
+**Primeira medição** (5 seeds × 1.000 × 90 dias, candidatos):
+- **Horas reais** (mediana; p90): casual 8,9 h (18,6), regular 16,5 h (30,9), hardcore 35,9 h (50,4), devoto 54,8 h (69,0).
+- **Influência das preferências:** forte e sem obrigar. Caça e chefe vão de 11% a 67% do tempo, do terço de baixo ao de cima da preferência PvE.
+- **Efeitos colaterais:** a mistura de atividades mudou (combate de 42% para 31%, coleta de 5% para 11%) e a evolução ficou mais lenta.
+- **Regras do cenário:** 7 de 9; horas do casual acima da faixa e fim de semana instável.
+
+**Pendente:** avaliação do criador antes de adotar o preset; nenhuma meta foi revista.

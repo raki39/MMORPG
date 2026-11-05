@@ -4,12 +4,18 @@ using Simulation.Core.Random;
 namespace Simulation.Core.Population;
 
 /// <summary>
-/// Gera pessoas a partir dos perfis de populacao do conteudo.
-/// Cada pessoa usa seu proprio fluxo de RNG derivado de (seed, "population.person", id),
-/// entao gerar a pessoa N nao depende de quantas pessoas vieram antes, e mudar o
-/// tamanho da populacao nao altera quem ja existia.
-/// Diversidade: perfil define tendencia (media), ruido individual cria variacao;
-/// correlacoes surgem da mistura de perfis, sem tornar ninguem identico.
+/// Gera pessoas a partir do conteudo. Cada pessoa usa seus proprios fluxos de RNG derivados de
+/// (seed, fluxo, id): gerar a pessoa N nao depende de quantas vieram antes, e mudar o tamanho da
+/// populacao nao altera quem ja existia.
+///
+/// Estrutura (separacao Perfil x Preferencias x atributos):
+/// - Perfil = dedicacao: importancia do jogo, habito e sessao normal, com a dedicacao
+///   compartilhada parcial (D-053).
+/// - Preferencias = interesses pessoais (fluxo proprio), independentes do perfil.
+/// - Demais atributos (especialidade, personalidade, conduta com Competitividade, capacidades,
+///   financas, rotina, talento e variedade) = distribuicoes gerais da populacao.
+/// - Ligacoes parciais configuraveis ("links") deixam atributos coerentes sem obrigar: o alvo
+///   mistura a posicao da ancora com a propria e mantem a sua distribuicao.
 /// </summary>
 public static class PopulationGenerator
 {
@@ -18,11 +24,36 @@ public static class PopulationGenerator
     public const string NameStreamName = "population.name";
     /// <summary>Fluxo proprio da posicao de dedicacao: nao muda o fluxo dos demais atributos.</summary>
     public const string DedicationStreamName = "population.dedication";
+    /// <summary>Fluxo proprio das preferencias e da competitividade (atributos novos): nao muda os antigos.</summary>
+    public const string InterestsStreamName = "population.interests";
+
+    /// <summary>Atributos de dedicacao, gerados pelo perfil.</summary>
+    public static readonly string[] DedicationKeys = { "sessionMinutes", "gameImportance", "habit" };
 
     /// <summary>
-    /// Gera a pessoa. Com "cell" (cenario controlado, R4): perfil e ocupacao fixos, tracos e
-    /// rotina na media do conteudo e residencia na localidade do servidor. Pessoas da mesma
-    /// celula ficam iguais; o resultado so varia pelos sorteios do dia a dia.
+    /// Ordem fixa do fluxo principal (a mesma de antes da separacao, com os mesmos tres sorteios
+    /// por atributo): nome, localidade e ocupacao de cada pessoa continuam os mesmos.
+    /// </summary>
+    private static readonly (string Key, int Lo, int Hi)[] MainOrder =
+    {
+        ("pve", 0, 1000), ("pvp", 0, 1000), ("trade", 0, 1000), ("exploration", 0, 1000), ("socializing", 0, 1000),
+        ("sociability", 0, 1000), ("aggressiveness", 0, 1000), ("patience", 0, 1000), ("loyalty", 0, 1000), ("riskAversion", 0, 1000),
+        ("mechanicalSkill", 0, 1000), ("gameKnowledge", 0, 1000), ("coordination", 0, 1000),
+        ("cheatPropensity", 0, 1000), ("opportunism", 0, 1000),
+        ("leisureBudgetCentsPerMonth", 0, 1_000_000), ("willingnessToPay", 0, 1000), ("paidAdvantageSensitivity", 0, 1000),
+        ("preferredStartHour", 0, 23), ("sessionMinutes", 10, 720), ("gameImportance", 0, 1000), ("habit", 0, 1000),
+        ("talent", 0, 1000), ("variety", 0, 1000),
+    };
+
+    /// <summary>Chaves que podem entrar em ligacoes (sorteadas antes da rotina, fora da dedicacao).</summary>
+    public static IEnumerable<string> LinkableKeys() =>
+        MainOrder.Select(m => m.Key).Where(k => !DedicationKeys.Contains(k)).Select(k => "traits." + k)
+            .Concat(PersonPreferences.Keys.Select(k => "preferences." + k)).Append("traits.competitiveness");
+
+    /// <summary>
+    /// Gera a pessoa. Com "cell" (cenario controlado, R4): perfil e ocupacao fixos, atributos e
+    /// rotina na referencia do conteudo (mediana no formato triangular, media no antigo) e
+    /// residencia na localidade do servidor. Pessoas da mesma celula ficam iguais.
     /// </summary>
     public static Person Generate(int personId, ContentDatabase content, ulong campaignSeed, ControlledCell? cell = null)
     {
@@ -39,50 +70,139 @@ public static class PopulationGenerator
         string name = names.FirstNames[rng.NextInt(names.FirstNames.Count)] + " " +
                       names.LastNames[rng.NextInt(names.LastNames.Count)];
 
-        // Posicao de dedicacao (experimento): fluxo proprio, so quando a influencia e maior que 0.
+        // Fase 1: posicoes proprias (triangular) ou valores (media e dispersao), em ordem fixa.
+        var draws = new Dictionary<string, Draw>(StringComparer.Ordinal);
+        foreach (var (key, lo, hi) in MainOrder)
+            draws["traits." + key] = First(rng, mean, RangeOf(content, profile, key), lo, hi);
+        var irng = new DeterministicRng(RngStreams.DeriveSeed(campaignSeed, InterestsStreamName, personId));
+        foreach (var key in PersonPreferences.Keys)
+            draws["preferences." + key] = First(irng, mean, PreferenceRangeOf(content.PreferenceRanges, key), 0, 1000);
+        draws["traits.competitiveness"] = First(irng, mean, content.PopulationTraits.Competitiveness, 0, 1000);
+
+        // Fase 2: dedicacao compartilhada e ligacoes; depois o valor de cada posicao.
         int influence = content.Dedication.InfluencePermille;
         long? dedication = influence > 0 && !mean
             ? TraitDraw.Position(new DeterministicRng(RngStreams.DeriveSeed(campaignSeed, DedicationStreamName, personId)))
             : null;
-
-        // Ordem de sorteio fixa: alterar esta ordem muda populacoes geradas (versionar).
-        var t = new PersonTraits
+        var links = content.TraitLinks.Where(l => l.InfluencePermille > 0)
+            .GroupBy(l => l.Trait, StringComparer.Ordinal).ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);
+        var final = new Dictionary<string, long>(StringComparer.Ordinal);
+        var visiting = new HashSet<string>(StringComparer.Ordinal);
+        long FinalPosition(string key)
         {
-            Pve = Roll(rng, mean, profile.Pve, 0, 1000),
-            Pvp = Roll(rng, mean, profile.Pvp, 0, 1000),
-            Trade = Roll(rng, mean, profile.Trade, 0, 1000),
-            Exploration = Roll(rng, mean, profile.Exploration, 0, 1000),
-            Socializing = Roll(rng, mean, profile.Socializing, 0, 1000),
-            Sociability = Roll(rng, mean, profile.Sociability, 0, 1000),
-            Aggressiveness = Roll(rng, mean, profile.Aggressiveness, 0, 1000),
-            Patience = Roll(rng, mean, profile.Patience, 0, 1000),
-            Loyalty = Roll(rng, mean, profile.Loyalty, 0, 1000),
-            RiskAversion = Roll(rng, mean, profile.RiskAversion, 0, 1000),
-            MechanicalSkill = Roll(rng, mean, profile.MechanicalSkill, 0, 1000),
-            GameKnowledge = Roll(rng, mean, profile.GameKnowledge, 0, 1000),
-            Coordination = Roll(rng, mean, profile.Coordination, 0, 1000),
-            CheatPropensity = Roll(rng, mean, profile.CheatPropensity, 0, 1000),
-            Opportunism = Roll(rng, mean, profile.Opportunism, 0, 1000),
-            LeisureBudgetCentsPerMonth = Roll(rng, mean, profile.LeisureBudgetCentsPerMonth, 0, 1_000_000),
-            WillingnessToPay = Roll(rng, mean, profile.WillingnessToPay, 0, 1000),
-            PaidAdvantageSensitivity = Roll(rng, mean, profile.PaidAdvantageSensitivity, 0, 1000),
-            PreferredStartHour = Roll(rng, mean, profile.PreferredStartHour, 0, 23),
-            SessionMinutes = RollDedication(rng, mean, profile.SessionMinutes, 10, 720, dedication, influence),
-            // Mesmas posicoes de sorteio dos antigos dias/semana e reforco de fim de semana (P2):
-            // talento, variedade e localidade das pessoas nao mudam.
-            GameImportance = RollDedication(rng, mean, profile.GameImportance, 0, 1000, dedication, influence),
-            Habit = RollDedication(rng, mean, profile.Habit, 0, 1000, dedication, influence),
-        };
-        // Sorteado por ultimo (D-036): nao altera os tracos ja existentes das populacoes.
-        t.Talent = Roll(rng, mean, profile.Talent, 0, 1000);
-        // Depois do talento (D-039a): mantem os tracos e o talento ja gerados.
-        t.Variety = Roll(rng, mean, profile.Variety, 0, 1000);
+            if (final.TryGetValue(key, out long f)) return f;
+            if (!visiting.Add(key)) throw new InvalidOperationException($"Ligação circular em {key}.");
+            var d = draws[key];
+            long pos = d.Own;
+            if (dedication is long ded && key.StartsWith("traits.", StringComparison.Ordinal) && DedicationKeys.Contains(key["traits.".Length..]))
+                pos = TraitDraw.Combine(ded, d.Own, influence);
+            else if (links.TryGetValue(key, out var link) && draws.TryGetValue(link.Anchor, out var a) && a.Triangular && !mean)
+                pos = TraitDraw.Combine(FinalPosition(link.Anchor), d.Own, link.InfluencePermille);
+            final[key] = pos;
+            return pos;
+        }
+        int Value(string key)
+        {
+            var d = draws[key];
+            if (!d.Triangular || mean) return d.Value;
+            var r = d.Range;
+            int v = TraitDraw.Triangular(FinalPosition(key), r.Min!.Value, r.Mode!.Value, r.Max!.Value);
+            return Math.Clamp(v, d.Lo, d.Hi);
+        }
+
+        var t = new PersonTraits();
+        foreach (var (key, _, _) in MainOrder) Assign(t, key, Value("traits." + key));
+        t.Competitiveness = Value("traits.competitiveness");
 
         ulong appearance = RngStreams.DeriveSeed(campaignSeed, AppearanceStreamName, personId);
         var person = new Person(personId, name, profile.Id, appearance, t);
+        foreach (var key in PersonPreferences.Keys) person.Preferences.Set(key, Value("preferences." + key));
         AssignLocality(person, content, rng, mean);   // depois dos tracos: nao altera populacoes ja geradas
         AssignRoutine(person, content, rng, cell?.Occupation, mean);    // depois da localidade (P2)
         return person;
+    }
+
+    /// <summary>Resultado da fase 1: posicao propria (triangular) ou valor ja sorteado.</summary>
+    private readonly record struct Draw(TraitRange Range, int Lo, int Hi, bool Triangular, long Own, int Value);
+
+    private static Draw First(DeterministicRng rng, bool mean, TraitRange range, int lo, int hi)
+    {
+        if (range.IsTriangular)
+        {
+            int min = range.Min ?? range.Mode ?? 0, mode = range.Mode ?? min, max = range.Max ?? mode;
+            var r = new TraitRange { Min = min, Mode = mode, Max = max };
+            if (mean) return new Draw(r, lo, hi, true, TraitDraw.Scale / 2, Math.Clamp(TraitDraw.Median(min, mode, max), lo, hi));
+            return new Draw(r, lo, hi, true, TraitDraw.Position(rng), 0);
+        }
+        int value = mean ? range.Mean : range.Mean + rng.NextCenteredNoise(range.Spread);
+        return new Draw(range, lo, hi, false, 0, Math.Clamp(value, lo, hi));
+    }
+
+    /// <summary>Faixa de um atributo: dedicacao vem do perfil; o resto, da populacao.</summary>
+    private static TraitRange RangeOf(ContentDatabase c, PopulationProfileDefinition profile, string key)
+    {
+        var t = c.PopulationTraits;
+        return key switch
+        {
+            "sessionMinutes" => profile.SessionMinutes,
+            "gameImportance" => profile.GameImportance,
+            "habit" => profile.Habit,
+            _ => TraitRangeOf(t, key),
+        };
+    }
+
+    /// <summary>Faixa de um atributo da populacao pela chave do conteudo.</summary>
+    public static TraitRange TraitRangeOf(PopulationTraitsDefinition t, string key) => key switch
+    {
+        "pve" => t.Pve, "pvp" => t.Pvp, "trade" => t.Trade, "exploration" => t.Exploration, "socializing" => t.Socializing,
+        "sociability" => t.Sociability, "aggressiveness" => t.Aggressiveness, "patience" => t.Patience, "loyalty" => t.Loyalty,
+        "riskAversion" => t.RiskAversion, "mechanicalSkill" => t.MechanicalSkill, "gameKnowledge" => t.GameKnowledge,
+        "coordination" => t.Coordination, "cheatPropensity" => t.CheatPropensity, "opportunism" => t.Opportunism,
+        "competitiveness" => t.Competitiveness,
+        "leisureBudgetCentsPerMonth" => t.LeisureBudgetCentsPerMonth, "willingnessToPay" => t.WillingnessToPay,
+        "paidAdvantageSensitivity" => t.PaidAdvantageSensitivity, "preferredStartHour" => t.PreferredStartHour,
+        "extendTendency" => t.ExtendTendency, "selfControl" => t.SelfControl, "talent" => t.Talent, "variety" => t.Variety,
+        _ => throw new ArgumentException($"Atributo desconhecido: {key}"),
+    };
+
+    /// <summary>Faixa de uma preferencia pela chave do conteudo.</summary>
+    public static TraitRange PreferenceRangeOf(PreferencesDefinition p, string key) => key switch
+    {
+        "pve" => p.Pve, "pvp" => p.Pvp, "crafting" => p.Crafting, "trade" => p.Trade, "gathering" => p.Gathering,
+        "exploration" => p.Exploration, "social" => p.Social,
+        _ => throw new ArgumentException($"Preferência desconhecida: {key}"),
+    };
+
+    private static void Assign(PersonTraits t, string key, int v)
+    {
+        switch (key)
+        {
+            case "pve": t.Pve = v; break;
+            case "pvp": t.Pvp = v; break;
+            case "trade": t.Trade = v; break;
+            case "exploration": t.Exploration = v; break;
+            case "socializing": t.Socializing = v; break;
+            case "sociability": t.Sociability = v; break;
+            case "aggressiveness": t.Aggressiveness = v; break;
+            case "patience": t.Patience = v; break;
+            case "loyalty": t.Loyalty = v; break;
+            case "riskAversion": t.RiskAversion = v; break;
+            case "mechanicalSkill": t.MechanicalSkill = v; break;
+            case "gameKnowledge": t.GameKnowledge = v; break;
+            case "coordination": t.Coordination = v; break;
+            case "cheatPropensity": t.CheatPropensity = v; break;
+            case "opportunism": t.Opportunism = v; break;
+            case "leisureBudgetCentsPerMonth": t.LeisureBudgetCentsPerMonth = v; break;
+            case "willingnessToPay": t.WillingnessToPay = v; break;
+            case "paidAdvantageSensitivity": t.PaidAdvantageSensitivity = v; break;
+            case "preferredStartHour": t.PreferredStartHour = v; break;
+            case "sessionMinutes": t.SessionMinutes = v; break;
+            case "gameImportance": t.GameImportance = v; break;
+            case "habit": t.Habit = v; break;
+            case "talent": t.Talent = v; break;
+            case "variety": t.Variety = v; break;
+            default: throw new ArgumentException($"Atributo desconhecido: {key}");
+        }
     }
 
     /// <summary>
@@ -120,10 +240,10 @@ public static class PopulationGenerator
         person.IncomeCentsPerMonth = (long)Roll(rng, mean, occ.Income, 0, 100_000_000) * factor / 1000;
         person.SupportCentsPerMonth = rng.ChancePermille(occ.SupportChancePermille) ? (long)Roll(rng, mean, occ.Support, 0, 100_000_000) * factor / 1000 : 0;
         person.SleepDebtTolerance = Roll(rng, mean, rs.SleepDebtTolerance, 0, 1000);
-        // Tendencia a prolongar e autocontrole (P3): do perfil, sorteados por ultimo.
-        var profile = content.Profiles[person.ProfileId];
-        person.Traits.ExtendTendency = Roll(rng, mean, profile.ExtendTendency, 0, 1000);
-        person.Traits.SelfControl = Roll(rng, mean, profile.SelfControl, 0, 1000);
+        // Tendencia a prolongar e autocontrole (P3): caracteristicas individuais da populacao toda,
+        // independentes do perfil; sorteadas por ultimo, como antes.
+        person.Traits.ExtendTendency = Roll(rng, mean, content.PopulationTraits.ExtendTendency, 0, 1000);
+        person.Traits.SelfControl = Roll(rng, mean, content.PopulationTraits.SelfControl, 0, 1000);
         // Coerencia (D-045): o sono se acostuma as obrigacoes e o horario habitual de jogar cai no
         // tempo livre da rotina. Nada e sorteado aqui. O gosto de horario sorteado fica guardado a
         // parte (Traits.PreferredStartHour): preferir 20 h e normalmente so conseguir as 21 h (R4).
@@ -164,32 +284,17 @@ public static class PopulationGenerator
         }
     }
 
-    private static int Roll(DeterministicRng rng, bool mean, TraitRange range, int min, int max)
-        => RollDedication(rng, mean, range, min, max, null, 0);
-
     /// <summary>
-    /// Sorteia um atributo. No formato triangular: a pessoa de referencia (cenario controlado) fica
-    /// na mediana; as demais usam uma posicao propria (tres sorteios do fluxo da pessoa, como o
-    /// formato de media e dispersao), misturada com a posicao de dedicacao quando houver.
+    /// Sorteia um parametro avulso (rotina, renda): triangular com posicao propria (mediana na
+    /// referencia) ou media e dispersao.
     /// </summary>
-    private static int RollDedication(DeterministicRng rng, bool mean, TraitRange range, int min, int max, long? dedication, int influence)
+    private static int Roll(DeterministicRng rng, bool mean, TraitRange range, int min, int max)
     {
-        int value;
-        if (range.IsTriangular)
-        {
-            int lo = range.Min ?? range.Mode ?? 0, mo = range.Mode ?? lo, hi = range.Max ?? mo;
-            if (mean) value = TraitDraw.Median(lo, mo, hi);
-            else
-            {
-                long own = TraitDraw.Position(rng);
-                long pos = dedication is long d ? TraitDraw.Combine(d, own, influence) : own;
-                value = TraitDraw.Triangular(pos, lo, mo, hi);
-            }
-        }
-        else value = mean ? range.Mean : range.Mean + rng.NextCenteredNoise(range.Spread);
-        return value < min ? min : value > max ? max : value;
+        var d = First(rng, mean, range, min, max);
+        if (!d.Triangular || mean) return d.Value;
+        return Math.Clamp(TraitDraw.Triangular(d.Own, d.Range.Min!.Value, d.Range.Mode!.Value, d.Range.Max!.Value), min, max);
     }
 }
 
-/// <summary>Celula de um cenario controlado (R4): perfil e ocupacao fixos, tracos na media.</summary>
+/// <summary>Celula de um cenario controlado (R4): perfil e ocupacao fixos, atributos na referencia.</summary>
 public sealed record ControlledCell(string Profile, string Occupation);

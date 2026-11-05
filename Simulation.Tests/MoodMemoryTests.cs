@@ -44,44 +44,55 @@ public class MoodMemoryTests
     {
         var (r, a) = Hunt();
         var ch = new Character(1, 1, "x", "mago");
-        var lover = new PersonTraits { Pve = 900, Coordination = 500, RiskAversion = 500 };
-        var hater = new PersonTraits { Pve = 100, Coordination = 500, RiskAversion = 500 };
-        Assert.True(Part(ExperienceSystem.Components(lover, ch, r, a, 1000, true, 0, 0, M), ExperienceSystem.Fun) > 0);
-        Assert.True(Part(ExperienceSystem.Components(hater, ch, r, a, 1000, true, 0, 0, M), ExperienceSystem.Fun) < 0);
+        // O gosto (diversao) vem da preferencia, nao do atributo de especialidade.
+        var lover = new PersonTraits { Coordination = 500, RiskAversion = 500 };
+        var loves = new PersonPreferences { Pve = 900 };
+        var hates = new PersonPreferences { Pve = 100 };
+        var none = new PersonPreferences();
+        Assert.True(Part(ExperienceSystem.Components(lover, loves, ch, r, a, 1000, true, 0, 0, M), ExperienceSystem.Fun) > 0);
+        Assert.True(Part(ExperienceSystem.Components(lover, hates, ch, r, a, 1000, true, 0, 0, M), ExperienceSystem.Fun) < 0);
+        Assert.Equal(Part(ExperienceSystem.Components(new PersonTraits { Pve = 100 }, loves, ch, r, a, 1000, true, 0, 0, M), ExperienceSystem.Fun),
+            Part(ExperienceSystem.Components(new PersonTraits { Pve = 900 }, loves, ch, r, a, 1000, true, 0, 0, M), ExperienceSystem.Fun));
         // Lotacao incomoda; coordenacao alivia.
-        int crowdLo = Part(ExperienceSystem.Components(new PersonTraits { Coordination = 100 }, ch, r, a, 1000, true, 0, 200, M), ExperienceSystem.Crowding);
-        int crowdHi = Part(ExperienceSystem.Components(new PersonTraits { Coordination = 900 }, ch, r, a, 1000, true, 0, 200, M), ExperienceSystem.Crowding);
+        int crowdLo = Part(ExperienceSystem.Components(new PersonTraits { Coordination = 100 }, none, ch, r, a, 1000, true, 0, 200, M), ExperienceSystem.Crowding);
+        int crowdHi = Part(ExperienceSystem.Components(new PersonTraits { Coordination = 900 }, none, ch, r, a, 1000, true, 0, 200, M), ExperienceSystem.Crowding);
         Assert.True(crowdLo < crowdHi && crowdHi < 0);
         // Risco: emociona quem tem pouca aversao, incomoda quem tem muita.
-        Assert.True(Part(ExperienceSystem.Components(new PersonTraits { RiskAversion = 100 }, ch, r, a, 1000, true, 600, 0, M), ExperienceSystem.Risk) > 0);
-        Assert.True(Part(ExperienceSystem.Components(new PersonTraits { RiskAversion = 900 }, ch, r, a, 1000, true, 600, 0, M), ExperienceSystem.Risk) < 0);
+        Assert.True(Part(ExperienceSystem.Components(new PersonTraits { RiskAversion = 100 }, none, ch, r, a, 1000, true, 600, 0, M), ExperienceSystem.Risk) > 0);
+        Assert.True(Part(ExperienceSystem.Components(new PersonTraits { RiskAversion = 900 }, none, ch, r, a, 1000, true, 600, 0, M), ExperienceSystem.Risk) < 0);
         // Encaixe ruim de nivel pesa contra.
-        Assert.True(Part(ExperienceSystem.Components(lover, ch, r, a, 200, true, 0, 0, M), ExperienceSystem.Fit) < 0);
+        Assert.True(Part(ExperienceSystem.Components(lover, loves, ch, r, a, 200, true, 0, 0, M), ExperienceSystem.Fit) < 0);
     }
 
     [Fact]
     public void QuemSocializaOuNegocia_LigaMenosParaXp_EExploradoresPrecisamDeNovidade()
     {
-        var grinder = new PersonTraits { Pve = 900, Aggressiveness = 700, Pvp = 600 };
-        var social = new PersonTraits { Pve = 300, Aggressiveness = 200, Pvp = 100, Socializing = 900 };
-        Assert.True(ExperienceSystem.ProgressCare(grinder, M) > ExperienceSystem.ProgressCare(social, M) * 2);
-        var seeker = new PersonTraits { Variety = 900, Exploration = 700, Patience = 300 };
-        var routine = new PersonTraits { Variety = 100, Exploration = 300, Patience = 900 };
-        Assert.True(ExperienceSystem.NoveltyCare(seeker, M) > ExperienceSystem.NoveltyCare(routine, M) * 2);
-        // A preferencia por variedade pesa mais que a exploracao (D-039a).
-        int byVariety = ExperienceSystem.NoveltyCare(new PersonTraits { Variety = 900, Patience = 500 }, M);
-        int byExploration = ExperienceSystem.NoveltyCare(new PersonTraits { Exploration = 900, Patience = 500 }, M);
+        // Cuidado com o progresso: preferencias PvE e PvP e competitividade (nao a agressividade).
+        var grinder = new PersonTraits { Competitiveness = 700 };
+        var grinderPref = new PersonPreferences { Pve = 900, Pvp = 600 };
+        var social = new PersonTraits { Competitiveness = 200 };
+        var socialPref = new PersonPreferences { Pve = 300, Pvp = 100, Social = 900 };
+        Assert.True(ExperienceSystem.ProgressCare(grinder, grinderPref, M) > ExperienceSystem.ProgressCare(social, socialPref, M) * 2);
+        Assert.Equal(ExperienceSystem.ProgressCare(new PersonTraits { Aggressiveness = 0 }, grinderPref, M),
+            ExperienceSystem.ProgressCare(new PersonTraits { Aggressiveness = 1000 }, grinderPref, M));
+        var seeker = new PersonTraits { Variety = 900, Patience = 300 };
+        var routine = new PersonTraits { Variety = 100, Patience = 900 };
+        Assert.True(ExperienceSystem.NoveltyCare(seeker, new PersonPreferences { Exploration = 700 }, M)
+            > ExperienceSystem.NoveltyCare(routine, new PersonPreferences { Exploration = 300 }, M) * 2);
+        // A preferencia por variedade pesa mais que a preferencia por explorar (D-039a).
+        int byVariety = ExperienceSystem.NoveltyCare(new PersonTraits { Variety = 900, Patience = 500 }, new PersonPreferences(), M);
+        int byExploration = ExperienceSystem.NoveltyCare(new PersonTraits { Patience = 500 }, new PersonPreferences { Exploration = 900 }, M);
         Assert.True(byVariety > byExploration);
     }
 
     [Fact]
     public void Saturacao_TemEfeitoLimitado_EQuemGostaDeRepetirSentePouco()
     {
-        var routine = new PersonTraits { Variety = 100, Exploration = 300, Patience = 900 };
-        var seeker = new PersonTraits { Variety = 900, Exploration = 700, Patience = 300 };
-        int worst = ExperienceSystem.NoveltyTerm(M.NoveltyMin, seeker, M);
+        var routine = new PersonTraits { Variety = 100, Patience = 900 };
+        var seeker = new PersonTraits { Variety = 900, Patience = 300 };
+        int worst = ExperienceSystem.NoveltyTerm(M.NoveltyMin, seeker, new PersonPreferences { Exploration = 700 }, M);
         Assert.True(worst >= -M.NoveltyClamp);
-        Assert.True(ExperienceSystem.NoveltyTerm(M.NoveltyMin, routine, M) > worst / 2);   // metodico sente bem menos
+        Assert.True(ExperienceSystem.NoveltyTerm(M.NoveltyMin, routine, new PersonPreferences { Exploration = 300 }, M) > worst / 2);   // metodico sente bem menos
     }
 
     [Fact]
@@ -140,12 +151,12 @@ public class MoodMemoryTests
     public void ImpressaoDoLugar_PesaNaDecisao()
     {
         var (w, p, ch) = Someone();
-        var opts = ActivityScoring.Evaluate(ch, p.Traits, w.Content, w.Behavior.Routes, w.OccupancyOf, w.Clock.Tick,
+        var opts = ActivityScoring.Evaluate(ch, p.Traits, p.Preferences, w.Content, w.Behavior.Routes, w.OccupancyOf, w.Clock.Tick,
             new DeterministicRng(1), w.Behavior.Quests, w.Behavior.Goals, new Dictionary<string, int>());
         Assert.NotEmpty(opts);
         var key = opts[0].Key;
         var bad = new Dictionary<string, int> { [key] = -900 };
-        var again = ActivityScoring.Evaluate(ch, p.Traits, w.Content, w.Behavior.Routes, w.OccupancyOf, w.Clock.Tick,
+        var again = ActivityScoring.Evaluate(ch, p.Traits, p.Preferences, w.Content, w.Behavior.Routes, w.OccupancyOf, w.Clock.Tick,
             new DeterministicRng(1), w.Behavior.Quests, w.Behavior.Goals, bad);
         var f = again.Single(o => o.Key == key).Factors.Single(x => x.Key == "memory");
         Assert.Equal(-900 * w.Content.Memory.DecisionWeight / 1000, f.Contribution);

@@ -28,8 +28,8 @@ public class ValidationTests
         var casual = set.Population.Profiles.First(p => p.Id == "casual");
         casual.Id = "trabalhador";
         casual.Name = "Trabalhador";
-        casual.PreferredStartHour = new TraitRange { Mean = 21, Spread = 2 };
-        casual.GameImportance = new TraitRange { Mean = 800, Spread = 100 };
+        set.Population.Traits.PreferredStartHour = new TraitRange { Mean = 21, Spread = 2 };
+        casual.GameImportance = new TraitRange { Min = 700, Mode = 800, Max = 900 };
         set.Population.Profiles = new List<PopulationProfileDefinition> { casual };
         set.Occupations = set.Occupations.Where(o => o.Id == "comercial").ToList();
         var content = ContentDatabase.Create(set);

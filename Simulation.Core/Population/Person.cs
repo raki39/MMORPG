@@ -18,7 +18,8 @@ public enum LifecycleState
 /// </summary>
 public sealed class PersonTraits
 {
-    // Afinidades de estilo de jogo
+    // Especialidade: afinidade desenvolvida e familiaridade (cresce com a pratica). O gosto em si
+    // fica nas Preferencias; aqui so um reforco minimo e limitado na escolha.
     public int Pve;
     public int Pvp;
     public int Trade;
@@ -42,6 +43,11 @@ public sealed class PersonTraits
     // Conduta
     public int CheatPropensity;
     public int Opportunism;
+    /// <summary>
+    /// Competitividade (permille): motivacao para disputar, superar outros e buscar reconhecimento
+    /// pelo desempenho. Nao decide agressividade, PK, habilidade nem horas jogadas.
+    /// </summary>
+    public int Competitiveness;
 
     // Financas (dinheiro ficticio do tycoon, separado do ouro do MMORPG)
     public int LeisureBudgetCentsPerMonth;
@@ -71,6 +77,7 @@ public sealed class PersonTraits
         "pve", "pvp", "trade", "exploration", "socializing",
         "sociability", "aggressiveness", "patience", "loyalty", "riskAversion",
         "mechanicalSkill", "gameKnowledge", "coordination", "cheatPropensity", "opportunism", "variety",
+        "competitiveness",
     };
 
     public int Get(string key) => key switch
@@ -79,7 +86,7 @@ public sealed class PersonTraits
         "sociability" => Sociability, "aggressiveness" => Aggressiveness, "patience" => Patience, "loyalty" => Loyalty,
         "riskAversion" => RiskAversion, "mechanicalSkill" => MechanicalSkill, "gameKnowledge" => GameKnowledge,
         "coordination" => Coordination, "cheatPropensity" => CheatPropensity, "opportunism" => Opportunism,
-        "variety" => Variety,
+        "variety" => Variety, "competitiveness" => Competitiveness,
         _ => throw new ArgumentException($"Traço desconhecido: {key}"),
     };
 
@@ -103,11 +110,55 @@ public sealed class PersonTraits
             case "cheatPropensity": CheatPropensity = value; break;
             case "opportunism": Opportunism = value; break;
             case "variety": Variety = value; break;
+            case "competitiveness": Competitiveness = value; break;
             default: throw new ArgumentException($"Traço desconhecido: {key}");
         }
     }
 
     public PersonTraits Clone() => (PersonTraits)MemberwiseClone();
+}
+
+/// <summary>
+/// Preferencias: interesses pessoais (permille, 0..1000), separados do perfil (dedicacao) e dos
+/// atributos. Dao o peso principal de gosto nas decisoes, nunca uma obrigacao. Estaveis: nao
+/// mudam com a pratica (quem muda e a especialidade). Crafting ainda nao tem atividade no jogo.
+/// </summary>
+public sealed class PersonPreferences
+{
+    public int Pve;
+    public int Pvp;
+    /// <summary>Fabricar (sem efeito ate existir a fabricacao). Nao implica gostar de vender nem de coletar.</summary>
+    public int Crafting;
+    public int Trade;
+    /// <summary>Coleta de materiais, separada do comercio e da fabricacao.</summary>
+    public int Gathering;
+    public int Exploration;
+    public int Social;
+
+    /// <summary>Chaves do conteudo, na ordem fixa de sorteio.</summary>
+    public static readonly string[] Keys = { "pve", "pvp", "crafting", "trade", "gathering", "exploration", "social" };
+
+    public int Get(string key) => key switch
+    {
+        "pve" => Pve, "pvp" => Pvp, "crafting" => Crafting, "trade" => Trade, "gathering" => Gathering,
+        "exploration" => Exploration, "social" => Social,
+        _ => throw new ArgumentException($"Preferência desconhecida: {key}"),
+    };
+
+    internal void Set(string key, int value)
+    {
+        switch (key)
+        {
+            case "pve": Pve = value; break;
+            case "pvp": Pvp = value; break;
+            case "crafting": Crafting = value; break;
+            case "trade": Trade = value; break;
+            case "gathering": Gathering = value; break;
+            case "exploration": Exploration = value; break;
+            case "social": Social = value; break;
+            default: throw new ArgumentException($"Preferência desconhecida: {key}");
+        }
+    }
 }
 
 /// <summary>
@@ -185,6 +236,16 @@ public sealed class Person
     public PersonTraits Traits { get; }
     /// <summary>Tracos de nascenca (imutaveis): referencia dos limites e da comparacao "era X".</summary>
     public PersonTraits BaseTraits { get; }
+    /// <summary>Preferencias (interesses pessoais), ao lado do perfil; estaveis.</summary>
+    public PersonPreferences Preferences { get; internal set; } = new();
+
+    /// <summary>Prefixo das chaves de motivo que sao preferencias ("pref_pve"); as demais sao atributos.</summary>
+    public const string PreferenceMotivePrefix = "pref_";
+
+    /// <summary>Valor de um motivo (meta, causa de evento): preferencia ("pref_x") ou atributo ("x").</summary>
+    public int MotiveValue(string key) => key.StartsWith(PreferenceMotivePrefix, StringComparison.Ordinal)
+        ? Preferences.Get(key[PreferenceMotivePrefix.Length..])
+        : Traits.Get(key);
     /// <summary>Pratica acumulada por direcao e traco ("+mechanicalSkill" = minutos ate o proximo ponto).</summary>
     internal SortedDictionary<string, int> Practice { get; } = new(StringComparer.Ordinal);
     public IReadOnlyDictionary<string, int> PracticeProgress => Practice;
