@@ -1,6 +1,9 @@
 # Sorteio de dedicação (experimento)
 
-**Situação:** mecanismo aceito (D-053), com influência de 0,45 como referência inicial. Os valores candidatos não foram adotados. O preset principal continua no formato antigo (versão A) até a separação entre Perfil e Preferências. Com o conteúdo antigo, o código novo dá exatamente o mesmo hash final.
+**Situação:**
+- **Mecanismo** aceito (D-053), com influência de 0,45 como referência inicial. Com o conteúdo antigo, o código novo dava exatamente o mesmo hash final.
+- **Valores C deste experimento:** não foram adotados.
+- **Preset:** usa o mecanismo desde a separação entre Perfil e Preferências (D-054), com outros candidatos para Casual e Regular (`perfil-preferencias.md`).
 
 A dedicação de uma pessoa sai de três atributos: **importância do jogo**, **sessão normal** e **hábito**. As horas jogadas não são parâmetro; elas saem desses atributos, das janelas livres e das decisões da rotina (`docs/rotina.md`), que este experimento não altera.
 

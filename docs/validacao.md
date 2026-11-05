@@ -259,6 +259,37 @@ Os relatórios completos de cada versão estão em `docs/baselines/` (`pre-R4`, 
 - **Campanha completa:** as horas por perfil ficaram iguais à R5 dentro de 0,1 h.
 - **O Devoto:** 6,9 dias, 1,52 sessão por dia de jogo e 57 h por semana. Ainda sem meta própria.
 
+## D-054: Perfil, Preferências e atributos separados (05/11/2026)
+
+A estrutura nova foi adotada com os parâmetros candidatos (`perfil-preferencias.md`). Validação padrão: 5 seeds × 1.000 pessoas × 90 dias. **Regras do cenário: 7 de 9.** Nenhuma meta mudou; os valores abaixo ficam como referência para acompanhamento.
+
+**Divergência 1 — horas por semana do casual** (meta de 3 a 9 h; média por pessoa na rodada controlada com humor neutralizado):
+
+| Seed | 1 | 2 | 3 | 4 | 5 | Média |
+|---|---:|---:|---:|---:|---:|---:|
+| D-054 | 9,77 | 10,28 | 9,42 | 9,67 | 9,81 | 9,79 |
+| Referência A (antes) | 6,70 | 6,77 | 6,75 | 6,66 | 6,64 | 6,70 |
+
+- **Causa:** os candidatos do Casual (importância, hábito e sessão mais altos e mais espalhados) alongaram a cauda de cima. O mesmo efeito apareceu no experimento do D-053 (versões C0 e C).
+- **Mediana da campanha completa:** 8,9 h, contra 6,7 h em A.
+- **Média da campanha completa:** 10,3 h.
+
+**Divergência 2 — ativos no fim de semana ÷ ativos em dia útil** (meta de 1,3 a 2,0×):
+
+| Seed | 1 | 2 | 3 | 4 | 5 | Média |
+|---|---:|---:|---:|---:|---:|---:|
+| D-054 | 1,317 | **1,299** | 1,309 | 1,321 | 1,313 | 1,312 |
+| Referência A (antes) | 1,346 | 1,322 | 1,313 | 1,324 | 1,329 | 1,327 |
+
+- **Leitura:** já ficava perto do piso em A, e uma seed ficou abaixo de 1,3. Causa provável, não medida à parte: com hábito mais alto em parte da população, os dias úteis ganharam jogadores.
+
+**Outras mudanças registradas** (faixas provisórias, sem mudança de meta):
+- **Mistura de atividades:** combate 31,3% (A: 42,1%), coleta 11,4% (5,2%), cidade 26,8% (22,3%), exploração 8,5% (6,9%). A mistura nova fica preservada por decisão do criador.
+- **Progressão:** nível 15 em 40,2 h (36,4 h), nível 20 em 77,3 h (69,6 h), nível 30 em 195 h (173 h).
+- **Já estavam fora em A e continuam:** tempo em missões, casuais no nível 10, horas até o nível 20, inativos e desistentes.
+
+Relatórios em `docs/baselines/perfil-preferencias/`.
+
 ## Próximos passos
 
 Roteiro por etapas (backlog):

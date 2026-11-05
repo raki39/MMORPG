@@ -114,7 +114,7 @@ public partial class PlayerModal : ModalFrame
             double hours = v.PlayedTicks / (double)Simulation.Core.Time.SimTime.TicksPerHour;
             string exp = AttributeInfo.ExperienceTier(hours);
             Fact("Experiência", exp, UiTokens.TextSecondary,
-                $"Experiência: {exp}\nHoras jogadas|{PtBr.Decimal(hours)} h\nConhecimento|{UiTokens.To20(_person.Traits.GameKnowledge)} / 20\n~Vem da prática neste jogo: Novato (< 10 h), Iniciante (< 50 h), Experiente (< 200 h), Veterano. O Conhecimento cresce com ela; quem já jogava o gênero chega com mais conhecimento.", "clock");
+                $"Experiência: {exp}\nHoras jogadas|{PtBr.Decimal(hours)} h\nConhecimento|{UiTokens.To20(_person.Traits.GameKnowledge)} / 20\n~Vem da prática neste jogo: Novato (< 10 h), Iniciante (< 50 h), Experiente (< 200 h), Veterano. O Conhecimento cresce com ela; o Conhecimento inicial varia de pessoa para pessoa, sem depender do perfil.", "clock");
 
             var e = Engagement();
             var gauge = new SemiGauge
@@ -1144,7 +1144,7 @@ public partial class PlayerModal : ModalFrame
         High(pr.Crafting, "hammer", "Artesão", "Gosta de fabricar (ainda sem efeito: a fabricação não existe).");
         High(pr.Exploration, "compass", "Explorador", "Tende a descobrir zonas novas cedo.");
         High(pr.Social, "users", "Sociável", "Gosta de atividades sociais e de jogar onde há gente.");
-        High(t.Competitiveness, "trophy", "Competitivo", "Quer superar os outros: busca desafio acima do nível e metas de nível.");
+        High(t.Competitiveness, "trophy", "Competitivo", "Quer superar os outros; por enquanto isso aparece na progressão (desafio acima do nível e metas de nível).");
         High(t.Patience, "hourglass", "Paciente", "Repete a mesma atividade sem cansar tão cedo.");
         High(t.RiskAversion, "shield", "Cauteloso", "Evita perigo, PvP e conteúdo acima do nível.");
         High(t.Loyalty, "heart-handshake", "Leal", "Tende a ficar com grupos e guildas (M6).");

@@ -1,6 +1,6 @@
 # Perfil, Preferências e atributos
 
-**Situação:** implementado no ramo `perfil-preferencias`, em medição. O preset da `main` continua com a estrutura antiga até o criador aprovar os resultados. Os parâmetros abaixo são candidatos para medir, não valores definitivos.
+**Situação:** adotado (D-054), com os parâmetros candidatos de Casual, Regular, Hardcore e Devoto. Os valores abaixo continuam candidatos: ponto de partida medido, sujeito a ajuste quando houver novas evidências ou sistemas. A estrutura anterior, com sete perfis, fica como referência em `baselines/exp-dedicacao/A`.
 
 ## 1. O que é cada coisa
 
@@ -29,8 +29,9 @@
    - Os atributos de dedicação usam a posição de dedicação (D-053).
    - As ligações configuráveis (`links`) misturam a posição de uma âncora com a própria. É a mesma transformação da dedicação compartilhada: a distribuição de cada atributo não muda, só a combinação.
 5. **Atributos da população** (`traits`): mesma distribuição para todos os perfis.
-   - **Valores candidatos:** a média e o desvio que a população inteira tinha na estrutura anterior (mistura dos sete perfis). Só some a dependência do perfil.
-   - **Formato:** triangular para os que entram em ligações; os demais, no formato antigo.
+   - **Valores candidatos:** partem da média e do desvio que a população inteira tinha na estrutura anterior (mistura dos sete perfis). Só some a dependência do perfil.
+   - **Formato:** triangular para os que entram em ligações (simétrica: moda = média = mediana, salvo quando o limite corta a faixa); os demais, no formato antigo (média e dispersão).
+   - **Corte:** na Agressividade (0 · 320 · 700), o corte em 0 deixa a média em 340 e a mediana em 335, contra 320 antes.
 
 **Ligações candidatas** (influência de 0 a 1000; 0 desliga):
 
@@ -43,13 +44,21 @@
 
 Competitividade sem ligação: independente do Perfil e das Preferências.
 
-**Preferências candidatas** (triangular de 0 a 1000, moda indicada):
+**Preferências candidatas** (triangular de 0 a 1000). **Moda não é média:** a moda é o valor mais comum. Os candidatos foram escolhidos para que a **média** de cada triangular, `(mín + moda + máx) / 3`, ficasse perto do gosto médio que a população tinha. A mediana fica entre as duas.
 
-| Preferência | PvE | PvP | Crafting | Comércio | Coleta | Exploração | Social |
-|---|---|---|---|---|---|---|---|
-| Moda | 680 | 10 | 350 | 170 | 350 | 520 | 610 |
+| Preferência | Moda | Média | Mediana | Média do gosto antes |
+|---|---:|---:|---:|---:|
+| PvE | 680 | 560 | 583 | 558 |
+| PvP | 10 | 337 | 296 | 329 |
+| Crafting | 350 | 450 | 430 | — (não existia) |
+| Comércio | 170 | 390 | 356 | 384 |
+| Coleta | 350 | 450 | 430 | 449 (mistura de comércio 50%, paciência 30%, exploração 20%) |
+| Exploração | 520 | 507 | 510 | 497 |
+| Social | 610 | 537 | 552 | 528 (Socializar) |
 
-A moda reproduz o gosto médio da população anterior. A da Coleta vem da mistura que a coleta usava (comércio 50%, paciência 30%, exploração 20%).
+- **Outros triangulares:** especialidade 0 · 250 · 700 (média 317, mediana 303); Competitividade 0 · 250 · 950 (média 400, mediana 373).
+- **Dispersão:** é a de uma triangular inteira de 0 a 1000. Antes, gostos compostos (coleta, por exemplo) eram médias de vários atributos e variavam menos. Isso explica parte da mudança na mistura de atividades (seção 4).
+- **São parâmetros candidatos.** Esta correção de texto não mudou nenhuma distribuição.
 
 **Perfis candidatos** (mínimo · moda · máximo):
 
@@ -80,16 +89,34 @@ O Devoto mantém as ocupações próprias (D-052).
 
 **A agressividade continua existindo**, com o efeito de confronto: emboscada, tanque e ligação com a preferência PvP (PK no futuro).
 
-**Sem efeito por enquanto:** Crafting (não há fabricação), benefícios de execução da especialidade (com o combate, a economia e os grupos) e a Competitividade em rankings e duelos.
+**Competitividade: direção e limites atuais.**
+- **Direção:** a vontade de disputar, superar outros e ser reconhecido deve **acompanhar os interesses da pessoa**.
+  - Um comerciante competitivo quer ser o melhor no comércio; não precisa buscar nível alto.
+  - Quem prefere crafting pode querer ser o melhor artesão.
+  - Quem prefere PvP pode lutar sem ligar para rankings.
+- **Hoje os efeitos são parciais e só na progressão:** gosto por desafio acima do nível, metas de nível e zonas mais altas aceitas, expectativa de progresso e cuidado com o progresso.
+- **Limitação conhecida:** esses efeitos valem para qualquer competitivo, mesmo quem não liga para progressão.
+- **O resto entra com os sistemas:** rankings e mercado (M5), fabricação, PvP e chefes (Etapa 3), guildas (M6). A competição passará a seguir o tema das preferências da pessoa.
+- **O que ela não decide:** agressividade, PK, habilidade nem horas jogadas.
+
+**Especialidades: só o reforço nas escolhas, por enquanto.**
+- **Benefícios de execução ainda não existem.** Hoje a especialidade só dá o pequeno reforço no gosto (fator "especialidade", até 22 pontos contra até 450 da preferência) e cresce com a prática.
+- **Benefícios futuros:** serão propostos com o combate, a economia e os grupos, sem repetir o que as capacidades já fazem e sem contar a mesma eficiência de novo na recompensa esperada.
+
+**Sem efeito por enquanto:** Crafting (não há fabricação), benefícios de execução da especialidade e a Competitividade fora da progressão.
 
 ## 4. Medição (primeira, com os candidatos)
 
 **Execução e arquivos:**
 - 5 seeds × 1.000 pessoas × 90 dias, as mesmas da referência A (`baselines/exp-dedicacao/A`).
 - Detalhes em `baselines/perfil-preferencias/analise.md`.
-- **Pareamento:** 96,6% das pessoas têm a mesma ocupação de A. A diferença vem do devoto, que tem ocupações próprias, e dos pesos novos de perfil.
+- **A comparação com A não é perfeitamente pareada.**
+  - **Iguais por id:** nome e localidade (mesmo fluxo de sorteio).
+  - **Ocupação:** 96,6% mantiveram a mesma. Os outros 3,4% viraram ou deixaram de ser devoto, que tem ocupações próprias, com os pesos novos de perfil.
+  - **Diferentes para todos:** perfil, dedicação, preferências e atributos, porque a estrutura mudou.
+  - **Como ler:** a comparação é entre distribuições com rotina de vida quase igual, não pessoa a pessoa.
 
-**Horas reais por semana** (p10 · mediana · p90; p99):
+**Horas reais por semana na campanha completa, com humor** (p10 · mediana · p90; p99):
 
 | Perfil | Nova | Referência A |
 |---|---|---|
@@ -100,6 +127,16 @@ O Devoto mantém as ocupações próprias (D-052).
 | População | 5,5 · 14,6 · 35,6 | 5,2 · 12,5 · 31,8 |
 
 - **Sobreposição:** o p90 do casual (18,6 h) passa a mediana do regular (16,5 h); o p10 do hardcore (22,6 h) fica abaixo do p90 do regular (30,9 h).
+- **Horas do casual, média × mediana:** são duas medidas e duas rodadas diferentes.
+
+  | Medida | Rodada | Nova | Referência A |
+  |---|---|---|---|
+  | **Média** por pessoa (meta da validação) | controlada, humor neutralizado (regras do cenário, D-039a) | **9,8 h** (seeds 9,4 a 10,3) | 6,7 h |
+  | Média por pessoa | campanha completa, com humor | 10,3 h (seeds 9,8 a 10,8) | 7,1 h |
+  | **Mediana** por pessoa (tabela acima) | campanha completa, com humor | **8,9 h** (seeds 8,6 a 9,3) | 6,7 h |
+
+  - A média fica acima da mediana porque a cauda de cima ficou mais longa (p90 18,6 h, p99 29,5 h), e a média sente mais essa cauda.
+  - **A meta de 3 a 9 h compara a média da rodada neutra.**
 - **Ocupação ainda pesa:** casual em horário comercial vai de 3,1 a 15,7 h; casual sem ocupação, de 8,7 a 29,0 h.
 
 **Preferências:**
@@ -124,9 +161,8 @@ O Devoto mantém as ocupações próprias (D-052).
   - **Causa provável:** as preferências têm a dispersão inteira de um gosto. Antes, gostos compostos, como o da coleta, eram médias de três atributos e variavam menos.
 - **Evolução mais lenta:** nível 20 em 77 h (A: 70 h); nível 30 em 195 h (A: 173 h).
   - **Causa provável:** o hardcore não nasce mais com conhecimento e mecânica altos, e há menos combate.
-- **Regras do cenário: 7 de 9** (A: 9 de 9).
-  - Horas do casual: 9,8 h, acima da faixa de 3 a 9 h.
-  - Fim de semana ÷ dia útil: instável em 1,3.
-  - As metas não foram mudadas.
+- **Regras do cenário: 7 de 9** (A: 9 de 9). As duas divergências, com as medidas por seed, estão em `validacao.md` (seção "D-054"). As metas não foram mudadas; os valores atuais ficam como referência de acompanhamento.
+  - Horas do casual: média de 9,8 h na rodada neutra, acima da faixa de 3 a 9 h.
+  - Fim de semana ÷ dia útil: instável em 1,3, com uma seed em 1,299.
 - **Já estavam fora em A e continuam:** tempo em missões, casuais no nível 10, horas até o nível 20, inativos e desistentes.
 - **Competitividade:** sem correlação com nível nem horas. A agressividade correlaciona 0,11 com os minutos de PvP (emboscada e ligação com a preferência PvP).

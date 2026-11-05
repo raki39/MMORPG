@@ -1804,7 +1804,7 @@ O criador pediu que a dedicação de cada perfil viesse de uma faixa com tendên
 - **Erro corrigido no caminho:** o carregador de JSON não conhecia o campo `dedication`; há um teste novo que carrega o formato pelo arquivo.
 
 ## D-054 — Perfil (dedicação), Preferências e atributos separados
-**Data:** 05/11/2026 · **Estado:** em avaliação (ramo `perfil-preferencias`; a `main` segue com a estrutura anterior)
+**Data:** 05/11/2026 · **Estado:** aceita (estrutura e parâmetros candidatos adotados no preset)
 
 O criador pediu que o perfil representasse só dedicação e que os gostos fossem um campo próprio, ao lado do perfil. Detalhes em `perfil-preferencias.md`.
 
@@ -1822,4 +1822,15 @@ O criador pediu que o perfil representasse só dedicação e que os gostos fosse
 - **Efeitos colaterais:** a mistura de atividades mudou (combate de 42% para 31%, coleta de 5% para 11%) e a evolução ficou mais lenta.
 - **Regras do cenário:** 7 de 9; horas do casual acima da faixa e fim de semana instável.
 
-**Pendente:** avaliação do criador antes de adotar o preset; nenhuma meta foi revista.
+**Decisão do criador (adoção):**
+- **Estrutura e candidatos:** adotados, com os candidatos atuais de Casual, Regular, Hardcore e Devoto, que seguem como ponto de partida medido.
+- **Mistura de atividades:** a medida fica preservada. As preferências não foram ajustadas só para recuperar os percentuais antigos de combate: a distribuição anterior não é o padrão ideal, e faltam sistemas que vão mudar essas escolhas.
+- **Reforço da Especialidade:** de acordo com o combinado (pequeno, limitado e separado da Preferência), sem experimento próprio por enquanto.
+- **Metas:** nenhuma foi mudada para os resultados passarem. As duas divergências da rotina e as medidas por seed ficam registradas em `validacao.md` (seção "D-054") como referência de acompanhamento.
+
+**Correções de registro pedidas pelo criador:**
+- **Moda × média:** os candidatos das preferências reproduzem a **média** do gosto anterior, não a moda; as tabelas mostram moda, média e mediana.
+- **Horas do casual:** a meta usa a média por pessoa na rodada neutra (9,8 h); a tabela da campanha mostra a mediana (8,9 h).
+- **Pareamento com A:** não é perfeito; 96,6% mantiveram a ocupação.
+- **Competitividade:** deve acompanhar os interesses da pessoa. Os efeitos atuais (só na progressão) são parciais, e os demais entram com os sistemas correspondentes.
+- **Especialidades:** os benefícios de execução ainda não existem; hoje há só o pequeno reforço nas escolhas.

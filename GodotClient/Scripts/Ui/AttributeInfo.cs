@@ -15,15 +15,15 @@ public static class AttributeInfo
     public static readonly IReadOnlyDictionary<string, Entry> ByKey = new Dictionary<string, Entry>(StringComparer.Ordinal)
     {
         // Especialidade: afinidade desenvolvida e familiaridade. O gosto e da Preferencia.
-        ["pve"] = new("PvE", "Familiaridade com caça e chefes. Dá um reforço mínimo no gosto por essas atividades (5% do valor, no máximo +50 na escala de 0 a 1000 da afinidade); o gosto principal vem da preferência PvE. Benefícios de execução só com o combate.",
+        ["pve"] = new("PvE", "Familiaridade com caça e chefes. Dá um reforço mínimo no gosto por essas atividades (5% do valor, no máximo +50 na escala de 0 a 1000 da afinidade); o gosto principal vem da preferência PvE. Benefícios de execução ainda não existem (virão com o combate).",
             "Sobe com experiências boas de caça e chefes e ao concluir metas motivadas pela preferência PvE.", false),
-        ["pvp"] = new("PvP", "Familiaridade com patrulha e emboscada. Reforço mínimo no gosto por elas; o gosto principal vem da preferência PvP. Benefícios de execução só com o PvP (Etapa 3).",
+        ["pvp"] = new("PvP", "Familiaridade com patrulha e emboscada. Reforço mínimo no gosto por elas; o gosto principal vem da preferência PvP. Benefícios de execução ainda não existem (virão com o PvP, Etapa 3).",
             "Sobe com experiências boas de PvP e ao abater jogadores (Etapa 3).", false),
-        ["trade"] = new("Comércio", "Familiaridade com comprar e vender. Reforço mínimo no gosto pelo comércio; o gosto principal vem da preferência Comércio. A coleta é outra coisa e não usa este atributo.",
+        ["trade"] = new("Comércio", "Familiaridade com comprar e vender. Reforço mínimo no gosto pelo comércio; o gosto principal vem da preferência Comércio. A coleta é outra coisa e não usa este atributo. Benefícios de execução ainda não existem (virão com a economia, M5).",
             "Sobe com experiências boas de comércio.", false),
-        ["exploration"] = new("Exploração", "Familiaridade com explorar. Reforço mínimo no gosto por explorar; o gosto principal vem da preferência Exploração.",
+        ["exploration"] = new("Exploração", "Familiaridade com explorar. Reforço mínimo no gosto por explorar; o gosto principal vem da preferência Exploração. Benefícios de execução ainda não existem.",
             "Sobe com experiências boas de exploração e a cada 4 zonas descobertas.", false),
-        ["socializing"] = new("Socializar", "Familiaridade com a vida social do jogo. Reforço mínimo no gosto pela taverna; o gosto principal vem da preferência Social.",
+        ["socializing"] = new("Socializar", "Familiaridade com a vida social do jogo. Reforço mínimo no gosto pela taverna; o gosto principal vem da preferência Social. Benefícios de execução ainda não existem (virão com os grupos, M6).",
             "Sobe com experiências boas na taverna.", false),
         // Personalidade.
         ["sociability"] = new("Sociabilidade", "Como a pessoa se relaciona: valoriza companhia na taverna, aceita mais compromissos sociais fora do jogo e pesa na classe de suporte. Puxa um pouco a preferência Social, sem decidir por ela.",
@@ -48,7 +48,7 @@ public static class AttributeInfo
         // Conduta.
         ["cheatPropensity"] = new("Trapaça", "Sem efeito até os incidentes (M9).", "Estável.", false),
         ["opportunism"] = new("Oportunismo", "Foge mais de lugares disputados; pesa na emboscada. Incidentes no M9.", "Estável por enquanto.", false),
-        ["competitiveness"] = new("Competitividade", "Motivação para disputar, superar outros e ser reconhecido pelo desempenho: gosto por desafio acima do nível, metas de nível (e aceitar zonas mais altas), expectativa de progresso e quanto liga para evoluir. Não decide agressividade, PK, habilidade nem horas jogadas. Rankings e duelos no futuro.",
+        ["competitiveness"] = new("Competitividade", "Motivação para disputar, superar outros e ser reconhecido pelo desempenho. Deve acompanhar os interesses da pessoa: um comerciante competitivo quer ser o melhor no comércio, não necessariamente chegar a nível alto. Hoje os efeitos são parciais e só na progressão: gosto por desafio acima do nível, metas de nível (e zonas mais altas aceitas), expectativa de progresso e quanto liga para evoluir. Rankings, mercado, fabricação e PvP entram com os sistemas. Não decide agressividade, PK, habilidade nem horas jogadas.",
             "Estável por enquanto.", false),
     };
 

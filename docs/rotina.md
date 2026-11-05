@@ -50,21 +50,19 @@ A regra que amarra tudo (D-045) é a coerência: turno, sono, hora preferida, du
 
 ## 3. Criação da pessoa (uma vez)
 
-1. **Traços do perfil** (média ± faixa):
+1. **Dedicação, pelo perfil** (D-053 e D-054). Triangular mínimo · moda · máximo, com a mediana entre parênteses:
 
-   | Perfil | Peso (parcela) | Importância do jogo | Hábito | Sessão normal | Gosto de horário | Tendência a prolongar | Autocontrole |
-   |---|---:|---:|---:|---:|---:|---:|---:|
-   | Casual | 35 (34,3%) | 350 ±150 | 400 ±200 | 80 ±45 min | 20h ±3 | 300 ±300 | 600 ±300 |
-   | Social | 20 (19,6%) | 500 | 550 | 110 ±60 | 20h ±3 | 500 | 550 |
-   | Explorador | 10 (9,8%) | 550 | 500 | 120 ±60 | 15h ±6 | 500 | 550 |
-   | Comerciante | 10 (9,8%) | 600 | 650 | 90 ±50 | 19h ±4 | 400 | 650 |
-   | Competitivo | 15 (14,7%) | 650 | 600 | 150 ±80 | 21h ±2 | 650 | 450 |
-   | Hardcore | 10 (9,8%) | 820 ±100 | 750 | 240 ±100 | 19h ±4 | 800 | 400 |
-   | Devoto (R5) | 2 (2,0%) | 930 ±70 | 900 ±100 | 360 ±120 | 16h ±5 | 650 ±350 | 500 ±350 |
+   | Perfil | Peso (parcela) | Importância do jogo | Hábito | Sessão normal (min) |
+   |---|---:|---:|---:|---:|
+   | Casual | 35 (35%) | 120 · 280 · 750 (365) | 100 · 320 · 800 (390) | 30 · 65 · 220 (99) |
+   | Regular | 53 (53%) | 220 · 540 · 900 (550) | 180 · 540 · 900 (540) | 45 · 115 · 300 (146) |
+   | Hardcore | 10 (10%) | 550 · 900 · 1000 (831) | 450 · 850 · 1000 (782) | 100 · 260 · 420 (260) |
+   | Devoto | 2 (2%) | 800 · 970 · 1000 (930) | 650 · 950 · 1000 (879) | 180 · 360 · 600 (376) |
 
-   A parcela é o peso dividido pela soma dos pesos (102). O **Devoto** é o jogador extremamente dedicado. Os outros traços seguem o hardcore, com lealdade 750 ±200. Não tem regra própria na simulação (há um teste para isso): joga mais porque a prioridade alta e a sessão normal longa entram nas mesmas decisões de todos, com os mesmos limites de obrigações, sono e cansaço.
-
-   Importância, tendência a prolongar e autocontrole são sorteados de forma independente dentro do perfil (o teste mede correlação ≈ 0).
+   - **Dedicação compartilhada:** os três atributos compartilham a posição de dedicação com influência 0,45 (correlação ≈ 0,38 entre eles).
+   - **O perfil só define dedicação.** Gostos ficam nas Preferências e os demais atributos vêm da população (`perfil-preferencias.md`).
+   - **Devoto:** o jogador extremamente dedicado. Não tem regra própria na simulação (há um teste para isso). Joga mais porque a prioridade alta e a sessão normal longa entram nas mesmas decisões de todos, com os mesmos limites de obrigações, sono e cansaço.
+   - **Da população toda, independentes do perfil:** gosto de horário 19h ±6, tendência a prolongar 480 ±580 e autocontrole 550 ±370 (média ± dispersão, cortados nos limites). Os efeitos na rotina não mudaram.
 2. **Localidade:** residência e fuso. Brasil UTC−3 (peso 760), EUA UTC−5 (80), China UTC+8 (70), Argentina UTC−3 (90). Os feriados são os de onde a pessoa mora.
 3. **Ocupação:** pelo peso, com a variação de horário e de deslocamento e a folga da escala.
    - Um perfil pode ter ocupações próprias (`occupationWeights`, regra do preset). No preset inicial, só o Devoto tem: sem ocupação 40, universitário 25, estudante de manhã 20, estudante de tarde 15.
@@ -76,7 +74,7 @@ A regra que amarra tudo (D-045) é a coerência: turno, sono, hora preferida, du
 5. **Renda e apoio:** faixa da ocupação × fator da localidade (Brasil 1,0, Argentina 0,85, China 1,3, EUA 4,2). Sem efeito até o M7.
 6. **Tolerância ao déficit de sono:** 500 ±200.
 7. **Gosto de horário × horário habitual** (D-045; separados na R4):
-   - **Gosto:** a hora sorteada pelo perfil (`preferredStartHour`) fica guardada como está. É o que a pessoa preferiria.
+   - **Gosto:** a hora sorteada da população (`traits.preferredStartHour`) fica guardada como está. É o que a pessoa preferiria.
    - **Horário habitual** (`HabitualStartHour`, calculado, `ViableStartHour`): o que a rotina permite e a pressa de começar escolhe. É ele que o planejador usa. Uma pessoa pode gostar das 20h e normalmente só conseguir às 21h.
    - **Dias do hábito:** os dias com obrigação. A sessão considerada fica limitada à maior janela livre deles. Sem tempo nesses dias, valem os dias livres.
    - **Alvo do dia:** em cada dia do hábito, na janela mais perto do gosto:
@@ -334,7 +332,19 @@ Cada regra da rotina é de uma de três classes. Os testes da rotina levam a mes
 | Fim de semana ÷ dia útil | 1,3–2,0× | 1,3× | 1,3–1,4× |
 | Pico online do dia | 15–35% | 23,9% | 22,7–24,4 |
 
-**Campanha completa** (com humor):
+**Com a estrutura do D-054** (perfis de dedicação; mesmas seeds):
+
+| Perfil | Rotina pura: dias/semana · sessões por dia · horas | Campanha: dias/semana · sessões por dia · horas (média) |
+|---|---|---|
+| Casual | 3,1 · 1,51 · 9,8 | 3,2 · 1,52 · 10,3 |
+| Regular | 4,1 · 1,55 · 17,5 | 4,2 · 1,56 · 18,1 |
+| Hardcore | 6,1 · 1,50 · 36,7 | 6,0 · 1,50 · 36,6 |
+| Devoto | 7,0 · 1,51 · 57,6 | 6,9 · 1,50 · 56,7 |
+
+- **Regras do cenário:** 7 de 9; horas do casual acima da faixa e fim de semana instável. Medidas por seed em `validacao.md`, seção "D-054".
+- **Mediana de horas por pessoa** (campanha): casual 8,9, regular 16,5, hardcore 35,9, devoto 54,8.
+
+**Referência anterior (R5, sete perfis), campanha completa** (com humor):
 
 | Perfil | Dias de jogo/semana | Sessões por dia de jogo | Horas/semana |
 |---|---:|---:|---:|

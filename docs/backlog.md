@@ -61,7 +61,8 @@ Uma etapa por vez, fechada por inteiro (testes, validação, documentação, exp
    - revisão da rotina antes da P4 (aprovada pelo criador): ~~R1 contabilidade do dia~~ (D-047), ~~R2 limites, probabilidade e estimativa~~ (D-048), ~~R3 distribuições e referência pré-R4~~ (D-049), ~~R4 modelo de vontade~~ (D-050, corrigido na v3: D-051), ~~R5 metas separadas, regras classificadas e saciedade por meia-vida~~ (D-052);
    - ~~perfil Devoto, acima do hardcore~~ (D-052; revisão da rotina encerrada, com parâmetros ajustáveis por novas evidências e avaliação jogável);
    - ~~sorteio de dedicação: formato triangular e dedicação compartilhada~~ (D-053);
-   - separação entre Perfil (dedicação: Casual, Regular, Hardcore, Devoto), Preferências (PvE, PvP, Crafting, Comércio, Coleta, Exploração, Social) e atributos (especialidade e Competitividade em Conduta): implementada e medida no ramo `perfil-preferencias` (D-054), aguardando a avaliação do criador antes de adotar o preset;
+   - ~~separação entre Perfil (dedicação), Preferências e atributos (especialidade e Competitividade em Conduta)~~ (D-054, adotada; divergências da rotina acompanhadas em `validacao.md`);
+     - depois: Competitividade seguindo o tema das preferências (rankings, mercado, fabricação, PvP) e benefícios de execução da especialidade, com os sistemas correspondentes;
    - P4: traits;
    - a reputação do personagem entra com a Etapa 3 e as finanças com o M7.
 2. **Etapa 1 — O personagem** (decisões no D-040):

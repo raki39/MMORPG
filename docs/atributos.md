@@ -5,11 +5,11 @@ Os atributos são da **pessoa** (o jogador), não do personagem. O personagem te
 Cada atributo representa **uma coisa só**:
 
 - **O gosto não é atributo:** fica nas **Preferências** (PvE, PvP, Crafting, Comércio, Coleta, Exploração, Social), um campo da pessoa ao lado do Perfil. Elas dão o peso principal de gosto nas escolhas, sem obrigar (`perfil-preferencias.md`).
-- **Especialidade** (PvE, PvP, Comércio, Exploração, Socializar) é a afinidade desenvolvida e a familiaridade. Dá só um reforço mínimo e limitado no gosto (5%, com teto) e cresce com a prática. Benefícios de execução virão com o combate, a economia e os grupos.
+- **Especialidade** (PvE, PvP, Comércio, Exploração, Socializar) é a afinidade desenvolvida e a familiaridade. Dá só um reforço mínimo e limitado no gosto (5%, com teto) e cresce com a prática. **Benefícios de execução ainda não existem**; serão propostos com o combate, a economia e os grupos.
 - **Capacidades** (Mecânica, Conhecimento, Coordenação) decidem a **execução**. Evoluem com prática, talento e potencial.
 - **Personalidade** (Sociabilidade, Agressividade, Paciência, Lealdade, Aversão a risco, Variedade) e **conduta** (Competitividade, Trapaça, Oportunismo) mudam pouco ou nada.
   - A **Agressividade** é confronto (emboscada, tanque, PvP).
-  - A **Competitividade** é disputar, superar e ser reconhecido (desafio acima do nível, metas de nível, expectativa de progresso).
+  - A **Competitividade** é disputar, superar e ser reconhecido. Deve acompanhar os interesses da pessoa: um comerciante competitivo não precisa buscar nível alto. Hoje os efeitos são parciais e só na progressão (desafio acima do nível, metas de nível, expectativa de progresso); os demais entram com os sistemas correspondentes.
 
 Todos os números ficam em `population.json`, nas seções `dynamics` (evolução) e `goals` (metas). O jogador, como desenvolvedor do MMORPG, poderá editá-los, e o validador confere as faixas.
 
@@ -40,7 +40,7 @@ O talento vale só para as capacidades:
 - **Potencial absoluto (escolha consciente):** `max(início + 50, 250 + talento × 0,7)`.
   - O potencial **não depende** de onde a pessoa começa: quem começa baixo, mas tem talento, pode chegar alto.
   - O início só garante uma folga mínima de 50 unidades.
-  - Consequência: hardcore e competitivos começam mais perto do próprio potencial (já praticaram o gênero) e evoluem pouco; casuais talentosos têm mais espaço para crescer.
+  - Consequência: quem começa com capacidades altas fica mais perto do próprio potencial e evolui pouco; quem começa baixo, com talento, tem mais espaço para crescer. Desde o D-054, as capacidades iniciais e o talento vêm da população toda, sem depender do perfil: a diferença entre dedicações aparece pela prática (quem joga mais aprende mais).
   - Talento 0 → 250 (≈ 6/20); 500 → 600 (≈ 12/20); 800 → 810 (≈ 16/20); 1000 → 950 (≈ 19/20).
 - **Velocidade:** o custo da prática vai de 1,4× (talento 0) a 0,6× (talento 1000).
 - **Desaceleração:** perto do potencial a prática fica até 3× mais cara.
@@ -100,7 +100,16 @@ Medido no D-036a (90 dias × 1.000 pessoas × 5 seeds), em pontos da escala 1–
 | Hardcore | 25,0 | +0,87 | +0,97 | +0,57 | +0,05 | 0,00 | −0,08 | 21,3 | 5,0 |
 | Social | 9,0 | +0,05 | +1,14 | +0,07 | +0,05 | 0,00 | 0,00 | 14,8 | 3,1 |
 
-Como ler a tabela (seed 1):
+Esta tabela é da estrutura anterior (sete perfis). Com a estrutura do D-054 (5 seeds × 1.000 × 90 dias), em pontos da escala:
+
+| Perfil | Mecânica | Conhecimento | PvE (especialidade) | Exploração | Comércio | Aversão a risco | Metas concluídas | Metas abandonadas |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Casual | +0,17 | +1,10 | +0,18 | +0,11 | +0,01 | −0,02 | 14,9 | 5,4 |
+| Regular | +0,37 | +1,36 | +0,26 | +0,14 | +0,02 | −0,04 | 20,6 | 8,7 |
+| Hardcore | +0,66 | +1,69 | +0,38 | +0,16 | +0,03 | −0,08 | 30,1 | 11,9 |
+| Devoto | +0,82 | +2,20 | +0,41 | +0,17 | +0,04 | −0,12 | 38,4 | 9,9 |
+
+Como ler a tabela anterior (seed 1):
 
 - **Mecânica:**
   - comerciante, explorador e social passam só 8 a 9 h em combate em 90 dias, então ganham 2 a 3 unidades;
