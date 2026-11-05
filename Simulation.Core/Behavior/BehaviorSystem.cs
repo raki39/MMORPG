@@ -97,6 +97,54 @@ public sealed class BehaviorSystem
     private DayKind LocalKind(Person p, long localDay) =>
         _w.CalendarOf(p).KindOf(Cal.StartDate.AddDays(localDay));
 
+    // ---- Rotina de vida (P2) ----
+    private OccupationDefinition? OccOf(Person p) => _w.Content.Occupations.TryGetValue(p.OccupationId, out var o) ? o : null;
+    private static int Dow(DateTime d) => ((int)d.DayOfWeek + 6) % 7;
+
+    /// <summary>Dia local montado: obrigacoes, sono e janelas livres (feriados da residencia).</summary>
+    public DailySchedule.DayLayout LayoutOf(Person p, long localDay)
+    {
+        var cal = _w.CalendarOf(p);
+        var date = Cal.StartDate.AddDays(localDay);
+        return DailySchedule.Build(p, OccOf(p), _w.Content.Routine, Dow(date),
+            cal.HolidayOn(date) != null, cal.HolidayOn(date.AddDays(-1)) != null, cal.HolidayOn(date.AddDays(1)) != null);
+    }
+
+    private int PreferredMinute(Person p, DeterministicRng rng) =>
+        p.Traits.PreferredStartHour * 60 + rng.NextIntInclusive(-_w.Content.Behavior.SessionStartJitterMinutes, _w.Content.Behavior.SessionStartJitterMinutes);
+
+    private int DurationJitter(DeterministicRng rng) =>
+        rng.NextIntInclusive(1000 - _w.Content.Behavior.SessionDurationJitterPermille, 1000 + _w.Content.Behavior.SessionDurationJitterPermille);
+
+    /// <summary>
+    /// Primeira sessao a partir de um dia local (registro e retorno): na janela livre que melhor
+    /// serve, depois de "notBefore"; se o dia nao tem janela (ex.: trabalha e estuda), o proximo que tiver.
+    /// </summary>
+    private (long At, int Minutes) FirstSessionOf(Person p, long localDay, DeterministicRng rng, long notBefore)
+    {
+        var rs = _w.Content.Routine;
+        int preferred = PreferredMinute(p, rng);
+        int jitter = DurationJitter(rng);
+        for (long d = localDay; d < localDay + 8; d++)
+        {
+            var day = LayoutOf(p, d);
+            long dayStart = LocalDayStart(p, d);
+            int desired = DailySchedule.DesiredMinutes(p, day, rs, jitter);
+            if (DailySchedule.PlaceMain(day, preferred, desired, rs, out _, out int start, out int minutes)
+                && dayStart + start * SimTime.TicksPerMinute > notBefore)
+                return (dayStart + start * SimTime.TicksPerMinute, minutes);
+            // Hoje a janela preferida ja passou: a proxima janela ainda aberta do mesmo dia.
+            foreach (var (s, e) in day.Windows)
+            {
+                long ws = Math.Max(dayStart + s * SimTime.TicksPerMinute, notBefore + 1);
+                long we = dayStart + e * SimTime.TicksPerMinute;
+                if (we - ws >= rs.MinSessionMinutes * SimTime.TicksPerMinute)
+                    return (ws, (int)Math.Min(desired, (we - ws) / SimTime.TicksPerMinute));
+            }
+        }
+        return (notBefore + 1 + SimTime.TicksPerHour, p.Traits.SessionMinutes);
+    }
+
     private DeterministicRng Rng(string stream, long entity) =>
         new(RngStreams.DeriveSeed(_w.Seed, stream, entity));
 
@@ -111,9 +159,7 @@ public sealed class BehaviorSystem
             var rng = Rng("behavior.register", p.Id);
             int day = rng.PickWeighted(_w.Content.Behavior.RegistrationDayWeights);
             long localDay = LocalDay(p, Now) + day;
-            long dayStart = LocalDayStart(p, localDay);
-            long at = dayStart + SessionStartMinute(p, rng, LocalKind(p, localDay)) * SimTime.TicksPerMinute;
-            if (at <= Now) at = Now + 1 + rng.NextInt((int)SimTime.TicksPerHour);
+            long at = FirstSessionOf(p, localDay, rng, Now).At;   // no tempo livre da pessoa (P2)
             _w.Scheduler.Schedule(at, EvRegister, p.Id);
         }
     }
@@ -161,7 +207,13 @@ public sealed class BehaviorSystem
             new[] { new EventCause("launch_interest", 1000) }, $"{nick} · {classId}");
 
         // Primeira sessao comeca no ato do registro.
-        StartSession(p, SessionMinutes(p, rng, LocalKind(p, LocalDay(p, Now))));
+        // Primeira sessao no ato do registro, limitada a janela livre em que ele cai (P2).
+        var today = LayoutOf(p, LocalDay(p, Now));
+        int nowMin = (int)((Now - LocalDayStart(p, LocalDay(p, Now))) / SimTime.TicksPerMinute);
+        int firstMinutes = DailySchedule.DesiredMinutes(p, today, _w.Content.Routine, DurationJitter(rng));
+        foreach (var (s, e) in today.Windows)
+            if (s <= nowMin && nowMin < e) firstMinutes = Math.Max(_w.Content.Routine.MinSessionMinutes, Math.Min(firstMinutes, e - nowMin));
+        StartSession(p, firstMinutes);
     }
 
     private string ChooseClass(PersonTraits t, DeterministicRng rng)
@@ -201,7 +253,6 @@ public sealed class BehaviorSystem
             if (p.State is LifecycleState.PotentialInterested or LifecycleState.Banned || p.CharacterId == 0) continue;
             if (p.ResidenceId.Length > 0 ? p.ResidenceId != locality.Id : (int)ev.TargetId != 0) continue;
             long dayStart = LocalDayStart(p, localDay);
-            var kind = LocalKind(p, localDay);
             var ch = _w.GetCharacter(p.CharacterId);
             var rng = Rng("behavior.session", p.Id * 100_000L + day);
             if (p.State == LifecycleState.Quit)
@@ -209,7 +260,9 @@ public sealed class BehaviorSystem
                 // Desistente (D-039): so a saudade dos bons momentos traz de volta (atualizacoes e convites no M6/M7).
                 _exp.OnDaily(p, ch);
                 if (!TryReturnFromQuit(p, ch, day, rng)) continue;
-                _w.Scheduler.Schedule(dayStart + SessionStartMinute(p, rng, kind) * SimTime.TicksPerMinute, EvSessionStart, p.Id, SessionMinutes(p, rng, kind));
+                var (backAt, backMinutes) = FirstSessionOf(p, localDay, rng, Now);
+                _w.Scheduler.Schedule(backAt, EvSessionStart, p.Id, backMinutes);
+                RecordPlan(p, new DayPlanRecord(localDay, 0, 0, 1, "came_back", (int)((backAt - dayStart) / SimTime.TicksPerMinute), backMinutes, false));
                 continue;
             }
             else
@@ -218,19 +271,72 @@ public sealed class BehaviorSystem
                 _exp.OnDaily(p, ch);       // humor e memoria (D-038)
                 if (!_w.NeutralMood && !p.IsOnline && ReviewRetention(p, ch, day, rng)) continue;   // inativo ou desistiu (D-039)
             }
-            int chance = p.Traits.DaysPerWeek * 1000 / 7;
-            chance = kind == DayKind.Weekday
-                ? chance * (1000 - p.Traits.WeekendBoost * 2 / 7) / 1000
-                : chance * (1000 + p.Traits.WeekendBoost) / 1000;
-            // O humor muda a rotina (D-039): engajado joga mais; inativo raramente aparece.
-            if (!_w.NeutralMood) chance = chance * PlayFactor(p.Mood.Engagement, rt) / 1000;
-            if (p.State == LifecycleState.Inactive) chance = chance * rt.InactiveReturnPermille / 1000 * p.Mood.ReturnIntention / 1000;
-            if (!rng.ChancePermille(chance)) continue;
-            int minute = SessionStartMinute(p, rng, kind);
-            int duration = SessionMinutes(p, rng, kind);
-            _w.Scheduler.Schedule(dayStart + minute * SimTime.TicksPerMinute, EvSessionStart, p.Id, duration);
+            PlanDay(p, localDay, dayStart, rng);
         }
         _w.Scheduler.Schedule(Now + SimTime.TicksPerDay, EvDailySessions, ev.TargetId, localDay + 1);
+    }
+
+    /// <summary>
+    /// Agenda do dia (P2): janelas livres pelas obrigacoes e pelo sono; a vontade de jogar
+    /// (importancia do jogo, tempo livre, habito e humor) decide se joga; a sessao vai para a
+    /// janela que serve ao horario preferido. Pode haver uma segunda sessao em outra janela.
+    /// O motivo do dia fica na agenda (estado), sem gerar evento.
+    /// </summary>
+    private void PlanDay(Person p, long localDay, long dayStart, DeterministicRng rng)
+    {
+        var rs = _w.Content.Routine;
+        var rt = _w.Content.Retention;
+        var day = LayoutOf(p, localDay);
+        p.OpenWindows.RemoveAll(x => x.End < Now);
+        foreach (var (s, e) in day.Windows)
+            p.OpenWindows.Add((dayStart + s * SimTime.TicksPerMinute, dayStart + e * SimTime.TicksPerMinute));
+
+        int chance = DailySchedule.BaseChance(p, day, rs);
+        int streak = p.Traits.Habit * rs.HabitStreakPermille / 1000;
+        chance = Math.Clamp(chance + (p.LastPlayedLocalDay == localDay - 1 ? streak : -streak), 0, 1000);
+        if (!_w.NeutralMood) chance = chance * PlayFactor(p.Mood.Engagement, rt) / 1000;   // o humor muda a rotina (D-039)
+        if (p.State == LifecycleState.Inactive) chance = chance * rt.InactiveReturnPermille / 1000 * p.Mood.ReturnIntention / 1000;
+
+        int preferred = PreferredMinute(p, rng);
+        int desired = DailySchedule.DesiredMinutes(p, day, rs, DurationJitter(rng));
+        bool fits = DailySchedule.PlaceMain(day, preferred, desired, rs, out int window, out int start, out int minutes);
+        bool wants = rng.ChancePermille(chance);
+        if (!fits) { RecordPlan(p, new DayPlanRecord(localDay, day.FreeMinutes, day.Windows.Count, 0, "no_free_time", -1, 0, day.FreeDay)); return; }
+        if (!wants)
+        {
+            string reason = p.State == LifecycleState.Inactive ? "inactive"
+                : !_w.NeutralMood && p.Mood.Engagement < rt.EngagementNeutral - rs.LowEngagementGap ? "low_engagement" : "other_leisure";
+            RecordPlan(p, new DayPlanRecord(localDay, day.FreeMinutes, day.Windows.Count, 0, reason, -1, 0, day.FreeDay));
+            return;
+        }
+        _w.Scheduler.Schedule(dayStart + start * SimTime.TicksPerMinute, EvSessionStart, p.Id, minutes);
+        int sessions = 1, planned = minutes;
+        int imp = p.Traits.GameImportance;
+        if (rs.MaxSessionsPerDay > 1 && imp > rs.SecondSessionFromImportance)
+        {
+            int c2 = (imp - rs.SecondSessionFromImportance) * rs.SecondSessionPermilleAtMax / Math.Max(1, 1000 - rs.SecondSessionFromImportance);
+            int other = -1;
+            for (int i = 0; i < day.Windows.Count; i++)
+            {
+                if (i == window || day.Windows[i].End - day.Windows[i].Start < rs.MinSessionMinutes) continue;
+                if (other < 0 || day.Windows[i].End - day.Windows[i].Start > day.Windows[other].End - day.Windows[other].Start) other = i;
+            }
+            if (other >= 0 && rng.ChancePermille(c2))
+            {
+                var (s2, e2) = day.Windows[other];
+                int m2 = Math.Min(e2 - s2, Math.Max(rs.MinSessionMinutes, p.Traits.SessionMinutes * rs.SecondSessionDurationPermille / 1000));
+                _w.Scheduler.Schedule(dayStart + s2 * SimTime.TicksPerMinute, EvSessionStart, p.Id, m2);
+                sessions = 2;
+                planned += m2;
+            }
+        }
+        RecordPlan(p, new DayPlanRecord(localDay, day.FreeMinutes, day.Windows.Count, sessions, "played", start, planned, day.FreeDay));
+    }
+
+    private void RecordPlan(Person p, DayPlanRecord plan)
+    {
+        p.PlanList.Add(plan);
+        while (p.PlanList.Count > _w.Content.Routine.PlanHistoryDays) p.PlanList.RemoveAt(0);
     }
 
     /// <summary>Fator da chance de jogar pelo engajamento (permille), com piso e teto.</summary>
@@ -304,22 +410,6 @@ public sealed class BehaviorSystem
         return true;
     }
 
-    private int SessionStartMinute(Person p, DeterministicRng rng, DayKind kind)
-    {
-        int minute = p.Traits.PreferredStartHour * 60;
-        if (kind != DayKind.Weekday) minute -= p.Traits.WeekendBoost * 240 / 1000; // fim de semana: mais cedo
-        minute += rng.NextIntInclusive(-_w.Content.Behavior.SessionStartJitterMinutes, _w.Content.Behavior.SessionStartJitterMinutes);
-        return Math.Clamp(minute, 0, 24 * 60 - 1);
-    }
-
-    private int SessionMinutes(Person p, DeterministicRng rng, DayKind kind)
-    {
-        int j = _w.Content.Behavior.SessionDurationJitterPermille;
-        int minutes = p.Traits.SessionMinutes * rng.NextIntInclusive(1000 - j, 1000 + j) / 1000;
-        if (kind != DayKind.Weekday) minutes = minutes * (1000 + p.Traits.WeekendBoost / 2) / 1000;
-        return Math.Max(10, minutes);
-    }
-
     private void OnSessionStart(ScheduledEvent ev)
     {
         var p = _w.GetPerson((int)ev.TargetId);
@@ -353,6 +443,7 @@ public sealed class BehaviorSystem
                 $"{Cal.DayIndex(Now) - p.LastPlayedDay} dias");
         }
         p.State = LifecycleState.Online;
+        p.LastPlayedLocalDay = LocalDay(p, Now);
         _w.OnlineCount++;
         _w.Today.SessionsStarted++;
         _w.Today.PeakOnline = Math.Max(_w.Today.PeakOnline, _w.OnlineCount);
@@ -385,11 +476,12 @@ public sealed class BehaviorSystem
 
         // Sessao flexivel (D-039; plano 4.3): indo bem e engajado, fica mais um pouco (uma vez, com teto).
         var rt = _w.Content.Retention;
+        int room = RoomToExtend(p, ch);
         if (!_w.NeutralMood && !ch.SessionExtended && p.Mood.Engagement >= rt.EngagementNeutral && SessionScoreSoFar(ch) >= rt.ExtendScoreAbove
-            && Rng("behavior.session_flex", ch.Id * 1_000_000L + ch.DecisionCount).ChancePermille(rt.ExtendChance))
+            && room >= 10 && Rng("behavior.session_flex", ch.Id * 1_000_000L + ch.DecisionCount).ChancePermille(rt.ExtendChance))
         {
             int planned = (int)((ch.SessionEndTick - ch.SessionStartTick) / SimTime.TicksPerMinute);
-            int extra = Math.Max(10, planned * rt.ExtendPermille / 1000);
+            int extra = Math.Min(Math.Max(10, planned * rt.ExtendPermille / 1000), room);
             ch.SessionExtended = true;
             ch.SessionEndTick += extra * SimTime.TicksPerMinute;
             _w.Scheduler.Schedule(ch.SessionEndTick, EvSessionEnd, p.Id);
@@ -436,6 +528,16 @@ public sealed class BehaviorSystem
         _w.OnlineCount--;
         _w.Emit("session_ended", EventImportance.Low, new[] { new EntityRef("person", p.Id) },
             new[] { new EventCause(reason, 1000) });
+    }
+
+    /// <summary>Minutos de janela livre depois do fim previsto da sessao (P2): a extensao nao invade obrigacoes nem o sono.</summary>
+    private int RoomToExtend(Person p, Character ch)
+    {
+        long end = ch.SessionEndTick;
+        long limit = -1;
+        foreach (var (s, e) in p.OpenWindows)
+            if (s <= end && end <= e) limit = Math.Max(limit, e);
+        return limit < 0 ? 0 : (int)((limit - end) / SimTime.TicksPerMinute);
     }
 
     /// <summary>Nota parcial da sessao: experiencias e acontecimentos ate agora (sem progresso e novidade).</summary>

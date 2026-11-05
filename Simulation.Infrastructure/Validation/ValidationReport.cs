@@ -165,6 +165,26 @@ public static class ValidationReport
             sb.Append($"| {days} | {(-mech).ToString("0.00;-0.00;0.00", PtBr)} | {(-know).ToString("0.00;-0.00;0.00", PtBr)} |\n");
         }
 
+        // ---- Rotina por ocupacao (P2) ----
+        if (runs[0].Occupations.Count > 0)
+        {
+            sb.Append("\n## Rotina por ocupação (média das seeds, campanha completa)\n\nObrigações e sono definem o tempo livre; a vontade de jogar decide se e quanto. Tempo livre medido na agenda dos últimos dias. Renda e apoio em reais por mês (sem efeito até o M7).\n\n");
+            sb.Append("| Ocupação | Pessoas | Sessões/semana | Horas/semana | Livre em dia com obrigação | Livre em dia livre | Dias sem tempo | Renda | Apoio |\n|---|---:|---:|---:|---:|---:|---:|---:|---:|\n");
+            foreach (var id in runs[0].Occupations.Select(o => o.Id))
+            {
+                var os = runs.Select(r => r.Occupations.First(o => o.Id == id)).ToList();
+                string Min(Func<OccupationStats, double> f) { double v = Avg(os.Select(f)); return double.IsNaN(v) ? "—" : $"{v / 60:0.0} h"; }
+                sb.Append($"| {os[0].Name} | {Fmt(os.Average(o => o.Persons))} | {Fmt(Avg(os.Select(o => o.SessionsPerWeek)))} | {Fmt(Avg(os.Select(o => o.HoursPerWeek)))} | " +
+                          $"{Min(o => o.FreeMinutesBusyDay)} | {Min(o => o.FreeMinutesFreeDay)} | {Fmt(Avg(os.Select(o => o.NoFreeTimePct)))}% | R$ {Fmt(Avg(os.Select(o => o.MeanIncomeReais)))} | R$ {Fmt(Avg(os.Select(o => o.MeanSupportReais)))} |\n");
+            }
+            var dayReasons = new SortedDictionary<string, long>(StringComparer.Ordinal);
+            foreach (var r in runs) foreach (var kv in r.DayReasons) dayReasons[kv.Key] = dayReasons.GetValueOrDefault(kv.Key) + kv.Value;
+            long allDays = Math.Max(1, dayReasons.Values.Sum());
+            sb.Append("\nComo terminaram os dias da agenda:\n\n| Dia | Parcela |\n|---|---:|\n");
+            foreach (var kv in dayReasons.OrderByDescending(k => k.Value).ThenBy(k => k.Key, StringComparer.Ordinal))
+                sb.Append($"| {DayReason(kv.Key)} | {Pct(kv.Value, allDays)} |\n");
+        }
+
         // ---- Localidades (P1) ----
         if (runs[0].Localities.Count > 0)
         {
@@ -363,6 +383,17 @@ public static class ValidationReport
     }
 
     private static double Percentile(List<double> v, double q) => ValidationCollector.Percentile(v, q);
+
+    private static string DayReason(string key) => key switch
+    {
+        "played" => "Jogou",
+        "no_free_time" => "Sem tempo livre",
+        "other_leisure" => "Tinha tempo, preferiu outro lazer",
+        "low_engagement" => "Sem vontade (engajamento baixo)",
+        "inactive" => "Inativo",
+        "came_back" => "Voltou ao jogo",
+        _ => key,
+    };
 
     private static double CircAvg(IEnumerable<double> hours)
     {

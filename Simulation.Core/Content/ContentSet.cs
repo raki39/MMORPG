@@ -16,6 +16,8 @@ public sealed class ContentSet
     public QuestCatalog Quests { get; set; } = new();
     /// <summary>Localidades de residencia (P1).</summary>
     public List<LocalityDefinition> Localities { get; set; } = new();
+    /// <summary>Ocupacoes: obrigacoes, deslocamento, renda (P2).</summary>
+    public List<OccupationDefinition> Occupations { get; set; } = new();
 
     /// <summary>Hash do conteudo de origem (calculado por quem carregou os arquivos).</summary>
     public string SourceHash { get; set; } = "";
@@ -37,6 +39,7 @@ public sealed class ContentDatabase
         Creatures = Index(set.Creatures);
         Profiles = Index(set.Population.Profiles);
         Localities = Index(set.Localities);
+        Occupations = Index(set.Occupations);
         Quests = Index(set.Quests.Quests);
         QuestBoards = Index(set.Quests.Boards);
         var byActivity = new SortedDictionary<string, QuestBoardDefinition>(StringComparer.Ordinal);
@@ -84,6 +87,11 @@ public sealed class ContentDatabase
     /// <summary>Localidades por ID (ordem ordinal).</summary>
     public IReadOnlyDictionary<string, LocalityDefinition> Localities { get; }
     public IReadOnlyList<LocalityDefinition> LocalitiesOrdered => Localities.Values.ToList();
+    /// <summary>Ocupacoes por ID (ordem ordinal), P2.</summary>
+    public IReadOnlyDictionary<string, OccupationDefinition> Occupations { get; }
+    public IReadOnlyList<OccupationDefinition> OccupationsOrdered => Occupations.Values.ToList();
+    /// <summary>Planejador da rotina e sono basico (P2).</summary>
+    public RoutineSettingsDefinition Routine => Set.Population.Routine;
     /// <summary>Localidade do servidor (fuso e calendario do relogio global).</summary>
     public LocalityDefinition ServerLocality => Localities.TryGetValue(World.ServerLocalityId, out var l) ? l : LocalitiesOrdered[0];
 

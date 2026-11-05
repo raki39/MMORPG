@@ -53,8 +53,10 @@ public static class PopulationGenerator
             PaidAdvantageSensitivity = Roll(rng, profile.PaidAdvantageSensitivity, 0, 1000),
             PreferredStartHour = Roll(rng, profile.PreferredStartHour, 0, 23),
             SessionMinutes = Roll(rng, profile.SessionMinutes, 10, 720),
-            DaysPerWeek = Roll(rng, profile.DaysPerWeek, 0, 7),
-            WeekendBoost = Roll(rng, profile.WeekendBoost, 0, 1000),
+            // Mesmas posicoes de sorteio dos antigos dias/semana e reforco de fim de semana (P2):
+            // talento, variedade e localidade das pessoas nao mudam.
+            GameImportance = Roll(rng, profile.GameImportance, 0, 1000),
+            Habit = Roll(rng, profile.Habit, 0, 1000),
         };
         // Sorteado por ultimo (D-036): nao altera os tracos ja existentes das populacoes.
         t.Talent = Roll(rng, profile.Talent, 0, 1000);
@@ -64,7 +66,33 @@ public static class PopulationGenerator
         ulong appearance = RngStreams.DeriveSeed(campaignSeed, AppearanceStreamName, personId);
         var person = new Person(personId, name, profile.Id, appearance, t);
         AssignLocality(person, content, rng);   // depois dos tracos: nao altera populacoes ja geradas
+        AssignRoutine(person, content, rng);    // depois da localidade (P2)
         return person;
+    }
+
+    /// <summary>
+    /// Ocupacao pelo peso (independente do perfil: ter tempo nao e ser hardcore), variacao de
+    /// horario e deslocamento, folga da escala, sono, renda e apoio (P2). A renda nao tem efeito
+    /// ate o M7.
+    /// </summary>
+    private static void AssignRoutine(Person person, ContentDatabase content, DeterministicRng rng)
+    {
+        var occs = content.OccupationsOrdered;
+        if (occs.Count == 0) return;
+        var occ = occs[rng.PickWeighted(occs.Select(o => Math.Max(0, o.Weight)).ToList())];
+        var rs = content.Routine;
+        person.OccupationId = occ.Id;
+        person.ShiftOffsetMinutes = occ.StartVariationMinutes == 0 ? 0 : rng.NextIntInclusive(-occ.StartVariationMinutes, occ.StartVariationMinutes) / 5 * 5;
+        person.CommutePermille = 1000 + rng.NextIntInclusive(-rs.CommuteVariationPermille, rs.CommuteVariationPermille);
+        var dayOffDays = occ.Blocks.Where(b => b.PersonalDayOff).SelectMany(b => b.Days).Select(ContentValidator.WeekDayIndex)
+            .Where(d => d >= 0 && d <= 4).Distinct().OrderBy(d => d).ToList();
+        person.DayOffIndex = dayOffDays.Count == 0 ? -1 : dayOffDays[rng.NextInt(dayOffDays.Count)];
+        person.SleepNeedMinutes = Roll(rng, rs.SleepNeedMinutes, 300, 660);
+        person.BedtimeMinute = Roll(rng, rs.BedtimeMinute, 1260, 1680) / 5 * 5;
+        int factor = content.Localities.TryGetValue(person.ResidenceId, out var loc) ? loc.IncomeFactorPermille : 1000;
+        person.IncomeCentsPerMonth = (long)Roll(rng, occ.Income, 0, 100_000_000) * factor / 1000;
+        person.SupportCentsPerMonth = rng.ChancePermille(occ.SupportChancePermille) ? (long)Roll(rng, occ.Support, 0, 100_000_000) * factor / 1000 : 0;
+        person.ExpectedWeeklyMinutes = Behavior.DailySchedule.ExpectedWeeklyMinutes(person, occ, rs);
     }
 
     /// <summary>

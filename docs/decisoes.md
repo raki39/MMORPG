@@ -1130,3 +1130,72 @@ Durante a revisão, o criador acrescentou: falta de conteúdo novo é questão d
 - o pico do servidor agora se espalha pelos fusos.
 
 **Testes:** 7 novos (171 no total): localidades do conteúdo, sorteio de residência, nacionalidade, idiomas e nome, feriados por residência, chineses jogando na noite local (manhã do servidor), planejamento na meia-noite local, validação, determinismo e hash.
+
+## D-043 — P2: obrigações, tempo livre, vontade de jogar e renda real
+**Data:** 04/11/2026 · **Estado:** aceita (calibração a revisar)
+
+**Decisões:**
+- **Conteúdo novo, `occupations.json`:** 13 ocupações, com pesos para o público de MMORPG.
+
+  | Grupo | Ocupações (peso) |
+  |---|---|
+  | Estudo | estudante de manhã (12), estudante à tarde (5), universitário diurno (10) |
+  | Trabalho | horário comercial (24), home office em tecnologia (8), escala 6x1 do comércio (7), meio período (6), autônomo (5), turno noturno (4) |
+  | Trabalho e estudo | trabalha de dia e estuda à noite (6) |
+  | Sem trabalho fixo | sem ocupação (8), cuidando da casa e da família (3), aposentado (2) |
+
+  - Cada ocupação tem blocos de obrigação (dias, horário que pode cruzar a meia-noite, deslocamento, folga pessoal da escala), variação individual de horário e se trabalha em feriado.
+  - Cada uma tem também a faixa de renda e a chance e a faixa de apoio familiar.
+  - A ocupação é sorteada independente do perfil: ter tempo não é ser hardcore.
+- **Pessoa:**
+  - "dias por semana" e "reforço de fim de semana" deram lugar à **importância do jogo** (o que define o hardcore) e ao **hábito** (regularidade), nas mesmas posições do sorteio. Talento, variedade e localidade de ninguém mudaram.
+  - Depois da localidade vêm ocupação, variação de horário e deslocamento, folga da escala, necessidade de sono, hora de dormir, renda e apoio.
+  - A **renda real** é a faixa da ocupação × fator de renda da localidade (em reais equivalentes; EUA 4,2×). Fica sem efeito até o M7.
+- **Dia local montado** (`DailySchedule`, lógica pura):
+  - obrigações com deslocamento;
+  - quem trabalhou à noite dorme de manhã;
+  - os demais acordam a tempo da primeira obrigação e dormem a tempo da do dia seguinte (o déficit de sono fica para a P3);
+  - 45 min de preparo depois de acordar e 45 min ao chegar de cada obrigação;
+  - o resto são janelas livres.
+- **Vontade de jogar** (`population.json`, seção `routine`):
+  - **chance do dia:** a importância do jogo é a base. O tempo livre aumenta a chance de quem dá pouca importância ao jogo. A carga de obrigações reduz a chance, mas a dedicação supera o cansaço. O hábito soma ou tira conforme jogou ontem, e o humor (D-039) ajusta.
+  - **sessão:** vai para a janela que serve ao horário preferido, começando mais cedo se a sessão desejada não couber. Em dia livre dura mais, conforme a importância.
+  - **segunda sessão:** possível em outra janela, para quem dá muita importância ao jogo.
+  - **registro e retorno:** caem na próxima janela livre.
+  - **extensão (D-039):** só até o fim da janela, nunca invade obrigações.
+- **Agenda do dia:** fica como estado, sem evento (14 dias): tempo livre, janelas, sessões e motivo ("jogou", "sem tempo livre", "tinha tempo, preferiu outro lazer", "sem vontade", "inativo", "voltou").
+- Substitui "dias por semana", "reforço de fim de semana" e a hora preferida como horário fixo (agora é preferência dentro do tempo livre). É um sistema só.
+
+**Validação** (90 dias × 1.000 pessoas × 5 seeds):
+- regras do cenário: 7 de 7, na rodada controlada; provisórias: 9 de 12.
+- dias úteis com 50,9% dos cadastrados ativos; fim de semana 1,3× maior; casual 2,5 sessões e 3,4 h por semana; hardcore 6,6 sessões e 31,8 h.
+- **Por ocupação:**
+
+  | Ocupação | Sessões/semana | Horas/semana | Tempo livre em dia de obrigação | Dias sem tempo |
+  |---|---:|---:|---:|---:|
+  | Trabalha e estuda | 1,7 | 5,2 | 1,1 h | 56% |
+  | Horário comercial | 3,8 | 10,2 | 4,3 h | 0% |
+  | Estudante (manhã) | 4,5 | 11,4 | 8,6 h | 0% |
+  | Sem ocupação | 5,5 | 17,1 | (todo dia livre) | 0% |
+
+  Entre quem não tem ocupação, quem dá pouca importância ao jogo joga menos dias que o trabalhador que prioriza o jogo (teste).
+- **Agenda:** 56% dos dias com jogo; 37% "tinha tempo, preferiu outro lazer"; 3% sem tempo livre.
+- **Regra do cenário reescrita:** o trabalhador comercial joga depois do expediente e antes de dormir (≥ 90% dos inícios de dia útil entre 18h e 23h, nenhum no meio do expediente).
+  - O teste antigo de 19h–23h comparava com uma conta exata do início, que supunha hora preferida ± variação. Agora o início se ajusta à janela livre.
+
+**Interface:**
+- aba Rotina com os cards Onde mora, Vontade de jogar (importância, hábito, horário, sessão típica, previsto por semana) e Finanças (renda e apoio);
+- semana típica (obrigações e horas livres por dia, com dica do acordar, dormir e janelas) e últimos dias (o motivo de cada um);
+- "Ritmo de jogo" agora compara com o previsto pela rotina nova;
+- coluna e filtro "Ocupação" na lista de jogadores.
+
+**Testes:** 11 novos (184 no total):
+- montagem do dia: comercial, estudante, turno noturno, trabalho e estudo, feriado, escala e folga;
+- encaixe da sessão;
+- ninguém começa a sessão durante uma obrigação;
+- tempo livre não é jogar;
+- renda por ocupação e país, com apoio aos estudantes;
+- validação das ocupações;
+- determinismo.
+
+`StateHasher` v10.

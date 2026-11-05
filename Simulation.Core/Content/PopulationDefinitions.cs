@@ -52,10 +52,10 @@ public sealed class PopulationProfileDefinition : IContentDefinition
     /// <summary>Hora preferida de inicio de sessao (0..23).</summary>
     public TraitRange PreferredStartHour { get; set; } = new();
     public TraitRange SessionMinutes { get; set; } = new();
-    /// <summary>Dias de jogo por semana em dias uteis+fim de semana (0..7).</summary>
-    public TraitRange DaysPerWeek { get; set; } = new();
-    /// <summary>Quanto fins de semana/feriados aumentam disponibilidade (permille, 0 = nada).</summary>
-    public TraitRange WeekendBoost { get; set; } = new();
+    /// <summary>Importancia do jogo entre os lazeres (permille), P2.</summary>
+    public TraitRange GameImportance { get; set; } = new();
+    /// <summary>Habito: regularidade de jogar quando ha tempo (permille), P2.</summary>
+    public TraitRange Habit { get; set; } = new();
 
     // Jogador (D-036)
     /// <summary>Talento da pessoa como jogador (permille): potencial e velocidade de aprendizado das capacidades.</summary>
@@ -91,6 +91,8 @@ public sealed class PopulationDefinition
     public RetentionSettingsDefinition Retention { get; set; } = new();
     /// <summary>Pesos da decisao e regras de sessao que estavam no codigo (P0, D-041).</summary>
     public BehaviorSettingsDefinition Behavior { get; set; } = new();
+    /// <summary>Planejador da rotina e sono basico (P2, D-043).</summary>
+    public RoutineSettingsDefinition Routine { get; set; } = new();
 }
 
 /// <summary>
@@ -438,4 +440,50 @@ public sealed class BehaviorSettingsDefinition
     public int ActivityDurationMax { get; set; } = 1250;
     /// <summary>Espera quando nao ha nenhuma opcao viavel (minutos).</summary>
     public int IdleRethinkMinutes { get; set; } = 20;
+}
+
+/// <summary>
+/// Planejador da rotina (P2, D-043): janelas livres a partir das obrigacoes, do sono e do
+/// deslocamento; a vontade de jogar decide se e quanto. Minutos e permille.
+/// </summary>
+public sealed class RoutineSettingsDefinition
+{
+    /// <summary>Necessidade de sono (minutos por noite).</summary>
+    public TraitRange SleepNeedMinutes { get; set; } = new() { Mean = 470, Spread = 45 };
+    /// <summary>Hora preferida de dormir, em minutos a partir da meia-noite anterior (1425 = 23h45; acima de 1440 = depois da meia-noite).</summary>
+    public TraitRange BedtimeMinute { get; set; } = new() { Mean = 1425, Spread = 75 };
+    /// <summary>Preparo depois de acordar (minutos).</summary>
+    public int PrepMinutes { get; set; } = 45;
+    /// <summary>Ao chegar da ultima obrigacao do dia: comer e descansar (minutos).</summary>
+    public int ArrivalMinutes { get; set; } = 45;
+    /// <summary>Janela livre menor que isto nao conta.</summary>
+    public int MinWindowMinutes { get; set; } = 30;
+    /// <summary>Sessao minima que vale a pena comecar.</summary>
+    public int MinSessionMinutes { get; set; } = 20;
+    /// <summary>Tempo livre aumenta a chance de quem da pouca importancia ao jogo: + (1000 - importancia) * isto * folga / 10^6.</summary>
+    public int FreeDayChanceBonus { get; set; } = 350;
+    /// <summary>Minutos livres no dia para a folga contar inteira.</summary>
+    public int FullFreeMinutes { get; set; } = 600;
+    /// <summary>Em dia sem obrigacoes a sessao dura mais: x (1000 + importancia * isto / 1000) / 1000.</summary>
+    public int FreeDayDurationPerImportance { get; set; } = 800;
+    /// <summary>Habito: quem jogou ontem ganha (e quem faltou perde) habito * isto / 1000 na chance.</summary>
+    public int HabitStreakPermille { get; set; } = 250;
+    /// <summary>Importancia a partir da qual pode haver uma segunda sessao em outra janela.</summary>
+    public int SecondSessionFromImportance { get; set; } = 650;
+    /// <summary>Chance da segunda sessao com importancia 1000 (permille).</summary>
+    public int SecondSessionPermilleAtMax { get; set; } = 200;
+    /// <summary>Segunda sessao: fracao da duracao habitual.</summary>
+    public int SecondSessionDurationPermille { get; set; } = 450;
+    /// <summary>Sessoes planejadas por dia, no maximo.</summary>
+    public int MaxSessionsPerDay { get; set; } = 2;
+    /// <summary>Variacao individual do deslocamento (+-, permille).</summary>
+    public int CommuteVariationPermille { get; set; } = 300;
+    /// <summary>Dias de agenda guardados para a ficha.</summary>
+    public int PlanHistoryDays { get; set; } = 14;
+    /// <summary>Cansaco do dia de obrigacoes: chance x (1 - carga * isto / 1000 * (1000 - importancia) / 1000).</summary>
+    public int BusyDayPenaltyPermille { get; set; } = 600;
+    /// <summary>Minutos de obrigacao (com deslocamento) para a carga contar inteira.</summary>
+    public int FullLoadMinutes { get; set; } = 600;
+    /// <summary>Engajamento abaixo do neutro menos isto: o motivo do dia sem jogo vira "sem vontade".</summary>
+    public int LowEngagementGap { get; set; } = 150;
 }

@@ -30,7 +30,7 @@ public class PopulationTests
             t.Pve, t.Pvp, t.Trade, t.Exploration, t.Socializing, t.Sociability, t.Aggressiveness, t.Patience, t.Loyalty,
             t.RiskAversion, t.MechanicalSkill, t.GameKnowledge, t.Coordination, t.CheatPropensity, t.Opportunism,
             t.LeisureBudgetCentsPerMonth, t.WillingnessToPay, t.PaidAdvantageSensitivity, t.PreferredStartHour,
-            t.SessionMinutes, t.DaysPerWeek, t.WeekendBoost,
+            t.SessionMinutes, t.GameImportance, t.Habit,
         };
     }
 
@@ -62,11 +62,10 @@ public class PopulationTests
             var t = p.Traits;
             foreach (int v in new[] { t.Pve, t.Pvp, t.Trade, t.Exploration, t.Socializing, t.Sociability, t.Aggressiveness,
                          t.Patience, t.Loyalty, t.RiskAversion, t.MechanicalSkill, t.GameKnowledge, t.Coordination,
-                         t.CheatPropensity, t.Opportunism, t.WillingnessToPay, t.PaidAdvantageSensitivity, t.WeekendBoost })
+                         t.CheatPropensity, t.Opportunism, t.WillingnessToPay, t.PaidAdvantageSensitivity, t.GameImportance, t.Habit })
                 Assert.InRange(v, 0, 1000);
             Assert.InRange(t.PreferredStartHour, 0, 23);
             Assert.InRange(t.SessionMinutes, 10, 720);
-            Assert.InRange(t.DaysPerWeek, 0, 7);
             Assert.True(t.LeisureBudgetCentsPerMonth >= 0);
             Assert.Equal(LifecycleState.PotentialInterested, p.State);
         }
@@ -110,8 +109,8 @@ public class PopulationTests
         Assert.True(pvpLovers.Count > 100);
         Assert.Contains(pvpLovers, p => p.Traits.Aggressiveness < 400);
 
-        // Frequente nao implica habilidoso.
-        var frequent = persons.Where(p => p.Traits.DaysPerWeek >= 6).ToList();
+        // Dedicado ao jogo nao implica habilidoso.
+        var frequent = persons.Where(p => p.Traits.GameImportance >= 700).ToList();
         Assert.Contains(frequent, p => p.Traits.MechanicalSkill < 450);
     }
 

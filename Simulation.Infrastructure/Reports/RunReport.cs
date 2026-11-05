@@ -162,7 +162,7 @@ public static class RunReportWriter
         ("cheat_propensity", t => t.CheatPropensity), ("opportunism", t => t.Opportunism),
         ("leisure_budget_cents_month", t => t.LeisureBudgetCentsPerMonth), ("willingness_to_pay", t => t.WillingnessToPay),
         ("paid_advantage_sensitivity", t => t.PaidAdvantageSensitivity), ("preferred_start_hour", t => t.PreferredStartHour),
-        ("session_minutes", t => t.SessionMinutes), ("days_per_week", t => t.DaysPerWeek), ("weekend_boost", t => t.WeekendBoost),
+        ("session_minutes", t => t.SessionMinutes), ("game_importance", t => t.GameImportance), ("habit", t => t.Habit),
     };
 
     public static void WritePopulation(string path, IReadOnlyList<Person> persons)

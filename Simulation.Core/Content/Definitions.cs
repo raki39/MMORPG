@@ -111,6 +111,8 @@ public sealed class LocalityDefinition : IContentDefinition
     /// <summary>Idiomas falados pelos residentes; o primeiro e o idioma nativo de quem tem esta nacionalidade.</summary>
     public List<LanguageShareDefinition> Languages { get; set; } = new();
     public List<HolidayDefinition> Holidays { get; set; } = new();
+    /// <summary>Renda local em relacao a do Brasil, em reais equivalentes (permille), P2.</summary>
+    public int IncomeFactorPermille { get; set; } = 1000;
     /// <summary>Nomes de quem tem esta nacionalidade (vazio = nomes gerais de population.json).</summary>
     public LocalNamesDefinition Names { get; set; } = new();
 }
@@ -127,6 +129,45 @@ public sealed class LanguageShareDefinition
     public string Id { get; set; } = "";
     /// <summary>Residentes que falam o idioma (permille).</summary>
     public int Permille { get; set; }
+}
+
+/// <summary>
+/// Ocupacao (P2, D-043): obrigacoes semanais (trabalho, estudo, cuidados), deslocamento, renda
+/// e apoio familiar. A pessoa recebe uma ocupacao pelo peso; o horario varia por pessoa.
+/// </summary>
+public sealed class OccupationDefinition : IContentDefinition
+{
+    public string Id { get; set; } = "";
+    public int Version { get; set; }
+    public string Name { get; set; } = "";
+    /// <summary>work, study, work_study, care ou none.</summary>
+    public string Kind { get; set; } = "none";
+    public int Weight { get; set; }
+    public string Description { get; set; } = "";
+    public List<ObligationBlockDefinition> Blocks { get; set; } = new();
+    /// <summary>Variacao individual fixa do horario (minutos, +-): cada pessoa entra um pouco antes ou depois.</summary>
+    public int StartVariationMinutes { get; set; }
+    /// <summary>Trabalha mesmo em feriados (escala, turnos, autonomos).</summary>
+    public bool WorksHolidays { get; set; }
+    /// <summary>Renda do trabalho em centavos de real por mes (sem efeito ate o M7).</summary>
+    public TraitRange Income { get; set; } = new();
+    public int SupportChancePermille { get; set; }
+    /// <summary>Apoio familiar ou outras fontes regulares (centavos/mes).</summary>
+    public TraitRange Support { get; set; } = new();
+}
+
+/// <summary>Bloco de obrigacao: dias (mon..sun), "HH:mm" de inicio e fim (fim menor = vira a noite).</summary>
+public sealed class ObligationBlockDefinition
+{
+    public List<string> Days { get; set; } = new();
+    public string Start { get; set; } = "";
+    public string End { get; set; } = "";
+    /// <summary>Deslocamento antes e depois (minutos; varia por pessoa).</summary>
+    public int CommuteMinutes { get; set; }
+    /// <summary>trabalho, estudo, cuidados (texto da ficha).</summary>
+    public string Label { get; set; } = "";
+    /// <summary>A pessoa tem uma folga fixa num dos dias deste bloco (escala).</summary>
+    public bool PersonalDayOff { get; set; }
 }
 
 public sealed class HolidayDefinition

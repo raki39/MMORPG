@@ -55,7 +55,7 @@ Uma etapa por vez, fechada por inteiro (testes, validação, documentação, exp
 1b. **Pessoa: rotina de vida e traits** ([plano-pessoa.md](plano-pessoa.md), aprovado com ajustes no D-041):
    - ~~P0: parâmetros da decisão no conteúdo~~ (feito, D-041);
    - ~~P1: localidade e fuso~~ (feito, D-042);
-   - P2: obrigações, tempo livre e vontade de jogar;
+   - ~~P2: obrigações, tempo livre, vontade de jogar e renda real~~ (feito, D-043);
    - P3: sono e dificuldade de parar;
    - P4: traits;
    - a reputação do personagem entra com a Etapa 3 e as finanças com o M7.

@@ -233,7 +233,9 @@ public partial class Main : Node
                             .OrderByDescending(i => PlanName(_host.Snapshot.ByPerson[i]!.Plan!.FocusKey).Length).FirstOrDefault()
                         : p.StartsWith("resident:", StringComparison.Ordinal)   // capturas: primeiro registrado que mora na localidade
                             ? Enumerable.Range(1, _host.Snapshot.ByPerson.Length - 1).FirstOrDefault(i => _host.Snapshot.ByPerson[i] != null && _ctx.Persons[i - 1].ResidenceId == p[9..])
-                            : int.TryParse(p, out var n) ? n : 0;
+                            : p.StartsWith("occ:", StringComparison.Ordinal)   // capturas: primeiro registrado com a ocupacao
+                                ? Enumerable.Range(1, _host.Snapshot.ByPerson.Length - 1).FirstOrDefault(i => _host.Snapshot.ByPerson[i] != null && _ctx.Persons[i - 1].OccupationId == p[4..])
+                                : int.TryParse(p, out var n) ? n : 0;
             if (id > 0) OpenPerson(id);
             // Capturas: abre outra ficha e volta pelo historico (a evolucao deve carregar).
             if (id > 0 && _args.ContainsKey("back-test"))

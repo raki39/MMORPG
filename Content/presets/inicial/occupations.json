@@ -1,0 +1,476 @@
+{
+  "schemaVersion": 1,
+  "occupations": [
+    {
+      "id": "aposentado",
+      "version": 1,
+      "name": "Aposentado",
+      "kind": "none",
+      "weight": 2,
+      "startVariationMinutes": 0,
+      "worksHolidays": false,
+      "description": "Sem obrigações fixas; renda da aposentadoria.",
+      "blocks": [],
+      "income": {
+        "mean": 280000,
+        "spread": 120000
+      },
+      "supportChancePermille": 50,
+      "support": {
+        "mean": 50000,
+        "spread": 30000
+      }
+    },
+    {
+      "id": "autonomo",
+      "version": 1,
+      "name": "Autônomo / freelancer",
+      "kind": "work",
+      "weight": 5,
+      "startVariationMinutes": 120,
+      "worksHolidays": true,
+      "description": "Trabalha por projeto, em horários próprios; às vezes em feriados.",
+      "blocks": [
+        {
+          "days": [
+            "mon",
+            "tue",
+            "wed",
+            "thu",
+            "fri"
+          ],
+          "start": "10:00",
+          "end": "16:30",
+          "commuteMinutes": 0,
+          "label": "trabalho",
+          "personalDayOff": true
+        }
+      ],
+      "income": {
+        "mean": 350000,
+        "spread": 250000
+      },
+      "supportChancePermille": 80,
+      "support": {
+        "mean": 60000,
+        "spread": 40000
+      }
+    },
+    {
+      "id": "comercial",
+      "version": 1,
+      "name": "Trabalho em horário comercial",
+      "kind": "work",
+      "weight": 24,
+      "startVariationMinutes": 60,
+      "worksHolidays": false,
+      "description": "Segunda a sexta, de dia, com deslocamento.",
+      "blocks": [
+        {
+          "days": [
+            "mon",
+            "tue",
+            "wed",
+            "thu",
+            "fri"
+          ],
+          "start": "08:00",
+          "end": "17:00",
+          "commuteMinutes": 50,
+          "label": "trabalho"
+        }
+      ],
+      "income": {
+        "mean": 340000,
+        "spread": 180000
+      },
+      "supportChancePermille": 60,
+      "support": {
+        "mean": 40000,
+        "spread": 30000
+      }
+    },
+    {
+      "id": "cuidador",
+      "version": 1,
+      "name": "Cuidando da casa e da família",
+      "kind": "care",
+      "weight": 3,
+      "startVariationMinutes": 30,
+      "worksHolidays": true,
+      "description": "Rotina picada: cuidados de manhã, no almoço e no fim da tarde, todos os dias.",
+      "blocks": [
+        {
+          "days": [
+            "mon",
+            "tue",
+            "wed",
+            "thu",
+            "fri",
+            "sat",
+            "sun"
+          ],
+          "start": "06:30",
+          "end": "08:30",
+          "commuteMinutes": 0,
+          "label": "cuidados"
+        },
+        {
+          "days": [
+            "mon",
+            "tue",
+            "wed",
+            "thu",
+            "fri",
+            "sat",
+            "sun"
+          ],
+          "start": "11:30",
+          "end": "13:30",
+          "commuteMinutes": 0,
+          "label": "cuidados"
+        },
+        {
+          "days": [
+            "mon",
+            "tue",
+            "wed",
+            "thu",
+            "fri",
+            "sat",
+            "sun"
+          ],
+          "start": "17:00",
+          "end": "20:00",
+          "commuteMinutes": 0,
+          "label": "cuidados"
+        }
+      ],
+      "income": {
+        "mean": 0,
+        "spread": 0
+      },
+      "supportChancePermille": 850,
+      "support": {
+        "mean": 220000,
+        "spread": 120000
+      }
+    },
+    {
+      "id": "escala_6x1",
+      "version": 1,
+      "name": "Comércio em escala 6x1",
+      "kind": "work",
+      "weight": 7,
+      "startVariationMinutes": 90,
+      "worksHolidays": true,
+      "description": "Seis dias por semana, inclusive sábado, com uma folga fixa durante a semana.",
+      "blocks": [
+        {
+          "days": [
+            "mon",
+            "tue",
+            "wed",
+            "thu",
+            "fri",
+            "sat"
+          ],
+          "start": "10:00",
+          "end": "18:20",
+          "commuteMinutes": 45,
+          "label": "trabalho",
+          "personalDayOff": true
+        }
+      ],
+      "income": {
+        "mean": 210000,
+        "spread": 70000
+      },
+      "supportChancePermille": 80,
+      "support": {
+        "mean": 30000,
+        "spread": 20000
+      }
+    },
+    {
+      "id": "estudante_manha",
+      "version": 1,
+      "name": "Estudante (manhã)",
+      "kind": "study",
+      "weight": 12,
+      "startVariationMinutes": 20,
+      "worksHolidays": false,
+      "description": "Escola ou cursinho de manhã; tarde e noite livres.",
+      "blocks": [
+        {
+          "days": [
+            "mon",
+            "tue",
+            "wed",
+            "thu",
+            "fri"
+          ],
+          "start": "07:00",
+          "end": "12:30",
+          "commuteMinutes": 30,
+          "label": "estudo"
+        }
+      ],
+      "income": {
+        "mean": 0,
+        "spread": 0
+      },
+      "supportChancePermille": 950,
+      "support": {
+        "mean": 60000,
+        "spread": 40000
+      }
+    },
+    {
+      "id": "estudante_tarde",
+      "version": 1,
+      "name": "Estudante (tarde)",
+      "kind": "study",
+      "weight": 5,
+      "startVariationMinutes": 20,
+      "worksHolidays": false,
+      "description": "Aulas à tarde; manhã e noite livres.",
+      "blocks": [
+        {
+          "days": [
+            "mon",
+            "tue",
+            "wed",
+            "thu",
+            "fri"
+          ],
+          "start": "13:00",
+          "end": "18:00",
+          "commuteMinutes": 30,
+          "label": "estudo"
+        }
+      ],
+      "income": {
+        "mean": 0,
+        "spread": 0
+      },
+      "supportChancePermille": 950,
+      "support": {
+        "mean": 60000,
+        "spread": 40000
+      }
+    },
+    {
+      "id": "home_office",
+      "version": 1,
+      "name": "Home office (tecnologia)",
+      "kind": "work",
+      "weight": 8,
+      "startVariationMinutes": 60,
+      "worksHolidays": false,
+      "description": "Segunda a sexta, de casa, sem deslocamento.",
+      "blocks": [
+        {
+          "days": [
+            "mon",
+            "tue",
+            "wed",
+            "thu",
+            "fri"
+          ],
+          "start": "09:00",
+          "end": "18:00",
+          "commuteMinutes": 0,
+          "label": "trabalho"
+        }
+      ],
+      "income": {
+        "mean": 650000,
+        "spread": 300000
+      },
+      "supportChancePermille": 20,
+      "support": {
+        "mean": 30000,
+        "spread": 20000
+      }
+    },
+    {
+      "id": "meio_periodo",
+      "version": 1,
+      "name": "Meio período",
+      "kind": "work",
+      "weight": 6,
+      "startVariationMinutes": 240,
+      "worksHolidays": false,
+      "description": "Quatro horas por dia, de manhã ou à tarde.",
+      "blocks": [
+        {
+          "days": [
+            "mon",
+            "tue",
+            "wed",
+            "thu",
+            "fri"
+          ],
+          "start": "08:00",
+          "end": "12:00",
+          "commuteMinutes": 40,
+          "label": "trabalho"
+        }
+      ],
+      "income": {
+        "mean": 150000,
+        "spread": 60000
+      },
+      "supportChancePermille": 400,
+      "support": {
+        "mean": 60000,
+        "spread": 40000
+      }
+    },
+    {
+      "id": "sem_ocupacao",
+      "version": 1,
+      "name": "Sem ocupação",
+      "kind": "none",
+      "weight": 8,
+      "startVariationMinutes": 0,
+      "worksHolidays": false,
+      "description": "Sem trabalho nem estudo no momento; tempo livre não quer dizer jogar mais.",
+      "blocks": [],
+      "income": {
+        "mean": 0,
+        "spread": 0
+      },
+      "supportChancePermille": 750,
+      "support": {
+        "mean": 90000,
+        "spread": 60000
+      }
+    },
+    {
+      "id": "trabalho_estudo",
+      "version": 1,
+      "name": "Trabalha de dia e estuda à noite",
+      "kind": "work_study",
+      "weight": 6,
+      "startVariationMinutes": 30,
+      "worksHolidays": false,
+      "description": "Expediente durante o dia e faculdade de segunda a quinta à noite: pouco tempo livre nos dias úteis.",
+      "blocks": [
+        {
+          "days": [
+            "mon",
+            "tue",
+            "wed",
+            "thu",
+            "fri"
+          ],
+          "start": "08:00",
+          "end": "17:00",
+          "commuteMinutes": 45,
+          "label": "trabalho"
+        },
+        {
+          "days": [
+            "mon",
+            "tue",
+            "wed",
+            "thu"
+          ],
+          "start": "19:00",
+          "end": "22:30",
+          "commuteMinutes": 30,
+          "label": "estudo"
+        }
+      ],
+      "income": {
+        "mean": 260000,
+        "spread": 100000
+      },
+      "supportChancePermille": 150,
+      "support": {
+        "mean": 30000,
+        "spread": 20000
+      }
+    },
+    {
+      "id": "turno_noturno",
+      "version": 1,
+      "name": "Turno noturno",
+      "kind": "work",
+      "weight": 4,
+      "startVariationMinutes": 30,
+      "worksHolidays": true,
+      "description": "Trabalha de noite (vigilância, saúde, atendimento) e dorme de dia.",
+      "blocks": [
+        {
+          "days": [
+            "mon",
+            "tue",
+            "wed",
+            "thu",
+            "fri"
+          ],
+          "start": "22:00",
+          "end": "06:00",
+          "commuteMinutes": 35,
+          "label": "trabalho"
+        }
+      ],
+      "income": {
+        "mean": 300000,
+        "spread": 100000
+      },
+      "supportChancePermille": 50,
+      "support": {
+        "mean": 30000,
+        "spread": 20000
+      }
+    },
+    {
+      "id": "universitario",
+      "version": 1,
+      "name": "Universitário (diurno)",
+      "kind": "study",
+      "weight": 10,
+      "startVariationMinutes": 60,
+      "worksHolidays": false,
+      "description": "Aulas de manhã e algumas tardes; horários que mudam ao longo da semana.",
+      "blocks": [
+        {
+          "days": [
+            "mon",
+            "tue",
+            "wed",
+            "thu",
+            "fri"
+          ],
+          "start": "08:00",
+          "end": "12:00",
+          "commuteMinutes": 45,
+          "label": "estudo"
+        },
+        {
+          "days": [
+            "tue",
+            "thu"
+          ],
+          "start": "14:00",
+          "end": "17:30",
+          "commuteMinutes": 0,
+          "label": "estudo"
+        }
+      ],
+      "income": {
+        "mean": 40000,
+        "spread": 40000
+      },
+      "supportChancePermille": 850,
+      "support": {
+        "mean": 120000,
+        "spread": 70000
+      }
+    }
+  ]
+}

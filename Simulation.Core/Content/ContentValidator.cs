@@ -50,6 +50,7 @@ public static class ContentValidator
     public const string ProgressionFile = "progression.json";
     public const string QuestsFile = "quests.json";
     public const string LocalitiesFile = "localities.json";
+    public const string OccupationsFile = "occupations.json";
 
     private static readonly Regex IdPattern = new("^[a-z][a-z0-9_]*$", RegexOptions.CultureInvariant);
 
@@ -59,6 +60,7 @@ public static class ContentValidator
 
         ValidateWorld(set, v);
         ValidateLocalities(set, v);
+        ValidateOccupations(set, v);
         var regionIds = CheckIds(set.Regions, RegionsFile, "regions", v);
         var classIds = CheckIds(set.Classes, ClassesFile, "classes", v);
         var abilityIds = CheckIds(set.Abilities, AbilitiesFile, "abilities", v);
@@ -123,6 +125,80 @@ public static class ContentValidator
         }
     }
 
+    private static readonly string[] WeekDays = { "mon", "tue", "wed", "thu", "fri", "sat", "sun" };
+
+    /// <summary>"HH:mm" em minutos do dia; -1 se invalido.</summary>
+    public static int ParseClock(string s)
+    {
+        if (s.Length != 5 || s[2] != ':' || !int.TryParse(s[..2], out int h) || !int.TryParse(s[3..], out int m) || h > 23 || m > 59) return -1;
+        return h * 60 + m;
+    }
+
+    /// <summary>Indice do dia (mon = 0 .. sun = 6); -1 se invalido.</summary>
+    public static int WeekDayIndex(string d) => Array.IndexOf(WeekDays, d);
+
+    /// <summary>Ocupacoes (P2): blocos validos, sem sobreposicao no mesmo dia, renda e apoio coerentes.</summary>
+    private static void ValidateOccupations(ContentSet set, Collector v)
+    {
+        CheckIds(set.Occupations, OccupationsFile, "occupations", v);
+        if (set.Occupations.Count == 0) v.Error(OccupationsFile, "occupations", "Defina ao menos uma ocupação.");
+        else if (set.Occupations.Sum(o => Math.Max(0, o.Weight)) <= 0) v.Error(OccupationsFile, "occupations", "A soma dos pesos precisa ser positiva.");
+        var kinds = new[] { "work", "study", "work_study", "care", "none" };
+        for (int i = 0; i < set.Occupations.Count; i++)
+        {
+            var o = set.Occupations[i];
+            string p = $"occupations[{i}]";
+            if (!kinds.Contains(o.Kind)) v.Error(OccupationsFile, p + ".kind", $"Use {string.Join(", ", kinds)}.");
+            if (o.Weight < 0) v.Error(OccupationsFile, p + ".weight", "O peso não pode ser negativo.");
+            if (o.StartVariationMinutes is < 0 or > 360) v.Error(OccupationsFile, p + ".startVariationMinutes", "Use de 0 a 360 minutos.");
+            if (o.SupportChancePermille is < 0 or > 1000) v.Error(OccupationsFile, p + ".supportChancePermille", "Use 0 a 1000.");
+            Range(p, "income", o.Income, 0, 100_000_000, v, OccupationsFile);
+            Range(p, "support", o.Support, 0, 100_000_000, v, OccupationsFile);
+            var perDay = new List<(int Start, int End)>[7];
+            for (int d = 0; d < 7; d++) perDay[d] = new();
+            for (int j = 0; j < o.Blocks.Count; j++)
+            {
+                var b = o.Blocks[j];
+                string bp = $"{p}.blocks[{j}]";
+                int s = ParseClock(b.Start), e = ParseClock(b.End);
+                if (s < 0) v.Error(OccupationsFile, bp + ".start", "Use HH:mm.");
+                if (e < 0) v.Error(OccupationsFile, bp + ".end", "Use HH:mm.");
+                if (s >= 0 && e == s) v.Error(OccupationsFile, bp + ".end", "Início e fim iguais.");
+                if (b.CommuteMinutes is < 0 or > 240) v.Error(OccupationsFile, bp + ".commuteMinutes", "Use de 0 a 240 minutos.");
+                if (b.Days.Count == 0) v.Error(OccupationsFile, bp + ".days", "Defina ao menos um dia.");
+                foreach (var day in b.Days)
+                {
+                    int di = WeekDayIndex(day);
+                    if (di < 0) { v.Error(OccupationsFile, bp + ".days", $"Dia '{day}' inválido; use {string.Join(", ", WeekDays)}."); continue; }
+                    if (s < 0 || e < 0) continue;
+                    int end = e > s ? e : e + 1440;
+                    if (perDay[di].Any(x => s < x.End && x.Start < end))
+                        v.Error(OccupationsFile, bp, $"Sobrepõe outro bloco em '{day}'.");
+                    perDay[di].Add((s, end));
+                }
+            }
+        }
+        var r = set.Population.Routine;
+        Range("routine", "sleepNeedMinutes", r.SleepNeedMinutes, 240, 720, v, PopulationFile);
+        Range("routine", "bedtimeMinute", r.BedtimeMinute, 1200, 1800, v, PopulationFile);
+        foreach (var (name, value) in new (string, int)[]
+        {
+            ("prepMinutes", r.PrepMinutes), ("arrivalMinutes", r.ArrivalMinutes), ("minWindowMinutes", r.MinWindowMinutes),
+            ("minSessionMinutes", r.MinSessionMinutes), ("fullFreeMinutes", r.FullFreeMinutes), ("planHistoryDays", r.PlanHistoryDays),
+        })
+            if (value < 0) v.Error(PopulationFile, "routine." + name, "O valor não pode ser negativo.");
+        foreach (var (name, value) in new (string, int)[]
+        {
+            ("freeDayChanceBonus", r.FreeDayChanceBonus), ("habitStreakPermille", r.HabitStreakPermille), ("secondSessionFromImportance", r.SecondSessionFromImportance),
+            ("secondSessionPermilleAtMax", r.SecondSessionPermilleAtMax), ("secondSessionDurationPermille", r.SecondSessionDurationPermille), ("commuteVariationPermille", r.CommuteVariationPermille),
+            ("busyDayPenaltyPermille", r.BusyDayPenaltyPermille),
+        })
+            if (value is < 0 or > 1000) v.Error(PopulationFile, "routine." + name, "Use um valor de 0 a 1000.");
+        if (r.MaxSessionsPerDay is < 1 or > 4) v.Error(PopulationFile, "routine.maxSessionsPerDay", "Use de 1 a 4.");
+        if (r.FullFreeMinutes <= 0) v.Error(PopulationFile, "routine.fullFreeMinutes", "Use mais que zero.");
+        if (r.FullLoadMinutes <= 0) v.Error(PopulationFile, "routine.fullLoadMinutes", "Use mais que zero.");
+    }
+
     /// <summary>Localidades (P1): fuso, peso, idiomas e feriados; o servidor aponta uma delas.</summary>
     private static void ValidateLocalities(ContentSet set, Collector v)
     {
@@ -139,6 +215,7 @@ public static class ContentValidator
             if (l.UtcOffsetMinutes is < -720 or > 840) v.Error(LocalitiesFile, p + ".utcOffsetMinutes", "Use de -720 (UTC-12) a 840 (UTC+14).");
             if (l.Weight < 0) v.Error(LocalitiesFile, p + ".weight", "O peso não pode ser negativo.");
             if (l.ForeignResidentPermille is < 0 or > 1000) v.Error(LocalitiesFile, p + ".foreignResidentPermille", "Use 0 a 1000.");
+            if (l.IncomeFactorPermille is < 0 or > 20000) v.Error(LocalitiesFile, p + ".incomeFactorPermille", "Use de 0 a 20000.");
             if (l.Languages.Count == 0) v.Error(LocalitiesFile, p + ".languages", "Defina ao menos o idioma nativo.");
             else if (l.Languages[0].Permille != 1000) v.Error(LocalitiesFile, p + ".languages[0].permille", "O primeiro idioma é o nativo: use 1000.");
             for (int j = 0; j < l.Languages.Count; j++)
@@ -852,17 +929,23 @@ public static class ContentValidator
             Permille(p, "opportunism", pr.Opportunism, v);
             Permille(p, "willingnessToPay", pr.WillingnessToPay, v);
             Permille(p, "paidAdvantageSensitivity", pr.PaidAdvantageSensitivity, v);
-            Permille(p, "weekendBoost", pr.WeekendBoost, v);
+            Permille(p, "gameImportance", pr.GameImportance, v);
+            Permille(p, "habit", pr.Habit, v);
             Permille(p, "talent", pr.Talent, v);
             Permille(p, "variety", pr.Variety, v);
             Range(p, "preferredStartHour", pr.PreferredStartHour, 0, 23, v);
             Range(p, "sessionMinutes", pr.SessionMinutes, 10, 720, v);
-            Range(p, "daysPerWeek", pr.DaysPerWeek, 0, 7, v);
             Range(p, "leisureBudgetCentsPerMonth", pr.LeisureBudgetCentsPerMonth, 0, 1_000_000, v);
         }
     }
 
     private static void Permille(string p, string name, TraitRange t, Collector v) => Range(p, name, t, 0, 1000, v);
+
+    private static void Range(string p, string name, TraitRange t, int min, int max, Collector v, string file)
+    {
+        if (t.Mean < min || t.Mean > max) v.Error(file, $"{p}.{name}.mean", $"Use de {min} a {max}.");
+        if (t.Spread < 0) v.Error(file, $"{p}.{name}.spread", "A variação não pode ser negativa.");
+    }
 
     private static void Range(string p, string name, TraitRange t, int min, int max, Collector v)
     {

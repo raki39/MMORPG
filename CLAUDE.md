@@ -13,7 +13,7 @@ Jogo de gestão single-player e offline: o jogador cria e administra um MMORPG e
 - `Simulation.Runner`: CLI headless que compõe Core e Infrastructure.
 - `Simulation.Tests`: xUnit.
 - `GodotClient/`: projeto Godot 4.7.2 .NET; visualização, interface e comandos para o Core via `ProjectReference`. Nada de um nó por jogador no mapa; desenho em lote.
-- `Content/presets/<mundo>/`: `world`, `localities` (fuso, idiomas, feriados), `regions` (com `activities`), `classes`, `abilities`, `items`, `creatures`, `population`, `progression`, `quests` (`.json`; o jogador, como desenvolvedor do MMORPG, editará esse conteúdo no jogo) + `scenario.json` e `targets.json` (só do runner: cenário e metas de validação).
+- `Content/presets/<mundo>/`: `world`, `localities` (fuso, idiomas, feriados), `occupations` (obrigações, renda), `regions` (com `activities`), `classes`, `abilities`, `items`, `creatures`, `population`, `progression`, `quests` (`.json`; o jogador, como desenvolvedor do MMORPG, editará esse conteúdo no jogo) + `scenario.json` e `targets.json` (só do runner: cenário e metas de validação).
 - JSON é o formato de troca; o save SQLite guarda o conteúdo da campanha; a execução usa memória (D-008).
 
 ## Regras

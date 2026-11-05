@@ -22,6 +22,10 @@ public sealed class RunMetrics
     /// <summary>Tempo conectado por tipo (ticks), com "travel" (deslocamento) e "idle" (espera).</summary>
     public SortedDictionary<string, long> TimeByType { get; } = new(StringComparer.Ordinal);
     public List<ProfileStats> Profiles { get; } = new();
+    /// <summary>Rotina por ocupacao (P2).</summary>
+    public List<OccupationStats> Occupations { get; } = new();
+    /// <summary>Motivo de cada dia da agenda (P2): played, no_free_time, other_leisure, low_engagement, inactive...</summary>
+    public SortedDictionary<string, long> DayReasons { get; } = new(StringComparer.Ordinal);
     /// <summary>Por localidade (P1): pessoas registradas, sessoes e hora media de inicio local e do servidor.</summary>
     public List<LocalityStats> Localities { get; } = new();
     /// <summary>Perfis da rodada controlada (humor neutralizado), quando houver (D-039a).</summary>
@@ -44,6 +48,22 @@ public sealed class RunMetrics
     public long GreatSessions { get; set; }
     public long BadSessions { get; set; }
     public long RatedSessions { get; set; }
+}
+
+public sealed class OccupationStats
+{
+    public string Id { get; init; } = "";
+    public string Name { get; init; } = "";
+    public int Persons { get; init; }
+    public double SessionsPerWeek { get; init; }
+    public double HoursPerWeek { get; init; }
+    /// <summary>Minutos livres medios em dias com obrigacao e em dias livres (agenda dos ultimos dias).</summary>
+    public double FreeMinutesBusyDay { get; init; }
+    public double FreeMinutesFreeDay { get; init; }
+    /// <summary>% dos dias da agenda sem janela que comporte uma sessao.</summary>
+    public double NoFreeTimePct { get; init; }
+    public double MeanIncomeReais { get; init; }
+    public double MeanSupportReais { get; init; }
 }
 
 public sealed class LocalityStats
@@ -331,6 +351,28 @@ public sealed class ValidationCollector
             string key = worst.Key ?? "nenhum";
             m.TopComplaints[key] = m.TopComplaints.GetValueOrDefault(key) + 1;
         }
+        foreach (var o in w.Content.OccupationsOrdered)
+        {
+            var ps = chars.Select(c => w.GetPerson(c.PersonId)).Where(p => p.OccupationId == o.Id).ToList();
+            var ids = ps.Select(p => (long)p.Id).ToList();
+            var busyDays = ps.SelectMany(p => p.DayPlans).Where(d => !d.FreeDay && d.Reason != "came_back").ToList();
+            var freeDays = ps.SelectMany(p => p.DayPlans).Where(d => d.FreeDay && d.Reason != "came_back").ToList();
+            var allDays = busyDays.Concat(freeDays).ToList();
+            m.Occupations.Add(new OccupationStats
+            {
+                Id = o.Id, Name = o.Name, Persons = ps.Count,
+                SessionsPerWeek = PerPersonWeekly(ids, _sessionsInWindow, weeks, 1),
+                HoursPerWeek = PerPersonWeekly(ids, _playedInWindow, weeks, SimTime.TicksPerHour),
+                FreeMinutesBusyDay = busyDays.Count == 0 ? double.NaN : busyDays.Average(d => (double)d.FreeMinutes),
+                FreeMinutesFreeDay = freeDays.Count == 0 ? double.NaN : freeDays.Average(d => (double)d.FreeMinutes),
+                NoFreeTimePct = allDays.Count == 0 ? double.NaN : allDays.Count(d => d.Reason == "no_free_time") * 100.0 / allDays.Count,
+                MeanIncomeReais = ps.Count == 0 ? double.NaN : ps.Average(p => p.IncomeCentsPerMonth / 100.0),
+                MeanSupportReais = ps.Count == 0 ? double.NaN : ps.Average(p => p.SupportCentsPerMonth / 100.0),
+            });
+        }
+        foreach (var p in chars.Select(c => w.GetPerson(c.PersonId)))
+            foreach (var d in p.DayPlans)
+                m.DayReasons[d.Reason] = m.DayReasons.GetValueOrDefault(d.Reason) + 1;
         foreach (var l in w.Content.LocalitiesOrdered)
         {
             var residents = chars.Select(c => w.GetPerson(c.PersonId)).Where(p => p.ResidenceId == l.Id).ToList();

@@ -29,6 +29,7 @@ public static class ContentLoader
     {
         ContentValidator.WorldFile,
         ContentValidator.LocalitiesFile,
+        ContentValidator.OccupationsFile,
         ContentValidator.RegionsFile,
         ContentValidator.ClassesFile,
         ContentValidator.AbilitiesFile,
@@ -76,12 +77,13 @@ public static class ContentLoader
         set.World = Parse<WorldFile>(texts, ContentValidator.WorldFile, issues)?.World ?? new WorldDefinition();
         set.Regions = Parse<RegionsFile>(texts, ContentValidator.RegionsFile, issues)?.Regions ?? new();
         set.Localities = Parse<LocalitiesFile>(texts, ContentValidator.LocalitiesFile, issues)?.Localities ?? new();
+        set.Occupations = Parse<OccupationsFile>(texts, ContentValidator.OccupationsFile, issues)?.Occupations ?? new();
         set.Classes = Parse<ClassesFile>(texts, ContentValidator.ClassesFile, issues)?.Classes ?? new();
         set.Abilities = Parse<AbilitiesFile>(texts, ContentValidator.AbilitiesFile, issues)?.Abilities ?? new();
         set.Items = Parse<ItemsFile>(texts, ContentValidator.ItemsFile, issues)?.Items ?? new();
         set.Creatures = Parse<CreaturesFile>(texts, ContentValidator.CreaturesFile, issues)?.Creatures ?? new();
         var pop = Parse<PopulationFile>(texts, ContentValidator.PopulationFile, issues);
-        if (pop != null) set.Population = new PopulationDefinition { Profiles = pop.Profiles, Names = pop.Names, Dynamics = pop.Dynamics, Goals = pop.Goals, Session = pop.Session, Mood = pop.Mood, Memory = pop.Memory, Retention = pop.Retention, Behavior = pop.Behavior };
+        if (pop != null) set.Population = new PopulationDefinition { Profiles = pop.Profiles, Names = pop.Names, Dynamics = pop.Dynamics, Goals = pop.Goals, Session = pop.Session, Mood = pop.Mood, Memory = pop.Memory, Retention = pop.Retention, Behavior = pop.Behavior, Routine = pop.Routine };
         set.Progression = Parse<ProgressionFile>(texts, ContentValidator.ProgressionFile, issues)?.Progression ?? new ProgressionDefinition();
         var quests = Parse<QuestsFile>(texts, ContentValidator.QuestsFile, issues);
         if (quests != null) set.Quests = new QuestCatalog { Settings = quests.Settings, Boards = quests.Boards, Quests = quests.Quests };
@@ -136,6 +138,11 @@ public static class ContentLoader
 }
 
 // Formatos dos arquivos: envelope com schemaVersion + dados.
+public sealed class OccupationsFile : VersionedFile
+{
+    public List<OccupationDefinition> Occupations { get; set; } = new();
+}
+
 public sealed class LocalitiesFile : VersionedFile
 {
     public List<LocalityDefinition> Localities { get; set; } = new();
@@ -173,4 +180,5 @@ public sealed class PopulationFile : VersionedFile
     public MemorySettingsDefinition Memory { get; set; } = new();
     public RetentionSettingsDefinition Retention { get; set; } = new();
     public BehaviorSettingsDefinition Behavior { get; set; } = new();
+    public RoutineSettingsDefinition Routine { get; set; } = new();
 }

@@ -10,7 +10,7 @@
       "mechanicalSkill": { "mean": 350, "spread": 250 }, "gameKnowledge": { "mean": 300, "spread": 200 }, "coordination": { "mean": 350, "spread": 250 },
       "cheatPropensity": { "mean": 60, "spread": 60 }, "opportunism": { "mean": 250, "spread": 200 },
       "leisureBudgetCentsPerMonth": { "mean": 6000, "spread": 4000 }, "willingnessToPay": { "mean": 400, "spread": 250 }, "paidAdvantageSensitivity": { "mean": 550, "spread": 250 },
-      "preferredStartHour": { "mean": 20, "spread": 3 }, "sessionMinutes": { "mean": 70, "spread": 45 }, "daysPerWeek": { "mean": 3, "spread": 2 }, "weekendBoost": { "mean": 450, "spread": 300 }, "talent": { "mean": 380, "spread": 280 }, "variety": { "mean": 500, "spread": 200 }
+      "preferredStartHour": { "mean": 20, "spread": 3 }, "sessionMinutes": { "mean": 70, "spread": 45 }, "gameImportance": { "mean": 300, "spread": 150 }, "habit": { "mean": 400, "spread": 200 }, "talent": { "mean": 380, "spread": 280 }, "variety": { "mean": 500, "spread": 200 }
     },
     {
       "id": "competitivo", "version": 1, "name": "Competitivo", "weight": 15,
@@ -21,7 +21,7 @@
       "mechanicalSkill": { "mean": 650, "spread": 250 }, "gameKnowledge": { "mean": 650, "spread": 250 }, "coordination": { "mean": 550, "spread": 250 },
       "cheatPropensity": { "mean": 150, "spread": 140 }, "opportunism": { "mean": 500, "spread": 250 },
       "leisureBudgetCentsPerMonth": { "mean": 9000, "spread": 6000 }, "willingnessToPay": { "mean": 500, "spread": 250 }, "paidAdvantageSensitivity": { "mean": 850, "spread": 150 },
-      "preferredStartHour": { "mean": 21, "spread": 2 }, "sessionMinutes": { "mean": 150, "spread": 80 }, "daysPerWeek": { "mean": 5, "spread": 2 }, "weekendBoost": { "mean": 400, "spread": 300 }, "talent": { "mean": 600, "spread": 280 }, "variety": { "mean": 450, "spread": 200 }
+      "preferredStartHour": { "mean": 21, "spread": 2 }, "sessionMinutes": { "mean": 150, "spread": 80 }, "gameImportance": { "mean": 650, "spread": 150 }, "habit": { "mean": 600, "spread": 200 }, "talent": { "mean": 600, "spread": 280 }, "variety": { "mean": 450, "spread": 200 }
     },
     {
       "id": "social", "version": 1, "name": "Social", "weight": 20,
@@ -32,7 +32,7 @@
       "mechanicalSkill": { "mean": 400, "spread": 250 }, "gameKnowledge": { "mean": 400, "spread": 250 }, "coordination": { "mean": 550, "spread": 250 },
       "cheatPropensity": { "mean": 40, "spread": 40 }, "opportunism": { "mean": 200, "spread": 180 },
       "leisureBudgetCentsPerMonth": { "mean": 7000, "spread": 4500 }, "willingnessToPay": { "mean": 500, "spread": 250 }, "paidAdvantageSensitivity": { "mean": 500, "spread": 250 },
-      "preferredStartHour": { "mean": 20, "spread": 3 }, "sessionMinutes": { "mean": 110, "spread": 60 }, "daysPerWeek": { "mean": 4, "spread": 2 }, "weekendBoost": { "mean": 600, "spread": 250 }, "talent": { "mean": 420, "spread": 280 }, "variety": { "mean": 550, "spread": 200 }
+      "preferredStartHour": { "mean": 20, "spread": 3 }, "sessionMinutes": { "mean": 110, "spread": 60 }, "gameImportance": { "mean": 500, "spread": 150 }, "habit": { "mean": 550, "spread": 200 }, "talent": { "mean": 420, "spread": 280 }, "variety": { "mean": 550, "spread": 200 }
     },
     {
       "id": "comerciante", "version": 1, "name": "Comerciante", "weight": 10,
@@ -43,7 +43,7 @@
       "mechanicalSkill": { "mean": 350, "spread": 250 }, "gameKnowledge": { "mean": 600, "spread": 250 }, "coordination": { "mean": 400, "spread": 250 },
       "cheatPropensity": { "mean": 120, "spread": 120 }, "opportunism": { "mean": 650, "spread": 220 },
       "leisureBudgetCentsPerMonth": { "mean": 8000, "spread": 5000 }, "willingnessToPay": { "mean": 450, "spread": 250 }, "paidAdvantageSensitivity": { "mean": 600, "spread": 250 },
-      "preferredStartHour": { "mean": 19, "spread": 4 }, "sessionMinutes": { "mean": 90, "spread": 50 }, "daysPerWeek": { "mean": 5, "spread": 2 }, "weekendBoost": { "mean": 300, "spread": 250 }, "talent": { "mean": 500, "spread": 280 }, "variety": { "mean": 350, "spread": 200 }
+      "preferredStartHour": { "mean": 19, "spread": 4 }, "sessionMinutes": { "mean": 90, "spread": 50 }, "gameImportance": { "mean": 600, "spread": 150 }, "habit": { "mean": 650, "spread": 200 }, "talent": { "mean": 500, "spread": 280 }, "variety": { "mean": 350, "spread": 200 }
     },
     {
       "id": "explorador", "version": 1, "name": "Explorador", "weight": 10,
@@ -54,7 +54,7 @@
       "mechanicalSkill": { "mean": 500, "spread": 250 }, "gameKnowledge": { "mean": 550, "spread": 250 }, "coordination": { "mean": 400, "spread": 250 },
       "cheatPropensity": { "mean": 50, "spread": 50 }, "opportunism": { "mean": 250, "spread": 200 },
       "leisureBudgetCentsPerMonth": { "mean": 6500, "spread": 4000 }, "willingnessToPay": { "mean": 450, "spread": 250 }, "paidAdvantageSensitivity": { "mean": 500, "spread": 250 },
-      "preferredStartHour": { "mean": 15, "spread": 6 }, "sessionMinutes": { "mean": 120, "spread": 60 }, "daysPerWeek": { "mean": 4, "spread": 2 }, "weekendBoost": { "mean": 500, "spread": 300 }, "talent": { "mean": 520, "spread": 280 }, "variety": { "mean": 750, "spread": 200 }
+      "preferredStartHour": { "mean": 15, "spread": 6 }, "sessionMinutes": { "mean": 120, "spread": 60 }, "gameImportance": { "mean": 550, "spread": 150 }, "habit": { "mean": 500, "spread": 200 }, "talent": { "mean": 520, "spread": 280 }, "variety": { "mean": 750, "spread": 200 }
     },
     {
       "id": "hardcore", "version": 1, "name": "Hardcore", "weight": 10,
@@ -65,7 +65,7 @@
       "mechanicalSkill": { "mean": 700, "spread": 220 }, "gameKnowledge": { "mean": 800, "spread": 180 }, "coordination": { "mean": 700, "spread": 220 },
       "cheatPropensity": { "mean": 100, "spread": 100 }, "opportunism": { "mean": 400, "spread": 250 },
       "leisureBudgetCentsPerMonth": { "mean": 12000, "spread": 7000 }, "willingnessToPay": { "mean": 650, "spread": 250 }, "paidAdvantageSensitivity": { "mean": 750, "spread": 200 },
-      "preferredStartHour": { "mean": 19, "spread": 4 }, "sessionMinutes": { "mean": 240, "spread": 100 }, "daysPerWeek": { "mean": 6, "spread": 1 }, "weekendBoost": { "mean": 700, "spread": 250 }, "talent": { "mean": 620, "spread": 280 }, "variety": { "mean": 300, "spread": 200 }
+      "preferredStartHour": { "mean": 19, "spread": 4 }, "sessionMinutes": { "mean": 240, "spread": 100 }, "gameImportance": { "mean": 820, "spread": 100 }, "habit": { "mean": 750, "spread": 200 }, "talent": { "mean": 620, "spread": 280 }, "variety": { "mean": 300, "spread": 200 }
     }
   ],
   "names": {
@@ -143,5 +143,12 @@
     "weightReward": 300, "weightSocial": 150, "weightRisk": 350, "weightTravel": 250, "weightCrowding": 200,
     "timeBudgetPenalty": 400, "questOfferWeight": 210, "questDeliverWeight": 220, "questDeliverPerExtra": 90, "questStepWeight": 250,
     "noise": 50, "activityDurationMin": 800, "activityDurationMax": 1250, "idleRethinkMinutes": 20
+  },
+  "routine": {
+    "sleepNeedMinutes": { "mean": 470, "spread": 45 }, "bedtimeMinute": { "mean": 1425, "spread": 75 },
+    "prepMinutes": 45, "arrivalMinutes": 45, "minWindowMinutes": 30, "minSessionMinutes": 20,
+    "freeDayChanceBonus": 350, "fullFreeMinutes": 600, "freeDayDurationPerImportance": 800, "habitStreakPermille": 250,
+    "secondSessionFromImportance": 650, "secondSessionPermilleAtMax": 200, "secondSessionDurationPermille": 450, "maxSessionsPerDay": 2,
+    "commuteVariationPermille": 300, "planHistoryDays": 14, "lowEngagementGap": 150, "busyDayPenaltyPermille": 600, "fullLoadMinutes": 600
   }
 }

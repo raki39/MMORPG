@@ -54,8 +54,10 @@ public class BehaviorTests
                 starts.Add((p.Id, e.World.Clock.Calendar.ToDateTime(ev.Tick + p.LocalOffsetMinutes * SimTime.TicksPerMinute)));
             }
         }
-        var weekday = starts.Where(s => e.World.CalendarOf(e.World.GetPerson(s.PersonId)).KindOf(s.At.Date) == DayKind.Weekday).ToList();
-        Assert.True(weekday.Count > 200, $"amostra pequena: {weekday.Count}");
+        // Quem nao tem obrigacoes (P2): o horario preferido cabe no tempo livre.
+        var weekday = starts.Where(s => e.World.CalendarOf(e.World.GetPerson(s.PersonId)).KindOf(s.At.Date) == DayKind.Weekday
+            && e.World.GetPerson(s.PersonId).OccupationId is "sem_ocupacao" or "aposentado").ToList();
+        Assert.True(weekday.Count > 20, $"amostra pequena: {weekday.Count}");
         int near = weekday.Count(s =>
         {
             int preferred = e.World.GetPerson(s.PersonId).Traits.PreferredStartHour * 60;

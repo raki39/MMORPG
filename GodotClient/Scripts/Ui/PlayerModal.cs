@@ -196,7 +196,7 @@ public partial class PlayerModal : ModalFrame
         }
         var t = _person.Traits;
         double spanDays = Math.Max(2.0, (now - from) / (double)tpd);   // conta nova: janela minima de 2 dias
-        int expected = (int)Math.Max(1, t.SessionMinutes * t.DaysPerWeek / 7.0 * spanDays);
+        int expected = (int)Math.Max(1, _person.ExpectedWeeklyMinutes / 7.0 * spanDays);   // rotina tipica (P2)
         int playedMin = (int)(played / tpm);
         return new EngagementInfo(playedMin / (float)expected, playedMin, expected, (int)Math.Ceiling(spanDays), days.Count);
     }
@@ -666,7 +666,7 @@ public partial class PlayerModal : ModalFrame
         return Column(12, chart, Row(0,
             MiniStat(peak < 0 ? "–" : $"{peak:00}h", "Pico"),
             MiniStat($"{startH:00}h", "Início preferido"),
-            MiniStat($"{tr.DaysPerWeek}/7", "Dias por semana")));
+            MiniStat($"{_person.ExpectedWeeklyMinutes / 60.0:0.#} h", "Previsto por semana")));
     }
 
     // ----- Estatisticas: comparacao, XP por fonte, niveis -----
@@ -1528,18 +1528,103 @@ public partial class PlayerModal : ModalFrame
             KeyValue("Idiomas", string.Join(", ", _person.Languages.Select(LanguageName))),
             KeyValue("Hora local agora", $"{localNow:HH:mm} · {diff}", UiTokens.AccentSoft),
             Wrap("A rotina vale no horário e nos feriados de onde a pessoa mora; o relógio do jogo é o do servidor. A nacionalidade não decide horário, renda nem personalidade; os idiomas servirão ao social (M6).", UiTokens.FontCaption, UiTokens.TextDisabled));
-        var routine = Column(4,
+        int imp20 = UiTokens.To20(t.GameImportance), hab20 = UiTokens.To20(t.Habit);
+        var will = Column(4,
+            KeyValue("Importância do jogo", $"{imp20}/20", UiTokens.AttributeColor(imp20)),
+            KeyValue("Hábito", $"{hab20}/20", UiTokens.AttributeColor(hab20)),
             KeyValue("Horário preferido (local)", $"{t.PreferredStartHour:00}h"),
             KeyValue("Sessão típica", $"{t.SessionMinutes} min"),
-            KeyValue("Dias por semana", $"{t.DaysPerWeek}/7"),
-            KeyValue("A mais no fim de semana", $"+{t.WeekendBoost / 10}%"));
+            KeyValue("Previsto por semana", $"{_person.ExpectedWeeklyMinutes / 60.0:0.#} h"),
+            Wrap("Ter tempo livre não significa jogar: a importância do jogo entre os lazeres decide; o tempo livre e o hábito ajudam, o cansaço de um dia cheio e o desânimo tiram.", UiTokens.FontCaption, UiTokens.TextDisabled));
         int pay = UiTokens.To20(t.WillingnessToPay), adv = UiTokens.To20(t.PaidAdvantageSensitivity);
         var money = Column(4,
+            KeyValue("Renda do trabalho", $"R$ {PtBr.Decimal(_person.IncomeCentsPerMonth / 100.0, 0)}/mês"),
+            KeyValue("Apoio familiar e outras fontes", $"R$ {PtBr.Decimal(_person.SupportCentsPerMonth / 100.0, 0)}/mês"),
             KeyValue("Orçamento de lazer", $"R$ {PtBr.Decimal(t.LeisureBudgetCentsPerMonth / 100.0, 0)}/mês"),
             KeyValue("Disposição a pagar", $"{pay}/20", UiTokens.AttributeColor(pay)),
             KeyValue("Aversão a vantagem paga", $"{adv}/20", UiTokens.AttributeColor(adv)),
-            Wrap("Dinheiro real fictício do tycoon, separado do ouro do MMORPG. Usado pela monetização no M7.", UiTokens.FontCaption, UiTokens.TextDisabled));
-        return Row(12, Card("Onde mora", place, UiTokens.Info), Card("Rotina", routine, UiTokens.Info), Card("Finanças", money, UiTokens.Accent));
+            Wrap("Dinheiro real fictício do tycoon, separado do ouro do MMORPG. Sem efeito até a monetização (M7); trabalhar não quer dizer ter dinheiro sobrando.", UiTokens.FontCaption, UiTokens.TextDisabled));
+        var detail = _ctx.Snapshot().Watched is { } d && d.PersonId == _person.Id ? d : null;
+        return Column(12,
+            Grid(12, (Card("Onde mora", place, UiTokens.Info), 4), (Card("Vontade de jogar", will, UiTokens.Info), 4), (Card("Finanças", money, UiTokens.Accent), 4)),
+            Grid(12, (Card("Ocupação e semana típica", WeekBody(), info: "Obrigações, sono e tempo livre (hora local)\n~Montado pelo mesmo cálculo da simulação. Feriados da residência suspendem as obrigações de quem não trabalha neles."), 7),
+                (Card("Últimos dias", DaysBody(detail), info: "Agenda de cada dia\n~O tempo livre do dia e por que jogou ou não. Sem evento por dia: o motivo fica guardado na agenda."), 5)));
+    }
+
+    private static string Clock(int minute) { int m = ((minute % 1440) + 1440) % 1440; return $"{m / 60:00}:{m % 60:00}"; }
+    private static readonly string[] DowPt = { "seg", "ter", "qua", "qui", "sex", "sáb", "dom" };
+
+    public static string DayReasonPt(string key) => key switch
+    {
+        "played" => "Jogou",
+        "no_free_time" => "Sem tempo livre",
+        "other_leisure" => "Tinha tempo, preferiu outro lazer",
+        "low_engagement" => "Sem vontade (engajamento baixo)",
+        "inactive" => "Inativo",
+        "came_back" => "Voltou ao jogo",
+        _ => key,
+    };
+
+    private string OccupationName => _ctx.Content.Occupations.TryGetValue(_person.OccupationId, out var o) ? o.Name : _person.OccupationId;
+
+    private Control WeekBody()
+    {
+        var col = Column(8);
+        if (_ctx.Content.Occupations.TryGetValue(_person.OccupationId, out var occ))
+        {
+            col.AddChild(ThemeFactory.Text(occ.Name, UiTokens.FontBody, UiTokens.TextPrimary, UiFonts.SemiBold));
+            col.AddChild(Wrap(occ.Description, UiTokens.FontSmall, UiTokens.TextSecondary));
+        }
+        col.AddChild(KeyValue("Sono", $"{_person.SleepNeedMinutes / 60.0:0.#} h por noite · prefere dormir às {Clock(_person.BedtimeMinute)}"));
+        foreach (var day in _person.Week)
+        {
+            string obligations = day.Obligations.Count == 0 ? "livre" : string.Join(" · ", day.Obligations.Select(o => $"{o.Label} {Clock(o.Start)}–{Clock(o.End)}"));
+            string windows = day.Windows.Count == 0 ? "sem janela" : string.Join(", ", day.Windows.Select(w => $"{Clock(w.Start)}–{Clock(w.End)}"));
+            var tip = new TipPanel
+            {
+                TooltipText = $"{DowPt[day.Dow]}\nObrigações|{obligations}\nAcorda|{Clock(day.Wake)}\nDorme|{Clock(day.Bed)}\nTempo livre|{day.FreeMinutes / 60.0:0.#} h\n~Janelas: {windows}",
+                MouseFilter = MouseFilterEnum.Stop,
+            };
+            tip.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
+            var r = new HBoxContainer();
+            r.AddThemeConstantOverride("separation", 10);
+            var dn = ThemeFactory.Text(DowPt[day.Dow], UiTokens.FontSmall, day.FreeDay ? UiTokens.Success : UiTokens.TextLabel, UiFonts.Medium);
+            dn.CustomMinimumSize = new Vector2(34, 0);
+            r.AddChild(dn);
+            var ob = ThemeFactory.Text(obligations, UiTokens.FontSmall, UiTokens.TextSecondary);
+            ob.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+            ob.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+            r.AddChild(ob);
+            r.AddChild(ThemeFactory.Text($"{day.FreeMinutes / 60.0:0.#} h livres", UiTokens.FontSmall, day.FreeMinutes >= 120 ? UiTokens.TextPrimary : UiTokens.Warning, UiFonts.Numbers));
+            tip.AddChild(r);
+            col.AddChild(tip);
+        }
+        return col;
+    }
+
+    private Control DaysBody(CharacterDetailView? detail)
+    {
+        var col = Column(6);
+        var plans = detail?.DayPlans ?? Array.Empty<Simulation.Core.Population.DayPlanRecord>();
+        if (plans.Count == 0) col.AddChild(Wrap(detail == null ? "Carregando…" : "A agenda aparece depois do primeiro dia.", UiTokens.FontSmall, UiTokens.TextSecondary));
+        foreach (var d in plans.Reverse())
+        {
+            var date = _ctx.Calendar.StartDate.AddDays(d.LocalDay);
+            string when = d.FirstStartMinute >= 0 ? $" · {Clock(d.FirstStartMinute)}" : "";
+            string what = d.Sessions > 1 ? $"Jogou ({d.Sessions} sessões)" : DayReasonPt(d.Reason);
+            var r = new HBoxContainer();
+            r.AddThemeConstantOverride("separation", 10);
+            var dl = ThemeFactory.Text($"{DowPt[((int)date.DayOfWeek + 6) % 7]} {date:dd/MM}", UiTokens.FontSmall, d.FreeDay ? UiTokens.Success : UiTokens.TextLabel, UiFonts.Numbers);
+            dl.CustomMinimumSize = new Vector2(78, 0);
+            r.AddChild(dl);
+            var wl = ThemeFactory.Text(what + when, UiTokens.FontSmall, d.Reason == "played" || d.Reason == "came_back" ? UiTokens.TextPrimary : UiTokens.TextSecondary);
+            wl.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+            wl.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+            r.AddChild(wl);
+            r.AddChild(ThemeFactory.Text($"{d.FreeMinutes / 60.0:0.#} h livres", UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Numbers));
+            col.AddChild(r);
+        }
+        return col;
     }
 
     private static Label Wrap(string text, int size = UiTokens.FontSmall, Color? color = null, Font? font = null)

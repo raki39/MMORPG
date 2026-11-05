@@ -48,11 +48,14 @@ public sealed class PersonTraits
     public int WillingnessToPay;
     public int PaidAdvantageSensitivity;
 
-    // Rotina
+    // Rotina (P2): horario preferido para jogar (local) e duracao habitual; a frequencia vem da
+    // importancia do jogo, do habito e do tempo livre das obrigacoes.
     public int PreferredStartHour;
     public int SessionMinutes;
-    public int DaysPerWeek;
-    public int WeekendBoost;
+    /// <summary>Importancia do jogo entre os lazeres (permille): o principal diferencial do "hardcore", nao o tempo livre.</summary>
+    public int GameImportance;
+    /// <summary>Habito (permille): regularidade; quem jogou ontem tende a jogar hoje, quem faltou tende a faltar.</summary>
+    public int Habit;
 
     // Jogador (D-036): talento da pessoa (nao do personagem). Define o potencial e a velocidade
     // de aprendizado das capacidades (mecanica, conhecimento, coordenacao). Nao muda.
@@ -206,6 +209,30 @@ public sealed class Person
     /// <summary>Diferenca do horario local para o do servidor (minutos).</summary>
     public int LocalOffsetMinutes { get; internal set; }
 
+    // ---- Rotina de vida (P2, D-043) ----
+    public string OccupationId { get; internal set; } = "";
+    /// <summary>Variacao individual do horario das obrigacoes (minutos, +-).</summary>
+    public int ShiftOffsetMinutes { get; internal set; }
+    /// <summary>Deslocamento em relacao ao da ocupacao (permille).</summary>
+    public int CommutePermille { get; internal set; } = 1000;
+    /// <summary>Folga fixa da escala (0 = segunda .. 6 = domingo; -1 = sem).</summary>
+    public int DayOffIndex { get; internal set; } = -1;
+    public int SleepNeedMinutes { get; internal set; } = 480;
+    /// <summary>Hora preferida de dormir (minutos desde a meia-noite anterior; acima de 1440 = madrugada).</summary>
+    public int BedtimeMinute { get; internal set; } = 1425;
+    /// <summary>Renda do trabalho e apoio familiar (centavos/mes; sem efeito ate o M7).</summary>
+    public long IncomeCentsPerMonth { get; internal set; }
+    public long SupportCentsPerMonth { get; internal set; }
+    /// <summary>Minutos de jogo esperados numa semana tipica (rotina e importancia, sem humor).</summary>
+    public int ExpectedWeeklyMinutes { get; internal set; }
+    /// <summary>Ultimo dia local em que comecou uma sessao (habito).</summary>
+    public long LastPlayedLocalDay { get; internal set; } = -1;
+    /// <summary>Agenda dos ultimos dias (mais recente no fim): tempo livre, sessoes e motivo.</summary>
+    internal List<DayPlanRecord> PlanList { get; } = new();
+    public IReadOnlyList<DayPlanRecord> DayPlans => PlanList;
+    /// <summary>Janelas livres planejadas (ticks do servidor) de hoje e de ontem: limite da sessao.</summary>
+    internal List<(long Start, long End)> OpenWindows { get; } = new();
+
     /// <summary>Ultimo dia (indice) em que jogou; -1 = nunca.</summary>
     public long LastPlayedDay { get; internal set; } = -1;
     public bool IsOnline => State == LifecycleState.Online;
@@ -219,6 +246,34 @@ public sealed class Person
     public int TimesQuit { get; internal set; }
     public int TimesReturned { get; internal set; }
     public int TimesInactive { get; internal set; }
+}
+
+/// <summary>Agenda de um dia local (P2): tempo livre, janelas, sessoes planejadas e o motivo.</summary>
+public sealed class DayPlanRecord
+{
+    public DayPlanRecord(long localDay, int freeMinutes, int windows, int sessions, string reason, int firstStartMinute, int plannedMinutes, bool freeDay)
+    {
+        LocalDay = localDay;
+        FreeMinutes = freeMinutes;
+        Windows = windows;
+        Sessions = sessions;
+        Reason = reason;
+        FirstStartMinute = firstStartMinute;
+        PlannedMinutes = plannedMinutes;
+        FreeDay = freeDay;
+    }
+
+    public long LocalDay { get; }
+    public int FreeMinutes { get; }
+    public int Windows { get; }
+    public int Sessions { get; }
+    /// <summary>played, no_free_time, other_leisure, low_engagement, inactive, came_back.</summary>
+    public string Reason { get; }
+    /// <summary>Minuto local de inicio da primeira sessao (-1 = nenhuma).</summary>
+    public int FirstStartMinute { get; }
+    public int PlannedMinutes { get; }
+    /// <summary>Dia sem obrigacoes (folga, fim de semana, feriado ou sem ocupacao).</summary>
+    public bool FreeDay { get; }
 }
 
 /// <summary>Conta no MMORPG (plano 4.1). Criada no registro (M2).</summary>

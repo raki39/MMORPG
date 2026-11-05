@@ -121,7 +121,8 @@
           "Torres",
           "Vázquez"
         ]
-      }
+      },
+      "incomeFactorPermille": 850
     },
     {
       "id": "brasil",
@@ -193,7 +194,8 @@
           "date": "2027-03-26",
           "name": "Sexta-feira Santa"
         }
-      ]
+      ],
+      "incomeFactorPermille": 1000
     },
     {
       "id": "china",
@@ -305,7 +307,8 @@
           "Zhen",
           "Zihan"
         ]
-      }
+      },
+      "incomeFactorPermille": 1300
     },
     {
       "id": "eua",
@@ -411,7 +414,8 @@
           "Williams",
           "Wilson"
         ]
-      }
+      },
+      "incomeFactorPermille": 4200
     }
   ]
 }

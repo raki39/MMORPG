@@ -76,7 +76,13 @@ public sealed record CharacterDetailView(int PersonId, long PlayedTicks, IReadOn
     public IReadOnlyList<(string Key, int Value)> Impressions { get; init; } = Array.Empty<(string, int)>();
     /// <summary>Tedio por tipo de atividade (D-037).</summary>
     public IReadOnlyDictionary<string, int> Boredom { get; init; } = new Dictionary<string, int>();
+    /// <summary>Agenda dos ultimos dias (P2), mais recente no fim.</summary>
+    public IReadOnlyList<DayPlanRecord> DayPlans { get; init; } = Array.Empty<DayPlanRecord>();
 }
+
+/// <summary>Um dia da semana tipica (P2): obrigacoes, acordar, dormir e janelas livres (minutos locais).</summary>
+public sealed record WeekDayView(int Dow, IReadOnlyList<(int Start, int End, string Label)> Obligations, int Wake, int Bed,
+    IReadOnlyList<(int Start, int End)> Windows, int FreeMinutes, bool FreeDay);
 
 /// <summary>Humor da pessoa (copia imutavel, D-038).</summary>
 public sealed record MoodView(int Satisfaction, int Frustration, int Novelty, int Engagement, int ReturnIntention,
@@ -139,6 +145,14 @@ public sealed class PersonInfo
     public string NationalityId { get; init; } = "";
     public IReadOnlyList<string> Languages { get; init; } = Array.Empty<string>();
     public int LocalOffsetMinutes { get; init; }
+    /// <summary>Rotina de vida (P2): ocupacao, sono, renda e a semana tipica montada (fixa por pessoa).</summary>
+    public string OccupationId { get; init; } = "";
+    public int SleepNeedMinutes { get; init; }
+    public int BedtimeMinute { get; init; }
+    public long IncomeCentsPerMonth { get; init; }
+    public long SupportCentsPerMonth { get; init; }
+    public int ExpectedWeeklyMinutes { get; init; }
+    public IReadOnlyList<WeekDayView> Week { get; init; } = Array.Empty<WeekDayView>();
 }
 
 /// <summary>
@@ -203,7 +217,10 @@ public sealed class SimulationHost : IDisposable
         _engine = WorldFactory.Create(content, new WorldConfig { Seed = seed, PopulationSize = population });
         Persons = _engine.World.Persons
             .Select(p => new PersonInfo { Id = p.Id, Name = p.Name, ProfileId = p.ProfileId, AppearanceSeed = p.AppearanceSeed, Traits = p.Traits, BaseTraits = p.BaseTraits,
-                ResidenceId = p.ResidenceId, NationalityId = p.NationalityId, Languages = p.Languages, LocalOffsetMinutes = p.LocalOffsetMinutes })
+                ResidenceId = p.ResidenceId, NationalityId = p.NationalityId, Languages = p.Languages, LocalOffsetMinutes = p.LocalOffsetMinutes,
+                OccupationId = p.OccupationId, SleepNeedMinutes = p.SleepNeedMinutes, BedtimeMinute = p.BedtimeMinute,
+                IncomeCentsPerMonth = p.IncomeCentsPerMonth, SupportCentsPerMonth = p.SupportCentsPerMonth, ExpectedWeeklyMinutes = p.ExpectedWeeklyMinutes,
+                Week = WeekOf(p) })
             .ToArray();
         Calendar = _engine.World.Clock.Calendar;
         _snapshot = BuildSnapshot(-1);
@@ -378,6 +395,7 @@ public sealed class SimulationHost : IDisposable
                     .Concat(imps.Where(kv => kv.Value < 0).OrderBy(kv => kv.Value).Take(3))
                     .Select(kv => (kv.Key, kv.Value)).Distinct().ToArray(),
                 Boredom = c.BoredomByType.ToDictionary(kv => kv.Key, kv => kv.Value, StringComparer.Ordinal),
+                DayPlans = pw.DayPlans.ToArray(),
             };
         }
         return new SimSnapshot
@@ -397,6 +415,21 @@ public sealed class SimulationHost : IDisposable
                 kv.Value.UniqueCompleters, kv.Value.Active, kv.Value.SumPlayedTicksToComplete, kv.Value.SumLevelAtCompletion,
                 kv.Value.LastCompletedTick, kv.Value.XpGranted), StringComparer.Ordinal),
         };
+    }
+
+    /// <summary>Semana tipica da pessoa (sem feriados), montada pelo mesmo codigo do planejador.</summary>
+    private IReadOnlyList<WeekDayView> WeekOf(Person p)
+    {
+        var content = _engine.World.Content;
+        var occ = content.Occupations.TryGetValue(p.OccupationId, out var o) ? o : null;
+        var list = new List<WeekDayView>();
+        for (int dow = 0; dow < 7; dow++)
+        {
+            var day = Simulation.Core.Behavior.DailySchedule.Build(p, occ, content.Routine, dow, false, false, false);
+            var obligations = Simulation.Core.Behavior.DailySchedule.Obligations(p, occ, dow, false).Select(x => (x.Start, x.End, x.Label)).ToArray();
+            list.Add(new WeekDayView(dow, obligations, day.Wake, day.Bed, day.Windows.ToArray(), day.FreeMinutes, day.FreeDay));
+        }
+        return list;
     }
 
     private static MoodView MoodOf(PersonMood m) =>

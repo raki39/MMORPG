@@ -17,28 +17,25 @@ public class ValidationTests
     private const int WindowFrom = 19 * 60, WindowTo = 23 * 60;
 
     /// <summary>
-    /// Plano 19.4: um perfil "trabalhador" que prefere 19h-23h deve concentrar nessa faixa a
-    /// proporcao esperada das sessoes em dias uteis. A proporcao esperada sai da configuracao
-    /// do cenario (hora preferida 21 +- 2 e variacao de +-75 min), calculada exatamente abaixo;
-    /// a tolerancia e de 4 erros-padrao contados por pessoa (a hora preferida e fixa por pessoa,
-    /// entao sessoes da mesma pessoa nao sao independentes).
+    /// Regra do cenario (P2, D-043): trabalhador em horario comercial joga depois do expediente
+    /// e antes de dormir. Com hora preferida 21 +- 2, os inicios de dia util caem entre 18h e
+    /// 23h (hora local) e nenhum cai durante o trabalho.
     /// </summary>
     [Fact]
-    public void Trabalhador_19a23h_ConcentraAsSessoesDeDiaUtil()
+    public void TrabalhadorComercial_JogaDepoisDoExpediente_EAntesDeDormir()
     {
         var set = TestSupport.FreshPresetSet();
         var casual = set.Population.Profiles.First(p => p.Id == "casual");
         casual.Id = "trabalhador";
         casual.Name = "Trabalhador";
         casual.PreferredStartHour = new TraitRange { Mean = 21, Spread = 2 };
-        casual.DaysPerWeek = new TraitRange { Mean = 5, Spread = 1 };
+        casual.GameImportance = new TraitRange { Mean = 800, Spread = 100 };
         set.Population.Profiles = new List<PopulationProfileDefinition> { casual };
+        set.Occupations = set.Occupations.Where(o => o.Id == "comercial").ToList();
         var content = ContentDatabase.Create(set);
 
-        double expected = ExpectedShare(mean: 21, spread: 2, jitter: TestSupport.Preset.Behavior.SessionStartJitterMinutes);
-        int persons = 0, inWindow = 0, total = 0;
-        var perSeed = new List<double>();
-        foreach (ulong seed in new ulong[] { 1, 2, 3, 4, 5 })
+        int inWindow = 0, total = 0;
+        foreach (ulong seed in new ulong[] { 1, 2, 3 })
         {
             var e = WorldFactory.Create(content, new WorldConfig { Seed = seed, PopulationSize = 200 });
             e.Submit(new SetServerOpenCommand(true), SimTime.Hours(8));
@@ -49,22 +46,13 @@ public class ValidationTests
                 collector.Consume(e.World.Events.Drain(), e.World);
             }
             var starts = collector.WeekdaySessionStarts;
-            int hit = starts.Count(s => s.Minute >= WindowFrom && s.Minute < WindowTo);
-            perSeed.Add(hit / (double)starts.Count);
-            inWindow += hit;
+            inWindow += starts.Count(s => s.Minute >= 18 * 60 && s.Minute < 23 * 60);
             total += starts.Count;
-            persons += e.World.Characters.Count;
+            Assert.DoesNotContain(starts, s => s.Minute >= 8 * 60 + 60 && s.Minute < 17 * 60 - 60);   // nunca no meio do expediente
         }
-
-        Assert.True(total > 2000, $"amostra pequena: {total} sessões");
-        double observed = inWindow / (double)total;
-        double tolerance = 4 * Math.Sqrt(expected * (1 - expected) / persons);
-        _out.WriteLine($"esperado {expected:P2} · observado {observed:P2} · tolerância ±{tolerance:P2} · {persons} pessoas · {total} sessões · por seed: {string.Join(" ", perSeed.Select(x => x.ToString("P1")))}");
-        Assert.True(Math.Abs(observed - expected) <= tolerance,
-            $"observado {observed:P1} x esperado {expected:P1} (tolerância ±{tolerance:P1}, {persons} pessoas, {total} sessões)");
-        // Cada seed isolada tambem fica perto (tolerancia maior: 1/5 das pessoas).
-        foreach (var s in perSeed)
-            Assert.True(Math.Abs(s - expected) <= tolerance * Math.Sqrt(5), $"seed fora: {s:P1} x {expected:P1}");
+        Assert.True(total > 1500, $"amostra pequena: {total} sessões");
+        _out.WriteLine($"inícios de dia útil entre 18h e 23h: {inWindow * 100.0 / total:0.0}% de {total}");
+        Assert.True(inWindow * 100 / total >= 90, $"{inWindow}/{total} entre 18h e 23h");
     }
 
     /// <summary>
