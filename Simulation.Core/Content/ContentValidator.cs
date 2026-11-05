@@ -726,6 +726,37 @@ public static class ContentValidator
             ("noveltyCareExploration", pop.Mood.NoveltyCareExploration), ("noveltyCareImpatience", pop.Mood.NoveltyCareImpatience),
         })
             if (value is < 0 or > 1000) v.Error(PopulationFile, "mood." + name, "Use um valor de 0 a 1000.");
+        // Pesos da decisao e regras de sessao (P0).
+        var bh = pop.Behavior;
+        foreach (var (name, value) in new (string, int)[]
+        {
+            ("sessionStartJitterMinutes", bh.SessionStartJitterMinutes),
+            ("sessionDurationJitterPermille", bh.SessionDurationJitterPermille),
+            ("logoutToleranceMinutes", bh.LogoutToleranceMinutes),
+            ("walkSpeed", bh.WalkSpeed),
+            ("weightAffinity", bh.WeightAffinity),
+            ("weightReward", bh.WeightReward),
+            ("weightSocial", bh.WeightSocial),
+            ("weightRisk", bh.WeightRisk),
+            ("weightTravel", bh.WeightTravel),
+            ("weightCrowding", bh.WeightCrowding),
+            ("timeBudgetPenalty", bh.TimeBudgetPenalty),
+            ("questOfferWeight", bh.QuestOfferWeight),
+            ("questDeliverWeight", bh.QuestDeliverWeight),
+            ("questDeliverPerExtra", bh.QuestDeliverPerExtra),
+            ("questStepWeight", bh.QuestStepWeight),
+            ("noise", bh.Noise),
+            ("activityDurationMin", bh.ActivityDurationMin),
+            ("activityDurationMax", bh.ActivityDurationMax),
+            ("idleRethinkMinutes", bh.IdleRethinkMinutes)
+        })
+            if (value < 0) v.Error(PopulationFile, "behavior." + name, "O valor não pode ser negativo.");
+        if (bh.WalkSpeed <= 0) v.Error(PopulationFile, "behavior.walkSpeed", "A velocidade precisa ser maior que zero.");
+        if (bh.ActivityDurationMin <= 0 || bh.ActivityDurationMin > bh.ActivityDurationMax)
+            v.Error(PopulationFile, "behavior.activityDurationMin", "Use um mínimo maior que zero e até o máximo.");
+        if (bh.IdleRethinkMinutes <= 0) v.Error(PopulationFile, "behavior.idleRethinkMinutes", "Use 1 minuto ou mais.");
+        if (bh.RegistrationDayWeights.Count == 0 || bh.RegistrationDayWeights.Any(w => w < 0) || bh.RegistrationDayWeights.Sum() <= 0)
+            v.Error(PopulationFile, "behavior.registrationDayWeights", "Defina pesos não negativos com soma positiva.");
         // Retencao (D-039).
         foreach (var (name, value) in new (string, int)[]
         {

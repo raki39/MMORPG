@@ -32,7 +32,7 @@ public sealed class ScoredOption
 /// mundo: lotacao atual, viagem a partir de onde esta, tempo restante da sessao.
 ///
 /// U = afinidade + recompensa + social - risco - viagem - lotacao - tedio - tempo + ruido
-/// (cada termo normalizado em permille e multiplicado pelo peso de BehaviorTuning).
+/// (cada termo normalizado em permille e multiplicado pelo peso de population.json, secao "behavior").
 /// </summary>
 public static class ActivityScoring
 {
@@ -71,16 +71,16 @@ public static class ActivityScoring
                         bool offer = quests.CanAccept(ch) && quests.Offers(ch, board).Any();
                         if (ready == 0 && !offer) continue;
                         questTerm = ready > 0
-                            ? ("quest_deliver", BehaviorTuning.QuestDeliverWeight + (ready - 1) * BehaviorTuning.QuestDeliverPerExtra)
-                            : ("quest_offer", BehaviorTuning.QuestOfferWeight);
+                            ? ("quest_deliver", content.Behavior.QuestDeliverWeight + (ready - 1) * content.Behavior.QuestDeliverPerExtra)
+                            : ("quest_offer", content.Behavior.QuestOfferWeight);
                     }
                     else if (a.Type == ActivityTypes.Quest)
                     {
                         if (!quests.AdvancesStep(ch, region.Id, a.Id)) continue;
-                        questTerm = ("quest_step", BehaviorTuning.QuestStepWeight);
+                        questTerm = ("quest_step", content.Behavior.QuestStepWeight);
                     }
                     else if (quests.AdvancesStep(ch, region.Id, a.Id))
-                        questTerm = ("quest_step", BehaviorTuning.QuestStepWeight);
+                        questTerm = ("quest_step", content.Behavior.QuestStepWeight);
                 }
 
                 // Caminho real: ate o portao, pelas zonas, e ate o ponto da atividade (fora da estrada).
@@ -90,11 +90,11 @@ public static class ActivityScoring
 
                 var f = new List<DecisionFactor>();
                 int affinity = Affinity(a.Type, t);
-                f.Add(new DecisionFactor("affinity", affinity * BehaviorTuning.WeightAffinity / 1000));
+                f.Add(new DecisionFactor("affinity", affinity * content.Behavior.WeightAffinity / 1000));
                 // Explorar sem nada novo ao alcance perde parte da graca (D-037): o gosto de explorar
                 // e descobrir; terreno ja conhecido so rende XP.
                 if (a.Type == ActivityTypes.Explore && !ExploreRevealsSomething(ch, region, content))
-                    f.Add(new DecisionFactor("nothing_new", -affinity * BehaviorTuning.WeightAffinity / 1000 * content.Session.ExploreKnownPenalty / 1000));
+                    f.Add(new DecisionFactor("nothing_new", -affinity * content.Behavior.WeightAffinity / 1000 * content.Session.ExploreKnownPenalty / 1000));
 
                 // Adequacao ao nivel pelo desafio da propria atividade (D-027), nao pela faixa da zona.
                 int challenge = ProgressionRules.ChallengeLevel(content, a);
@@ -102,7 +102,7 @@ public static class ActivityScoring
                 int fit = yieldsXp ? ProgressionRules.Efficiency(content.Progression, ch.Level, challenge) : 0;
                 if (yieldsXp)
                 {
-                    f.Add(new DecisionFactor("level_fit", (fit - 500) * BehaviorTuning.WeightReward / 1000));
+                    f.Add(new DecisionFactor("level_fit", (fit - 500) * content.Behavior.WeightReward / 1000));
                     // Gosto por desafio acima do nivel (D-036a): competitividade (agressividade),
                     // confianca (mecanica) e pouca aversao a risco.
                     if (challenge > ch.Level)
@@ -114,20 +114,20 @@ public static class ActivityScoring
                 int count = occupancy(region.Id, a.Id);
                 int crowd = Math.Min(1000, count * 1000 / perActivityCapacity);
                 if (a.Type == ActivityTypes.Socialize)
-                    f.Add(new DecisionFactor("company", t.Sociability * Math.Min(count, 10) / 10 * BehaviorTuning.WeightSocial / 1000));
+                    f.Add(new DecisionFactor("company", t.Sociability * Math.Min(count, 10) / 10 * content.Behavior.WeightSocial / 1000));
                 else if (a.Type == ActivityTypes.Hunt || a.Type == ActivityTypes.Gather)
                 {
                     // Coordenacao divide o lugar melhor; oportunismo foge da disputa (D-036).
-                    int crowdWeight = BehaviorTuning.WeightCrowding * (1150 - t.Coordination * 3 / 10) / 1000 * (900 + t.Opportunism * 2 / 10) / 1000;
+                    int crowdWeight = content.Behavior.WeightCrowding * (1150 - t.Coordination * 3 / 10) / 1000 * (900 + t.Opportunism * 2 / 10) / 1000;
                     f.Add(new DecisionFactor("crowding", -crowd * crowdWeight / 1000));
                 }
                 else if (count > 0)
-                    f.Add(new DecisionFactor("company", t.Socializing * Math.Min(count, 5) / 5 * BehaviorTuning.WeightSocial / 3000));
+                    f.Add(new DecisionFactor("company", t.Socializing * Math.Min(count, 5) / 5 * content.Behavior.WeightSocial / 3000));
 
                 // Risco percebido: mecanica alta da confianca (D-036).
                 int risk = RiskOf(region, a, challenge, ch.Level) * (1150 - t.MechanicalSkill * 3 / 10) / 1000;
                 if (risk > 0)
-                    f.Add(new DecisionFactor("risk", -risk * t.RiskAversion / 1000 * BehaviorTuning.WeightRisk / 1000));
+                    f.Add(new DecisionFactor("risk", -risk * t.RiskAversion / 1000 * content.Behavior.WeightRisk / 1000));
 
                 if (travel > 0)
                 {
@@ -136,10 +136,10 @@ public static class ActivityScoring
                     int errMax = TravelErrorPermille(t, content.Dynamics);
                     int estimate = travel * (1000 + rng.NextIntInclusive(-errMax, errMax)) / 1000;
                     int travelCost = Math.Min(1000, estimate * 1000 / Math.Max(30, remaining));
-                    f.Add(new DecisionFactor("travel", -travelCost * BehaviorTuning.WeightTravel / 1000));
+                    f.Add(new DecisionFactor("travel", -travelCost * content.Behavior.WeightTravel / 1000));
                 }
-                if (travel + a.TypicalMinutes > remaining + BehaviorTuning.LogoutToleranceMinutes)
-                    f.Add(new DecisionFactor("time_budget", -BehaviorTuning.TimeBudgetPenalty));
+                if (travel + a.TypicalMinutes > remaining + content.Behavior.LogoutToleranceMinutes)
+                    f.Add(new DecisionFactor("time_budget", -content.Behavior.TimeBudgetPenalty));
 
                 // Tedio contextual (D-037): cansaco do tipo de atividade, aliviado pela paciencia.
                 if (BoredomPenalty(ch, t, a.Type, content.Session) is > 0 and var bored)
@@ -163,7 +163,7 @@ public static class ActivityScoring
                     f.Add(new DecisionFactor("goal", gb));
 
                 // Ruido: quem conhece o jogo decide de forma mais consistente (D-036).
-                int amp = BehaviorTuning.Noise * (1400 - t.GameKnowledge * 8 / 10) / 1000;
+                int amp = content.Behavior.Noise * (1400 - t.GameKnowledge * 8 / 10) / 1000;
                 int noise = rng.NextIntInclusive(-amp, amp);
                 f.Add(new DecisionFactor("noise", noise));
 

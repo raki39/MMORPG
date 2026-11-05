@@ -21,17 +21,21 @@ public sealed class TravelPlan
 {
     public static readonly TravelPlan Unreachable = new(new List<Waypoint>(), -1);
 
-    public TravelPlan(List<Waypoint> waypoints, int distance)
+    public TravelPlan(List<Waypoint> waypoints, int distance, int walkSpeed = 15)
     {
         Waypoints = waypoints;
         Distance = distance;
+        WalkSpeed = Math.Max(1, walkSpeed);
     }
+
+    /// <summary>Velocidade a pe usada no calculo (unidades de mapa por minuto; population.json "behavior").</summary>
+    public int WalkSpeed { get; }
 
     public List<Waypoint> Waypoints { get; }
     public int Distance { get; }
     public bool Reachable => Distance >= 0;
 
-    public int Minutes => Distance <= 0 ? 0 : (Distance + BehaviorTuning.WalkSpeed - 1) / BehaviorTuning.WalkSpeed;
+    public int Minutes => Distance <= 0 ? 0 : (Distance + WalkSpeed - 1) / WalkSpeed;
 }
 
 /// <summary>
@@ -134,6 +138,6 @@ public sealed class RouteFinder
             distance += _layout.LegLength(at, w.Pos);
             at = w.Pos;
         }
-        return new TravelPlan(wps, distance);
+        return new TravelPlan(wps, distance, _content.Behavior.WalkSpeed);
     }
 }

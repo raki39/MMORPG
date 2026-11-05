@@ -68,6 +68,8 @@ public sealed class ContentDatabase
     public MemorySettingsDefinition Memory => Set.Population.Memory;
     /// <summary>Retencao (D-039).</summary>
     public RetentionSettingsDefinition Retention => Set.Population.Retention;
+    /// <summary>Pesos da decisao e regras de sessao (P0, D-041).</summary>
+    public BehaviorSettingsDefinition Behavior => Set.Population.Behavior;
     public ProgressionDefinition Progression => Set.Progression;
 
     public IReadOnlyDictionary<string, RegionDefinition> Regions { get; }

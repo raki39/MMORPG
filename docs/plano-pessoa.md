@@ -1,6 +1,6 @@
 # Plano: rotina de vida, traits e reputação
 
-**Estado:** proposta para revisão do criador (04/11/2026). Nada disto está implementado.
+**Estado:** aprovado com ajustes (D-041, 04/11/2026). P0 feita; P1 a P4 em seguida, depois a Etapa 1.
 
 **Origem:** pedido do criador antes da Etapa 1.
 - Reputação do personagem, traits comportamentais da pessoa e rotina de vida (obrigações, sono, tempo livre, vontade de jogar, localidade e fuso, finanças).
@@ -258,7 +258,21 @@ Traits de M3, M5 e M6 podem ser sorteadas desde já como predisposições. Elas 
 
 Cada entrega fecha com testes, validação de 5 seeds, documentação, exportação e resumo.
 
-## 8. Decisões do criador antes de começar
+## 8. Decisões do criador (D-041)
+
+- **Traits:**
+  - pode haver pessoa sem traits;
+  - duas é o mais comum, e mais de duas é difícil (≈ 17%);
+  - a marcância desloca a tabela com efeito moderado;
+  - as iniciais precisam fazer sentido com atributos, personalidade e perfil;
+  - o catálogo deve ser grande e criativo;
+  - às vezes uma pessoa tem só negativas.
+- **Localidades:** Brasil, Argentina, Estados Unidos, China.
+- **Ocupações:** criativas e realistas (P2).
+- **Finanças:** M7, mas a renda real já entra na P2, sem efeito.
+- **Ordem:** P0 → P4, Etapa 1; reputação na Etapa 3.
+
+### Perguntas originais (respondidas)
 
 1. **Quantidade de traits:** o mínimo é 1 ou 0? Proposta: 1 → 15%, 2 → 35%, 3 → 22%, 4 → 14%, 5 → 9%, 6 → 5%.
 2. **Parâmetro da quantidade:** nenhum (só a tabela, como recomendo) ou marcância da personalidade. O "intelecto" fica de fora em qualquer caso.

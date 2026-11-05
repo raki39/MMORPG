@@ -35,7 +35,7 @@ public class ValidationTests
         set.Population.Profiles = new List<PopulationProfileDefinition> { casual };
         var content = ContentDatabase.Create(set);
 
-        double expected = ExpectedShare(mean: 21, spread: 2, jitter: Simulation.Core.Behavior.BehaviorTuning.SessionStartJitterMinutes);
+        double expected = ExpectedShare(mean: 21, spread: 2, jitter: TestSupport.Preset.Behavior.SessionStartJitterMinutes);
         int persons = 0, inWindow = 0, total = 0;
         var perSeed = new List<double>();
         foreach (ulong seed in new ulong[] { 1, 2, 3, 4, 5 })

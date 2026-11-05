@@ -1059,3 +1059,28 @@ Durante a revisão, o criador acrescentou: falta de conteúdo novo é questão d
   - o custo real é o tempo perdido, a tentativa interrompida e a reação emocional de cada pessoa;
   - desgaste, reparos e outras penalidades entram depois;
   - full loot continua uma regra separada, aplicada nos contextos definidos (zonas, M9).
+
+## D-041 — Decisões do criador para a pessoa (rotina, traits) e P0: pesos da decisão no conteúdo
+**Data:** 04/11/2026 · **Estado:** aceita
+
+**Decisões do criador** sobre o `docs/plano-pessoa.md`:
+- **Quantidade de traits:** pode haver pessoa sem traits.
+  - Duas é a quantidade mais comum, e é difícil ter mais de duas.
+  - Proposta de tabela: 0 → 18%, 1 → 27%, 2 → 38%, 3 → 10%, 4 → 4,5%, 5 → 2%, 6 → 0,5% (cerca de 17% com mais de duas).
+  - A "marcância da personalidade" desloca a tabela com efeito moderado, sem tornar comum ter mais de duas.
+- **Traits** (pedido durante a P0):
+  - as iniciais precisam combinar com os atributos, a personalidade e o perfil da pessoa, senão ficam desconexas;
+  - o catálogo deve ser grande e criativo, com positivas e negativas;
+  - algumas pessoas têm só negativas, por exemplo duas.
+- **Localidades:** Brasil, Argentina, Estados Unidos e China.
+- **Ocupações:** distribuição criativa e realista, a montar na P2.
+- **Finanças:** o modelo completo fica para o M7, mas a **renda real** da pessoa já é criada na P2, sem efeito por enquanto.
+- **Ordem:** P0 → P1 → P2 → P3 → P4, depois a Etapa 1. A reputação fica só na Etapa 3.
+
+**P0 — pesos da decisão no conteúdo:**
+- As constantes de `BehaviorTuning` (pesos da utilidade, missões, ruído, variação de sessão, tolerância de saída, velocidade a pé, duração das atividades, espera e dias de registro) foram para `population.json`, seção `behavior`, com validação. O arquivo do código foi removido.
+- A velocidade a pé vai para a classe na Etapa 1 (D-040: velocidade de movimento).
+- **Verificação:** eventos, população, personagens e o resumo diário ficaram idênticos antes e depois (30 dias × 100 pessoas e 20 dias × 1.000 pessoas).
+  - Só a coluna `state_hash` muda, porque o hash de estado inclui o hash do conteúdo (`Content.SourceHash`) e o `population.json` mudou.
+  - Esse é o método para checar mudanças que não deveriam alterar a simulação: comparar os relatórios, não o hash.
+- **Testes:** 164 passam.

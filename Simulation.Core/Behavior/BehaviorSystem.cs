@@ -98,7 +98,7 @@ public sealed class BehaviorSystem
         {
             if (p.State != LifecycleState.PotentialInterested) continue;
             var rng = Rng("behavior.register", p.Id);
-            int day = rng.PickWeighted(BehaviorTuning.RegistrationDayWeights);
+            int day = rng.PickWeighted(_w.Content.Behavior.RegistrationDayWeights);
             long dayStart = Cal.StartOfDay(Cal.DayIndex(Now) + day);
             long at = dayStart + SessionStartMinute(p, rng, Cal.KindOf(Cal.ToDateTime(dayStart).Date)) * SimTime.TicksPerMinute;
             if (at <= Now) at = Now + 1 + rng.NextInt((int)SimTime.TicksPerHour);
@@ -285,17 +285,17 @@ public sealed class BehaviorSystem
         return true;
     }
 
-    private static int SessionStartMinute(Person p, DeterministicRng rng, DayKind kind)
+    private int SessionStartMinute(Person p, DeterministicRng rng, DayKind kind)
     {
         int minute = p.Traits.PreferredStartHour * 60;
         if (kind != DayKind.Weekday) minute -= p.Traits.WeekendBoost * 240 / 1000; // fim de semana: mais cedo
-        minute += rng.NextIntInclusive(-BehaviorTuning.SessionStartJitterMinutes, BehaviorTuning.SessionStartJitterMinutes);
+        minute += rng.NextIntInclusive(-_w.Content.Behavior.SessionStartJitterMinutes, _w.Content.Behavior.SessionStartJitterMinutes);
         return Math.Clamp(minute, 0, 24 * 60 - 1);
     }
 
-    private static int SessionMinutes(Person p, DeterministicRng rng, DayKind kind)
+    private int SessionMinutes(Person p, DeterministicRng rng, DayKind kind)
     {
-        int j = BehaviorTuning.SessionDurationJitterPermille;
+        int j = _w.Content.Behavior.SessionDurationJitterPermille;
         int minutes = p.Traits.SessionMinutes * rng.NextIntInclusive(1000 - j, 1000 + j) / 1000;
         if (kind != DayKind.Weekday) minutes = minutes * (1000 + p.Traits.WeekendBoost / 2) / 1000;
         return Math.Max(10, minutes);
@@ -381,7 +381,7 @@ public sealed class BehaviorSystem
 
         switch (ch.Status)
         {
-            case CharacterStatus.Doing when ch.ActivityEndTick - Now <= BehaviorTuning.LogoutToleranceMinutes * SimTime.TicksPerMinute:
+            case CharacterStatus.Doing when ch.ActivityEndTick - Now <= _w.Content.Behavior.LogoutToleranceMinutes * SimTime.TicksPerMinute:
             case CharacterStatus.Traveling:
                 ch.LogoutPending = true; // termina a atividade ou a etapa da viagem e sai
                 break;
@@ -446,7 +446,7 @@ public sealed class BehaviorSystem
             ch.TargetRegionId = ch.RegionId;
             ch.ActivityId = "";
             ch.ActivityStartTick = Now;
-            ch.ActivityEndTick = Now + BehaviorTuning.IdleRethinkMinutes * SimTime.TicksPerMinute;
+            ch.ActivityEndTick = Now + _w.Content.Behavior.IdleRethinkMinutes * SimTime.TicksPerMinute;
             _w.Scheduler.Schedule(ch.ActivityEndTick, EvActivityEnd, ch.Id);
             return;
         }
@@ -536,7 +536,7 @@ public sealed class BehaviorSystem
         var wp = ch.Waypoints[0];
         ch.Waypoints.RemoveAt(0);
         long dist = _routes.Layout.LegLength(ch.Position, wp.Pos);   // pela estrada (D-030)
-        long ticks = Math.Max(1, (dist * SimTime.TicksPerMinute + BehaviorTuning.WalkSpeed - 1) / BehaviorTuning.WalkSpeed);
+        long ticks = Math.Max(1, (dist * SimTime.TicksPerMinute + _w.Content.Behavior.WalkSpeed - 1) / _w.Content.Behavior.WalkSpeed);
         ch.Status = CharacterStatus.Traveling;
         ch.MoveTo = wp.Pos;
         ch.MoveEntersZone = wp.EntersZone;
@@ -572,7 +572,7 @@ public sealed class BehaviorSystem
     {
         var a = _w.Content.Regions[ch.TargetRegionId].FindActivity(ch.ActivityId)!;
         var rng = Rng("behavior.duration", ch.Id * 1_000_000L + ch.DecisionCount);
-        int minutes = Math.Max(1, a.TypicalMinutes * rng.NextIntInclusive(BehaviorTuning.ActivityDurationMin, BehaviorTuning.ActivityDurationMax) / 1000);
+        int minutes = Math.Max(1, a.TypicalMinutes * rng.NextIntInclusive(_w.Content.Behavior.ActivityDurationMin, _w.Content.Behavior.ActivityDurationMax) / 1000);
         ch.Status = CharacterStatus.Doing;
         ch.ActivityStartTick = Now;
         ch.ActivityEndTick = Now + minutes * SimTime.TicksPerMinute;

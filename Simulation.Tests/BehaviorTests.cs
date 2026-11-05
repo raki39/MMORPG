@@ -57,7 +57,7 @@ public class BehaviorTests
         {
             int preferred = e.World.GetPerson(s.PersonId).Traits.PreferredStartHour * 60;
             int minute = s.At.Hour * 60 + s.At.Minute;
-            return Math.Abs(minute - preferred) <= BehaviorTuning.SessionStartJitterMinutes + 5;
+            return Math.Abs(minute - preferred) <= TestSupport.Preset.Behavior.SessionStartJitterMinutes + 5;
         });
         // Tolerancia: o primeiro acesso (registro) pode cair fora da janela por chegar atrasado.
         Assert.True(near * 100 / weekday.Count >= 85, $"{near}/{weekday.Count} perto do horário preferido");
@@ -175,7 +175,7 @@ public class BehaviorTests
         var at = start;
         foreach (var wp in plan.Waypoints) { sum += layout.LegLength(at, wp.Pos); Assert.True(layout.LegLength(at, wp.Pos) >= at.DistanceTo(wp.Pos) - 1); at = wp.Pos; }
         Assert.Equal(sum, plan.Distance);
-        Assert.Equal((sum + BehaviorTuning.WalkSpeed - 1) / BehaviorTuning.WalkSpeed, plan.Minutes);
+        Assert.Equal((sum + TestSupport.Preset.Behavior.WalkSpeed - 1) / TestSupport.Preset.Behavior.WalkSpeed, plan.Minutes);
         // Pontos de atividade ficam dentro da zona.
         foreach (var r in TestSupport.Preset.Regions.Values)
             foreach (var a in r.AllActivities())

@@ -89,6 +89,8 @@ public sealed class PopulationDefinition
     public MemorySettingsDefinition Memory { get; set; } = new();
     /// <summary>Retencao: engajamento na rotina, sessoes flexiveis, inatividade, desistencia e retorno (D-039).</summary>
     public RetentionSettingsDefinition Retention { get; set; } = new();
+    /// <summary>Pesos da decisao e regras de sessao que estavam no codigo (P0, D-041).</summary>
+    public BehaviorSettingsDefinition Behavior { get; set; } = new();
 }
 
 /// <summary>
@@ -388,4 +390,52 @@ public sealed class RetentionSettingsDefinition
     public int RageQuitFrustration { get; set; } = 600;
     /// <summary>Chance de sair na hora apos uma experiencia ruim com frustracao alta (permille).</summary>
     public int RageQuitChance { get; set; } = 300;
+}
+
+/// <summary>
+/// Pesos da decisao por utilidade (plano 4.4) e regras basicas de sessao e atividade (P0, D-041).
+/// Antes eram constantes em BehaviorTuning; os valores sao os mesmos. Termos em permille.
+/// </summary>
+public sealed class BehaviorSettingsDefinition
+{
+    /// <summary>Peso relativo do dia de registro depois da abertura (dia 0..6).</summary>
+    public List<int> RegistrationDayWeights { get; set; } = new() { 30, 22, 16, 12, 9, 6, 5 };
+    /// <summary>Variacao do horario de inicio em torno do preferido (minutos, +-).</summary>
+    public int SessionStartJitterMinutes { get; set; } = 75;
+    /// <summary>Variacao da duracao da sessao (permille, +-).</summary>
+    public int SessionDurationJitterPermille { get; set; } = 200;
+    /// <summary>Tolerancia para terminar a atividade antes de sair (plano 4.3).</summary>
+    public int LogoutToleranceMinutes { get; set; } = 15;
+    /// <summary>Velocidade a pe em unidades de mapa por minuto (1 unidade = 10 m; 15 = 9 km/h). Vai para a classe na Etapa 1.</summary>
+    public int WalkSpeed { get; set; } = 15;
+    /// <summary>Peso do gosto pelo tipo de atividade.</summary>
+    public int WeightAffinity { get; set; } = 450;
+    /// <summary>Peso do encaixe de nivel (recompensa).</summary>
+    public int WeightReward { get; set; } = 300;
+    /// <summary>Peso da companhia.</summary>
+    public int WeightSocial { get; set; } = 150;
+    /// <summary>Peso do risco percebido.</summary>
+    public int WeightRisk { get; set; } = 350;
+    /// <summary>Peso do tempo de viagem.</summary>
+    public int WeightTravel { get; set; } = 250;
+    /// <summary>Peso da lotacao na caca e na coleta.</summary>
+    public int WeightCrowding { get; set; } = 200;
+    /// <summary>Penalidade quando viagem + atividade nao cabem no tempo restante da sessao.</summary>
+    public int TimeBudgetPenalty { get; set; } = 400;
+    /// <summary>Quadro com missao elegivel para aceitar (D-031/D-036).</summary>
+    public int QuestOfferWeight { get; set; } = 210;
+    /// <summary>Quadro com missao pronta para entregar.</summary>
+    public int QuestDeliverWeight { get; set; } = 220;
+    /// <summary>A mais por missao pronta alem da primeira.</summary>
+    public int QuestDeliverPerExtra { get; set; } = 90;
+    /// <summary>Atividade ou ponto que avanca a etapa atual de uma missao.</summary>
+    public int QuestStepWeight { get; set; } = 250;
+    /// <summary>Aleatoriedade pequena e reproduzivel (+-); escala com o conhecimento do jogo.</summary>
+    public int Noise { get; set; } = 50;
+    /// <summary>Duracao real minima de uma atividade em relacao a tipica (permille).</summary>
+    public int ActivityDurationMin { get; set; } = 800;
+    /// <summary>Duracao real maxima de uma atividade em relacao a tipica (permille).</summary>
+    public int ActivityDurationMax { get; set; } = 1250;
+    /// <summary>Espera quando nao ha nenhuma opcao viavel (minutos).</summary>
+    public int IdleRethinkMinutes { get; set; } = 20;
 }

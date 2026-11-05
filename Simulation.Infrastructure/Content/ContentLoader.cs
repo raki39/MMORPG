@@ -79,7 +79,7 @@ public static class ContentLoader
         set.Items = Parse<ItemsFile>(texts, ContentValidator.ItemsFile, issues)?.Items ?? new();
         set.Creatures = Parse<CreaturesFile>(texts, ContentValidator.CreaturesFile, issues)?.Creatures ?? new();
         var pop = Parse<PopulationFile>(texts, ContentValidator.PopulationFile, issues);
-        if (pop != null) set.Population = new PopulationDefinition { Profiles = pop.Profiles, Names = pop.Names, Dynamics = pop.Dynamics, Goals = pop.Goals, Session = pop.Session, Mood = pop.Mood, Memory = pop.Memory, Retention = pop.Retention };
+        if (pop != null) set.Population = new PopulationDefinition { Profiles = pop.Profiles, Names = pop.Names, Dynamics = pop.Dynamics, Goals = pop.Goals, Session = pop.Session, Mood = pop.Mood, Memory = pop.Memory, Retention = pop.Retention, Behavior = pop.Behavior };
         set.Progression = Parse<ProgressionFile>(texts, ContentValidator.ProgressionFile, issues)?.Progression ?? new ProgressionDefinition();
         var quests = Parse<QuestsFile>(texts, ContentValidator.QuestsFile, issues);
         if (quests != null) set.Quests = new QuestCatalog { Settings = quests.Settings, Boards = quests.Boards, Quests = quests.Quests };
@@ -165,4 +165,5 @@ public sealed class PopulationFile : VersionedFile
     public MoodSettingsDefinition Mood { get; set; } = new();
     public MemorySettingsDefinition Memory { get; set; } = new();
     public RetentionSettingsDefinition Retention { get; set; } = new();
+    public BehaviorSettingsDefinition Behavior { get; set; } = new();
 }
