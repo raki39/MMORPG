@@ -975,7 +975,7 @@ public sealed class BehaviorSystem
         foreach (var g in ch.Goals)
         {
             if (g.Type == GoalTypes.PracticeActivity && g.TargetValue > 0 && g.Progress * 1000L / g.TargetValue >= close) return true;
-            if (g.Type == GoalTypes.ReachLevel && ch.Level == g.TargetValue - 1
+            if ((g.Type == GoalTypes.ReachLevel || g.Type == GoalTypes.UnlockLevel) && ch.Level == g.TargetValue - 1
                 && ch.Experience * 1000 / Math.Max(1, ProgressionRules.XpToNextLevel(_w.Content.Progression, ch.Level)) >= close) return true;
         }
         return false;

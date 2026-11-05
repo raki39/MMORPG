@@ -98,6 +98,8 @@ public sealed class ContentDatabase
     public PopulationTraitsDefinition PopulationTraits => Set.Population.Traits;
     /// <summary>Distribuicoes das preferencias.</summary>
     public PreferencesDefinition PreferenceRanges => Set.Population.Preferences;
+    /// <summary>Prioridade de progressao inicial (D-055).</summary>
+    public EarlyProgressionDefinition EarlyProgression => Set.Population.EarlyProgression;
     /// <summary>Ligacoes parciais entre atributos.</summary>
     public IReadOnlyList<TraitLinkDefinition> TraitLinks => Set.Population.Links;
     /// <summary>Localidade do servidor (fuso e calendario do relogio global).</summary>

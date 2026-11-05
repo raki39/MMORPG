@@ -63,6 +63,8 @@ Uma etapa por vez, fechada por inteiro (testes, validação, documentação, exp
    - ~~sorteio de dedicação: formato triangular e dedicação compartilhada~~ (D-053);
    - ~~separação entre Perfil (dedicação), Preferências e atributos (especialidade e Competitividade em Conduta)~~ (D-054, adotada; divergências da rotina acompanhadas em `validacao.md`);
      - depois: Competitividade seguindo o tema das preferências (rankings, mercado, fabricação, PvP) e benefícios de execução da especialidade, com os sistemas correspondentes;
+   - ~~progressão inicial, metas de desbloqueio e descoberta orientada pelo conteúdo~~ (D-055);
+     - depois: novas fontes de informação para a descoberta (conversas, outros jogadores, guildas), `requiredQuestIds` quando houver desbloqueio por missão, equipamento e venda de excedentes com inventário e economia (M5);
    - P4: traits;
    - a reputação do personagem entra com a Etapa 3 e as finanças com o M7.
 2. **Etapa 1 — O personagem** (decisões no D-040):

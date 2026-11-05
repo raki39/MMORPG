@@ -1834,3 +1834,30 @@ O criador pediu que o perfil representasse só dedicação e que os gostos fosse
 - **Pareamento com A:** não é perfeito; 96,6% mantiveram a ocupação.
 - **Competitividade:** deve acompanhar os interesses da pessoa. Os efeitos atuais (só na progressão) são parciais, e os demais entram com os sistemas correspondentes.
 - **Especialidades:** os benefícios de execução ainda não existem; hoje há só o pequeno reforço nas escolhas.
+
+## D-055 — Progressão inicial, metas de desbloqueio e descoberta orientada pelo conteúdo
+**Data:** 05/11/2026 · **Estado:** aceita como implementação; resultados para a conferência do criador
+
+O criador pediu para separar **gosto** (Preferências) de **necessidade de progressão**. A pessoa deve poder cumprir uma etapa de que gosta menos quando ela é necessária para o que quer, e depois voltar ao que prefere, sem mudar a preferência e sem tornar caça ou missões obrigatórias. Detalhes em `progressao-inicial.md`.
+
+**Mecanismos:**
+1. **Progressão inicial** (`earlyProgression`, configurável):
+   - **Configuração:** nível-alvo 10 (configuração do preset, não regra fixa), peso 150, pleno até o nível 5 e linear até zero no alvo.
+   - **O fator "Progressão inicial":** igual para todos; vale o maior entre rendimento de XP adequado e missão disponível.
+   - **Limites:** não soma com metas de nível ou de missão (vale o maior) e não vale para o que não cabe na sessão. Acaba no nível-alvo, e missões já concluídas não recebem nada.
+2. **Metas de desbloqueio:** o nível que libera uma atividade conhecida de um tema preferido (qualquer preferência a partir de 450, não só a mais forte). A pessoa escolhe a fonte de XP, e a meta termina ao cumprir o requisito.
+3. **Descoberta orientada pelo conteúdo:** zona desconhecida da fronteira com uma pista **válida** de conteúdo preferido. Hoje a única fonte de pista são as etapas das missões aceitas; sem pista, a pessoa não sabe o conteúdo de zonas desconhecidas.
+
+**Fora do escopo:**
+- `requiredQuestIds`, até haver uma necessidade concreta;
+- planejador de várias etapas;
+- equipamento e venda de excedentes, até existirem inventário e economia.
+
+**Medição** (5 seeds × 1.000 × 90 dias; versões V0 a V3 com as mesmas pessoas):
+- **V0** (tudo desligado) é idêntico ao D-054.
+- **Rotina:** regras do cenário 7 de 9 nas quatro versões, horas por perfil iguais.
+- **Tempo até o nível 10:** p90 de 31,7 h (V0) para 22,6 h (V3). A mediana vai de 15,8 h para 15,2 h. Quem prefere Social: p90 de 64,1 h para 43,3 h.
+- **Antes do nível 10:** a cidade cai de 37% para 25% do tempo. **Depois:** a mistura volta ao normal.
+- **Abaixo do nível 10 com 20 h ou mais:** de 82 para 35 (0,7%), quase todos com preferência Social, que escolhem a taverna mesmo tendo caminhos.
+- **Metas de desbloqueio:** cerca de 25 mil adotadas, 64% cumpridas.
+- **Descoberta orientada:** quase sem efeito (6 metas) por falta de fontes de informação válidas; o efeito virá com elas.

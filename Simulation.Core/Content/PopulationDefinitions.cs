@@ -117,6 +117,25 @@ public sealed class PreferencesDefinition
 }
 
 /// <summary>
+/// Progressao inicial (D-055): todos os personagens abaixo do nivel-alvo recebem uma prioridade
+/// para se estabelecer (missoes disponiveis e atividades com bom rendimento de XP), igual para
+/// qualquer perfil e preferencia. Nao e sequencia obrigatoria nem mudanca de gosto: e um fator
+/// da nota ("early_progression"), que diminui perto do alvo e acaba nele.
+/// </summary>
+public sealed class EarlyProgressionDefinition
+{
+    public bool Enabled { get; set; }
+    /// <summary>Nivel em que o incentivo acaba (configuracao do preset, nao regra fixa).</summary>
+    public int TargetLevel { get; set; } = 10;
+    /// <summary>Peso maximo na nota (com contribuicao plena e antes da reducao).</summary>
+    public int Weight { get; set; } = 150;
+    /// <summary>Peso pleno ate este nivel; depois cai em linha reta ate zero no nivel-alvo.</summary>
+    public int FullUntilLevel { get; set; } = 5;
+    /// <summary>Rendimento minimo (permille) para uma atividade contar como progressao adequada.</summary>
+    public int MinFitPermille { get; set; } = 600;
+}
+
+/// <summary>
 /// Ligacao parcial entre dois atributos (mesmo mecanismo da dedicacao compartilhada): a posicao
 /// do alvo mistura a posicao da ancora com a propria, mantendo a distribuicao do alvo. Chaves
 /// "traits.x" ou "preferences.x"; os dois no formato triangular.
@@ -159,6 +178,8 @@ public sealed class PopulationDefinition
     public RoutineSettingsDefinition Routine { get; set; } = new();
     /// <summary>Dedicacao compartilhada entre importancia, sessao normal e habito (D-053).</summary>
     public DedicationSettingsDefinition Dedication { get; set; } = new();
+    /// <summary>Prioridade de progressao inicial ate o nivel-alvo (D-055).</summary>
+    public EarlyProgressionDefinition EarlyProgression { get; set; } = new();
     /// <summary>Atributos gerados pela populacao toda, independentes do perfil.</summary>
     public PopulationTraitsDefinition Traits { get; set; } = new();
     /// <summary>Preferencias (interesses pessoais).</summary>
@@ -252,6 +273,26 @@ public sealed class GoalSettingsDefinition
     public int ImpatientDropChance { get; set; } = 40;
     public int ImpatientBelow { get; set; } = 300;
     public int MotiveReinforce { get; set; } = 1;
+    /// <summary>
+    /// Metas de desbloqueio: com uma preferencia relevante (a partir de UnlockMinPreference) e uma
+    /// atividade desse tema conhecida, mas acima do nivel, a pessoa pode buscar o nivel que a libera.
+    /// A preferencia nao muda; a meta termina ao cumprir o requisito.
+    /// </summary>
+    public bool UnlockEnabled { get; set; }
+    public int UnlockMinPreference { get; set; } = 450;
+    /// <summary>Peso da meta na escolha: base + preferencia * isto / 1000.</summary>
+    public int UnlockBaseWeight { get; set; } = 80;
+    public int UnlockPerPreference { get; set; } = 600;
+    /// <summary>So requisitos ate esta distancia do nivel atual.</summary>
+    public int UnlockMaxLevelsAhead { get; set; } = 6;
+    /// <summary>
+    /// Descoberta orientada pelo conteudo: a pessoa procura uma zona desconhecida da fronteira
+    /// sobre a qual tem informacao valida (pista de missao aceita) com o conteudo de que gosta.
+    /// </summary>
+    public bool ContentDiscoveryEnabled { get; set; }
+    public int ContentDiscoveryMinPreference { get; set; } = 450;
+    public int ContentDiscoveryBaseWeight { get; set; } = 100;
+    public int ContentDiscoveryPerPreference { get; set; } = 900;
 }
 
 /// <summary>

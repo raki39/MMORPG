@@ -107,6 +107,19 @@ public sealed class GoalSystem
             list.Add(new(GoalTypes.CompleteQuest, quest.Id, 1, 0, w, motive));
         }
 
+        // Descoberta orientada pelo conteudo (D-055): zona da fronteira com pista do que a pessoa gosta.
+        if (!Has(GoalTypes.DiscoverZone))
+        {
+            int maxLevel = ch.Level + 2 + t.Competitiveness / 250;
+            foreach (var (zone, w, motive) in ContentDiscoveryOptions(p, ch, C, S, maxLevel))
+                list.Add(new(GoalTypes.DiscoverZone, zone, 1, 0, w, motive));
+        }
+
+        // Desbloqueio (D-055): nivel que libera uma atividade conhecida de um tema que a pessoa prefere.
+        if (!Has(GoalTypes.UnlockLevel))
+            foreach (var (target, level, w, motive) in UnlockOptions(p, ch, C, S))
+                list.Add(new(GoalTypes.UnlockLevel, target, level, ch.Level, w, motive));
+
         // Praticar a atividade preferida (pela preferencia); meta maior para os pacientes.
         if (!Has(GoalTypes.PracticeActivity))
         {
@@ -119,6 +132,79 @@ public sealed class GoalSystem
                 string motive = AffinityTraitFor(best)!;
                 int minutes = 120 + t.Patience * 3 / 10;
                 list.Add(new(GoalTypes.PracticeActivity, best, minutes, 0, 100 + p.MotiveValue(motive) * 5 / 10 + t.Patience / 5, motive));
+            }
+        }
+        return list;
+    }
+
+    /// <summary>Tipos de atividade que uma preferencia motiva (crafting: nenhum por enquanto).</summary>
+    public static IReadOnlyList<string> TypesOf(string preference) => preference switch
+    {
+        "pve" => new[] { ActivityTypes.Hunt },
+        "pvp" => new[] { ActivityTypes.Patrol, ActivityTypes.Ambush },
+        "gathering" => new[] { ActivityTypes.Gather },
+        "exploration" => new[] { ActivityTypes.Explore },
+        "trade" => new[] { ActivityTypes.Trade },
+        "social" => new[] { ActivityTypes.Socialize },
+        _ => Array.Empty<string>(),
+    };
+
+    /// <summary>
+    /// Metas de desbloqueio possiveis (D-055): para cada preferencia relevante, a atividade
+    /// conhecida (zona conhecida) desse tema com o menor nivel minimo acima do atual, ao alcance
+    /// (ate UnlockMaxLevelsAhead) e sem requisito que ainda nao existe (grupo, item, classe).
+    /// Varias preferencias podem gerar opcoes; a escolha entre metas e ponderada.
+    /// </summary>
+    public static List<(string Target, int Level, int Weight, string Motive)> UnlockOptions(Person p, Character ch, ContentDatabase c, GoalSettingsDefinition s)
+    {
+        var list = new List<(string, int, int, string)>();
+        if (!s.UnlockEnabled) return list;
+        int limit = Math.Min(c.Progression.LevelCap, ch.Level + s.UnlockMaxLevelsAhead);
+        foreach (var key in PersonPreferences.Keys)
+        {
+            int pref = p.Preferences.Get(key);
+            var types = TypesOf(key);
+            if (pref < s.UnlockMinPreference || types.Count == 0) continue;
+            (string Region, ActivityDefinition? A) best = ("", null);
+            foreach (var regionId in ch.Known)
+                foreach (var a in c.Regions[regionId].AllActivities())
+                {
+                    if (!types.Contains(a.Type) || a.MinLevel <= ch.Level || a.MinLevel > limit) continue;
+                    if (a.MinGroupSize > 1 || a.RequiredItemIds.Count > 0 || (a.ClassIds.Count > 0 && !a.ClassIds.Contains(ch.ClassId))) continue;
+                    if (best.A == null || a.MinLevel < best.A.MinLevel
+                        || (a.MinLevel == best.A.MinLevel && string.CompareOrdinal(regionId + "/" + a.Id, best.Region + "/" + best.A.Id) < 0))
+                        best = (regionId, a);
+                }
+            if (best.A != null)
+                list.Add((best.Region + "/" + best.A.Id, best.A.MinLevel, s.UnlockBaseWeight + pref * s.UnlockPerPreference / 1000, Person.PreferenceMotivePrefix + key));
+        }
+        return list;
+    }
+
+    /// <summary>
+    /// Descobertas orientadas pelo conteudo (D-055): zonas desconhecidas da fronteira (vizinhas das
+    /// conhecidas, dentro do nivel aceito) sobre as quais a pessoa tem pista de uma atividade de um
+    /// tema que prefere. Sem pista valida, nada: ela nao sabe o conteudo de zonas desconhecidas.
+    /// </summary>
+    public static List<(string Zone, int Weight, string Motive)> ContentDiscoveryOptions(Person p, Character ch, ContentDatabase c, GoalSettingsDefinition s, int maxLevel)
+    {
+        var list = new List<(string, int, string)>();
+        if (!s.ContentDiscoveryEnabled || ch.Hints.Count == 0) return list;
+        foreach (var key in PersonPreferences.Keys)
+        {
+            int pref = p.Preferences.Get(key);
+            var types = TypesOf(key);
+            if (pref < s.ContentDiscoveryMinPreference || types.Count == 0) continue;
+            foreach (var hint in ch.Hints)
+            {
+                int slash = hint.IndexOf('/');
+                string zoneId = hint[..slash], activityId = hint[(slash + 1)..];
+                if (ch.Known.Contains(zoneId) || !c.Regions.TryGetValue(zoneId, out var z)) continue;
+                if (z.FindActivity(activityId) is not { } a || !types.Contains(a.Type)) continue;
+                if (!z.IsCity && z.LevelMin > maxLevel) continue;
+                if (!ch.Known.Any(k => c.Regions[k].Connections.Any(x => x.To == zoneId) || z.Connections.Any(x => x.To == k))) continue;
+                list.Add((zoneId, s.ContentDiscoveryBaseWeight + pref * s.ContentDiscoveryPerPreference / 1000, Person.PreferenceMotivePrefix + key));
+                break;   // uma zona por preferencia (a primeira pista em ordem ordinal)
             }
         }
         return list;
@@ -174,15 +260,27 @@ public sealed class GoalSystem
     /// Limitado (nao vira regra): ruido, gosto, risco e distancia ainda podem vencer.
     /// </summary>
     public int Bonus(Character ch, RegionDefinition region, ActivityDefinition a, bool yieldsXp, int levelFit, bool deliversQuests = false)
+        => BonusOf(ch, region, a, yieldsXp, levelFit, deliversQuests, onlyProgression: false);
+
+    /// <summary>
+    /// Parte das metas que e progressao (nivel, desbloqueio por nivel e missao): o incentivo de
+    /// progressao inicial nao soma com ela; na mesma opcao vale o maior dos dois (D-055).
+    /// </summary>
+    public int ProgressionBonus(Character ch, RegionDefinition region, ActivityDefinition a, bool yieldsXp, int levelFit, bool deliversQuests = false)
+        => BonusOf(ch, region, a, yieldsXp, levelFit, deliversQuests, onlyProgression: true);
+
+    private int BonusOf(Character ch, RegionDefinition region, ActivityDefinition a, bool yieldsXp, int levelFit, bool deliversQuests, bool onlyProgression)
     {
         if (ch.GoalList.Count == 0) return 0;
         int total = 0;
         foreach (var g in ch.GoalList)
         {
+            if (onlyProgression && g.Type is not (GoalTypes.ReachLevel or GoalTypes.UnlockLevel or GoalTypes.CompleteQuest)) continue;
             int rel = g.Type switch
             {
                 // Quem quer subir de nivel tambem e puxado para entregar missoes prontas (recompensa em XP).
-                GoalTypes.ReachLevel => deliversQuests ? 800 : yieldsXp && levelFit >= 600 ? levelFit : 0,
+                // O desbloqueio por nivel usa a mesma regra: a pessoa escolhe a fonte de XP.
+                GoalTypes.ReachLevel or GoalTypes.UnlockLevel => deliversQuests ? 800 : yieldsXp && levelFit >= 600 ? levelFit : 0,
                 GoalTypes.DiscoverZone => region.Connections.Any(c => c.To == g.Target) ? 1000
                     : a.Type == ActivityTypes.Explore && region.Connections.Any(c => C.Regions[c.To].Connections.Any(c2 => c2.To == g.Target)) ? 700 : 0,
                 GoalTypes.CompleteQuest => QuestRelevance(ch, g.Target, region, a),
@@ -223,7 +321,7 @@ public sealed class GoalSystem
     {
         foreach (var g in ch.GoalList.ToList())
         {
-            if (g.Type != GoalTypes.ReachLevel) continue;
+            if (g.Type != GoalTypes.ReachLevel && g.Type != GoalTypes.UnlockLevel) continue;
             g.Progress = ch.Level - g.StartValue;
             g.LastProgressPlayedTicks = ch.PlayedTicksAt(Now);
             if (ch.Level >= g.TargetValue) Complete(p, ch, g);

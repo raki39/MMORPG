@@ -133,6 +133,10 @@ public sealed class QuestSystem
     private void Accept(Character ch, QuestDefinition q)
     {
         ch.ActiveQuestList.Add(new ActiveQuest(q.Id, Now, ch.PlayedTicksAt(Now)));
+        // Ler a missao informa o que existe nos lugares das etapas (pista de conteudo, D-055).
+        foreach (var step in q.Steps)
+            if (step.RegionId.Length > 0 && step.ActivityId.Length > 0 && !ch.Known.Contains(step.RegionId))
+                ch.Hints.Add(step.RegionId + "/" + step.ActivityId);
         var s = _w.StatsOf(q.Id);
         s.Accepted++;
         s.Active++;

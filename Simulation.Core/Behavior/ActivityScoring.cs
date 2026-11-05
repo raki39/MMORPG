@@ -173,6 +173,17 @@ public static class ActivityScoring
                 if (goals != null && goals.Bonus(ch, region, a, yieldsXp, fit, delivers) is > 0 and var gb)
                     f.Add(new DecisionFactor("goal", gb));
 
+                // Progressao inicial (D-055): prioridade ate o nivel-alvo, igual para todos. Conta uma
+                // vez por opcao (o maior entre rendimento de XP adequado e missao disponivel), so se a
+                // opcao cabe na sessao, e nao soma com metas de progressao (na opcao vale o maior).
+                bool fitsSession = travel + a.TypicalMinutes <= remaining + content.Behavior.LogoutToleranceMinutes;
+                int early = EarlyProgressionValue(ch.Level, content.EarlyProgression, yieldsXp, fit, questTerm != null, fitsSession);
+                if (early > 0)
+                {
+                    int progressGoals = goals?.ProgressionBonus(ch, region, a, yieldsXp, fit, delivers) ?? 0;
+                    if (early > progressGoals) f.Add(new DecisionFactor("early_progression", early - progressGoals));
+                }
+
                 // Ruido: quem conhece o jogo decide de forma mais consistente (D-036).
                 int amp = content.Behavior.Noise * (1400 - t.GameKnowledge * 8 / 10) / 1000;
                 int noise = rng.NextIntInclusive(-amp, amp);
@@ -191,6 +202,27 @@ public static class ActivityScoring
             return c != 0 ? c : string.CompareOrdinal(x.Key, y.Key);
         });
         return options;
+    }
+
+    /// <summary>
+    /// Incentivo de progressao inicial de uma opcao (D-055): peso x reducao pelo nivel x
+    /// contribuicao, onde a contribuicao e o rendimento de XP (se ao menos MinFitPermille) ou 1000
+    /// para opcao de missao (oferta, etapa ou entrega), o maior dos dois. Zero desligado, no
+    /// nivel-alvo ou acima, ou se a opcao nao cabe na sessao.
+    /// </summary>
+    public static int EarlyProgressionValue(int level, EarlyProgressionDefinition e, bool yieldsXp, int fit, bool quest, bool fitsSession)
+    {
+        if (!e.Enabled || level >= e.TargetLevel || !fitsSession) return 0;
+        int contribution = Math.Max(yieldsXp && fit >= e.MinFitPermille ? fit : 0, quest ? 1000 : 0);
+        return e.Weight * EarlyDecay(e, level) / 1000 * contribution / 1000;
+    }
+
+    /// <summary>Reducao pelo nivel (permille): pleno ate FullUntilLevel, linear ate zero no nivel-alvo.</summary>
+    public static int EarlyDecay(EarlyProgressionDefinition e, int level)
+    {
+        if (level >= e.TargetLevel) return 0;
+        if (level <= e.FullUntilLevel) return 1000;
+        return 1000 * (e.TargetLevel - level) / (e.TargetLevel - e.FullUntilLevel);
     }
 
     /// <summary>

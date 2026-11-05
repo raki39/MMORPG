@@ -290,6 +290,19 @@ A estrutura nova foi adotada com os parâmetros candidatos (`perfil-preferencias
 
 Relatórios em `docs/baselines/perfil-preferencias/`.
 
+## D-055: progressão inicial e metas de desbloqueio (05/11/2026)
+
+Medição em quatro versões com as mesmas pessoas (`baselines/progressao-inicial/`). Nenhuma meta mudou.
+
+- **Regras do cenário:** 7 de 9 em todas. As duas divergências do D-054 continuam iguais (horas do casual 9,8 h; fim de semana instável em 1,3).
+- **Mudanças provisórias (V0 → V3):**
+  - horas até o nível 10: 15,8 → 15,2;
+  - casuais no nível 10 ou mais: 95,3% → 97,5% (já fora);
+  - XP de missões: 19,5% → 17,7%;
+  - combate: 31,3% → 32,9%;
+  - cidade: 26,8% → 24,4%;
+  - andando ou esperando: 20,2% → 19,9%.
+
 ## Próximos passos
 
 Roteiro por etapas (backlog):

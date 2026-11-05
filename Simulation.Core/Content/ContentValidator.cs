@@ -830,6 +830,21 @@ public static class ContentValidator
         if (gs.MaxActive < 0 || gs.MaxActive > 5) v.Error(PopulationFile, "goals.maxActive", "Use de 0 a 5 metas ao mesmo tempo.");
         if (gs.AdoptChance < 0 || gs.AdoptChance > 1000) v.Error(PopulationFile, "goals.adoptChance", "Use um valor de 0 a 1000.");
         if (gs.Weight < 0) v.Error(PopulationFile, "goals.weight", "O peso não pode ser negativo.");
+        foreach (var (name, value, lo, hi) in new (string, int, int, int)[]
+        {
+            ("unlockMinPreference", gs.UnlockMinPreference, 0, 1000), ("unlockBaseWeight", gs.UnlockBaseWeight, 0, 1000),
+            ("unlockPerPreference", gs.UnlockPerPreference, 0, 2000), ("unlockMaxLevelsAhead", gs.UnlockMaxLevelsAhead, 1, 30),
+            ("contentDiscoveryMinPreference", gs.ContentDiscoveryMinPreference, 0, 1000), ("contentDiscoveryBaseWeight", gs.ContentDiscoveryBaseWeight, 0, 1000),
+            ("contentDiscoveryPerPreference", gs.ContentDiscoveryPerPreference, 0, 2000),
+        })
+            if (value < lo || value > hi) v.Error(PopulationFile, "goals." + name, $"Use de {lo} a {hi}.");
+        // Progressao inicial (D-055): incentivo limitado, que acaba no nivel-alvo.
+        var ep = pop.EarlyProgression;
+        int cap = set.Progression.LevelCap > 0 ? set.Progression.LevelCap : 1000;
+        if (ep.TargetLevel < 2 || ep.TargetLevel > cap) v.Error(PopulationFile, "earlyProgression.targetLevel", $"Use de 2 a {cap} (nível máximo).");
+        if (ep.Weight is < 0 or > 300) v.Error(PopulationFile, "earlyProgression.weight", "Use de 0 a 300 (não deve passar do peso de uma missão).");
+        if (ep.FullUntilLevel < 1 || ep.FullUntilLevel >= ep.TargetLevel) v.Error(PopulationFile, "earlyProgression.fullUntilLevel", "Use de 1 até o nível anterior ao nível-alvo.");
+        if (ep.MinFitPermille is < 0 or > 1000) v.Error(PopulationFile, "earlyProgression.minFitPermille", "Use de 0 a 1000.");
         var ss = pop.Session;
         foreach (var (name, value) in new (string, int)[]
         {

@@ -568,6 +568,8 @@ public static class GoalTypes
     public const string DiscoverZone = "discover_zone";
     public const string CompleteQuest = "complete_quest";
     public const string PracticeActivity = "practice_activity";
+    /// <summary>Chegar ao nivel que libera uma atividade desejada (D-055). Target = "zona/atividade".</summary>
+    public const string UnlockLevel = "unlock_level";
 }
 
 /// <summary>
@@ -683,6 +685,13 @@ public sealed class Character
     /// <summary>Locais que o personagem conhece (so estes entram nas decisoes).</summary>
     internal SortedSet<string> Known { get; } = new(StringComparer.Ordinal);
     public IReadOnlyCollection<string> KnownRegions => Known;
+    /// <summary>
+    /// Pistas de conteudo (D-055): "zona/atividade" de zonas ainda desconhecidas sobre as quais a
+    /// pessoa recebeu informacao valida (hoje, as etapas de missoes aceitas). Sem pista, ela nao
+    /// sabe o que ha numa zona desconhecida.
+    /// </summary>
+    internal SortedSet<string> Hints { get; } = new(StringComparer.Ordinal);
+    public IReadOnlyCollection<string> ContentHints => Hints;
     public int DecisionCount { get; internal set; }
     public string LastActivityKey { get; internal set; } = "";
     public int RepeatCount { get; internal set; }

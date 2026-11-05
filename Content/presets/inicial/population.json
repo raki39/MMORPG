@@ -20,6 +20,7 @@
     }
   ],
   "dedication": { "influencePermille": 450 },
+  "earlyProgression": { "enabled": true, "targetLevel": 10, "weight": 150, "fullUntilLevel": 5, "minFitPermille": 600 },
   "traits": {
     "pve": { "min": 0, "mode": 250, "max": 700 }, "pvp": { "min": 0, "mode": 250, "max": 700 }, "trade": { "min": 0, "mode": 250, "max": 700 }, "exploration": { "min": 0, "mode": 250, "max": 700 }, "socializing": { "min": 0, "mode": 250, "max": 700 },
     "sociability": { "min": 150, "mode": 540, "max": 930 }, "aggressiveness": { "min": 0, "mode": 320, "max": 700 }, "patience": { "mean": 530, "spread": 420 }, "loyalty": { "mean": 520, "spread": 430 }, "riskAversion": { "mean": 510, "spread": 530 },
@@ -79,7 +80,9 @@
   },
   "goals": {
     "weight": 200, "maxStackPermille": 1500, "maxActive": 2, "adoptChance": 450,
-    "staleBaseHours": 3, "staleExtraHoursAtMaxPatience": 9, "impatientDropChance": 40, "impatientBelow": 300, "motiveReinforce": 1
+    "staleBaseHours": 3, "staleExtraHoursAtMaxPatience": 9, "impatientDropChance": 40, "impatientBelow": 300, "motiveReinforce": 1,
+    "unlockEnabled": true, "unlockMinPreference": 450, "unlockBaseWeight": 80, "unlockPerPreference": 600, "unlockMaxLevelsAhead": 6,
+    "contentDiscoveryEnabled": true, "contentDiscoveryMinPreference": 450, "contentDiscoveryBaseWeight": 100, "contentDiscoveryPerPreference": 900
   },
   "session": {
     "switchMargin": 60, "commitMargin": 150, "commitBaseMinutes": 30, "commitExtraMinutesAtMaxPatience": 60,

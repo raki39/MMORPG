@@ -266,17 +266,20 @@ public static class ScenarioRunner
                 foreach (var c in scenario.Commands.OrderBy(c => c.Tick).Where(c => c.Tick <= SimTime.Days(opt.Days)))
                     engine.Submit(c.Command, c.Tick);
             var collector = new ValidationCollector(db, targets.File.WarmupDays);
+            var tracker = neutral ? null : new ProgressionTracker(db);
             var watch = Stopwatch.StartNew();
             for (int day = 0; day < opt.Days; day++)
             {
                 engine.AdvanceTo(SimTime.Days(day + 1));
-                collector.Consume(engine.World.Events.Drain(), engine.World);
+                var evs = engine.World.Events.Drain();
+                tracker?.Consume(evs, engine.World);
+                collector.Consume(evs, engine.World);
             }
             watch.Stop();
             var m = collector.Finish(engine.World, seed, opt.Days, neutral ? scenarioTargets : targets.File.Targets);
             m.FinalStateHash = StateHasher.Compute(engine.World);
             m.SimulationSeconds = watch.Elapsed.TotalSeconds;
-            if (neutral) controlled[i] = m; else { results[i] = m; people[i] = PeopleRows(engine.World, collector, seed, opt.Days, targets.File.WarmupDays); }
+            if (neutral) controlled[i] = m; else { results[i] = m; people[i] = PeopleRows(engine.World, collector, tracker!, seed, opt.Days, targets.File.WarmupDays); }
         });
         WritePeople(opt.OutDir, people);
         for (int i = 0; i < seeds.Count; i++)
@@ -352,14 +355,16 @@ public static class ScenarioRunner
         "seed,person_id,profile,occupation,state,registered,game_importance,session_minutes,habit,expected_h_week,played_h_week,free_h_week,plan_days,class,level,"
         + string.Join(",", PeopleTraitKeys.Select(k => "t_" + k)) + ","
         + string.Join(",", PersonPreferences.Keys.Select(k => "pref_" + k)) + ","
-        + string.Join(",", PeopleActivityTypes.Select(k => "min_" + k)) + "\n";
+        + string.Join(",", PeopleActivityTypes.Select(k => "min_" + k)) + ","
+        + "target_level,h_to_target," + string.Join(",", PeopleActivityTypes.Select(k => "pre_min_" + k)) + ","
+        + "unlock_set,unlock_done,discover_set,discover_done,discover_set_non_exploration\n";
 
     /// <summary>
     /// Uma linha por pessoa da campanha (people.csv): atributos de dedicacao, horas estimadas na
     /// criacao, horas jogadas por semana na janela de medicao (mesma conta da validacao; zero para
     /// quem nao jogou) e tempo livre por semana na agenda guardada.
     /// </summary>
-    private static string PeopleRows(WorldState w, ValidationCollector collector, ulong seed, int days, int warmupDays)
+    private static string PeopleRows(WorldState w, ValidationCollector collector, ProgressionTracker tracker, ulong seed, int days, int warmupDays)
     {
         double weeks = Math.Max(0, days - warmupDays) / 7.0;
         var inv = System.Globalization.CultureInfo.InvariantCulture;
@@ -380,10 +385,58 @@ public static class ScenarioRunner
             }
             .Concat(PeopleTraitKeys.Select(k => p.Traits.Get(k).ToString(inv)))
             .Concat(PersonPreferences.Keys.Select(k => p.Preferences.Get(k).ToString(inv)))
-            .Concat(PeopleActivityTypes.Select(k => ch == null ? "0" : (ch.ActivityTicksByType.GetValueOrDefault(k) / SimTime.TicksPerMinute).ToString(inv)))));
+            .Concat(PeopleActivityTypes.Select(k => ch == null ? "0" : (ch.ActivityTicksByType.GetValueOrDefault(k) / SimTime.TicksPerMinute).ToString(inv)))
+            .Concat(tracker.Columns(ch, p.CharacterId, PeopleActivityTypes))));
             sb.Append('\n');
         }
         return sb.ToString();
+    }
+
+    /// <summary>
+    /// Medicao da progressao inicial (D-055), so para o relatorio por pessoa: horas ate o
+    /// nivel-alvo, minutos por tipo antes dele (foto do fim do dia em que chegou) e metas de
+    /// desbloqueio e de descoberta adotadas e cumpridas. Nao muda a simulacao.
+    /// </summary>
+    private sealed class ProgressionTracker
+    {
+        private readonly int _target;
+        private readonly Dictionary<int, Dictionary<string, long>> _before = new();
+        private readonly Dictionary<int, int[]> _goals = new();   // unlock set, unlock done, discover set, discover done, discover nao-exploracao
+
+        public ProgressionTracker(ContentDatabase db) => _target = db.EarlyProgression.TargetLevel;
+
+        public void Consume(IReadOnlyList<SimEvent> evs, WorldState w)
+        {
+            foreach (var e in evs)
+            {
+                if (e.Type is not ("goal_set" or "goal_completed") || e.Entities.Count == 0 || e.Detail == null) continue;
+                int cid = (int)e.Entities[0].Id;
+                if (!_goals.TryGetValue(cid, out var g)) _goals[cid] = g = new int[5];
+                bool set = e.Type == "goal_set";
+                if (e.Detail.StartsWith("unlock_level|", StringComparison.Ordinal)) g[set ? 0 : 1]++;
+                else if (e.Detail.StartsWith("discover_zone|", StringComparison.Ordinal))
+                {
+                    g[set ? 2 : 3]++;
+                    if (set && e.Causes.Count > 0 && e.Causes[0].Factor != "pref_exploration") g[4]++;
+                }
+            }
+            foreach (var c in w.Characters)
+                if (c.Level >= _target && !_before.ContainsKey(c.Id))
+                    _before[c.Id] = new Dictionary<string, long>(c.ActivityTicksByType, StringComparer.Ordinal);
+        }
+
+        public IEnumerable<string> Columns(Character? ch, int characterId, string[] types)
+        {
+            var inv = System.Globalization.CultureInfo.InvariantCulture;
+            yield return _target.ToString(inv);
+            yield return ch != null && ch.PlayedTicksAtLevel.Count >= _target - 1
+                ? (ch.PlayedTicksAtLevel[_target - 2] / (double)SimTime.TicksPerHour).ToString("0.00", inv) : "";
+            _before.TryGetValue(characterId, out var before);
+            foreach (var k in types)
+                yield return before == null ? "" : (before.GetValueOrDefault(k) / SimTime.TicksPerMinute).ToString(inv);
+            var g = _goals.GetValueOrDefault(characterId) ?? new int[5];
+            foreach (var x in g) yield return x.ToString(inv);
+        }
     }
 
     private static void WritePeople(string outDir, string[] rows)

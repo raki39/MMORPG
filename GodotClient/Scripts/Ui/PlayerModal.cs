@@ -560,6 +560,14 @@ public partial class PlayerModal : ModalFrame
                 return ("trending-up", $"Chegar ao nível {g.TargetValue}", (v.Level - g.StartValue) / (float)Math.Max(1, g.TargetValue - g.StartValue));
             case Simulation.Core.Population.GoalTypes.DiscoverZone:
                 return ("compass", $"Descobrir {_ctx.ZoneName(g.Target)}", 0);
+            case Simulation.Core.Population.GoalTypes.UnlockLevel:
+            {
+                // Desbloqueio (D-055): "zona/atividade" que o nivel libera.
+                int slash = g.Target.IndexOf('/');
+                string zone = slash > 0 ? g.Target[..slash] : g.Target, act = slash > 0 ? g.Target[(slash + 1)..] : "";
+                string actName = _ctx.Content.Regions.TryGetValue(zone, out var z) && z.FindActivity(act) is { } a ? a.Name : act;
+                return ("door-open", $"Nível {g.TargetValue} para {actName} ({_ctx.ZoneName(zone)})", (v.Level - g.StartValue) / (float)Math.Max(1, g.TargetValue - g.StartValue));
+            }
             case Simulation.Core.Population.GoalTypes.CompleteQuest:
             {
                 string name = _ctx.Content.Quests.TryGetValue(g.Target, out var q) ? q.Name : g.Target;
@@ -1340,6 +1348,7 @@ public partial class PlayerModal : ModalFrame
         "familiarity" => "Zona familiar",
         "challenge" => "Gosto por desafio",
         "specialty" => "Especialidade",
+        "early_progression" => "Progressão inicial",
         "interruption" => "Sessão interrompível",
         _ => key,
     };
@@ -1348,6 +1357,7 @@ public partial class PlayerModal : ModalFrame
     {
         "affinity" => "Preferências da pessoa combinadas com o tipo de atividade (no PvP, também personalidade e conduta).",
         "specialty" => "Reforço mínimo da familiaridade com o tipo de atividade (atributo de especialidade): 5% do valor, com teto.",
+        "early_progression" => "Prioridade para estabelecer o personagem até o nível-alvo do preset (missões disponíveis e atividades com bom rendimento de XP), igual para todos. Diminui perto do alvo e acaba nele; não soma com metas de nível ou de missão (vale o maior) e não vale para o que não cabe na sessão. Não muda o gosto.",
         "level_fit" => "Conteúdo dentro da faixa de nível da zona rende mais.",
         "company" => "Outros jogadores no lugar (sociabilidade na taverna; preferência Social nas demais).",
         "crowding" => "Caça e coleta disputadas rendem menos.",
