@@ -68,6 +68,7 @@ Uma etapa por vez, fechada por inteiro (testes, validação, documentação, exp
    - inventário e carteira de ouro com fontes registradas;
    - aba "Personagem".
 3. **Etapa 2 — Combate PvE (M3):**
+   - ideia do criador a detalhar nesta etapa: percepção 360° separada do alcance, área de caça como território com borda e perseguição limitada, caça como atividade com vários encontros e "matar monstros" como ação reutilizável ([ideia-percepcao-caca.md](ideia-percepcao-caca.md));
    - criaturas vivas por área e combate determinístico sem 3D;
    - magias e efeitos combináveis;
    - XP e saque por abate;
@@ -181,7 +182,7 @@ Continuidade, humor e retenção (D-026; fechamento do M2):
 
 ## M3 — Combate (depois do M2)
 
-Pedido do criador: combate nas caças (PvE), no PvP e contra chefes.
+Pedido do criador: combate nas caças (PvE), no PvP e contra chefes. Ideia de percepção e caça espacial: [ideia-percepcao-caca.md](ideia-percepcao-caca.md).
 - [ ] Caça com criaturas reais (quantidade e reaparecimento por área), dano, morte e saque
 - [ ] PvP de verdade em emboscada e patrulha (hoje elas dão XP sem combate)
 - [ ] Morte com as regras da zona (perda parcial ou total) e propriedade dos itens
