@@ -183,6 +183,8 @@ public sealed class PersonInfo
     public long IncomeCentsPerMonth { get; init; }
     public long SupportCentsPerMonth { get; init; }
     public int ExpectedWeeklyMinutes { get; init; }
+    /// <summary>Horario habitual de comecar (R4): o viavel pela rotina; o gosto fica em Traits.PreferredStartHour.</summary>
+    public int HabitualStartHour { get; init; }
     /// <summary>Tolerancia temporaria ao deficit de sono (permille, P3).</summary>
     public int SleepDebtTolerance { get; init; }
     public IReadOnlyList<WeekDayView> Week { get; init; } = Array.Empty<WeekDayView>();
@@ -253,7 +255,7 @@ public sealed class SimulationHost : IDisposable
                 ResidenceId = p.ResidenceId, NationalityId = p.NationalityId, Languages = p.Languages, LocalOffsetMinutes = p.LocalOffsetMinutes,
                 OccupationId = p.OccupationId, SleepNeedMinutes = p.SleepNeedMinutes, BedtimeMinute = p.BedtimeMinute,
                 IncomeCentsPerMonth = p.IncomeCentsPerMonth, SupportCentsPerMonth = p.SupportCentsPerMonth, ExpectedWeeklyMinutes = p.ExpectedWeeklyMinutes,
-                SleepDebtTolerance = p.SleepDebtTolerance, Week = WeekOf(p) })
+                HabitualStartHour = p.HabitualStartHour, SleepDebtTolerance = p.SleepDebtTolerance, Week = WeekOf(p) })
             .ToArray();
         Calendar = _engine.World.Clock.Calendar;
         _snapshot = BuildSnapshot(-1);

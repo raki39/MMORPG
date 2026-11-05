@@ -110,7 +110,7 @@ Três traços separados, todos sorteados por perfil e independentes dentro dele:
 
 | Traço | O que decide |
 |---|---|
-| Importância do jogo (P2) | Se joga no dia e quanto; segunda sessão; jogar na pausa do trabalho |
+| Importância do jogo (P2; R4) | Prioridade do jogo: se joga no dia, se a vontade que sobra vira segunda sessão, jogar na pausa do trabalho e a pressa de começar. Não muda a duração (D-050) |
 | Tendência a prolongar | Chance e tamanho da extensão quando a sessão está boa ou a meta está perto |
 | Autocontrole | Freia a extensão e a escapada no expediente |
 

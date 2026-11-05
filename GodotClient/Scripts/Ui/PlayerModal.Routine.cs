@@ -98,9 +98,9 @@ public partial class PlayerModal
             Grid(12,
                 (Card("Onde mora", PlaceBody(), info: "Localidade, fuso e idiomas (P1)\n~A rotina segue o horário e os feriados de onde a pessoa mora; o relógio do jogo é o do servidor."), 3),
                 (Card("Finanças", MoneyBody(), info: "Dinheiro real fictício do tycoon (P2)\n~Separado do ouro do MMORPG. Sem efeito até a monetização (M7)."), 3),
-                (Card("Vontade de jogar", WillBody(), info: "O que faz a pessoa jogar e parar\n~Importância do jogo, hábito, tendência a prolongar e autocontrole são traços separados: dá para priorizar o jogo e parar na hora, ou ligar pouco e se empolgar.\n~O humor (satisfação e engajamento) muda a vontade de verdade. A estimativa é só a rotina e o hábito; o real inclui humor, cansaço e sessões estendidas."), 6)),
+                (Card("Vontade de jogar", WillBody(), info: "O que faz a pessoa jogar e parar\n~Importância do jogo, hábito, tendência a prolongar e autocontrole são traços separados: dá para priorizar o jogo e parar na hora, ou ligar pouco e se empolgar.\n~O humor (satisfação e engajamento) muda a vontade de verdade, e a disposição de cada dia varia um pouco (querer descansar ou fazer outra coisa). A estimativa é só a rotina e o hábito; o real inclui humor, cansaço e sessões estendidas."), 6)),
             Grid(12,
-                (Card("Semana típica", AgendaBody(), info: "O que a rotina permite e o que se espera (hora local)\n~Azul (verde em dia livre): o tempo livre do dia, o que sobra depois de sono, obrigações, deslocamento, preparo e chegada. Dourado: o jogo estimado, a chance de jogar no dia (rotina e hábito, calculada na semana real dia a dia) × a sessão que cabe na janela, mais a segunda sessão de quem prioriza o jogo; sem o humor. É uma estimativa. Embaixo de cada dia, a chance de jogar.\n~Passe o mouse num dia para ver os horários."), 6),
+                (Card("Semana típica", AgendaBody(), info: "O que a rotina permite e o que se espera (hora local)\n~Azul (verde em dia livre): o tempo livre do dia, o que sobra depois de sono, obrigações, deslocamento, preparo e chegada. Dourado: o jogo estimado, a chance de jogar no dia (rotina e hábito, calculada na semana real dia a dia) × o tempo desejado do dia que cabe na janela, mais a segunda sessão quando sobra vontade e há outra janela; sem o humor. É uma estimativa. Embaixo de cada dia, a chance de jogar.\n~Passe o mouse num dia para ver os horários."), 6),
                 (Card("Ocupação", OccupationBody(occ), info: "Obrigações da ocupação\n~Horários individuais (cada pessoa varia um pouco), deslocamento e folgas. No trabalho remoto, a pausa permite jogar; com flexibilidade, às vezes há uma escapada no expediente, curta e interrompível por um chamado do trabalho."), 6)),
             Grid(12,
                 (Card("Últimos 30 dias", DaysBody(detail), info: "O que a pessoa fez com o tempo livre\n~Área azul: tempo livre de cada dia. Linha dourada: tempo jogado. Quando não jogou, o ponto fica no zero com a cor do motivo (sem tempo, outro lazer, cansaço, desânimo). Faixas verdes: dias livres. Losango azul: jogou no horário do trabalho remoto. Ponto roxo no alto: um compromisso no dia livre (festa, visita à família, passeio), que tira horas do tempo livre.\n~A agenda é estado da simulação (30 dias), sem um evento por dia."), 6),
@@ -130,7 +130,7 @@ public partial class PlayerModal
             lines.Add(d.PlannedStart >= 0
                 ? ($"Chance de jogar {d.ChancePermille / 10}% · sessão de {d.PlannedMinutes} min às {Clock(d.PlannedStart)}", UiTokens.AccentSoft)
                 : ("Nenhuma janela comporta uma sessão", UiTokens.Danger));
-            if (d.PlannedStart >= 0) lines.Add(($"Estimativa: {d.ExpectedMinutes} min (chance do dia com o hábito × sessão, mais a segunda sessão de quem prioriza o jogo)", UiTokens.AccentSoft));
+            if (d.PlannedStart >= 0) lines.Add(($"Estimativa: {d.ExpectedMinutes} min (chance do dia com o hábito × sessão, mais a segunda sessão quando sobra vontade)", UiTokens.AccentSoft));
             var chanceColor = d.ChancePermille >= 600 ? UiTokens.Success : d.ChancePermille >= 300 ? UiTokens.TextLabel : UiTokens.TextSecondary;
             groups.Add(new BarGroup
             {
@@ -223,8 +223,8 @@ public partial class PlayerModal
         }
         var meters = new HBoxContainer();
         meters.AddThemeConstantOverride("separation", 24);
-        var mLeft = Column(12, TraitMeter("Importância do jogo", t.GameImportance, "Importância do jogo\n~Entre os lazeres, quanto o jogo importa: decide se joga no dia e quanto, a segunda sessão e jogar na pausa do trabalho. É o que define o hardcore, não o tempo livre."),
-            TraitMeter("Hábito", t.Habit, "Hábito\n~Regularidade: quem jogou ontem tende a jogar hoje; quem quebrou a sequência, menos."));
+        var mLeft = Column(12, TraitMeter("Importância do jogo", t.GameImportance, "Importância do jogo\n~Prioridade do jogo entre os lazeres: decide se joga no dia, se volta para uma segunda sessão quando sobra vontade, se joga na pausa do trabalho e a pressa de começar. Não muda a duração da sessão. É o que define o hardcore, não o tempo livre."),
+            TraitMeter("Hábito", t.Habit, HabitTip()));
         var mRight = Column(12, TraitMeter("Tendência a prolongar", t.ExtendTendency, "Tendência a prolongar\n~Vontade de ficar \"só mais um pouco\" quando a sessão está boa ou a meta está perto. Até 2 vezes por sessão e 3 h no total; no fim do dia, corta sono."),
             TraitMeter("Autocontrole", t.SelfControl, "Autocontrole\n~Freia a extensão da sessão e a escapada no expediente. Independe da importância do jogo."));
         mLeft.SizeFlagsHorizontal = SizeFlags.ExpandFill;
@@ -248,7 +248,8 @@ public partial class PlayerModal
             mr.SizeFlagsHorizontal = SizeFlags.ExpandFill;
             mrow.AddChild(ml);
             mrow.AddChild(mr);
-            var note = ThemeFactory.Text($"Humor agora: {effect}", UiTokens.FontSmall, moodColor, UiFonts.Medium);
+            string today = TodayDisposition() is { } disp ? $" · disposição de hoje: {(disp >= 0 ? "+" : "−")}{Math.Abs(disp) / 10}%" : "";
+            var note = ThemeFactory.Text($"Humor agora: {effect}{today}", UiTokens.FontSmall, moodColor, UiFonts.Medium);
             moodRow = Column(8, mrow, note);
         }
         return Column(12,
@@ -278,18 +279,49 @@ public partial class PlayerModal
         int start = Median(days.Select(d => d.PlannedStart).ToList());
         int minutes = Median(days.Select(d => d.PlannedMinutes).ToList());
         var row = Row(0,
-            MiniStat(Hours(_person.ExpectedWeeklyMinutes), "Estimativa por semana"),
+            MiniStat(Hours(_person.ExpectedWeeklyMinutes), "Estimativa/semana"),
             MiniStat(minutes >= 60 ? Hours(minutes) : $"{minutes} min", $"Sessão no {which}"),
+            MiniStat($"{t.PreferredStartHour:00}h", "Horário preferido"),
             MiniStat(Clock(start), "Costuma começar"),
             MiniStat(Clock(start + minutes), "Costuma sair"));
         var tip = new TipPanel
         {
-            TooltipText = $"Hábito de jogo ({which}, hora local)\nComeça|{Clock(start)}\nSai|{Clock(start + minutes)}\nSessão|{minutes} min\nSessão base do perfil|{t.SessionMinutes} min\n~A sessão cresce em dia com muito tempo livre, mais para quem prioriza o jogo. Quem prioriza começa logo que fica livre; o casual começa mais tarde. Sem o humor e as sessões estendidas.",
+            TooltipText = $"Hábito de jogo ({which}, hora local)\nHorário preferido|{t.PreferredStartHour:00}h\nCostuma começar|{Clock(start)}\nSai|{Clock(start + minutes)}\nSessão|{minutes} min\nSessão normal da pessoa|{t.SessionMinutes} min\n~Gosto e prática são coisas separadas: a pessoa pode preferir uma hora e a rotina só permitir outra. Quem prioriza o jogo começa logo que fica livre; o casual espera mais.\n~A sessão normal cresce até ×{PtBr.Decimal(_ctx.Content.Routine.MaxPlannedAmplificationPermille / 1000.0, 1)} em dia com muito tempo livre, igual para todos os perfis. Sem o humor e as sessões estendidas.",
             MouseFilter = MouseFilterEnum.Stop,
         };
         tip.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
         tip.AddChild(row);
         return tip;
+    }
+
+    /// <summary>
+    /// Dica do habito (R4): o traco e a regularidade recente pela mesma conta do planejador (dias
+    /// com oportunidade; faltar por obrigacao nao conta; sessao interrompida conta como jogo).
+    /// </summary>
+    private string HabitTip()
+    {
+        var rs = _ctx.Content.Routine;
+        string head = "Hábito\n";
+        if (RoutineDetail is { } detail && detail.DayPlans.Count > 0)
+        {
+            long today = LocalOf(_ctx.Snapshot().Tick).Day;
+            var (reg, played, missed) = Simulation.Core.Behavior.DailySchedule.Regularity(detail.DayPlans, today, rs.HabitHistoryDays);
+            int factor = Simulation.Core.Behavior.DailySchedule.HabitFactor(_person.Traits.Habit, reg, rs);
+            int pct = (factor - 1000) / 10;
+            head += played + missed == 0
+                ? $"Últimos {rs.HabitHistoryDays} dias|sem dias com oportunidade\n"
+                : $"Últimos {rs.HabitHistoryDays} dias|jogou em {played} de {played + missed} com oportunidade\nEfeito na chance hoje|{(pct >= 0 ? "+" : "−")}{Math.Abs(pct)}%\n";
+        }
+        return head + "~O traço diz quanto a regularidade recente pesa: quem vem jogando sempre que pode mantém o embalo; quem vem escolhendo outra coisa tende a continuar. Os dias mais recentes pesam mais.\n~Faltar por obrigação não conta; sessão interrompida conta como jogo (a escolha foi jogar).";
+    }
+
+    /// <summary>Disposicao sorteada para hoje (R4, permille), se o dia ja foi planejado.</summary>
+    private int? TodayDisposition()
+    {
+        if (RoutineDetail is not { } detail || detail.DayPlans.Count == 0) return null;
+        long today = LocalOf(_ctx.Snapshot().Tick).Day;
+        var plan = detail.DayPlans.LastOrDefault(d => d.LocalDay == today);
+        return plan == null || plan.Reason == "came_back" ? null : plan.DispositionPermille;
     }
 
     /// <summary>Leitura do perfil de rotina em uma frase (como um relatorio de olheiro).</summary>
@@ -335,6 +367,9 @@ public partial class PlayerModal
             };
             if (d.Sessions > 0 || playedMin > 0)
                 lines.Add(($"Jogou: {playedMin} min{(logged ? "" : " (planejado)")}" + (d.FirstStartMinute >= 0 ? $" · começou {Clock(d.FirstStartMinute)}" : ""), UiTokens.AccentSoft));
+            if (d.DesiredMinutes > 0)
+                lines.Add(($"Queria jogar: {d.DesiredMinutes} min · disposição {(d.DispositionPermille >= 0 ? "+" : "−")}{Math.Abs(d.DispositionPermille) / 10}%", UiTokens.TextSecondary));
+            if (d.SkippedSessions > 0) lines.Add(("Deixou a 2ª sessão de lado: já tinha jogado o que queria", UiTokens.TextSecondary));
             if (d.SleepMinutes > 0) lines.Add(($"Sono na noite anterior: {Hours(d.SleepMinutes)}" + (d.DeficitMinutes > 0 ? $" · déficit {Hours(d.DeficitMinutes)}" : ""), UiTokens.TextSecondary));
             if (d.WorkOverlapMinutes > 0) lines.Add(($"Escapada no expediente: {d.WorkOverlapMinutes} min" + (d.WorkSessions > 1 ? " + pausa" : ""), UiTokens.Warning));
             else if (d.WorkSessions > 0) lines.Add(("Jogou na pausa do trabalho", UiTokens.Info));

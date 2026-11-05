@@ -1568,3 +1568,74 @@ O teste "ninguém começa a sessão durante uma obrigação" agora aceita sobrep
   - o tempo livre pesando duas vezes;
   - quase nunca há segunda sessão (1,9%);
   - os dias sem jogo são quase todos "escolha", sem variação de disposição.
+
+## D-050 — R4: modelo de vontade (sessão normal, vontade do dia, hábito, disposição, horário)
+**Data:** 05/11/2026 · **Estado:** aceita
+
+Aprovada pelo criador depois da medição da R3 (D-049). Nenhum peso foi ajustado para recuperar médias antigas.
+
+**O que mudou:**
+- **Sessão base = sessão normal.** O tempo livre amplia a sessão planejada até ×1,5 (`maxPlannedAmplificationPermille`, configurável). É uma hipótese da ampliação planejada, não um teto universal: extensões e acontecimentos podem passar disso.
+- **Importância = prioridade.** Decide se joga no dia, se a vontade que sobra vira segunda sessão, jogar na pausa do trabalho e a pressa de começar. Saiu da duração (antes: + importância × 0,8 da sessão).
+- **Tempo desejado do dia** (`DayIntentMinutes`): uma intenção flexível, não cota nem teto rígido. É a sessão planejada × disposição × metade do efeito do humor × cansaço.
+  - O jogo planejado no trabalho sai dela.
+  - Cada sessão normal desconta o que já foi jogado no mesmo dia da agenda, inclusive a sessão em andamento.
+  - A primeira sessão do dia sempre acontece; uma seguinte fica de lado se sobrou menos que 20 min (`SkippedSessions`).
+  - A extensão pode passar da intenção.
+  - A agenda guarda a vontade do dia, a disposição, a regularidade e os minutos jogados.
+- **Segunda sessão:** qualquer perfil. A chance é a importância × a vontade restante (menos 20 min de custo de entrar de novo) ÷ a sessão normal, e só existe se há outra janela. Antes era só para importância acima de 650.
+- **Hábito:** o traço (quanto pesa) separado do histórico (regularidade nos últimos 7 dias com oportunidade, os recentes pesando mais).
+  - Faltar por obrigação é neutro.
+  - Outro lazer, cansaço, desânimo e inatividade contam como falta.
+  - Sessão interrompida conta como jogo.
+  - Antes valia só "jogou ontem".
+- **Disposição do dia:** um sorteio pequeno e centrado (±200, média de três uniformes), próprio de cada pessoa e dia (`routine.disposition`). Entra na chance e no tempo desejado.
+  - A variação de ±20% da sessão saiu do planejamento: a medição mostrou que as duas variações do dia se empilhavam nas sessões mais longas. Continua só na primeira sessão do cadastro e da volta, que não têm agenda.
+- **Horário preferido × horário habitual:** o gosto sorteado fica em `PreferredStartHour`; o horário viável calculado (D-045) fica em `HabitualStartHour` e é o que o planejador usa. A tela mostra os dois.
+- **Estimativa** (`ExpectWeek`): mesma política, com a regularidade dos dias anteriores, a distribuição da disposição em nove faixas e a segunda sessão pela vontade restante.
+- **Estado:** `StateHasher` v18.
+- **Testes:** 8 novos (`WillModelTests`); 235 no total.
+- **Medição:** modo `--controlled` do runner (pessoas iguais por célula perfil × ocupação, humor neutro), medido antes (`docs/baselines/pre-R4/`) e depois (`docs/baselines/pos-R4/`). O relatório ganhou "segunda sessão" e "sessões mais longas e por quê".
+
+**Cenário controlado** (mesmas pessoas e regras, antes → R4; seleção de `pos-R4/comparacao-controlada.md`):
+
+| Célula | h/semana | Dias com jogo | Sessão p50 | p90 | Máx. | Planejado no dia livre |
+|---|---:|---:|---:|---:|---:|---:|
+| Casual, escala 5×2 | 4,2 → 4,1 | 32,8 → 32,4% | 109 → 108 | 139 → 131 | 158 → 152 | 120 → 120 |
+| Social, sem ocupação | 15,5 → 14,1 | 72,0 → 71,0% | 185 → 170 | 214 → 186 | 231 → 207 | 181 → 165 |
+| Competitivo, meio período manhã | 23,3 → 20,2 | 75,0 → 76,0% | 265 → 228 | 307 → 248 | 331 → 279 | 263 → 226 |
+| Hardcore, sem ocupação | 53,4 → 41,8 | 100 → 98,5% | 458 → 364 | 534 → 396 | 562 → 440 | 455 → 360 |
+| Hardcore, home office | 42,2 → 35,8 | 94,2 → 93,9% | 348 → 325 | 490 → 376 | 558 → 433 | 455 → 360 |
+| Hardcore, trabalha e estuda | 14,7 → 13,6 | 33,2 → 39,2% | 418 → 339 | 509 → 382 | 560 → 430 | 433 → 346 |
+
+Leitura:
+- **Sem a importância na duração:** o casual quase não muda (a importância dele era baixa). O hardcore cai para a sessão normal × 1,5 (240 → 360 min no dia livre).
+- **Variação única:** as caudas encolhem em todos os perfis (p90 e máximo).
+- **Hábito corrigido:** quem trabalha e estuda não perde mais o hábito nas noites de aula. Joga em mais dias: hardcore de 33% para 39%, competitivo de 28% para 31%, comerciante de 26% para 29%.
+- **Jogo no trabalho:** no home office, a pausa de almoço agora sai da vontade do dia. A noite do hardcore planeja menos (345 → 306 min) e a segunda sessão de manhã sumiu (5,7% → 0,1%).
+
+**Campanha completa** (com humor), antes → R4:
+
+| Perfil | Horas/semana | Sessão mediana | p90 | Máx. | Uso do tempo livre |
+|---|---:|---:|---:|---:|---:|
+| Casual | 5,9 → 6,0 | 117 → 120 | 157 → 156 | 276 → 318 | 8,5 → 8,5% |
+| Comerciante | 11,2 → 10,0 | 145 → 131 | 195 → 168 | 371 → 319 | 15,9 → 14,3% |
+| Social | 11,0 → 10,4 | 168 → 160 | 228 → 209 | 490 → 409 | 16,0 → 15,0% |
+| Explorador | 14,4 → 13,7 | 185 → 178 | 248 → 229 | 464 → 445 | 20,2 → 18,9% |
+| Competitivo | 20,2 → 18,2 | 235 → 213 | 326 → 281 | 608 → 511 | 29,2 → 26,1% |
+| Hardcore | 37,3 → 33,3 | 340 → 301 | 526 → 417 | 853 → 734 | 53,5 → 47,1% |
+
+- **Metas:** regras do cenário 7 de 7 (hardcore 36,8 → 31,9 h, faixa 15–45); provisórias 8 de 12; futuras 1 de 5.
+  - Nas provisórias, "quests por personagem" entrou na faixa (30,2 → 28,4).
+  - "Horas até o nível 30" ficou instável: média 171, uma seed com 169, faixa 170–230. É progressão, recalibrada na Etapa 2.
+- **Sessões mais longas:** 734 min. Todas são hardcore em dia com 9 a 15 h livres, com uma vontade do dia de 490–554 min (sessão normal longa × 1,5, disposição de −3% a +15%) e duas extensões (180 min). Os motivos aparecem no relatório; nenhuma vem de multiplicadores escondidos.
+- **Efeito do tempo livre:** a duração planejada com 10 h ou mais livres caiu de 210 para 186 min; com 2–4 h, de 146 para 144. A chance por faixa ficou igual (44% e 71%).
+- **Segunda sessão:** planejada em 0,7% dos dias com jogo; com o jogo no trabalho, 2,4% dos dias têm duas sessões ou mais (antes 1,9%).
+  - Ela só surge quando a vontade do dia não cabe na janela da sessão principal.
+  - No dia livre, a vontade inteira cabe numa sessão, então ninguém divide o sábado em duas sessões, a não ser que um compromisso corte o dia.
+  - Fica para a R5 decidir se uma sessão deve ter um tamanho próprio que faça a vontade de um dia livre longo virar duas sessões (tarde e noite).
+- **Dias sem jogo:** 42,9% da agenda (antes 43,1%); 88,5% por escolha.
+- **Corte de sono:** 3.109 períodos (antes 3.406), mediana de 71 min (antes 81), teto de 180 respeitado.
+- **Desempenho do cliente:**
+  - Teste rápido: acusou p95 de 8,3 ms numa medição de 5 s.
+  - Verificação completa: todas as vistas dentro de 6,9 ms; o mapa com 2000 pessoas deu 219 FPS e p95 de 5,6 ms.

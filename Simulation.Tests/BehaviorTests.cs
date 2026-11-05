@@ -60,7 +60,7 @@ public class BehaviorTests
         Assert.True(weekday.Count > 20, $"amostra pequena: {weekday.Count}");
         int near = weekday.Count(s =>
         {
-            int preferred = e.World.GetPerson(s.PersonId).Traits.PreferredStartHour * 60;
+            int preferred = e.World.GetPerson(s.PersonId).HabitualStartHour * 60;
             int minute = s.At.Hour * 60 + s.At.Minute;
             return Math.Abs(minute - preferred) <= TestSupport.Preset.Behavior.SessionStartJitterMinutes + 5;
         });

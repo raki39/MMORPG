@@ -36,10 +36,10 @@ public class CoherenceTests
             // Dias do habito: obrigacao com tempo para a sessao (limitada a maior janela deles); senao dia livre.
             var (pool, session) = DailySchedule.PreferredPool(Week(p), Math.Max(RS.MinSessionMinutes, p.Traits.SessionMinutes), RS);
             if (pool.Count == 0) continue;
-            int near = pool.Count(d => DailySchedule.StartsAtPreferred(d, p.Traits.PreferredStartHour, session, RS));
+            int near = pool.Count(d => DailySchedule.StartsAtPreferred(d, p.HabitualStartHour, session, RS));
             // Na maioria dos dias com tempo livre, a sessao tipica comeca na hora preferida (ou logo
             // que a janela abre) e cabe inteira antes de dormir: nada de preferir 21 h e precisar comecar as 20:47.
-            Assert.True(near * 2 > pool.Count, $"{p.OccupationId}: prefere {p.Traits.PreferredStartHour}h, perto em {near} de {pool.Count} dias; sessao {p.Traits.SessionMinutes}; " + string.Join(" / ", pool.Select(d => $"acorda {d.Wake} " + string.Join(",", d.Windows.Select(w => $"{w.Start}-{w.End}")))));
+            Assert.True(near * 2 > pool.Count, $"{p.OccupationId}: costuma {p.HabitualStartHour}h, perto em {near} de {pool.Count} dias; sessao {p.Traits.SessionMinutes}; " + string.Join(" / ", pool.Select(d => $"acorda {d.Wake} " + string.Join(",", d.Windows.Select(w => $"{w.Start}-{w.End}")))));
             total++;
             if (near == pool.Count) all++;
         }
@@ -58,7 +58,7 @@ public class CoherenceTests
         {
             var day = Week(p)[1];   // terca
             var w = day.Windows.OrderByDescending(x => x.End - x.Start).First();
-            int pref = p.Traits.PreferredStartHour * 60;
+            int pref = p.HabitualStartHour * 60;
             if (pref < day.Wake) pref += 1440;
             return Math.Max(0, pref - w.Start);
         }
@@ -82,8 +82,8 @@ public class CoherenceTests
         {
             var monday = Week(p)[0];
             var w = monday.Windows.OrderByDescending(x => x.End - x.Start).First();
-            int delay = p.Traits.PreferredStartHour * 60 - w.Start;
-            Assert.True(delay is >= -59 and <= 90, $"livre às {w.Start / 60}:{w.Start % 60:00}, prefere {p.Traits.PreferredStartHour}h");
+            int delay = p.HabitualStartHour * 60 - w.Start;
+            Assert.True(delay is >= -59 and <= 90, $"livre às {w.Start / 60}:{w.Start % 60:00}, costuma {p.HabitualStartHour}h");
         }
     }
 
@@ -126,13 +126,13 @@ public class CoherenceTests
             var monday = week[0];
             var (pool, session) = DailySchedule.PreferredPool(week, Math.Max(RS.MinSessionMinutes, p.Traits.SessionMinutes), RS);
             Assert.True(monday.Blocks[0].Start >= 6 * 60, $"{p.OccupationId} sai às {monday.Blocks[0].Start / 60}h");
-            int pref = p.Traits.PreferredStartHour * 60;
+            int pref = p.HabitualStartHour * 60;
             if (pref < monday.Wake) pref += 1440;
-            Assert.True(pref < monday.Bed, $"prefere {p.Traits.PreferredStartHour}h e dorme às {monday.Bed / 60 % 24}h");
+            Assert.True(pref < monday.Bed, $"costuma {p.HabitualStartHour}h e dorme às {monday.Bed / 60 % 24}h");
             // A sessao tipica cabe inteira depois da hora preferida (quem sai as 17 h nao "prefere" 21 h com sessao de 3 h).
             Assert.Contains(monday, pool);   // meio periodo sempre tem tempo para jogar no dia util
-            Assert.True(DailySchedule.StartsAtPreferred(monday, p.Traits.PreferredStartHour, session, RS),
-                $"{p.OccupationId}: prefere {p.Traits.PreferredStartHour}h, sessão de {p.Traits.SessionMinutes} min, dorme às {monday.Bed / 60 % 24}h");
+            Assert.True(DailySchedule.StartsAtPreferred(monday, p.HabitualStartHour, session, RS),
+                $"{p.OccupationId}: costuma {p.HabitualStartHour}h, sessão de {p.Traits.SessionMinutes} min, dorme às {monday.Bed / 60 % 24}h");
         }
         Assert.Contains(part, p => p.OccupationId == "meio_periodo_manha");
         Assert.Contains(part, p => p.OccupationId == "meio_periodo_tarde");

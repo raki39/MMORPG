@@ -253,7 +253,12 @@ public sealed class Person
     public int SleepCutTotalMinutes { get; internal set; }
     /// <summary>Minutos de jogo esperados numa semana tipica (rotina e importancia, sem humor).</summary>
     public int ExpectedWeeklyMinutes { get; internal set; }
-    /// <summary>Ultimo dia local em que comecou uma sessao (habito).</summary>
+    /// <summary>
+    /// Horario habitual de comecar (R4): o viavel pela rotina e pela pressa de comecar (D-045),
+    /// calculado na geracao. O gosto pessoal fica separado, em Traits.PreferredStartHour.
+    /// </summary>
+    public int HabitualStartHour { get; internal set; } = 20;
+    /// <summary>Ultimo dia local em que comecou uma sessao (informativo; o habito usa a agenda, R4).</summary>
     public long LastPlayedLocalDay { get; internal set; } = -1;
     /// <summary>Agenda dos ultimos dias (mais recente no fim): tempo livre, sessoes e motivo.</summary>
     internal List<DayPlanRecord> PlanList { get; } = new();
@@ -288,8 +293,12 @@ public sealed class DayPlanRecord
 
     public DayPlanRecord(long localDay, int freeMinutes, int windows, int sessions, string reason, int firstStartMinute, int plannedMinutes, bool freeDay,
         int sleepMinutes = 0, int deficitMinutes = 0, int workSessions = 0, int workOverlapMinutes = 0,
-        string commitmentId = "", int commitmentStart = 0, int commitmentEnd = 0, int recoveryMinutes = 0)
+        string commitmentId = "", int commitmentStart = 0, int commitmentEnd = 0, int recoveryMinutes = 0,
+        int desiredMinutes = 0, int dispositionPermille = 0, int regularityPermille = 500)
     {
+        DesiredMinutes = desiredMinutes;
+        DispositionPermille = dispositionPermille;
+        RegularityPermille = regularityPermille;
         RecoveryMinutes = recoveryMinutes;
         CommitmentId = commitmentId;
         CommitmentStart = commitmentStart;
@@ -325,6 +334,20 @@ public sealed class DayPlanRecord
     /// <summary>Sessoes no expediente remoto (pausa ou escapada) e minutos sobrepostos ao trabalho (D-044).</summary>
     public int WorkSessions { get; }
     public int WorkOverlapMinutes { get; }
+    /// <summary>
+    /// Tempo desejado de jogo no dia (R4): intencao flexivel, de todas as sessoes do dia (inclusive
+    /// no trabalho). 0 = nao quis jogar ou nao coube.
+    /// </summary>
+    public int DesiredMinutes { get; }
+    /// <summary>Disposicao do dia (R4, +-permille): sorteio proprio por pessoa e dia.</summary>
+    public int DispositionPermille { get; }
+    /// <summary>Regularidade recente no planejamento (R4, 0..1000; 500 = sem dias para medir).</summary>
+    public int RegularityPermille { get; }
+    /// <summary>Minutos jogados nas sessoes planejadas para este dia (todas, inclusive no trabalho).</summary>
+    public int PlayedMinutes { get; internal set; }
+    /// <summary>Sessoes normais ja iniciadas para este dia e as desistidas por ja ter jogado o que queria (R4).</summary>
+    public int NormalSessionsStarted { get; internal set; }
+    public int SkippedSessions { get; internal set; }
 }
 
 /// <summary>Conta no MMORPG (plano 4.1). Criada no registro (M2).</summary>
@@ -569,6 +592,8 @@ public sealed class Character
     /// janela do dia, mais o corte de sono autorizado. Na pausa ou na escapada, o fim planejado.
     /// </summary>
     public long SessionHardEndTick { get; internal set; }
+    /// <summary>Dia local da agenda a que a sessao pertence (R4): o tempo jogado sai da vontade desse dia (-1 = nenhum).</summary>
+    public long SessionPlanDay { get; internal set; } = -1;
     public bool LogoutPending { get; internal set; }
     /// <summary>Tipo da sessao atual (D-044): 0 normal, 1 pausa permitida do trabalho remoto, 2 escapada no expediente.</summary>
     public int SessionKind { get; internal set; }

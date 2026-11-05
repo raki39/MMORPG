@@ -225,7 +225,12 @@ public static class ContentValidator
         Range("routine", "bedtimeMinute", r.BedtimeMinute, 1200, 1800, v, PopulationFile);
         if (r.BedtimeAdaptMinutes is < 0 or > 240) v.Error(PopulationFile, "routine.bedtimeAdaptMinutes", "Use de 0 a 240 minutos.");
         if (r.PreferredDelayMaxMinutes is < 0 or > 600) v.Error(PopulationFile, "routine.preferredDelayMaxMinutes", "Use de 0 a 600 minutos.");
-        if (r.FreeTimeDurationBase is < 0 or > 2000) v.Error(PopulationFile, "routine.freeTimeDurationBase", "Use 0 a 2000.");
+        if (r.MaxPlannedAmplificationPermille is < 1000 or > 3000) v.Error(PopulationFile, "routine.maxPlannedAmplificationPermille", "Use de 1000 (sem ampliação) a 3000.");
+        if (r.DispositionSpreadPermille is < 0 or > 500) v.Error(PopulationFile, "routine.dispositionSpreadPermille", "Use de 0 a 500.");
+        if (r.MoodDurationWeightPermille is < 0 or > 1000) v.Error(PopulationFile, "routine.moodDurationWeightPermille", "Use de 0 a 1000.");
+        if (r.ReentryCostMinutes is < 0 or > 240) v.Error(PopulationFile, "routine.reentryCostMinutes", "Use de 0 a 240 minutos.");
+        if (r.HabitHistoryDays < 1 || r.HabitHistoryDays > r.PlanHistoryDays)
+            v.Error(PopulationFile, "routine.habitHistoryDays", "Use de 1 até planHistoryDays (o hábito lê a agenda guardada).");
         if (r.WorkCallToleranceMinutes is < 0 or > 30) v.Error(PopulationFile, "routine.workCallToleranceMinutes", "Use de 0 a 30 minutos.");
         if (r.CommitmentChancePermille is < 0 or > 1000) v.Error(PopulationFile, "routine.commitmentChancePermille", "Use 0 a 1000.");
         var commitIds = new HashSet<string>(StringComparer.Ordinal);
@@ -250,8 +255,7 @@ public static class ContentValidator
             if (value < 0) v.Error(PopulationFile, "routine." + name, "O valor não pode ser negativo.");
         foreach (var (name, value) in new (string, int)[]
         {
-            ("freeDayChanceBonus", r.FreeDayChanceBonus), ("habitStreakPermille", r.HabitStreakPermille), ("secondSessionFromImportance", r.SecondSessionFromImportance),
-            ("secondSessionPermilleAtMax", r.SecondSessionPermilleAtMax), ("secondSessionDurationPermille", r.SecondSessionDurationPermille), ("commuteVariationPermille", r.CommuteVariationPermille),
+            ("freeDayChanceBonus", r.FreeDayChanceBonus), ("habitStreakPermille", r.HabitStreakPermille), ("commuteVariationPermille", r.CommuteVariationPermille),
             ("busyDayPenaltyPermille", r.BusyDayPenaltyPermille),
         })
             if (value is < 0 or > 1000) v.Error(PopulationFile, "routine." + name, "Use um valor de 0 a 1000.");

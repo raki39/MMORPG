@@ -147,9 +147,9 @@
   "routine": {
     "sleepNeedMinutes": { "mean": 470, "spread": 45 }, "bedtimeMinute": { "mean": 1425, "spread": 75 },
     "prepMinutes": 45, "arrivalMinutes": 45, "minWindowMinutes": 30, "minSessionMinutes": 20,
-    "freeDayChanceBonus": 350, "fullFreeMinutes": 600, "freeDayDurationPerImportance": 800, "habitStreakPermille": 250,
-    "secondSessionFromImportance": 650, "secondSessionPermilleAtMax": 200, "secondSessionDurationPermille": 450, "maxSessionsPerDay": 2,
-    "commuteVariationPermille": 300, "planHistoryDays": 30, "bedtimeAdaptMinutes": 60, "preferredDelayMaxMinutes": 240, "freeTimeDurationBase": 250, "workCallToleranceMinutes": 5, "commitmentChancePermille": 70,
+    "freeDayChanceBonus": 350, "fullFreeMinutes": 600, "maxPlannedAmplificationPermille": 1500, "habitStreakPermille": 250, "habitHistoryDays": 7,
+    "reentryCostMinutes": 20, "maxSessionsPerDay": 2, "dispositionSpreadPermille": 200, "moodDurationWeightPermille": 500,
+    "commuteVariationPermille": 300, "planHistoryDays": 30, "bedtimeAdaptMinutes": 60, "preferredDelayMaxMinutes": 240, "workCallToleranceMinutes": 5, "commitmentChancePermille": 70,
     "commitments": [
       { "id": "festa", "label": "festa", "startFrom": "20:00", "startTo": "21:30", "minMinutes": 150, "maxMinutes": 240, "weight": 3, "social": true },
       { "id": "familia", "label": "visita à família", "startFrom": "11:00", "startTo": "15:00", "minMinutes": 150, "maxMinutes": 300, "weight": 4, "social": false },

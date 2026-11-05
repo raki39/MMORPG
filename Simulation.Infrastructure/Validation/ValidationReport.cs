@@ -432,8 +432,8 @@ public static class ValidationReport
         double weeks = runs[0].Distribution.Weeks;
         string P(List<double> v, double q) => Fmt(ValidationCollector.Percentile(v, q));
         string ProfileName(string id) => content.Profiles.TryGetValue(id, out var pr) ? pr.Name : id;
-        sb.Append("\n## Distribuições (R3: referência antes de mudar a vontade de jogar)\n\n");
-        sb.Append("Medição da campanha completa (com humor), seeds somadas, na janela de medição. Serve de referência corrigida (depois da R1 e da R2) para comparar a R4. Nada foi recalibrado.\n\n");
+        sb.Append("\n## Distribuições (R3)\n\n");
+        sb.Append("Medição da campanha completa (com humor), seeds somadas, na janela de medição. A referência antes da R4 (modelo de vontade) está em `docs/baselines/pre-R4/`, com o mesmo relatório e o cenário controlado (pessoas iguais por célula perfil × ocupação), que separa o efeito das regras da mistura da população.\n\n");
 
         // Duracao das sessoes
         sb.Append("**Duração das sessões (minutos, sessões normais).** Inclui extensões e o fim real; pausa e escapada do trabalho à parte.\n\n");
@@ -493,6 +493,30 @@ public static class ValidationReport
             long free = list.Sum(t => (long)t.D.FreeMinutes);
             long played = list.Sum(t => (long)Played(t));
             return free == 0 ? "—" : Pct(played, free);
+        }
+        {
+            // R4: a segunda sessao planejada e a deixada de lado (ja tinha jogado o que queria).
+            var played = runs.SelectMany(r => r.Distribution.Days).Where(d => d.Reason == "played").ToList();
+            if (played.Count > 0)
+            {
+                int planned2 = played.Count(d => d.Sessions >= 2), skipped = played.Sum(d => d.Skipped);
+                sb.Append($"**Segunda sessão (R4):** planejada em {Pct(planned2, played.Count)} dos dias com jogo (a vontade que sobrou e outra janela); ");
+                sb.Append($"deixada de lado em {skipped.ToString("N0", PtBr)} dias, porque a pessoa já tinha jogado o que queria.\n\n");
+            }
+            // R4: as sessoes mais longas e por que ficaram longas.
+            var longest = runs.SelectMany(r => r.Distribution.Sessions).Where(x => x.Kind == "normal").OrderByDescending(x => x.Minutes).ThenBy(x => x.PersonId).Take(8).ToList();
+            if (longest.Count > 0)
+            {
+                sb.Append("**Sessões mais longas e por quê** (as 8 maiores sessões normais, seeds somadas). Resto: terminar a atividade ou a viagem e segunda sessão emendada.\n\n");
+                sb.Append("| Perfil | Ocupação | Duração | Planejada ao começar | Extensões | Resto | Vontade do dia | Disposição | Tempo livre do dia |\n|---|---|---:|---:|---:|---:|---:|---:|---:|\n");
+                foreach (var x in longest)
+                {
+                    int rest = x.Minutes - x.Planned - x.ExtendedMinutes;
+                    sb.Append($"| {ProfileName(x.Profile)} | {(content.Occupations.TryGetValue(x.Occupation, out var oc) ? oc.Name : x.Occupation)} | {x.Minutes} min | {x.Planned} min | {x.ExtendedMinutes} min | {rest} min | ");
+                    sb.Append($"{(x.Desired >= 0 ? x.Desired + " min" : "—")} | {(x.Desired >= 0 ? (x.Disposition >= 0 ? "+" : "−") + Math.Abs(x.Disposition) / 10 + "%" : "—")} | {(x.FreeMinutes >= 0 ? Fmt(x.FreeMinutes / 60.0) + " h" : "—")} |\n");
+                }
+                sb.Append('\n');
+            }
         }
         sb.Append("\n**Quanto do tempo livre vira jogo** (minutos jogados ÷ minutos livres da agenda; o jogo no trabalho e as extensões entram no jogado).\n\n| Perfil | Uso |\n|---|---:|\n");
         foreach (var pr in profiles) sb.Append($"| {ProfileName(pr)} | {Use(daysR.Where(t => t.D.Profile == pr))} |\n");

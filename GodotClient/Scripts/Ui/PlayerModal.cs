@@ -655,7 +655,7 @@ public partial class PlayerModal : ModalFrame
             }
         }
         var tr = _person.Traits;
-        int startH = tr.PreferredStartHour, spanH = Math.Max(1, (tr.SessionMinutes + 59) / 60);
+        int startH = _person.HabitualStartHour, spanH = Math.Max(1, (tr.SessionMinutes + 59) / 60);
         bool InRoutine(int h) => ((h - startH + 24) % 24) < spanH;
         var chart = new ColumnChart
         {
@@ -666,7 +666,8 @@ public partial class PlayerModal : ModalFrame
         int peak = minutes.Max() <= 0 ? -1 : Array.IndexOf(minutes, minutes.Max());
         return Column(12, chart, Row(0,
             MiniStat(peak < 0 ? "–" : $"{peak:00}h", "Pico"),
-            MiniStat($"{startH:00}h", "Início preferido"),
+            MiniStat($"{startH:00}h", "Costuma começar"),
+            MiniStat($"{tr.PreferredStartHour:00}h", "Horário preferido"),
             MiniStat($"{_person.ExpectedWeeklyMinutes / 60.0:0.#} h", "Previsto por semana")));
     }
 

@@ -107,12 +107,11 @@ public static class PopulationGenerator
         var profile = content.Profiles[person.ProfileId];
         person.Traits.ExtendTendency = Roll(rng, mean, profile.ExtendTendency, 0, 1000);
         person.Traits.SelfControl = Roll(rng, mean, profile.SelfControl, 0, 1000);
-        // Coerencia (D-045): o sono se acostuma as obrigacoes e a hora preferida de jogar cai no
-        // tempo livre da rotina. Nada e sorteado aqui: so ajusta o que ja foi sorteado.
+        // Coerencia (D-045): o sono se acostuma as obrigacoes e o horario habitual de jogar cai no
+        // tempo livre da rotina. Nada e sorteado aqui. O gosto de horario sorteado fica guardado a
+        // parte (Traits.PreferredStartHour): preferir 20 h e normalmente so conseguir as 21 h (R4).
         person.BedtimeMinute = Behavior.DailySchedule.AdaptedBedtime(person, occ, rs);
-        int preferred = Behavior.DailySchedule.CoherentPreferredHour(person, occ, rs);
-        person.Traits.PreferredStartHour = preferred;
-        person.BaseTraits.PreferredStartHour = preferred;
+        person.HabitualStartHour = Behavior.DailySchedule.ViableStartHour(person, occ, rs);
         person.ExpectedWeeklyMinutes = Behavior.DailySchedule.ExpectedWeeklyMinutes(person, occ, rs);
     }
 

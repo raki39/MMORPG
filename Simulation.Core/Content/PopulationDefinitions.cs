@@ -468,16 +468,21 @@ public sealed class RoutineSettingsDefinition
     public int FreeDayChanceBonus { get; set; } = 350;
     /// <summary>Minutos livres no dia para a folga contar inteira.</summary>
     public int FullFreeMinutes { get; set; } = 600;
-    /// <summary>Em dia sem obrigacoes a sessao dura mais: x (1000 + importancia * isto / 1000) / 1000.</summary>
-    public int FreeDayDurationPerImportance { get; set; } = 800;
-    /// <summary>Habito: quem jogou ontem ganha (e quem faltou perde) habito * isto / 1000 na chance.</summary>
+    /// <summary>
+    /// Sessao planejada (R4): o tempo livre amplia a sessao normal (sessionMinutes) ate este fator
+    /// (permille) com o tempo livre cheio. Hipotese configuravel da ampliacao planejada; nao limita
+    /// extensoes nem sessoes excepcionais. A importancia do jogo nao entra na duracao.
+    /// </summary>
+    public int MaxPlannedAmplificationPermille { get; set; } = 1500;
+    /// <summary>
+    /// Habito (R4): peso do habito na chance. A regularidade recente (dias com oportunidade) vezes o
+    /// traco de habito: + habito * isto / 1000 para quem jogou em todos, - para quem faltou em todos.
+    /// </summary>
     public int HabitStreakPermille { get; set; } = 250;
-    /// <summary>Importancia a partir da qual pode haver uma segunda sessao em outra janela.</summary>
-    public int SecondSessionFromImportance { get; set; } = 650;
-    /// <summary>Chance da segunda sessao com importancia 1000 (permille).</summary>
-    public int SecondSessionPermilleAtMax { get; set; } = 200;
-    /// <summary>Segunda sessao: fracao da duracao habitual.</summary>
-    public int SecondSessionDurationPermille { get; set; } = 450;
+    /// <summary>Dias recentes que formam a regularidade do habito (R4); so contam os dias com oportunidade.</summary>
+    public int HabitHistoryDays { get; set; } = 7;
+    /// <summary>Custo de entrar de novo no mesmo dia (minutos, R4): sai da vontade restante antes de decidir outra sessao.</summary>
+    public int ReentryCostMinutes { get; set; } = 20;
     /// <summary>Sessoes planejadas por dia, no maximo.</summary>
     public int MaxSessionsPerDay { get; set; } = 2;
     /// <summary>Variacao individual do deslocamento (+-, permille).</summary>
@@ -495,10 +500,13 @@ public sealed class RoutineSettingsDefinition
     /// </summary>
     public int PreferredDelayMaxMinutes { get; set; } = 240;
     /// <summary>
-    /// Tempo livre e duracao (D-045): quanto qualquer pessoa estende a sessao num dia com o tempo
-    /// livre cheio (permille), alem da parte que vem da importancia do jogo.
+    /// Disposicao do dia (R4): variacao pequena por pessoa e dia (+-, permille, ruido centrado),
+    /// reproduzivel pela seed. Vale na chance de jogar e no tempo desejado do dia: querer descansar
+    /// ou fazer outra coisa mesmo gostando do jogo.
     /// </summary>
-    public int FreeTimeDurationBase { get; set; } = 250;
+    public int DispositionSpreadPermille { get; set; } = 200;
+    /// <summary>Parte do efeito do humor na chance que tambem vale no tempo desejado do dia (permille, R4).</summary>
+    public int MoodDurationWeightPermille { get; set; } = 500;
     /// <summary>Chamado do trabalho durante a escapada (R2): minutos para terminar a atividade antes de sair (0 = sai na hora).</summary>
     public int WorkCallToleranceMinutes { get; set; } = 5;
     /// <summary>
