@@ -44,7 +44,7 @@ dotnet run --project Simulation.Runner -- --world Content/presets/inicial --days
 dotnet run --project Simulation.Runner -- --days 1 --no-skip   # verificação tick a tick
 dotnet run --project Simulation.Runner -- --days 90 --population 1000 --seeds 1-5 --out reports/validacao   # metas (docs/validacao.md)
 dotnet run --project Simulation.Runner -- --progression   # prévia nominal da curva de XP (progression.json)
-tools/perf.ps1   # desempenho do cliente: falha se o p95 do quadro passar de 6,9 ms (144 Hz), D-032
+tools/perf.ps1 -Quick   # por etapa: abre o jogo uma vez (~15 s); a completa (sem -Quick) só se o rápido acusar algo, D-032
 ```
 
 ## Marco atual
