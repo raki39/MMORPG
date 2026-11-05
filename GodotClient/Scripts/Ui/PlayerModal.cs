@@ -852,6 +852,7 @@ public partial class PlayerModal : ModalFrame
         "comerciante" => "prefere coletar e negociar.",
         "explorador" => "quer ver o mundo inteiro.",
         "hardcore" => "joga muitas horas e quer evoluir rápido.",
+        "devoto" => "vive o jogo: prioriza acima de tudo e aproveita cada janela livre.",
         _ => "perfil de origem.",
     };
 

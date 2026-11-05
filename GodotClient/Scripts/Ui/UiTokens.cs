@@ -76,6 +76,7 @@ public static class UiTokens
         "comerciante" => new Color("#E9CF5A"),
         "explorador" => new Color("#6FDB93"),
         "hardcore" => new Color("#B48CF2"),
+        "devoto" => new Color("#E36FC4"),
         _ => TextSecondary,
     };
 

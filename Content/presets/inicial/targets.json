@@ -67,7 +67,7 @@
     {
       "id": "horas_casual", "kind": "scenario", "name": "Horas por semana — casual", "metric": "hours_per_week", "profile": "casual",
       "min": 3, "max": 9, "unit": "h",
-      "rationale": "Cerca de 3 dias de jogo; no dia livre, 1 ou 2 sessões de 1h30 com pausa (D-051, comportamento aprovado pelo criador em 05/11/2026). A faixa antiga (2–6 h, '3 sessões de 70 minutos') supunha uma sessão por dia (R5, D-052)."
+      "rationale": "Cerca de 3 dias de jogo; no dia livre, 1 ou 2 sessões de 1h30 com pausa (D-051: comportamento da v3, considerado coerente pelo criador em 05/11/2026, ainda sem avaliação jogável). A faixa antiga (2–6 h, '3 sessões de 70 minutos') supunha uma sessão por dia (R5, D-052)."
     },
     {
       "id": "horas_hardcore", "kind": "scenario", "name": "Horas por semana — hardcore", "metric": "hours_per_week", "profile": "hardcore",

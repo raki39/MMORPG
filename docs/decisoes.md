@@ -1718,7 +1718,7 @@ Leitura:
 ## D-052 — R5: metas separadas, regras classificadas, saciedade por meia-vida
 **Data:** 05/11/2026 · **Estado:** aceita
 
-O criador aprovou o comportamento integrado da v3 (D-051) e pediu para preservá-lo como referência, sem reduzir horas nem sessões para voltar às faixas antigas.
+O criador considerou coerentes os resultados e os perfis apresentados da v3 (D-051), ainda sem validar o comportamento numa experiência jogável, e pediu para preservá-lo como referência, sem reduzir horas nem sessões para voltar às faixas antigas.
 
 **Metas** (histórico e justificativas em `validacao.md`, seção "R5"):
 - **Medidas separadas:** "sessões por semana" virou dias de jogo por semana (mesmas faixas: casual 2–4, hardcore 5–7) e sessões por dia de jogo (novas: casual 1,1–2,0, hardcore 1,2–2,5).
@@ -1733,7 +1733,7 @@ O criador aprovou o comportamento integrado da v3 (D-051) e pediu para preservá
 **Saciedade por meia-vida** (problema identificado):
 - **Problema:** a fórmula anterior (fração m ÷ (m + τ)) dependia de quantas vezes era atualizada. Depois de 745 min, dava 62% sem decisões no meio e 76% a 79% com blocos de 60 a 10 min.
 - **Correção:** meia-vida, em conta inteira com uma tabela fixa e arredondamento para o mais próximo. Truncar acumulava viés: +32 com blocos de 5 min.
-- **Valores:** meia-vida de 1,5 sessão normal jogando, escolhida para reproduzir o comportamento aprovado (78% depois de 745 min, como antes), e 2 h em pausa.
+- **Valores:** meia-vida de 1,5 sessão normal jogando e 2 h em pausa. O 1,5 é uma escolha de calibração (do Claude, não uma exigência do criador), feita para reproduzir o comportamento da v3 (78% depois de 745 min, como antes).
 - **Teste:** o resultado é o mesmo com blocos de 5, 10, 30 e 60 min e com pausas divididas.
 - **Efeito nas mesmas 2000 pessoas** (v3 → R5): de 0 a −2% de horas (casual 6,9 → 6,8 h, hardcore 36,3 → 36,3 h). Sessões por dia e voltas praticamente iguais.
 
@@ -1753,3 +1753,28 @@ O criador aprovou o comportamento integrado da v3 (D-051) e pediu para preservá
   - Opção: um peso configurável da saciedade na vontade de parar. Com o dobro, a chance de parar depois de 12 h iria a cerca de 60% por bloco, mas encurtaria também as sessões comuns.
 
 **Sem recalibração de pesos:** nenhum peso de vontade foi mudado para cumprir faixa.
+
+**Perfil Devoto** (aprovado pelo criador como hipótese inicial configurável):
+- **Definição:** o jogador extremamente dedicado, acima do hardcore e raro.
+  - Peso 2 em 102, ou 1,96% depois da normalização; medido entre 1,8% e 1,9%.
+  - Importância 930 ±70; hábito 900 ±100; sessão normal 360 ±120 min; horário preferido 16h ±5.
+  - Tendência a prolongar 650 ±350 e autocontrole 500 ±350, separados e bem espalhados.
+  - Os outros traços seguem o hardcore, com lealdade 750 ±200.
+- **Ocupações próprias:** campo novo e opcional do perfil (`occupationWeights`, regra do preset). Sem ocupação 40, universitário 25, estudante de manhã 20, estudante de tarde 15. Os outros perfis seguem com o peso geral, e o validador confere o campo.
+- **Sem regra própria:** um teste garante que o código da simulação não trata nenhum perfil pelo id. Ele joga mais porque a prioridade alta e a sessão normal longa entram nas mesmas decisões, com os mesmos limites.
+- **Medição na campanha completa** (5 seeds × 1.000 × 90 dias):
+  - 6,9 dias de jogo por semana, 1,52 sessão por dia de jogo e 57 h por semana;
+  - sessão mediana de 342 min (p90 477, máximo 795);
+  - 64% do tempo livre vira jogo;
+  - 12 min de sono cortado por semana e ninguém cansado no fim (estudantes e quem não tem ocupação recuperam nas manhãs livres).
+- **Medição por pessoa** (população de 6.000, seed 23, 60 dias, 110 devotos):
+  - horas por semana p10 47, mediana 55, p90 69, máximo 76;
+  - 9h29 por dia livre e 6h12 por dia de obrigação (medianas);
+  - 0% de dias cansado e 0,5% de outro lazer.
+- **Cenário controlado** (pessoas iguais): devoto de 50 a 70 h contra hardcore de 40 a 54 h nas mesmas ocupações (`docs/baselines/pos-R5-devoto/`).
+- **Os outros perfis ficaram preservados:**
+  - **Pessoas iguais:** as 36 células do cenário controlado deram exatamente o mesmo resultado da R5.
+  - **Campanha:** como o sorteio de perfil muda com o peso novo, as pessoas não são as mesmas; mesmo assim, as horas por perfil ficaram iguais à R5 dentro de 0,1 h. Regras do cenário 9 de 9.
+- **Sem meta própria por enquanto.** O devoto entra nas tabelas do relatório como os outros perfis.
+
+**R5 encerrada**, com os parâmetros sujeitos a ajuste quando houver novas evidências e avaliação jogável.

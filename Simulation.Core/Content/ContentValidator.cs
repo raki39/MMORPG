@@ -1036,6 +1036,15 @@ public static class ContentValidator
             Range(p, "preferredStartHour", pr.PreferredStartHour, 0, 23, v);
             Range(p, "sessionMinutes", pr.SessionMinutes, 10, 720, v);
             Range(p, "leisureBudgetCentsPerMonth", pr.LeisureBudgetCentsPerMonth, 0, 1_000_000, v);
+            if (pr.OccupationWeights.Count > 0)
+            {
+                foreach (var (occId, w) in pr.OccupationWeights.OrderBy(kv => kv.Key, StringComparer.Ordinal))
+                {
+                    if (!set.Occupations.Any(o => o.Id == occId)) v.Error(PopulationFile, $"{p}.occupationWeights.{occId}", "Ocupação inexistente.");
+                    if (w < 0) v.Error(PopulationFile, $"{p}.occupationWeights.{occId}", "O peso não pode ser negativo.");
+                }
+                if (pr.OccupationWeights.Values.All(w => w <= 0)) v.Error(PopulationFile, p + ".occupationWeights", "Ao menos uma ocupação precisa de peso maior que zero.");
+            }
         }
     }
 

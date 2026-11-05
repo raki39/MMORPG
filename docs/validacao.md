@@ -234,7 +234,7 @@ Com a vontade de jogar da v3 (D-051), a pessoa joga, para e volta. A meta antiga
 | Hardcore: sessões por semana 5–7 | `sessions_per_week` | **Dias de jogo por semana 5–7** | Mesma intenção (cerca de 6 dias) |
 | — | — | **Casual: sessões por dia de jogo 1,1–2,0** (`sessions_per_play_day`) | Nova. Uma sessão na maioria dos dias e voltas comuns no dia livre; abaixo de 1,1 a volta quase não existiria |
 | — | — | **Hardcore: sessões por dia de jogo 1,2–2,5** | Nova. Volta mais quando há tempo; a sessão normal longa limita quantas cabem |
-| Casual: horas por semana 2–6 h | "3 sessões de 70 min" | **3–9 h** | Cerca de 3 dias de jogo; no dia livre, 1 ou 2 sessões de 1h30 com pausa (comportamento aprovado pelo criador em 05/11/2026) |
+| Casual: horas por semana 2–6 h | "3 sessões de 70 min" | **3–9 h** | Cerca de 3 dias de jogo; no dia livre, 1 ou 2 sessões de 1h30 com pausa (comportamento da v3, que o criador considerou coerente em 05/11/2026; ainda sem avaliação numa experiência jogável) |
 | Hardcore: horas por semana 15–45 h | — | sem mudança | — |
 | Ativos em dia útil, fim de semana, pico online | — | sem mudança | Medem a população no dia, não as sessões |
 
@@ -252,7 +252,12 @@ Com a vontade de jogar da v3 (D-051), a pessoa joga, para e volta. A meta antiga
 | Hardcore: horas por semana | 36,8 | 31,9 | 36,8 | 36,5 |
 | Regras do cenário dentro | 7 de 7 | 7 de 7 | 4 de 7 | 9 de 9 |
 
-Os relatórios completos de cada versão estão em `docs/baselines/` (`pre-R4`, `pos-R4`, `pos-R4b`, `pos-R5`).
+Os relatórios completos de cada versão estão em `docs/baselines/` (`pre-R4`, `pos-R4`, `pos-R4b`, `pos-R5`, `pos-R5-devoto`).
+
+**Com o perfil Devoto** (D-052, cerca de 2% da população): regras do cenário 9 de 9.
+- **Outros perfis com pessoas iguais:** idênticos no cenário controlado.
+- **Campanha completa:** as horas por perfil ficaram iguais à R5 dentro de 0,1 h.
+- **O Devoto:** 6,9 dias, 1,52 sessão por dia de jogo e 57 h por semana. Ainda sem meta própria.
 
 ## Próximos passos
 

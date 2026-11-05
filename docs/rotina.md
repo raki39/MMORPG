@@ -52,18 +52,23 @@ A regra que amarra tudo (D-045) é a coerência: turno, sono, hora preferida, du
 
 1. **Traços do perfil** (média ± faixa):
 
-   | Perfil | Importância do jogo | Hábito | Sessão base | Gosto de horário | Tendência a prolongar | Autocontrole |
-   |---|---:|---:|---:|---:|---:|---:|
-   | Casual | 350 ±150 | 400 ±200 | 80 ±45 min | 20h ±3 | 300 ±300 | 600 ±300 |
-   | Social | 500 | 550 | 110 ±60 | 20h ±3 | 500 | 550 |
-   | Explorador | 550 | 500 | 120 ±60 | 15h ±6 | 500 | 550 |
-   | Comerciante | 600 | 650 | 90 ±50 | 19h ±4 | 400 | 650 |
-   | Competitivo | 650 | 600 | 150 ±80 | 21h ±2 | 650 | 450 |
-   | Hardcore | 820 ±100 | 750 | 240 ±100 | 19h ±4 | 800 | 400 |
+   | Perfil | Peso (parcela) | Importância do jogo | Hábito | Sessão normal | Gosto de horário | Tendência a prolongar | Autocontrole |
+   |---|---:|---:|---:|---:|---:|---:|---:|
+   | Casual | 35 (34,3%) | 350 ±150 | 400 ±200 | 80 ±45 min | 20h ±3 | 300 ±300 | 600 ±300 |
+   | Social | 20 (19,6%) | 500 | 550 | 110 ±60 | 20h ±3 | 500 | 550 |
+   | Explorador | 10 (9,8%) | 550 | 500 | 120 ±60 | 15h ±6 | 500 | 550 |
+   | Comerciante | 10 (9,8%) | 600 | 650 | 90 ±50 | 19h ±4 | 400 | 650 |
+   | Competitivo | 15 (14,7%) | 650 | 600 | 150 ±80 | 21h ±2 | 650 | 450 |
+   | Hardcore | 10 (9,8%) | 820 ±100 | 750 | 240 ±100 | 19h ±4 | 800 | 400 |
+   | Devoto (R5) | 2 (2,0%) | 930 ±70 | 900 ±100 | 360 ±120 | 16h ±5 | 650 ±350 | 500 ±350 |
+
+   A parcela é o peso dividido pela soma dos pesos (102). O **Devoto** é o jogador extremamente dedicado. Os outros traços seguem o hardcore, com lealdade 750 ±200. Não tem regra própria na simulação (há um teste para isso): joga mais porque a prioridade alta e a sessão normal longa entram nas mesmas decisões de todos, com os mesmos limites de obrigações, sono e cansaço.
 
    Importância, tendência a prolongar e autocontrole são sorteados de forma independente dentro do perfil (o teste mede correlação ≈ 0).
 2. **Localidade:** residência e fuso. Brasil UTC−3 (peso 760), EUA UTC−5 (80), China UTC+8 (70), Argentina UTC−3 (90). Os feriados são os de onde a pessoa mora.
 3. **Ocupação:** pelo peso, com a variação de horário e de deslocamento e a folga da escala.
+   - Um perfil pode ter ocupações próprias (`occupationWeights`, regra do preset). No preset inicial, só o Devoto tem: sem ocupação 40, universitário 25, estudante de manhã 20, estudante de tarde 15.
+   - Os outros perfis usam o peso geral, independente do perfil: ter tempo não é ser hardcore.
 4. **Sono:**
    - necessidade de 470 ±45 min (5 a 11 h);
    - hora natural de dormir 23:45 ±1h15;
@@ -337,13 +342,15 @@ Cada regra da rotina é de uma de três classes. Os testes da rotina levam a mes
 | Social | 3,8 | 1,57 | 12,9 |
 | Comerciante | 4,4 | 1,71 | 14,4 |
 | Explorador | 4,5 | 1,70 | 17,5 |
-| Competitivo | 4,9 | 1,58 | 21,5 |
-| Hardcore | 6,3 | 1,52 | 36,9 |
+| Competitivo | 4,9 | 1,58 | 21,4 |
+| Hardcore | 6,2 | 1,52 | 36,8 |
+| Devoto | 6,9 | 1,52 | 57,1 |
 
 - **Sessões por dia de jogo:** uma em 58%, duas em 30%, três ou mais em 12%; pausa mediana de 80 min.
 - **Fim das sessões:** decidiu parar 79%, hora de dormir 16%, fim do tempo livre 5%.
 - **Sono cortado:** 0,2% do tempo jogado.
-- **Referências:** pré-R4, R4, v3 e R5 em `docs/baselines/`.
+- **Devoto:** sessão mediana de 342 min (p90 477); por pessoa, 47 a 69 h por semana (p10 a p90); 64% do tempo livre vira jogo; 0% cansado.
+- **Referências:** pré-R4, R4, v3, R5 e R5 com o Devoto em `docs/baselines/`.
 
 **Pendente:** com todos jogando mais, ficam fora as metas de progressão.
 - Horas até o nível 20: 70 h, contra 80–110.

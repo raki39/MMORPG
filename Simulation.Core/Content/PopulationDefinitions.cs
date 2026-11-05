@@ -66,6 +66,11 @@ public sealed class PopulationProfileDefinition : IContentDefinition
     public TraitRange ExtendTendency { get; set; } = new();
     /// <summary>Autocontrole (P3): respeitar o horario planejado e o trabalho.</summary>
     public TraitRange SelfControl { get; set; } = new();
+    /// <summary>
+    /// Ocupacoes possiveis deste perfil e seus pesos (R5, regra do preset). Vazio = o peso geral de
+    /// cada ocupacao, como nos outros perfis. Nao muda a escolha de ocupacao dos demais perfis.
+    /// </summary>
+    public Dictionary<string, int> OccupationWeights { get; set; } = new();
 }
 
 public sealed class NamePoolDefinition

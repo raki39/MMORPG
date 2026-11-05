@@ -66,6 +66,19 @@
       "cheatPropensity": { "mean": 100, "spread": 100 }, "opportunism": { "mean": 400, "spread": 250 },
       "leisureBudgetCentsPerMonth": { "mean": 12000, "spread": 7000 }, "willingnessToPay": { "mean": 650, "spread": 250 }, "paidAdvantageSensitivity": { "mean": 750, "spread": 200 },
       "preferredStartHour": { "mean": 19, "spread": 4 }, "sessionMinutes": { "mean": 240, "spread": 100 }, "gameImportance": { "mean": 820, "spread": 100 }, "habit": { "mean": 750, "spread": 200 }, "talent": { "mean": 620, "spread": 280 }, "variety": { "mean": 300, "spread": 200 }, "extendTendency": { "mean": 800, "spread": 300 }, "selfControl": { "mean": 400, "spread": 300 }
+    },
+    {
+      "id": "devoto", "version": 1, "name": "Devoto", "weight": 2,
+      "pve": { "mean": 850, "spread": 150 }, "pvp": { "mean": 550, "spread": 300 }, "trade": { "mean": 450, "spread": 250 },
+      "exploration": { "mean": 450, "spread": 250 }, "socializing": { "mean": 550, "spread": 250 },
+      "sociability": { "mean": 500, "spread": 250 }, "aggressiveness": { "mean": 450, "spread": 300 }, "patience": { "mean": 600, "spread": 250 },
+      "loyalty": { "mean": 750, "spread": 200 }, "riskAversion": { "mean": 350, "spread": 250 },
+      "mechanicalSkill": { "mean": 700, "spread": 220 }, "gameKnowledge": { "mean": 800, "spread": 180 }, "coordination": { "mean": 700, "spread": 220 },
+      "cheatPropensity": { "mean": 100, "spread": 100 }, "opportunism": { "mean": 400, "spread": 250 },
+      "leisureBudgetCentsPerMonth": { "mean": 12000, "spread": 7000 }, "willingnessToPay": { "mean": 650, "spread": 250 }, "paidAdvantageSensitivity": { "mean": 750, "spread": 200 },
+      "preferredStartHour": { "mean": 16, "spread": 5 }, "sessionMinutes": { "mean": 360, "spread": 120 }, "gameImportance": { "mean": 930, "spread": 70 }, "habit": { "mean": 900, "spread": 100 }, "talent": { "mean": 620, "spread": 280 }, "variety": { "mean": 300, "spread": 200 },
+      "extendTendency": { "mean": 650, "spread": 350 }, "selfControl": { "mean": 500, "spread": 350 },
+      "occupationWeights": { "sem_ocupacao": 40, "universitario": 25, "estudante_manha": 20, "estudante_tarde": 15 }
     }
   ],
   "names": {

@@ -86,7 +86,16 @@ public static class PopulationGenerator
     {
         var occs = content.OccupationsOrdered;
         if (occs.Count == 0) return;
-        var occ = occupationId != null ? content.Occupations[occupationId] : occs[rng.PickWeighted(occs.Select(o => Math.Max(0, o.Weight)).ToList())];
+        var own = content.Profiles[person.ProfileId].OccupationWeights;
+        OccupationDefinition occ;
+        if (occupationId != null) occ = content.Occupations[occupationId];
+        else if (own.Count > 0)
+        {
+            // Perfil com ocupacoes proprias (regra do preset): um sorteio so, em ordem ordinal.
+            var keys = own.Keys.Where(content.Occupations.ContainsKey).OrderBy(k => k, StringComparer.Ordinal).ToList();
+            occ = content.Occupations[keys[rng.PickWeighted(keys.Select(k => Math.Max(0, own[k])).ToList())]];
+        }
+        else occ = occs[rng.PickWeighted(occs.Select(o => Math.Max(0, o.Weight)).ToList())];
         var rs = content.Routine;
         person.OccupationId = occ.Id;
         person.ShiftOffsetMinutes = occ.StartVariationMinutes == 0 || mean ? 0 : rng.NextIntInclusive(-occ.StartVariationMinutes, occ.StartVariationMinutes) / 5 * 5;
