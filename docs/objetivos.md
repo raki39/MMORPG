@@ -282,11 +282,11 @@ Configuração em `objectives.json`: seção `evolution` (valores candidatos) e,
 - **Promoção:** sem objetivo geral ativo, o secundário mais importante passa a geral, como consequência e sem intervalo.
 - **Estagnação:** um objetivo que podia avançar e ficou 30 dias jogados sem progresso perde 150 de importância. Se ficar abaixo de um secundário, os dois trocam de lugar.
   - **Sistemas futuros nunca perdem prioridade por não avançar.**
-- **Abandono por experiência negativa:**
-  - acontece quando metas ligadas por **avanço real** são abandonadas em seguida: 2 + o comprometimento × 4 vezes (de 2 a 6);
-  - metas de preparação não contam;
-  - tem revés, frustração e memória, mas só a diferença para o revés da meta que o provocou (sem somar);
-  - o objetivo abandonado só volta como candidato depois de 60 dias jogados.
+- **Abandono (D-065):** abandonar metas **não** leva a desistir do objetivo.
+  - A regra de "falhas seguidas" da primeira versão da O3 foi retirada. Ela contrariava o princípio do criador (não conseguir realizar agora, ou estar perto, não é motivo para desistir), e as "falhas" eram quase todas defeitos das metas de missão (diagnóstico em `baselines/metas-missao/`).
+  - A desistência precisa de um motivo específico (mudança de interesse ou de personalidade, experiência negativa marcante ligada ao objetivo). O critério está proposto e aguarda o criador.
+  - A sequência de metas ligadas abandonadas continua registrada como medida, sem efeito.
+  - O estado "abandonado" e o intervalo de 60 dias para voltar ficam prontos para esse critério.
 - **Influência desligada:** a evolução continua registrando, sem efeito no humor nem no plano. **Sorteio desligado:** não há objetivos nem evolução.
 
 ### 8.4 Medição (O3)
@@ -320,7 +320,7 @@ Rodadas pareadas com as mesmas pessoas e a evolução **desligada** × **ligada*
   - só 4,4% têm algum objetivo ativo que pode avançar ou tem preparação conhecida;
   - os ativos são quase todos ambições de sistemas futuros: chefes 990, PvP 782, "mais fortes" 754, fabricação 641 e fortuna 548;
   - sem nenhum objetivo ativo: 0,8% (5,9% com a evolução desligada).
-- **Abandonos:** quase todos da campanha principal (409 de 423), porque as metas de missão já eram abandonadas com frequência antes da O3.
+- **Abandonos:** quase todos da campanha principal (409 de 423), consequência de defeitos nas metas de missão. Depois do D-065 não há abandono de objetivo por falha de meta (0).
 - **Comportamento:**
   - objetivos ativos no fim: de 2,27 para 2,88 por pessoa;
   - metas ligadas: de 28,1% para 30,6%;

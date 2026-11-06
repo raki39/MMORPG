@@ -1,0 +1,8 @@
+seed 1: etapa disponivel sem avanco = 1391
+- escolheram a atividade da etapa ao menos uma vez durante a meta: 55 (4%)
+- nenhuma escolha de atividade durante a meta: 0; escolhas por meta (mediana) 21; sessoes (mediana) 0
+- avancaram outra missao durante a meta: 300 (22%)
+- principal motivo das outras escolhas: affinity 23419, plan_continuity 3973, time_budget 1437, quest_step 559, quest_deliver 223, level_fit 181, goal 133, quest_offer 72
+- atividades escolhidas no lugar: taverna 5031, colher_espinheiro 2711, mercado 2107, colher_erva_dos_ventos 1669, coletar_cristal_de_gelo 1624, patrulhar_o_passo 1312, cacar_grifos 1004, emboscar_no_passo 914, minerar_obsidiana 890, cacar_aranhas_gigantes 856
+- etapas paradas mais comuns: colinas_do_vale/explorar_colinas 211, ruinas_sombrias/examinar_altar 172, floresta_sussurrante/cacar_lobos 162, mina_velha/cacar_goblins 152, ravina_escarlate/cacar_esqueletos 139, floresta_sussurrante/coletar_ervas 92, brejo_das_brumas/explorar_brejo 70, mina_velha/cacar_morcegos 64
+- missoes: vila_principal_2 220, vila_principal_1 191, forte_principal_4 172, forte_principal_2 167, vila_principal_4 152, vila_principal_3 93, vila_secundaria_ervas 92, forte_principal_1 92

@@ -162,7 +162,7 @@ São as metas de sessão ou secundárias (chegar a um nível, descobrir uma zona
 |---|---|---|
 | Chegar a um nível | 150 + preferência PvE·0,3 + Competitividade·0,2 + (1000 − Paciência)·0,1 | 1 a 3 níveis acima |
 | Descobrir uma zona | 100 + preferência Exploração·0,9 | Uma zona vizinha das conhecidas, dentro do nível (os competitivos aceitam zonas mais altas) |
-| Concluir uma missão | 120 + (preferências PvE + Exploração)·0,2 + Paciência·0,2 + Conhecimento·0,1 | A principal disponível; senão, uma secundária |
+| Concluir uma missão | 120 + (preferências PvE + Exploração)·0,2 + Paciência·0,2 + Conhecimento·0,1 | A principal ativa ou que pode ser aceita agora (com vaga); senão, uma secundária (D-065) |
 | Praticar a atividade preferida | 100 + preferência do tipo·0,5 + Paciência·0,2 | 120 a 420 minutos |
 
 - **Influência:** fator "meta pessoal" na decisão.
@@ -171,6 +171,8 @@ São as metas de sessão ou secundárias (chegar a um nível, descobrir uma zona
   - O ruído, o gosto, o risco e a distância ainda podem vencer, então não é regra.
 - **Persistência e abandono:**
   - depois de 3 a 12 horas de jogo sem progresso, conforme a paciência;
-  - ou, ao conectar, com 4% de chance, se a paciência for < 300.
+  - ou, ao conectar, com 4% de chance, se a paciência for < 300;
+  - a meta largada não volta com o mesmo alvo na mesma revisão (D-065; as de nível têm bloqueio até subir de nível, D-055).
+- **O que conta como progresso numa meta de missão** (D-065): aceitar a missão, minutos parciais da etapa, concluir uma etapa e a entrega. Uma missão pronta só para entregar não recebe progresso até a entrega.
 - **Conclusão:** reforça o traço que motivou a meta (+1 unidade).
 - **Registro:** tudo gera evento (`goal_set`, `goal_completed`, `goal_abandoned`) com o motivo, e o estado entra no hash.

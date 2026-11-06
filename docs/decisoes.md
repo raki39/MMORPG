@@ -2302,3 +2302,67 @@ Itens como instâncias, inventário, equipamento funcional, carteira e aplicaç�
 - **Comportamento:** metas ligadas de 28,1% para 30,6%; nível e horas iguais; satisfação −1,5 (o custo dos abandonos); validação igual.
 
 **Próximo:** com a camada de objetivos fechada, a Etapa 1 retoma na E1b (página Classes e editor), depois da avaliação do criador.
+
+## D-065 — Diagnóstico dos abandonos das metas de missão e do objetivo da campanha
+**Data:** 06/11/2026 · **Estado:** correções aceitas; propostas de comportamento aguardando o criador
+
+**Pedido do criador:**
+- investigar os 42% de abandono das metas de missão e os 409 de 423 abandonos de objetivo concentrados na campanha, antes da E1b;
+- não ajustar pesos nem limites para baixar números;
+- corrigir só defeitos concretos, comparar antes e depois nas mesmas pessoas e apresentar decisões de comportamento antes de alterar.
+- **Princípio:** um objetivo não pode ser abandonado só porque a pessoa não consegue realizá-lo agora ou está perto de realizá-lo; a desistência precisa de algo específico, como mudança de personalidade ou de interesse.
+
+**Diagnóstico** (5 seeds × 1.000 × 90 dias; estado registrado no instante de cada abandono; `baselines/metas-missao/`):
+- **Metas de missão:**
+  - 32.772 adotadas por 4.868 pessoas; 50,7% abandonadas, quase todas por "sem progresso";
+  - 81% foram readotadas depois;
+  - em 44%, a pessoa continuou a mesma missão depois do abandono.
+- **Estado da missão no abandono:**
+  - **43,3%** não aceita porque as 3 vagas estavam cheias;
+  - 42,2% etapa disponível sem avanço;
+  - 9,7% com progresso parcial na etapa (mediana de 80% da etapa feita);
+  - 3,4% não aceita com vaga;
+  - 1,4% pronta para entregar.
+- **O que ocupa as vagas:** missões secundárias e diárias, na mediana 17 níveis abaixo do personagem (94% a 5 ou mais), aceitas há 38 dias e sem avanço. Missões nunca saem do diário, então a próxima principal não pode ser aceita.
+- **"Etapa disponível sem avanço":** só 4% escolheram a atividade da etapa durante a meta. São missões antigas de nível baixo, como caçar lobos ou explorar as colinas, num personagem de nível alto. O abandono vai de 16% (missão no nível do personagem) a 75% (15 ou mais níveis acima).
+- **Readoção no mesmo instante:** abandonada e readotada na mesma revisão em 18% dos abandonos de missão, 29% dos de prática e 12% dos de descoberta. As de nível não, porque têm bloqueio desde o D-055.
+- **O que contava como progresso:** só concluir uma etapa e a entrega. Aceitar a missão e os minutos parciais da etapa não contavam, um problema equivalente ao das metas de nível que ignoravam XP (D-055).
+- **Viagem, fim de sessão e desconexão:** não são confundidos com estagnação. O prazo conta em horas jogadas, então tempo desconectado não pesa, e a viagem é curta perto de 3 a 12 horas. A saída no meio de uma atividade não credita os minutos na etapa (regra existente, "sem recompensa"); o efeito é pequeno.
+- **Ligação meta → objetivo:** cada meta de missão principal abandonada somava uma "falha" no objetivo da campanha, inclusive as impossíveis por vaga cheia. Depois de 2 a 6 falhas o objetivo era abandonado, e em parte dos casos a pessoa concluía as missões da campanha depois.
+
+**Defeitos corrigidos:**
+1. **Meta de missão só para missão ativa ou que pode ser aceita agora (com vaga):** uma meta impossível é requisito indisponível, não estagnação.
+2. **Progresso da meta de missão:** passam a contar o aceite e os minutos parciais da etapa, além de concluir etapa e entregar.
+3. **A meta largada não volta com o mesmo alvo na mesma revisão.**
+4. **Objetivo não é abandonado por falhas de metas:** a regra da O3 foi retirada por contrariar o princípio. A sequência continua registrada como medida.
+
+**Antes × depois** (mesmas pessoas):
+
+| Medida | Antes | Depois |
+|---|---|---|
+| metas de missão abandonadas | 50,7% | 42,1% |
+| abandonos por vaga cheia | 6.956 | 27 |
+| abandono e readoção no mesmo instante | 3.942 | 0 |
+| objetivo da campanha abandonado | 409 | 0 |
+| objetivo da campanha concluído | 524 | 650 |
+| missões principais concluídas | 38.203 | 38.832 |
+| metas abandonadas por pessoa | 4,41 | 3,67 |
+| satisfação | 588 | 591 |
+| frustração | 5,3 | 4,3 |
+
+- **Nível, horas e tempo por atividade:** praticamente iguais.
+- **Validação:** regras do cenário 8 de 9 e provisórias 8 de 12, iguais.
+- **O que restou:** os abandonos são sobretudo de missões antigas muito abaixo do nível (83% a 5 ou mais níveis): a pessoa não quer fazê-las. É comportamento legítimo, mas o sistema continua escolhendo metas para elas.
+
+**Propostas de comportamento, aguardando o criador:**
+- **Diário de missões:**
+  - diárias expiram na virada do dia, como nos MMORPGs;
+  - a pessoa larga uma missão antiga, muito abaixo do nível e sem avanço, quando precisa da vaga para uma oferta que valoriza mais (por exemplo, a próxima principal), com evento e causa e sem frustração.
+- **Meta de missão:**
+  - a candidata considera o encaixe de nível da etapa atual, como as atividades: missão muito abaixo do nível pesa menos sem ser proibida, porque há quem complete a história;
+  - a meta abandonada não volta para a mesma missão até a missão avançar ou haver mudança relevante, no mesmo princípio do bloqueio das metas de nível (D-055).
+- **Desistência de objetivo** (substitui a regra retirada), só com motivo específico:
+  - **mudança de interesse:** depois de uma mudança real na pessoa (personalidade principal, trait adquirida ou perdida, atributos que mudam com a experiência), o ajuste da pessoa ao objetivo cai abaixo de um limiar;
+  - **experiência negativa marcante ligada ao objetivo:** memórias ruins fortes nos tipos de atividade dele; no futuro, mortes repetidas no chefe, perdas no PvP ou falência.
+
+  O motivo fica registrado e a recompensa emocional não soma.

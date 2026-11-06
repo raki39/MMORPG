@@ -26,6 +26,8 @@ public sealed class QuestSystem
 
     /// <summary>Avisos para objetivos e atributos (D-036): etapa cumprida e quest entregue.</summary>
     internal Action<Character, string>? StepCompleted { get; set; }
+    /// <summary>Avanco sem concluir a etapa (minutos parciais) ou missao aceita: progresso de meta (D-065).</summary>
+    internal Action<Character, string>? Progressed { get; set; }
     internal Action<Character, string>? Completed { get; set; }
 
     private ContentDatabase C => _w.Content;
@@ -111,7 +113,11 @@ public sealed class QuestSystem
             var step = CurrentStep(C, aq);
             if (step == null || step.RegionId != region.Id || step.ActivityId != a.Id) continue;
             aq.StepMinutes += minutes;
-            if (aq.StepMinutes < step.Minutes) continue;
+            if (aq.StepMinutes < step.Minutes)
+            {
+                if (minutes > 0) Progressed?.Invoke(ch, aq.QuestId);   // avanco parcial da etapa tambem e progresso (D-065)
+                continue;
+            }
             var q = C.Quests[aq.QuestId];
             aq.StepIndex++;
             aq.StepMinutes = 0;
@@ -173,6 +179,7 @@ public sealed class QuestSystem
         s.Active++;
         _w.Emit("quest_accepted", EventImportance.Low, new[] { new EntityRef("character", ch.Id) },
             new[] { new EventCause("quest_board", 1000), new EventCause(q.Category, 1000) }, q.Id);
+        Progressed?.Invoke(ch, q.Id);   // aceitar a missao da meta e progresso (D-065)
     }
 
     private void Deliver(Character ch, ActiveQuest aq, QuestDefinition q, QuestBoardDefinition board)

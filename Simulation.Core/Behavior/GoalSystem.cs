@@ -48,12 +48,14 @@ public sealed class GoalSystem
         int patience = persistent ? C.QuirkCatalog.Effects.Persistente.GoalPatiencePermille : 1000;
         long baseStale = staleTicks;
         staleTicks = staleTicks * patience / 1000;
+        // Alvos largados nesta revisao: nao voltam na mesma decisao (D-065; as de nivel ja tem bloqueio proprio, D-055).
+        var droppedNow = new HashSet<string>(StringComparer.Ordinal);
         foreach (var g in ch.GoalList.ToList())
         {
-            if (played - g.LastProgressPlayedTicks > staleTicks) Abandon(ch, g, "no_progress");
+            if (played - g.LastProgressPlayedTicks > staleTicks) { Abandon(ch, g, "no_progress"); droppedNow.Add(g.Type + "|" + g.Target); }
             // Leal (P4a): nao abandona meta por impaciencia.
             else if (C.PersonalityRules(p.PersonalityId)?.Rule != PersonalityRuleIds.SteadfastGoals
-                     && t.Patience < S.ImpatientBelow && rng.ChancePermille(S.ImpatientDropChance * 1000 / patience)) Abandon(ch, g, "impatience");
+                     && t.Patience < S.ImpatientBelow && rng.ChancePermille(S.ImpatientDropChance * 1000 / patience)) { Abandon(ch, g, "impatience"); droppedNow.Add(g.Type + "|" + g.Target); }
             else if (persistent && played - g.LastProgressPlayedTicks > baseStale)
             {
                 QuirkSystem.Count(p, "persistente_manteve_meta");
@@ -64,6 +66,7 @@ public sealed class GoalSystem
         if (ch.GoalList.Count >= S.MaxActive) return;
         if (!rng.ChancePermille(S.AdoptChance)) return;
         var options = Candidates(p, ch, rng);
+        if (droppedNow.Count > 0) options = options.Where(o => !droppedNow.Contains(o.Type + "|" + o.Target)).ToList();
         if (options.Count == 0) return;
         // Objetivos pessoais (O2): a meta que contribui de verdade para um objetivo ganha peso na adocao
         // (so o maior reforco entre os objetivos atendidos). Metas sem vinculo continuam como antes.
@@ -286,13 +289,19 @@ public sealed class GoalSystem
         _ => motiveKey,
     };
 
-    /// <summary>Missao principal ativa ou oferecida por um quadro conhecido; senao, uma secundaria.</summary>
+    /// <summary>
+    /// Missao principal ativa ou oferecida por um quadro conhecido; senao, uma secundaria. Oferta so
+    /// com vaga para aceitar (D-065): meta para missao que nao pode ser aceita agora e requisito
+    /// indisponivel, nao estagnacao.
+    /// </summary>
     private QuestDefinition? MainQuestTarget(Character ch)
     {
+        bool canAccept = _quests.CanAccept(ch);
         foreach (var cat in new[] { QuestCategories.Main, QuestCategories.Secondary })
         {
             foreach (var aq in ch.ActiveQuestList)
                 if (C.Quests.TryGetValue(aq.QuestId, out var q) && q.Category == cat) return q;
+            if (!canAccept) continue;
             foreach (var b in C.QuestBoards.Values.OrderBy(b => b.Id, StringComparer.Ordinal))
             {
                 if (!ch.Known.Contains(b.RegionId)) continue;
@@ -399,6 +408,14 @@ public sealed class GoalSystem
             g.LastProgressPlayedTicks = ch.PlayedTicksAt(Now);   // explorar conta como avanco
             if (g.Target == zoneId || ch.Known.Contains(g.Target)) { g.Progress = 1; Complete(p, ch, g); }
         }
+    }
+
+    /// <summary>Avanco parcial da etapa ou missao aceita (D-065): progresso, sem contar etapa.</summary>
+    internal void OnQuestProgress(Character ch, string questId)
+    {
+        foreach (var g in ch.GoalList)
+            if (g.Type == GoalTypes.CompleteQuest && g.Target == questId)
+                g.LastProgressPlayedTicks = ch.PlayedTicksAt(Now);
     }
 
     internal void OnQuestStep(Character ch, string questId)

@@ -554,7 +554,6 @@ public static class ContentValidator
             ("maxGeneral", ev.MaxGeneral, 1, 2), ("maxSecondary", ev.MaxSecondary, 0, 5),
             ("changeCooldownPlayDays", ev.ChangeCooldownPlayDays, 0, 365), ("abandonCooldownPlayDays", ev.AbandonCooldownPlayDays, 0, 3650),
             ("stalePlayDays", ev.StalePlayDays, 1, 3650), ("staleImportanceDrop", ev.StaleImportanceDrop, 0, 1000),
-            ("failuresBase", ev.FailuresBase, 1, 50), ("failuresPerCommitment", ev.FailuresPerCommitment, 0, 50),
             ("preparationFactorPermille", ev.PreparationFactorPermille, 0, 1000), ("futureFactorPermille", ev.FutureFactorPermille, 0, 1000),
             ("minFitPermille", ev.MinFitPermille, 0, 10_000), ("futureMinFitPermille", ev.FutureMinFitPermille, 0, 10_000),
             ("relatedBonusPermille", ev.RelatedBonusPermille, 0, 3000), ("recoverBonusPermille", ev.RecoverBonusPermille, 0, 3000),

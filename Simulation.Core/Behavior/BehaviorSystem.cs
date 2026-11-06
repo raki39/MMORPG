@@ -55,6 +55,7 @@ public sealed class BehaviorSystem
         _quests = new QuestSystem(world, GainExperience);
         _traits = new TraitDynamics(world);
         _goals = new GoalSystem(world, _quests, _traits);
+        _quests.Progressed = (ch, questId) => _goals.OnQuestProgress(ch, questId);
         _quests.StepCompleted = (ch, questId) =>
         {
             RequestPlanReview(ch, "quest_step");
@@ -83,21 +84,8 @@ public sealed class BehaviorSystem
             if (completed && g.Links.Count > 0) _lastLinkedGoal = (ch.Id, Now, md.GoalCompletedPoints, g.Links.Select(l => l.ObjectiveId).ToArray());
             if (completed) _exp.OnAchievement(p, ch, "goal_completed", subject, md.GoalCompletedPoints, 0, _w.Content.Memory.GoalCompletedIntensity);
             else _exp.OnSetback(p, ch, "goal_abandoned", subject, md.GoalAbandonedPoints, md.GoalAbandonedFrustration, _w.Content.Memory.GoalAbandonedIntensity);
-            // Objetivos (O3): falhas seguidas de metas que o avancariam levam a desistir dele (experiencia negativa).
-            if (!completed && g.Links.Count > 0 && !_w.Controlled && ObjectiveEvolution.CheckAbandon(_w.Content, p, LocalDay(p, Now)) is { } gaveUp)
-            {
-                var ev = _w.Content.ObjectiveCatalog.Evolution;
-                _w.Emit("objective_abandoned", EventImportance.Normal, new[] { new EntityRef("person", p.Id), new EntityRef("character", ch.Id) },
-                    new[] { new EventCause("repeated_failures", gaveUp.FailureStreak), new EventCause("commitment", gaveUp.Commitment) }, $"{gaveUp.Id}|{gaveUp.Param}|{gaveUp.Tier}");
-                // Efeito no humor e no plano so com a influencia ligada (desligada: registro, sem efeito). O mesmo
-                // acontecimento ja deu o reves da meta: so a diferenca para o maior (sem somar); a memoria e propria.
-                if (_w.Content.ObjectiveCatalog.Influence.Enabled)
-                {
-                    _exp.OnSetback(p, ch, "objective_abandoned", gaveUp.Id + "|" + gaveUp.Param, Math.Max(0, ev.AbandonedPoints - md.GoalAbandonedPoints),
-                        Math.Max(0, ev.AbandonedFrustration - md.GoalAbandonedFrustration), ev.AbandonedMemoryIntensity);
-                    RequestPlanReview(ch, "objective_abandoned");
-                }
-            }
+            // Objetivos (D-065): abandonar metas nao leva a desistir do objetivo. Nao conseguir realizar agora
+            // nao e motivo; a desistencia precisa de um motivo especifico (proposta pendente do criador).
         };
     }
 

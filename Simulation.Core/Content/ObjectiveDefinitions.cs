@@ -80,9 +80,6 @@ public sealed class ObjectiveEvolutionDefinition
     /// <summary>Objetivo que pode avancar e nao avancou por tantos dias jogados perde importancia (sistemas futuros nunca).</summary>
     public int StalePlayDays { get; set; } = 30;
     public int StaleImportanceDrop { get; set; } = 150;
-    /// <summary>Abandono por experiencia negativa: metas ligadas (avanco real) abandonadas seguidas, base + comprometimento x por mil.</summary>
-    public int FailuresBase { get; set; } = 2;
-    public int FailuresPerCommitment { get; set; } = 4;
     /// <summary>Renovacao: peso pela viabilidade (pode avancar = 1000; preparacao conhecida; sistema futuro).</summary>
     public int PreparationFactorPermille { get; set; } = 800;
     public int FutureFactorPermille { get; set; } = 300;
@@ -98,7 +95,7 @@ public sealed class ObjectiveEvolutionDefinition
     public int ExperienceCap { get; set; } = 4;
     /// <summary>Substituicao voluntaria: o novo precisa ser mais importante que o secundario deixado de lado, por esta margem.</summary>
     public int SubstituteMarginPermille { get; set; } = 100;
-    /// <summary>Abandono por experiencia negativa: reves, frustracao e memoria.</summary>
+    /// <summary>Reves, frustracao e memoria de um abandono de objetivo (para o criterio de desistencia pendente, D-065).</summary>
     public int AbandonedPoints { get; set; } = 100;
     public int AbandonedFrustration { get; set; } = 80;
     public int AbandonedMemoryIntensity { get; set; } = 600;

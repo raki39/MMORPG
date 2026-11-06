@@ -30,8 +30,6 @@
     "abandonCooldownPlayDays": 60,
     "stalePlayDays": 30,
     "staleImportanceDrop": 150,
-    "failuresBase": 2,
-    "failuresPerCommitment": 4,
     "preparationFactorPermille": 800,
     "futureFactorPermille": 300,
     "minFitPermille": 1000,

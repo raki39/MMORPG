@@ -37,7 +37,7 @@ public static class ObjectiveTriggers
 /// podia avancar e parou, e, depois de um acontecimento, renova: adota um objetivo relevante (pela
 /// ficha, pelos objetivos anteriores, pelas experiencias e pelo conteudo e requisitos conhecidos), sem
 /// sequencia fixa e sem preencher vaga artificialmente; sem nenhum relevante, registra a falta.
-/// Abandono por experiencia negativa acontece na hora (meta ligada abandonada; BehaviorSystem).
+/// Nao ha abandono por falhas de metas (D-065): nao conseguir realizar agora nao e motivo de desistir.
 /// </summary>
 public static class ObjectiveEvolution
 {
@@ -54,10 +54,6 @@ public static class ObjectiveEvolution
     /// <summary>A pessoa pode fazer uma mudanca escolhida hoje (intervalo entre mudancas).</summary>
     public static bool CanChange(ContentDatabase c, Person p) =>
         p.LastObjectiveChangePlayDay < 0 || p.ObjectivePlayDays - p.LastObjectiveChangePlayDay >= c.ObjectiveCatalog.Evolution.ChangeCooldownPlayDays;
-
-    /// <summary>Metas ligadas (avanco real) abandonadas em seguida que levam a desistir: base + comprometimento.</summary>
-    public static int RequiredFailures(ObjectiveEvolutionDefinition ev, PersonObjective o) =>
-        ev.FailuresBase + o.Commitment * ev.FailuresPerCommitment / 1000;
 
     /// <summary>
     /// Termo de experiencia (permille): memorias marcantes boas aproximam e ruins afastam, nos tipos de
@@ -310,25 +306,4 @@ public static class ObjectiveEvolution
         p.LastObjectiveChangePlayDay = p.ObjectivePlayDays;
     }
 
-    /// <summary>
-    /// Abandono por experiencia negativa (chamado quando uma meta ligada por avanco real e abandonada):
-    /// se as falhas seguidas chegaram ao limite e a pessoa pode mudar agora. Sistemas futuros nao (nao
-    /// perdem prioridade por nao avancar). Devolve o objetivo abandonado, ou null.
-    /// </summary>
-    public static PersonObjective? CheckAbandon(ContentDatabase c, Person p, long day)
-    {
-        var ev = c.ObjectiveCatalog.Evolution;
-        if (!Enabled(c) || !CanChange(c, p)) return null;
-        var o = Active(p).Where(o => !IsFuture(c, o) && o.FailureStreak >= RequiredFailures(ev, o))
-            .OrderByDescending(o => o.FailureStreak).ThenBy(o => o.Id, StringComparer.Ordinal).FirstOrDefault();
-        if (o == null) return null;
-        o.State = ObjectiveStates.Abandoned;
-        o.EndedDay = day;
-        o.EndReason = "repeated_failures";
-        o.EndedPlayDay = p.ObjectivePlayDays;   // inicio do intervalo para voltar como candidato
-        p.ObjectiveHistoryList.Add(new ObjectiveChange(day, o.Id, o.Param, "abandoned", o.Tier, "repeated_failures"));
-        p.LastObjectiveChangePlayDay = p.ObjectivePlayDays;
-        ObjectiveTriggers.Set(p, ObjectiveTriggers.Abandoned + ":" + o.Id);
-        return o;
-    }
 }

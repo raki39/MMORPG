@@ -252,28 +252,24 @@ public class ObjectiveEvolutionTests
     }
 
     [Fact]
-    public void Abandono_PorFalhasSeguidas_ComFrustracao_EIntervaloParaVoltar()
+    public void Objetivo_NaoEAbandonadoPorFalhasDeMetas()
     {
+        // D-065: nao conseguir realizar agora nao e motivo para desistir do objetivo.
         var (w, p, ch) = World(C);
         var camp = Obj("campanha_principal", commitment: 0);
-        var boss = Obj("grandes_desafios_pve", ObjectiveTiers.Secondary, commitment: 0);
         p.ObjectiveList.Add(camp);
-        p.ObjectiveList.Add(boss);
-        var ev = C.ObjectiveCatalog.Evolution;
-        boss.FailureStreak = 99;                 // sistema futuro: nunca e abandonado por isso
-        camp.FailureStreak = ObjectiveEvolution.RequiredFailures(ev, camp) - 1;
-        Assert.Null(ObjectiveEvolution.CheckAbandon(C, p, 10));
-        camp.FailureStreak++;
-        var gaveUp = ObjectiveEvolution.CheckAbandon(C, p, 10);
-        Assert.Same(camp, gaveUp);
-        Assert.Equal(ObjectiveStates.Abandoned, camp.State);
-        Assert.Equal("repeated_failures", camp.EndReason);
-        Assert.Equal(ObjectiveStates.Active, boss.State);
-        Assert.StartsWith(ObjectiveTriggers.Abandoned, p.ObjectiveTrigger);
-        // Nao volta antes do intervalo.
-        Assert.DoesNotContain(ObjectiveEvolution.Candidates(C, p, ch, new DeterministicRng(5)), x => x.Def.Id == "campanha_principal");
-        // Comprometimento alto exige mais falhas.
-        Assert.True(ObjectiveEvolution.RequiredFailures(ev, Obj("x", commitment: 1000)) > ObjectiveEvolution.RequiredFailures(ev, Obj("x", commitment: 0)));
+        int frustration = p.Mood.Frustration;
+        for (int k = 0; k < 8; k++)
+        {
+            var g = new PersonalGoal(GoalTypes.CompleteQuest, "vila_principal_2", 1, 0, 500, "patience", 500, w.Clock.Tick, -10_000_000);
+            g.LinkList.Add(new ObjectiveLink("campanha_principal", ObjectiveLinkKinds.Advance, "vila_principal_2"));
+            ch.GoalList.Clear();
+            ch.GoalList.Add(g);
+            w.Behavior.Goals.Review(p, ch, new DeterministicRng((ulong)k + 1));   // sem progresso ha muito tempo: meta abandonada
+        }
+        Assert.Equal(ObjectiveStates.Active, camp.State);
+        Assert.True(camp.FailureStreak >= 8);   // a sequencia fica registrada (medida), sem efeito
+        Assert.DoesNotContain(p.ObjectiveHistory, h => h.Change == "abandoned");
     }
 
     [Fact]
