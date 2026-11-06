@@ -749,6 +749,7 @@ public sealed class BehaviorSystem
         ch.Status = CharacterStatus.Idle;
         ch.SessionStartTick = Now;
         ch.RepeatMinutes = 0;   // a repeticao do Inquieto conta dentro da sessao
+        ch.LastHesitationPair = "";   // Indeciso (P4c): a mesma dupla pode fazer hesitar de novo em outra sessao
         ch.SessionEndTick = end;
         ch.LogoutPending = false;
         ch.SessionKind = kind;
@@ -1157,17 +1158,20 @@ public sealed class BehaviorSystem
             return;
         }
 
-        // Indeciso (P4c): empate apertado entre as duas melhores opcoes: perde alguns minutos decidindo
-        // (espera, sem atividade) e decide de novo depois, sem hesitar outra vez nessa decisao.
+        // Indeciso (P4c): empate apertado entre as duas melhores opcoes, medido SEM o ruido da decisao
+        // (o ruido nao fabrica empate): perde alguns minutos decidindo (espera, sem atividade) e decide
+        // de novo depois. Uma vez por decisao e uma vez por dupla de opcoes na sessao.
         var fx = _w.Content.QuirkCatalog.Effects;
-        if (!ch.Hesitated && options.Count >= 2 && options[0].Utility - options[1].Utility < fx.Indeciso.TieGap
-            && QuirkSystem.Active(_w.Content, p, QuirkIds.Indeciso) && Now + fx.Indeciso.DelayMinutes * SimTime.TicksPerMinute < ch.SessionEndTick)
+        if (!ch.Hesitated && options.Count >= 2 && QuirkSystem.Active(_w.Content, p, QuirkIds.Indeciso)
+            && Now + fx.Indeciso.DelayMinutes * SimTime.TicksPerMinute < ch.SessionEndTick
+            && SessionRules.CloseCall(options, fx.Indeciso.TieGap) is { } tie && tie.Pair != ch.LastHesitationPair)
         {
             ch.Hesitated = true;
+            ch.LastHesitationPair = tie.Pair;
             QuirkSystem.Count(p, "indeciso_hesitou");
             QuirkSystem.Count(p, "indeciso_minutos", fx.Indeciso.DelayMinutes);
             _w.Emit("hesitated", EventImportance.Low, new[] { new EntityRef("character", ch.Id) },
-                new[] { new EventCause(QuirkIds.Factor(QuirkIds.Indeciso), options[0].Utility - options[1].Utility) }, $"{options[0].Key}|{options[1].Key}");
+                new[] { new EventCause(QuirkIds.Factor(QuirkIds.Indeciso), tie.Gap) }, tie.Pair);
             ch.Status = CharacterStatus.Doing;
             ch.TargetRegionId = ch.RegionId;
             ch.ActivityId = "";

@@ -121,6 +121,24 @@ public class QuirkEffectTests
         Assert.True(impulsive > none && indecisive < none, $"ruido max: {none} / impulsivo {impulsive} / indeciso {indecisive}");
     }
 
+    /// <summary>
+    /// Indeciso: a proximidade e medida sem o ruido. Opcoes iguais na base com ruidos diferentes
+    /// empatam; opcoes distantes na base nao empatam mesmo que o ruido as aproxime.
+    /// </summary>
+    [Fact]
+    [Trait("Classe", "Invariante")]
+    public void Indeciso_EmpateSemORuido()
+    {
+        var (p, ch, w) = Online();
+        var opts = Eval(p, ch, w).Take(2).ToList();
+        ScoredOption With(ScoredOption o, int baseUtility, int noise) =>
+            new(o.Region, o.Activity, o.Plan, baseUtility + noise, new List<DecisionFactor> { new("affinity", baseUtility), new("noise", noise) });
+        var close = new List<ScoredOption> { With(opts[0], 500, 90), With(opts[1], 490, -90) };   // nota final 590 x 400; base 500 x 490
+        Assert.Equal(10, SessionRules.CloseCall(close, FX.Indeciso.TieGap)!.Value.Gap);
+        var far = new List<ScoredOption> { With(opts[0], 500, -80), With(opts[1], 380, 80) };     // nota final 420 x 460; base 500 x 380
+        Assert.Null(SessionRules.CloseCall(far, FX.Indeciso.TieGap));
+    }
+
     /// <summary>Persistente demora mais a abandonar meta sem progresso.</summary>
     [Fact]
     [Trait("Classe", "Invariante")]

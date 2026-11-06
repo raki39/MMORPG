@@ -6,10 +6,10 @@
 |---|---|
 | Conteúdo | `reports/p4c/mundos/Q1` (`c49f0e2d6095a8be`) |
 | Metas | `reports/p4c/mundos/Q1/targets.json` (`d8f348f9966ab923`) |
-| Simulador | 0.1.0+06fed58ed211ec963456e342c50aa135d154e6de |
+| Simulador | 0.1.0+6f4a135c1c9fbbcb4f256ce3b6a0cf07221c3993 |
 | Execuções | 5 seeds (1, 2, 3, 4, 5) · 1.000 pessoas · 90 dias |
 | Janela das medidas semanais | a partir do dia 7 (exclui a semana de lançamento) |
-| Tempo total | 438,3 s |
+| Tempo total | 325,9 s |
 
 ## Metas
 
@@ -29,7 +29,7 @@ As metas têm três classes (D-039a); o total "x de y" sozinho não diz se dá p
 | ✅ dentro | Sessões por dia de jogo — hardcore | 1,2–2,5  | 1,5 | 1,5–1,6 |  |
 | ❌ acima | Horas por semana — casual | 3,0–9,0 h | 10,0 | 9,6–10,5 |  |
 | ✅ dentro | Horas por semana — hardcore | 15,0–45,0 h | 37,1 | 35,6–38,2 |  |
-| ✅ dentro | Jogadores ativos em dia útil / cadastrados | 30,0–55,0 % | 54,1 | 53,5–54,6 | 58 dias |
+| ✅ dentro | Jogadores ativos em dia útil / cadastrados | 30,0–55,0 % | 54,2 | 53,5–54,7 | 58 dias |
 | ✅ dentro | Ativos no fim de semana ÷ ativos em dia útil | 1,3–2,0 × | 1,3 | 1,3–1,3 |  |
 | ✅ dentro | Pico online do dia / cadastrados | 15,0–35,0 % | 28,1 | 27,3–29,5 |  |
 
@@ -38,27 +38,27 @@ As metas têm três classes (D-039a); o total "x de y" sozinho não diz se dá p
 | Situação | Meta | Faixa | Média | Mín–máx entre seeds | Observação |
 |---|---|---|---:|---|---|
 | ✅ dentro | Horas conectadas até o nível 5 (mediana) | 1,0–4,0 h | 2,6 | 2,6–2,6 | 100% chegaram |
-| ✅ dentro | Horas conectadas até o nível 10 (mediana) | 8,0–20,0 h | 15,2 | 15,0–15,3 | 98–99% chegaram |
-| ✅ dentro | Horas conectadas até o nível 15 (mediana) | 22,0–50,0 h | 39,7 | 39,0–40,5 | 89–91% chegaram |
-| ❌ abaixo | Horas conectadas até o nível 20 (mediana) | 80,0–110 h | 78,4 | 77,0–80,4 | 76–79% chegaram |
-| ✅ dentro | Horas conectadas até o nível 30 (mediana) | 170–230 h | 199 | 195–206 | 33–37% chegaram (mediana só de quem chegou: subestima o tempo real) |
-| ❌ acima | Casuais no nível 10 ou mais ao fim | 60,0–95,0 % | 96,6 | 95,6–97,5 |  |
-| ✅ dentro | XP vindo de quests | 15,0–35,0 % | 16,6 | 16,4–16,7 |  |
-| ✅ dentro | Quests concluídas por personagem (média) | 4,0–30,0  | 25,9 | 25,0–26,5 |  |
-| ❌ abaixo | Tempo em atividades de combate (abstratas: caça, chefe, patrulha, emboscada; sem luta simulada até o M3) | 35,0–55,0 % | 34,1 | 32,8–35,2 |  |
-| ✅ dentro | Tempo explorando | 5,0–15,0 % | 8,9 | 8,1–9,6 |  |
-| ✅ dentro | Tempo na cidade (comércio, taverna, treino, conserto) | 10,0–25,0 % | 22,6 | 21,4–24,7 |  |
-| ❌ acima | Tempo andando ou esperando | 5,0–20,0 % | 20,7 | 20,3–20,9 |  |
+| ✅ dentro | Horas conectadas até o nível 10 (mediana) | 8,0–20,0 h | 15,1 | 14,9–15,2 | 98–99% chegaram |
+| ✅ dentro | Horas conectadas até o nível 15 (mediana) | 22,0–50,0 h | 39,6 | 39,1–40,5 | 89–91% chegaram |
+| ❌ abaixo | Horas conectadas até o nível 20 (mediana) | 80,0–110 h | 78,3 | 76,7–80,6 | 76–78% chegaram |
+| ✅ dentro | Horas conectadas até o nível 30 (mediana) | 170–230 h | 200 | 195–206 | 34–36% chegaram (mediana só de quem chegou: subestima o tempo real) |
+| ❌ acima | Casuais no nível 10 ou mais ao fim | 60,0–95,0 % | 96,5 | 95,9–97,2 |  |
+| ✅ dentro | XP vindo de quests | 15,0–35,0 % | 16,6 | 15,9–17,2 |  |
+| ✅ dentro | Quests concluídas por personagem (média) | 4,0–30,0  | 25,6 | 24,7–26,7 |  |
+| ❌ abaixo | Tempo em atividades de combate (abstratas: caça, chefe, patrulha, emboscada; sem luta simulada até o M3) | 35,0–55,0 % | 34,0 | 32,6–35,4 |  |
+| ✅ dentro | Tempo explorando | 5,0–15,0 % | 8,9 | 8,0–9,6 |  |
+| ✅ dentro | Tempo na cidade (comércio, taverna, treino, conserto) | 10,0–25,0 % | 22,8 | 21,7–24,4 |  |
+| ❌ acima | Tempo andando ou esperando | 5,0–20,0 % | 20,5 | 20,2–20,8 |  |
 
 ### Dependem de sistemas futuros (acompanhamento): 2 de 5 dentro
 
 | Situação | Meta | Faixa | Média | Mín–máx entre seeds | Observação |
 |---|---|---|---:|---|---|
 | ❌ abaixo | Tempo em missões | 10,0–25,0 % | 1,7 | 1,7–1,8 |  |
-| ✅ dentro | Tempo em coleta | 8,0–20,0 % | 12,0 | 11,5–12,9 |  |
-| ❌ abaixo | Desistentes no fim / cadastrados | 8,0–30,0 % | 0,8 | 0,5–1,0 |  |
-| ❌ abaixo | Inativos no fim / cadastrados | 2,0–15,0 % | 1,6 | 0,9–2,0 |  |
-| ✅ dentro | Quem saiu e voltou (inativos e desistentes) | 20,0–70,0 % | 55,7 | 44,9–62,2 | 45 saíram; 52 saíram; 49 saíram; 48 saíram |
+| ✅ dentro | Tempo em coleta | 8,0–20,0 % | 12,1 | 11,5–12,8 |  |
+| ❌ abaixo | Desistentes no fim / cadastrados | 8,0–30,0 % | 0,8 | 0,5–1,1 |  |
+| ❌ abaixo | Inativos no fim / cadastrados | 2,0–15,0 % | 1,5 | 0,9–1,7 |  |
+| ✅ dentro | Quem saiu e voltou (inativos e desistentes) | 20,0–70,0 % | 55,3 | 48,9–60,9 | 49 saíram; 50 saíram; 47 saíram; 46 saíram; 42 saíram |
 
 
 Por que cada faixa:
@@ -95,18 +95,18 @@ Por que cada faixa:
 | Perfil | Dias de jogo/semana | Sessões por dia de jogo | Sessões/semana | Horas/semana |
 |---|---:|---:|---:|---:|
 | Casual | 3,1 | 1,51 | 4,7 | 10,0 |
-| Devoto | 7,0 | 1,53 | 10,6 | 58,5 |
-| Hardcore | 6,1 | 1,52 | 9,2 | 37,1 |
-| Regular | 4,1 | 1,56 | 6,5 | 17,8 |
+| Devoto | 7,0 | 1,53 | 10,7 | 58,6 |
+| Hardcore | 6,1 | 1,52 | 9,3 | 37,1 |
+| Regular | 4,1 | 1,57 | 6,5 | 17,8 |
 
 ## Perfis na campanha completa (média das seeds)
 
 | Perfil | Pessoas | Dias de jogo/semana | Sessões por dia de jogo | Horas/semana | Nível mediano no fim | Nível p90 | Sessões em dia útil iniciadas entre 18h e 23h |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Casual | 353 | 3,2 | 1,53 | 10,5 | 21,2 | 30,0 | 49,0% |
-| Devoto | 19,4 | 6,9 | 1,53 | 57,6 | 30,0 | 30,0 | 37,9% |
-| Hardcore | 101 | 6,1 | 1,52 | 37,1 | 30,0 | 30,0 | 48,8% |
-| Regular | 527 | 4,3 | 1,57 | 18,5 | 27,6 | 30,0 | 49,1% |
+| Casual | 353 | 3,2 | 1,53 | 10,5 | 21,2 | 29,8 | 48,9% |
+| Devoto | 19,4 | 6,9 | 1,53 | 57,5 | 30,0 | 30,0 | 37,6% |
+| Hardcore | 101 | 6,1 | 1,52 | 37,0 | 30,0 | 30,0 | 48,9% |
+| Regular | 527 | 4,3 | 1,57 | 18,5 | 27,4 | 30,0 | 49,2% |
 
 ## Evolução dos atributos do jogador (média das seeds)
 
@@ -114,10 +114,10 @@ Variação média desde o início, em **pontos da escala 1–20** (1 ponto ≈ 5
 
 | Perfil | Mecânica | Conhecimento | PvE | Exploração | Comércio | Aversão a risco | Metas concluídas | Metas abandonadas |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| Casual | +0,20 | +1,11 | +0,21 | +0,12 | +0,01 | -0,02 | 15,6 | 3,2 |
-| Devoto | +0,89 | +2,20 | +0,47 | +0,19 | +0,05 | -0,15 | 42,2 | 6,1 |
-| Hardcore | +0,71 | +1,72 | +0,42 | +0,18 | +0,03 | -0,10 | 32,9 | 7,0 |
-| Regular | +0,41 | +1,38 | +0,30 | +0,15 | +0,02 | -0,05 | 22,1 | 5,0 |
+| Casual | +0,20 | +1,11 | +0,21 | +0,12 | +0,01 | -0,02 | 15,6 | 3,1 |
+| Devoto | +0,87 | +2,20 | +0,46 | +0,19 | +0,05 | -0,15 | 41,4 | 6,3 |
+| Hardcore | +0,71 | +1,72 | +0,42 | +0,18 | +0,04 | -0,10 | 32,9 | 6,7 |
+| Regular | +0,41 | +1,38 | +0,30 | +0,15 | +0,02 | -0,05 | 22,2 | 5,0 |
 
 Inatividade (queda, sem modificadores):
 
@@ -135,17 +135,17 @@ Obrigações e sono definem o tempo livre; a vontade de jogar decide se e quanto
 
 | Ocupação | Pessoas | Sessões/semana | Horas/semana | Livre em dia com obrigação | Livre em dia livre | Dias sem tempo | Renda | Apoio |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| Aposentado | 20,2 | 8,8 | 26,2 | — | 15,3 h | 0,0% | R$ 3.426 | R$ 36,9 |
-| Autônomo / freelancer | 42,4 | 8,2 | 20,4 | 9,3 h | 14,3 h | 0,0% | R$ 4.269 | R$ 55,1 |
+| Aposentado | 20,2 | 8,8 | 25,9 | — | 15,3 h | 0,0% | R$ 3.426 | R$ 36,9 |
+| Autônomo / freelancer | 42,4 | 8,2 | 20,5 | 9,3 h | 14,3 h | 0,0% | R$ 4.269 | R$ 55,1 |
 | Trabalho em horário comercial | 229 | 5,2 | 15,0 | 4,3 h | 14,3 h | 0,0% | R$ 4.421 | R$ 29,8 |
 | Cuidando da casa e da família | 30,0 | 7,7 | 16,8 | 8,4 h | — | 0,0% | R$ 0,0 | R$ 2.322 |
-| Comércio e serviços em escala 5x2 | 82,4 | 4,8 | 13,0 | 3,6 h | 14,4 h | 0,0% | R$ 2.604 | R$ 31,8 |
+| Comércio e serviços em escala 5x2 | 82,4 | 4,9 | 13,0 | 3,6 h | 14,4 h | 0,0% | R$ 2.604 | R$ 31,8 |
 | Comércio em escala 6x1 | 37,0 | 4,6 | 12,3 | 5,0 h | 13,9 h | 0,0% | R$ 2.719 | R$ 28,1 |
 | Estudante (manhã) | 106 | 7,2 | 21,3 | 8,6 h | 14,3 h | 0,0% | R$ 0,0 | R$ 739 |
 | Estudante (tarde) | 45,4 | 7,8 | 22,6 | 8,9 h | 14,7 h | 0,0% | R$ 0,0 | R$ 729 |
-| Home office (tecnologia) | 80,4 | 7,2 | 18,3 | 6,7 h | 14,5 h | 0,0% | R$ 8.226 | R$ 17,5 |
-| Meio período (manhã) | 30,0 | 7,4 | 21,6 | 9,7 h | 14,5 h | 0,0% | R$ 1.971 | R$ 294 |
-| Meio período (tarde) | 25,2 | 7,7 | 20,2 | 9,5 h | 14,7 h | 0,0% | R$ 1.914 | R$ 286 |
+| Home office (tecnologia) | 80,4 | 7,2 | 18,4 | 6,7 h | 14,5 h | 0,0% | R$ 8.226 | R$ 17,5 |
+| Meio período (manhã) | 30,0 | 7,4 | 21,5 | 9,7 h | 14,5 h | 0,0% | R$ 1.971 | R$ 294 |
+| Meio período (tarde) | 25,2 | 7,7 | 20,1 | 9,5 h | 14,7 h | 0,0% | R$ 1.914 | R$ 286 |
 | Sem ocupação | 82,0 | 9,4 | 30,4 | — | 15,3 h | 0,0% | R$ 0,0 | R$ 811 |
 | Trabalha de dia e estuda à noite | 55,8 | 2,5 | 7,4 | 1,2 h | 12,5 h | 52,2% | R$ 3.384 | R$ 53,2 |
 | Turno noturno | 31,6 | 6,4 | 16,6 | 6,3 h | 13,4 h | 0,0% | R$ 3.614 | R$ 19,8 |
@@ -155,8 +155,8 @@ Como terminaram os dias da agenda:
 
 | Dia | Parcela |
 |---|---:|
-| Jogou | 57,0% |
-| Tinha tempo, preferiu outro lazer | 38,4% |
+| Jogou | 56,9% |
+| Tinha tempo, preferiu outro lazer | 38,5% |
 | Sem tempo livre | 2,9% |
 | Inativo | 1,1% |
 | Cansado (dormiu pouco) | 0,4% |
@@ -167,15 +167,15 @@ Como terminaram os dias da agenda:
 
 Importância do jogo, tendência a prolongar e autocontrole são traços separados. A extensão tem limites explícitos (vezes por sessão, minutos, sono mínimo e teto do déficit); só corta sono no fim do dia, nunca uma obrigação. Sono cortado vira déficit; manhã livre e noites normais recuperam.
 
-- Extensões na janela: 407 (123 gostando da sessão, 284 perto de concluir a meta); 407 avançaram sobre a hora de dormir.
-- Noites encurtadas pelo jogo: 371, 62,9 min a menos em média.
+- Extensões na janela: 418 (125 gostando da sessão, 293 perto de concluir a meta); 418 avançaram sobre a hora de dormir.
+- Noites encurtadas pelo jogo: 381, 62,4 min a menos em média.
 
 | Perfil | Extensões/semana | Sono cortado/semana | Déficit no fim | Cansados |
 |---|---:|---:|---:|---:|
 | Casual | 0,0 | 0,7 min | 0,2 h | 1,8% |
-| Devoto | 0,1 | 8,5 min | 0,0 h | 0,0% |
-| Hardcore | 0,1 | 6,2 min | 0,4 h | 2,8% |
-| Regular | 0,0 | 1,8 min | 0,3 h | 2,1% |
+| Devoto | 0,1 | 6,4 min | 0,0 h | 0,0% |
+| Hardcore | 0,1 | 6,3 min | 0,4 h | 2,8% |
+| Regular | 0,0 | 1,9 min | 0,3 h | 2,1% |
 
 Sono da noite anterior pela agenda (o sono cortado pelo jogo vai direto para o déficit). Em dia livre a pessoa dorme mais para recuperar. O déficit no fim depende do dia da semana em que a campanha termina.
 
@@ -184,7 +184,7 @@ Sono da noite anterior pela agenda (o sono cortado pelo jogo vai direto para o d
 | Aposentado | 7,8 h | — | 7,8 h | 0,0 h | 0,0% |
 | Autônomo / freelancer | 7,8 h | 7,8 h | 7,8 h | 0,0 h | 0,0% |
 | Trabalho em horário comercial | 7,8 h | 7,8 h | 7,8 h | 0,0 h | 0,0% |
-| Cuidando da casa e da família | 7,8 h | 7,8 h | — | 0,0 h | 0,0% |
+| Cuidando da casa e da família | 7,8 h | 7,8 h | — | 0,1 h | 0,0% |
 | Comércio e serviços em escala 5x2 | 7,8 h | 7,8 h | 7,9 h | 0,0 h | 0,0% |
 | Comércio em escala 6x1 | 7,8 h | 7,8 h | 7,8 h | 0,0 h | 0,0% |
 | Estudante (manhã) | 7,8 h | 7,8 h | 7,8 h | 0,0 h | 0,0% |
@@ -193,7 +193,7 @@ Sono da noite anterior pela agenda (o sono cortado pelo jogo vai direto para o d
 | Meio período (manhã) | 7,8 h | 7,8 h | 7,8 h | 0,0 h | 0,0% |
 | Meio período (tarde) | 7,9 h | 7,9 h | 7,9 h | 0,0 h | 0,0% |
 | Sem ocupação | 7,8 h | — | 7,8 h | 0,0 h | 0,0% |
-| Trabalha de dia e estuda à noite | 7,9 h | 6,9 h | 9,7 h | 4,5 h | 36,5% |
+| Trabalha de dia e estuda à noite | 7,9 h | 6,9 h | 9,7 h | 4,5 h | 36,9% |
 | Turno noturno | 7,8 h | 7,8 h | 7,8 h | 0,0 h | 0,0% |
 | Universitário (diurno) | 7,8 h | 7,8 h | 7,8 h | 0,0 h | 0,0% |
 
@@ -201,8 +201,8 @@ Sono da noite anterior pela agenda (o sono cortado pelo jogo vai direto para o d
 
 Só no trabalho remoto. Pausa: jogar no intervalo permitido. Escapada: jogar no expediente, rara, pela flexibilidade do trabalho, importância do jogo, falta de autocontrole e folga do dia; sessão curta e interrompível. Deslocamento, trabalho presencial e estudo ficam protegidos. Sem consequência profissional por enquanto.
 
-- Sessões na pausa: 1.128 (1,5% das sessões); escapadas: 219 (0,3%).
-- Chamados do trabalho durante a escapada: 76,4 (8,2 terminaram a atividade, 68,2 largaram e saíram).
+- Sessões na pausa: 1.131 (1,5% das sessões); escapadas: 220 (0,3%).
+- Chamados do trabalho durante a escapada: 76,8 (10,0 terminaram a atividade, 66,8 largaram e saíram).
 
 | Ocupação | Pausa/semana | Escapadas/semana | Dias de trabalho com escapada |
 |---|---:|---:|---:|
@@ -217,42 +217,42 @@ Medição da campanha completa (com humor), seeds somadas, na janela de mediçã
 
 | Perfil | Sessões | p10 | p25 | Mediana | p75 | p90 | Máx. | Média |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| Casual | 101.799 | 64,0 | 87,0 | 121 | 163 | 200 | 565 | 128 |
-| Devoto | 11.958 | 117 | 228 | 336 | 432 | 512 | 909 | 329 |
-| Hardcore | 54.193 | 102 | 184 | 243 | 308 | 372 | 849 | 244 |
-| Regular | 205.900 | 84,0 | 117 | 160 | 210 | 258 | 666 | 167 |
-| Pausa no trabalho | 5.642 | 38,0 | 52,0 | 55,0 | 55,0 | 55,0 | 55,0 | 50,9 |
-| Escapada no expediente | 1.097 | 9,0 | 18,0 | 23,0 | 26,0 | 29,0 | 34,0 | 21,3 |
+| Casual | 101.734 | 64,0 | 87,0 | 121 | 163 | 200 | 522 | 128 |
+| Devoto | 11.938 | 118 | 228 | 336 | 434 | 508 | 820 | 329 |
+| Hardcore | 54.043 | 102 | 184 | 242 | 308 | 372 | 798 | 244 |
+| Regular | 205.699 | 84,0 | 118 | 160 | 210 | 259 | 672 | 167 |
+| Pausa no trabalho | 5.656 | 38,0 | 52,0 | 55,0 | 55,0 | 55,0 | 55,0 | 50,9 |
+| Escapada no expediente | 1.098 | 9,0 | 18,0 | 23,0 | 26,0 | 29,0 | 34,0 | 21,3 |
 
 **Horas por semana, perfil × ocupação** (por pessoa registrada; "—" com menos de 10 pessoas na soma das seeds).
 
 | Ocupação | Casual | Devoto | Hardcore | Regular |
 |---|---:|---:|---:|---:|
-| Aposentado | 17,3 | — | 55,3 | 27,7 |
-| Autônomo / freelancer | 12,1 | — | 43,6 | 22,9 |
+| Aposentado | 17,3 | — | 52,0 | 27,7 |
+| Autônomo / freelancer | 12,2 | — | 43,6 | 22,8 |
 | Trabalho em horário comercial | 8,7 | — | 31,9 | 15,6 |
-| Cuidando da casa e da família | 9,3 | — | 35,3 | 17,3 |
-| Comércio e serviços em escala 5x2 | 7,6 | — | 31,0 | 13,9 |
-| Comércio em escala 6x1 | 8,4 | — | 27,3 | 12,4 |
-| Estudante (manhã) | 12,4 | 53,5 | 43,5 | 21,9 |
-| Estudante (tarde) | 12,1 | 53,4 | 39,5 | 21,6 |
-| Home office (tecnologia) | 9,9 | — | 38,8 | 19,1 |
-| Meio período (manhã) | 11,9 | — | 46,6 | 23,7 |
-| Meio período (tarde) | 11,4 | — | 45,5 | 21,8 |
-| Sem ocupação | 17,6 | 65,3 | 53,3 | 27,4 |
-| Trabalha de dia e estuda à noite | 4,5 | — | 14,8 | 7,7 |
-| Turno noturno | 10,7 | — | 37,9 | 16,7 |
-| Universitário (diurno) | 10,8 | 49,0 | 39,6 | 19,3 |
+| Cuidando da casa e da família | 9,2 | — | 35,2 | 17,3 |
+| Comércio e serviços em escala 5x2 | 7,6 | — | 30,7 | 14,0 |
+| Comércio em escala 6x1 | 8,5 | — | 27,4 | 12,3 |
+| Estudante (manhã) | 12,4 | 53,8 | 43,5 | 22,0 |
+| Estudante (tarde) | 12,1 | 53,0 | 39,4 | 21,6 |
+| Home office (tecnologia) | 9,9 | — | 38,9 | 19,1 |
+| Meio período (manhã) | 11,8 | — | 46,9 | 23,5 |
+| Meio período (tarde) | 11,3 | — | 45,0 | 21,8 |
+| Sem ocupação | 17,6 | 65,1 | 53,2 | 27,4 |
+| Trabalha de dia e estuda à noite | 4,5 | — | 15,0 | 7,7 |
+| Turno noturno | 10,7 | — | 38,1 | 16,7 |
+| Universitário (diurno) | 10,9 | 49,2 | 39,5 | 19,3 |
 
-**Sessões por dia de jogo:** 57,9% com uma, 31,0% com duas, 11,1% com três ou mais. Intervalo entre sessões do mesmo dia: mediana 87,0 min, p90 386 min.
-**Voltas depois de uma pausa (v3):** em 40,5% dos dias com jogo. Sessões normais por dia com jogo: uma 57,9%, duas 31,1%, três ou mais 11,0%. Voltas consideradas e recusadas: 37.010. Sessão da noite deixada de lado depois de jogar no trabalho: 41 dias.
+**Sessões por dia de jogo:** 58,0% com uma, 30,9% com duas, 11,1% com três ou mais. Intervalo entre sessões do mesmo dia: mediana 87,0 min, p90 386 min.
+**Voltas depois de uma pausa (v3):** em 40,4% dos dias com jogo. Sessões normais por dia com jogo: uma 58,0%, duas 31,1%, três ou mais 10,9%. Voltas consideradas e recusadas: 36.961. Sessão da noite deixada de lado depois de jogar no trabalho: 39 dias.
 
 **Por que as sessões começaram e terminaram** (sessões normais, seeds somadas).
 
 | Início | Parcela | | Fim | Parcela |
 |---|---:|---|---|---:|
-| Antes do horário, por vontade | 42,1% | | Decidiu parar (saciedade, cansaço, outras opções) | 73,2% |
-| Voltou depois de uma pausa | 35,5% | | Hora de dormir | 20,4% |
+| Antes do horário, por vontade | 42,1% | | Decidiu parar (saciedade, cansaço, outras opções) | 73,3% |
+| Voltou depois de uma pausa | 35,4% | | Hora de dormir | 20,3% |
 | No horário de costume | 22,5% | | Fim do tempo livre (obrigação, preparo, compromisso) | 5,7% |
 | Primeira (cadastro ou volta ao jogo) | 0,0% | | Depois de ficar acordado jogando | 0,5% |
 |  |  | | Fim planejado (sem decisão) | 0,2% |
@@ -262,71 +262,71 @@ Medição da campanha completa (com humor), seeds somadas, na janela de mediçã
 
 | Perfil | Ocupação | Duração | Ao começar | Continuou | Ficou acordado | Resto | Disposição | Tempo livre do dia |
 |---|---|---:|---:|---:|---:|---:|---:|---:|
-| Devoto | Sem ocupação | 909 min | 541 min | 188 min | 180 min | 0 min | +5% | 15,3 h |
-| Devoto | Sem ocupação | 871 min | 541 min | 320 min | 0 min | 10 min | +6% | 15,3 h |
-| Hardcore | Sem ocupação | 849 min | 374 min | 474 min | 0 min | 1 min | −3% | 15,6 h |
-| Devoto | Sem ocupação | 843 min | 537 min | 300 min | 0 min | 6 min | +15% | 15,1 h |
-| Devoto | Sem ocupação | 831 min | 541 min | 290 min | 0 min | 0 min | +2% | 15,3 h |
-| Devoto | Universitário (diurno) | 828 min | 408 min | 420 min | 0 min | 0 min | +6% | 15,3 h |
-| Devoto | Universitário (diurno) | 816 min | 506 min | 300 min | 0 min | 10 min | +9% | 15,3 h |
-| Hardcore | Home office (tecnologia) | 808 min | 374 min | 420 min | 0 min | 14 min | +0% | 15,5 h |
+| Devoto | Universitário (diurno) | 820 min | 485 min | 328 min | 0 min | 7 min | +2% | 15,2 h |
+| Devoto | Sem ocupação | 818 min | 541 min | 270 min | 0 min | 7 min | +1% | 15,3 h |
+| Devoto | Universitário (diurno) | 814 min | 506 min | 300 min | 0 min | 8 min | +7% | 15,3 h |
+| Devoto | Estudante (manhã) | 805 min | 556 min | 240 min | 0 min | 9 min | +4% | 14,5 h |
+| Devoto | Sem ocupação | 798 min | 430 min | 360 min | 0 min | 8 min | +0% | 15,3 h |
+| Hardcore | Comércio e serviços em escala 5x2 | 798 min | 396 min | 390 min | 0 min | 12 min | +6% | 15,5 h |
+| Devoto | Sem ocupação | 783 min | 501 min | 270 min | 0 min | 12 min | +1% | 15,7 h |
+| Devoto | Sem ocupação | 779 min | 501 min | 270 min | 0 min | 8 min | −5% | 15,8 h |
 
 
 **Quanto do tempo livre vira jogo** (minutos jogados ÷ minutos livres da agenda; o jogo no trabalho e as extensões entram no jogado).
 
 | Perfil | Uso |
 |---|---:|
-| Casual | 15,1% |
-| Devoto | 61,9% |
-| Hardcore | 53,4% |
-| Regular | 26,5% |
+| Casual | 15,0% |
+| Devoto | 62,0% |
+| Hardcore | 53,3% |
+| Regular | 26,4% |
 
 | Ocupação | Uso |
 |---|---:|
-| Aposentado | 22,7% |
-| Autônomo / freelancer | 25,0% |
-| Trabalho em horário comercial | 26,1% |
+| Aposentado | 23,0% |
+| Autônomo / freelancer | 24,9% |
+| Trabalho em horário comercial | 26,0% |
 | Cuidando da casa e da família | 26,6% |
-| Comércio e serviços em escala 5x2 | 25,4% |
-| Comércio em escala 6x1 | 26,3% |
+| Comércio e serviços em escala 5x2 | 25,3% |
+| Comércio em escala 6x1 | 26,2% |
 | Estudante (manhã) | 27,0% |
-| Estudante (tarde) | 27,3% |
-| Home office (tecnologia) | 26,3% |
-| Meio período (manhã) | 25,9% |
-| Meio período (tarde) | 24,6% |
-| Sem ocupação | 26,2% |
-| Trabalha de dia e estuda à noite | 18,7% |
-| Turno noturno | 25,6% |
-| Universitário (diurno) | 28,3% |
+| Estudante (tarde) | 27,2% |
+| Home office (tecnologia) | 26,4% |
+| Meio período (manhã) | 25,8% |
+| Meio período (tarde) | 24,4% |
+| Sem ocupação | 26,1% |
+| Trabalha de dia e estuda à noite | 19,0% |
+| Turno noturno | 25,4% |
+| Universitário (diurno) | 28,2% |
 
-**Composição do tempo jogado:** 1.080.832 h no total; extensões 0,2%; pausa e escapada do trabalho 0,5%; sono cortado pelo jogo 1.947 h (0,2% do tempo jogado).
+**Composição do tempo jogado:** 1.080.034 h no total; extensões 0,2%; pausa e escapada do trabalho 0,5%; sono cortado pelo jogo 1.983 h (0,2% do tempo jogado).
 
-**Dias sem sessão principal** (43,0% dos dias da agenda):
+**Dias sem sessão principal** (43,1% dos dias da agenda):
 
 | Motivo | Parcela dos dias sem sessão |
 |---|---:|
 | Sem oportunidade (nenhuma janela comporta uma sessão) | 6,8% |
-| Escolha: tinha tempo, preferiu outro lazer | 87,9% |
+| Escolha: tinha tempo, preferiu outro lazer | 88,1% |
 | Cansaço | 0,9% |
 | Desânimo (engajamento baixo) | 0,3% |
-| Inativo | 2,7% |
+| Inativo | 2,5% |
 | Jogou só no horário de trabalho | 1,5% |
 
 **Efeito do tempo livre, separado** (dias da agenda por faixa de tempo livre): a frequência (chance de jogar) e a duração (minutos planejados quando joga) medidas à parte.
 
 | Tempo livre no dia | Dias | Jogou | Duração planejada quando joga | Jogado por dia |
 |---|---:|---:|---:|---:|
-| até 2 h | 4.436 | 0,4% | 57,9 min | 0,2 min |
-| 2–4 h | 19.335 | 44,5% | 149 min | 74,2 min |
-| 4–6 h | 21.712 | 45,4% | 157 min | 86,8 min |
-| 6–10 h | 42.809 | 55,8% | 154 min | 144 min |
-| 10 h ou mais | 61.708 | 70,0% | 163 min | 203 min |
+| até 2 h | 4.434 | 0,5% | 55,2 min | 0,2 min |
+| 2–4 h | 19.339 | 44,2% | 149 min | 73,8 min |
+| 4–6 h | 21.709 | 45,4% | 157 min | 86,8 min |
+| 6–10 h | 42.817 | 55,7% | 154 min | 144 min |
+| 10 h ou mais | 61.698 | 69,9% | 163 min | 203 min |
 
 **Corte de sono (observações do criador, R2/R3).**
 
 - **Onde pode cortar:** só a janela que termina **por causa do sono** avança sobre ele. Janela que termina por obrigação, preparo, deslocamento ou compromisso não avança (teste).
 - **Teto compartilhado:** os 180 minutos por período de sono valem para a soma de todas as sessões que afetam aquele período (teste).
-- **Medido:** 1.856 períodos de sono encurtados pelo jogo; corte por período: mediana 56,0 min, p90 114 min, máximo 180 min.
+- **Medido:** 1.907 períodos de sono encurtados pelo jogo; corte por período: mediana 56,0 min, p90 111 min, máximo 180 min.
 
 ## Localidades (média das seeds)
 
@@ -334,29 +334,29 @@ Cada pessoa joga no horário e nos feriados de onde mora; o relógio do jogo é 
 
 | Localidade | Fuso | Pessoas | Estrangeiros | Sessões | Início médio (local) | Início médio (servidor) |
 |---|---|---:|---:|---:|---:|---:|
-| Argentina | UTC−3 | 85,6 | 2,2 | 6.558 | 16h38 | 16h38 |
-| Brasil | UTC−3 | 758 | 19,0 | 58.072 | 16h42 | 16h42 |
-| China | UTC+8 | 75,4 | 0,8 | 5.645 | 16h47 | 05h47 |
-| Estados Unidos | UTC−5 | 81,4 | 12,6 | 5.966 | 16h48 | 18h48 |
+| Argentina | UTC−3 | 85,6 | 2,2 | 6.564 | 16h38 | 16h38 |
+| Brasil | UTC−3 | 758 | 19,0 | 57.981 | 16h42 | 16h42 |
+| China | UTC+8 | 75,4 | 0,8 | 5.649 | 16h47 | 05h47 |
+| Estados Unidos | UTC−5 | 81,4 | 12,6 | 5.969 | 16h48 | 18h48 |
 
 ## Retenção (média das seeds, no fim)
 
 | Perfil | Desistiram | Inativos | Voltaram alguma vez |
 |---|---:|---:|---:|
-| Casual | 1,5% | 2,3% | 4,8% |
-| Devoto | 0,0% | 0,0% | 0,0% |
-| Hardcore | 0,0% | 0,6% | 0,6% |
-| Regular | 0,5% | 1,3% | 1,7% |
+| Casual | 1,5% | 2,2% | 4,7% |
+| Devoto | 1,1% | 0,0% | 0,0% |
+| Hardcore | 0,2% | 0,4% | 0,6% |
+| Regular | 0,5% | 1,2% | 1,6% |
 
-Desistências: dia mediano 67,0, nível mediano 9,0. Sessões estendidas por estarem indo bem: 0,5%; encerradas por frustração: 0,0%.
+Desistências: dia mediano 65,0, nível mediano 10,0. Sessões estendidas por estarem indo bem: 0,5%; encerradas por frustração: 0,0%.
 
 Motivo principal das desistências (o que mais incomodava; "long_inactivity/" = sumiu por muito tempo):
 
 | Motivo | Desistências |
 |---|---:|
-| long_inactivity/long_inactivity | 76,9% |
-| long_inactivity/boredom | 20,5% |
-| boredom | 2,6% |
+| long_inactivity/long_inactivity | 71,4% |
+| boredom | 14,3% |
+| long_inactivity/boredom | 14,3% |
 
 ## Humor e memória (média das seeds, no fim)
 
@@ -364,24 +364,23 @@ Satisfação, frustração, novidade e engajamento em permille (0–1000); progr
 
 | Perfil | Satisfação | Insatisfeitos (< 400) | Frustração | Novidade | Engajamento | Intenção de continuar | Expectativa | Progresso da última sessão | Memórias |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| Casual | 613 | 0,1% | 4,2 | 972 | 725 | 671 | 585 | 474 | 9,6 |
-| Devoto | 479 | 11,8% | 21,4 | 281 | 561 | 530 | 570 | 283 | 6,6 |
-| Hardcore | 538 | 2,0% | 9,0 | 660 | 641 | 597 | 591 | 385 | 8,7 |
-| Regular | 586 | 0,1% | 5,2 | 915 | 701 | 646 | 602 | 442 | 9,9 |
+| Casual | 611 | 0,1% | 3,7 | 969 | 724 | 669 | 583 | 462 | 9,4 |
+| Devoto | 482 | 14,5% | 40,6 | 274 | 560 | 524 | 570 | 307 | 6,2 |
+| Hardcore | 537 | 2,3% | 7,9 | 656 | 641 | 597 | 592 | 376 | 8,7 |
+| Regular | 584 | 0,3% | 6,0 | 912 | 699 | 644 | 603 | 449 | 9,8 |
 
-Sessões ótimas: 9,6% · ruins: 0,0% (após a semana de lançamento).
+Sessões ótimas: 9,5% · ruins: 0,0% (após a semana de lançamento).
 
 O que mais incomoda cada pessoa (motivo mais negativo acumulado):
 
 | Motivo | Pessoas |
 |---|---:|
-| boredom | 96,7% |
-| progress | 1,9% |
-| nenhum | 0,9% |
-| fatigue | 0,5% |
+| boredom | 96,8% |
+| progress | 1,8% |
+| nenhum | 0,8% |
+| fatigue | 0,6% |
+| fun | 0,1% |
 | fit | 0,0% |
-| fun | 0,0% |
-| novelty | 0,0% |
 
 ## Uso do tempo conectado (todas as seeds)
 
@@ -390,16 +389,16 @@ Caça, chefe, patrulha e emboscada ainda são atividades abstratas (tempo e XP, 
 | Tipo | Tempo | Escolhas |
 |---|---:|---:|
 | Caça | 28,8% | 29,9% |
-| Deslocamento | 20,3% | — |
-| Socializar | 16,1% | 15,6% |
-| Coleta | 12,0% | 17,3% |
+| Deslocamento | 20,2% | — |
+| Socializar | 16,3% | 15,7% |
+| Coleta | 12,1% | 17,3% |
 | Exploração | 8,9% | 8,7% |
 | Comércio | 5,4% | 10,6% |
 | Patrulha | 4,0% | 4,0% |
 | Missão | 1,7% | 8,2% |
 | Emboscada | 1,2% | 1,8% |
-| Treino | 1,0% | 3,2% |
-| Espera (sem opção viável) | 0,4% | — |
+| Treino | 1,0% | 3,3% |
+| Espera (sem opção viável) | 0,3% | — |
 | Conserto | 0,1% | 0,5% |
 
 ## Continuidade das sessões (média das seeds)
@@ -407,7 +406,7 @@ Caça, chefe, patrulha e emboscada ainda são atividades abstratas (tempo e XP, 
 | Medida | Valor |
 |---|---:|
 | Escolhas por sessão | 6,0 |
-| Continuou na mesma atividade (% das escolhas após a primeira) | 75,5% |
+| Continuou na mesma atividade (% das escolhas após a primeira) | 75,6% |
 | Trocas de atividade por hora conectada | 0,4 |
 | Trocas de zona por sessão | 0,5 |
 | Ciclos seguidos na mesma atividade (média) | 2,7 |
@@ -416,25 +415,25 @@ Motivos das trocas de plano (fator principal):
 
 | Motivo | Trocas |
 |---|---:|
-| quest_step | 21,5% |
-| quest_completed | 16,8% |
-| boredom | 10,5% |
-| time_budget | 10,2% |
-| level_up | 8,1% |
+| quest_step | 21,3% |
+| quest_completed | 16,6% |
+| boredom | 10,6% |
+| time_budget | 10,3% |
+| level_up | 8,0% |
 | focus_unavailable | 6,9% |
-| personality | 5,6% |
+| personality | 5,7% |
 | goal_completed | 5,3% |
 | affinity | 4,3% |
 | nothing_new | 2,6% |
 | quirk_impulsivo | 1,8% |
 | goal | 1,2% |
 | zone_discovered | 1,1% |
-| quest_deliver | 1,0% |
 | quest_offer | 1,0% |
+| quest_deliver | 1,0% |
 | company | 0,6% |
 | level_fit | 0,5% |
-| crowding | 0,4% |
 | quirk_colecionador | 0,4% |
+| crowding | 0,4% |
 | risk | 0,2% |
 | noise | 0,0% |
 | memory | 0,0% |
@@ -459,12 +458,12 @@ Motivos das trocas de plano (fator principal):
 | Fortaleza Sombria | Ler as inscrições da cripta | `quest` | 0,1% | pouco atraente na fórmula atual (rever na conferência da fórmula). |
 | Picos Gelados | Investigar o covil do yeti | `quest` | 0,1% | pouco atraente na fórmula atual (rever na conferência da fórmula). |
 | Planalto dos Ventos | Espiar o acampamento orc | `quest` | 0,1% | pouco atraente na fórmula atual (rever na conferência da fórmula). |
-| Ruínas Sombrias | Coletar cristais sombrios | `gather` | 0,2% | zona PvP: o risco extra afasta quem tem aversão a risco. |
-| Terras Queimadas | Explorar as terras queimadas | `explore` | 0,2% | zona PvP: o risco extra afasta quem tem aversão a risco. |
 | Ruínas Sombrias | Examinar o altar profanado | `quest` | 0,2% | zona PvP: o risco extra afasta quem tem aversão a risco. |
 | Ravina Escarlate | Emboscar viajantes | `ambush` | 0,2% | zona PvP: o risco extra afasta quem tem aversão a risco. |
+| Terras Queimadas | Explorar as terras queimadas | `explore` | 0,2% | zona PvP: o risco extra afasta quem tem aversão a risco. |
 | Ruínas Sombrias | Caçar mortos-vivos | `hunt` | 0,2% | zona PvP: o risco extra afasta quem tem aversão a risco. |
 | Mina Velha | Explorar galerias profundas | `explore` | 0,2% | pouco atraente na fórmula atual (rever na conferência da fórmula). |
+| Ruínas Sombrias | Coletar cristais sombrios | `gather` | 0,2% | zona PvP: o risco extra afasta quem tem aversão a risco. |
 | Mata dos Espinhos | Seguir os rastros dos trolls | `quest` | 0,2% | pouco atraente na fórmula atual (rever na conferência da fórmula). |
 | Ravina Escarlate | Procurar o estandarte perdido | `quest` | 0,2% | zona PvP: o risco extra afasta quem tem aversão a risco. |
 | Ruínas Sombrias | Patrulhar as ruínas | `patrol` | 0,2% | zona PvP: o risco extra afasta quem tem aversão a risco. |
@@ -478,25 +477,25 @@ Motivos das trocas de plano (fator principal):
 | Forte do Vau | Treinar com o mestre de armas | `train` | 0,5% | atividade da cidade: não dá XP e ainda não existe economia nem desgaste, então a nota não tem termo de recompensa. |
 | Terras Queimadas | Caçar salamandras de fogo | `hunt` | 0,6% | zona PvP: o risco extra afasta quem tem aversão a risco. |
 | Terras Queimadas | Enfrentar golens de magma | `hunt` | 0,6% | zona PvP: o risco extra afasta quem tem aversão a risco. |
-| Colinas do Vale | Caçar lobos das colinas | `hunt` | 0,6% | pouco atraente na fórmula atual (rever na conferência da fórmula). |
+| Colinas do Vale | Caçar lobos das colinas | `hunt` | 0,7% | pouco atraente na fórmula atual (rever na conferência da fórmula). |
 | Ravina Escarlate | Caçar esqueletos da ravina | `hunt` | 0,7% | zona PvP: o risco extra afasta quem tem aversão a risco. |
 | Mina Velha | Caçar morcegos gigantes | `hunt` | 0,7% | pouco atraente na fórmula atual (rever na conferência da fórmula). |
 | Forte do Vau | Socializar na taverna | `socialize` | 0,8% | atividade da cidade: não dá XP e ainda não existe economia nem desgaste, então a nota não tem termo de recompensa. |
 | Colinas do Vale | Explorar as colinas | `explore` | 0,8% | pouco atraente na fórmula atual (rever na conferência da fórmula). |
 | Fortaleza Sombria | Purgar a cripta | `hunt` | 0,8% | pouco atraente na fórmula atual (rever na conferência da fórmula). |
-| Fortaleza Sombria | Explorar a fortaleza | `explore` | 0,9% | pouco atraente na fórmula atual (rever na conferência da fórmula). |
-| Mina Velha | Caçar goblins | `hunt` | 0,9% | pouco atraente na fórmula atual (rever na conferência da fórmula). |
+| Mina Velha | Caçar goblins | `hunt` | 0,8% | pouco atraente na fórmula atual (rever na conferência da fórmula). |
+| Fortaleza Sombria | Explorar a fortaleza | `explore` | 0,8% | pouco atraente na fórmula atual (rever na conferência da fórmula). |
 | Colinas do Vale | Caçar ursos pardos | `hunt` | 0,9% | pouco atraente na fórmula atual (rever na conferência da fórmula). |
-| Floresta Sussurrante | Caçar javalis | `hunt` | 1,0% | pouco atraente na fórmula atual (rever na conferência da fórmula). |
+| Floresta Sussurrante | Coletar ervas curativas | `gather` | 1,0% | pouco atraente na fórmula atual (rever na conferência da fórmula). |
 
 ## Execuções
 
 | Seed | Hash final | Simulação |
 |---:|---|---:|
-| 1 | `14ebf1d1485a211a` | 337,9 s |
-| 2 | `972625b0d43928ce` | 333,8 s |
-| 3 | `e3058769ade769b1` | 331,8 s |
-| 4 | `33732d7eb7f6a782` | 318,6 s |
-| 5 | `78f4062c19802af6` | 326,9 s |
+| 1 | `ccde61a1b513dcef` | 245,3 s |
+| 2 | `8659083eedfc0599` | 246,5 s |
+| 3 | `e0fb6f16f0102791` | 246,0 s |
+| 4 | `aaefee7b6557c014` | 237,8 s |
+| 5 | `c9b6b0f9065c7b82` | 242,6 s |
 
 Medições de tempo desta máquina, não benchmark.

@@ -65,7 +65,7 @@ public static class StateHasher
             foreach (var r in c.ContentHints) h.Str(r);
             h.Int(c.BlockedGoals.Count);
             foreach (var r in c.BlockedGoals) h.Str(r);
-            h.Int(c.DecisionCount); h.Str(c.LastActivityKey); h.Int(c.RepeatCount); h.Int(c.RepeatMinutes); h.Long(c.LastSetbackTick); h.Bool(c.Hesitated);
+            h.Int(c.DecisionCount); h.Str(c.LastActivityKey); h.Int(c.RepeatCount); h.Int(c.RepeatMinutes); h.Long(c.LastSetbackTick); h.Bool(c.Hesitated); h.Str(c.LastHesitationPair);
             if (c.LastDecision != null)
             {
                 h.Long(c.LastDecision.Tick); h.Str(c.LastDecision.RegionId); h.Str(c.LastDecision.ActivityId);

@@ -658,6 +658,8 @@ public sealed class Character
     public long LastSetbackTick { get; internal set; } = -1;
     /// <summary>Indeciso (P4c): ja hesitou nesta decisao (a proxima decide sem atraso).</summary>
     public bool Hesitated { get; internal set; }
+    /// <summary>Indeciso (P4c): dupla de opcoes da ultima hesitacao nesta sessao (nao hesita de novo por ela).</summary>
+    public string LastHesitationPair { get; internal set; } = "";
     public Character(int id, int accountId, string name, string classId)
     {
         Id = id;

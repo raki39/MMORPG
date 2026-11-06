@@ -13,6 +13,31 @@ public static class SessionRules
     /// Fim de uma atividade: o tedio do tipo cresce com os minutos (mais rapido para quem prefere
     /// variedade, mais devagar para quem gosta muito daquele tipo) e o dos outros se alivia.
     /// </summary>
+    /// <summary>
+    /// Empate apertado (Indeciso, P4c): as duas melhores opcoes pela nota SEM o fator de ruido. Devolve
+    /// a dupla (chaves em ordem ordinal) e a diferenca, ou null se a diferenca chega a "gap".
+    /// </summary>
+    public static (string Pair, int Gap)? CloseCall(IReadOnlyList<ScoredOption> options, int gap)
+    {
+        static int Base(ScoredOption o)
+        {
+            int noise = 0;
+            foreach (var f in o.Factors) if (f.Key == "noise") noise += f.Contribution;
+            return o.Utility - noise;
+        }
+        ScoredOption? a = null, b = null;
+        int ba = int.MinValue, bb = int.MinValue;
+        foreach (var o in options)
+        {
+            int v = Base(o);
+            if (v > ba || (v == ba && a != null && string.CompareOrdinal(o.Key, a.Key) < 0)) { b = a; bb = ba; a = o; ba = v; }
+            else if (v > bb || (v == bb && b != null && string.CompareOrdinal(o.Key, b.Key) < 0)) { b = o; bb = v; }
+        }
+        if (a == null || b == null || ba - bb >= gap) return null;
+        string pair = string.CompareOrdinal(a.Key, b.Key) <= 0 ? a.Key + "|" + b.Key : b.Key + "|" + a.Key;
+        return (pair, ba - bb);
+    }
+
     public static void AccrueBoredom(Character ch, PersonTraits t, PersonPreferences pr, string type, int minutes, SessionSettingsDefinition s, int boredomPermille = 1000)
     {
         if (minutes <= 0) return;

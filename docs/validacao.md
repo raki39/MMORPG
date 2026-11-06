@@ -341,8 +341,8 @@ Efeitos desligados × ligados, com as mesmas pessoas (`baselines/traits-efeitos/
 
 - **Regras do cenário:** 8 de 9, iguais.
 - **Provisórias:** 8 de 12 (antes, 7):
-  - "tempo na cidade" voltou para dentro: 23,6% → 22,6%;
-  - "andando ou esperando" foi de 20,0% para 20,7%, pelo Colecionador, pelo Impulsivo e pela espera do Indeciso. Fica registrado, sem enfraquecer as traits.
+  - "tempo na cidade" voltou para dentro: 23,6% → 22,8%;
+  - "andando ou esperando" foi de 20,0% para 20,5%, pelo Colecionador, pelo Impulsivo e pela espera do Indeciso. Fica registrado, sem enfraquecer as traits.
 - **Outras:**
   - XP de missões: 17,4% → 16,6%;
   - horas até o nível 20: 77,9 → 78,4 (já fora);

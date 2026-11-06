@@ -2008,14 +2008,15 @@ As 15 traits da pessoa passaram a agir, cada uma no seu ponto de avaliação. De
 - **Testes:** em mundos em que todos têm a trait, toda sessão começa numa janela livre.
 
 **Medição** (5 seeds × 1.000 × 90 dias; efeitos desligados × ligados, mesmas pessoas):
+- **Comparação:** todos os efeitos desligados × todos ligados. Cada número inclui as outras traits da pessoa.
 - **Efeitos fortes:**
-  - Persistente abandona 26% menos metas;
-  - Resiliente tem 60% menos frustração;
-  - Pavio curto tem o dobro de frustração;
-  - Otimizador fica 5,5 pontos menos na cidade e sobe 0,8 nível, com satisfação menor;
-  - Procrastinador joga 1,7 h por semana a menos;
-  - Indeciso passa 5% do tempo decidindo.
-- **Validação:** regras do cenário 8 de 9; provisórias 8 de 12 (antes, 7). "Tempo na cidade" voltou para dentro, e "andando ou esperando" foi a 20,7%.
+  - Persistente abandona 28% menos metas;
+  - Pavio curto tem 2,5× a frustração;
+  - Otimizador fica 4,6 pontos menos na cidade e sobe 0,6 nível, com satisfação menor;
+  - Procrastinador joga 1,8 h por semana a menos;
+  - Indeciso passa 3,5% do tempo decidindo.
+- **Maratonista:** sessões +2 a 3 min, maratonas sem aumento e 17% menos jogo no dia seguinte a uma maratona.
+- **Validação:** regras do cenário 8 de 9; provisórias 8 de 12 (antes, 7). "Tempo na cidade" voltou para dentro, e "andando ou esperando" foi a 20,5%.
 
 **Interações registradas** (sem recalibrar):
 - Colecionador, Impulsivo e Indeciso andam ou esperam mais.
@@ -2023,5 +2024,9 @@ As 15 traits da pessoa passaram a agir, cada uma no seu ponto de avaliação. De
 - Largar com raiva, volta de desistentes, queda por inatividade e pistas do Observador quase não atuam no mundo atual, porque faltam desistências, pausas longas e zonas vizinhas desconhecidas.
 
 **Correção durante os testes:** a disposição do Maratonista guardava só o dia da última maratona, e a disposição de um dia passado deixava de ser reproduzível. Agora ficam as maratonas dos últimos 14 dias. O comportamento na simulação é o mesmo, porque o dia é planejado antes de qualquer maratona dele.
+
+**Correção no fechamento (pedida pelo criador):** o empate do Indeciso passou a ser medido sem o ruído da decisão, para que o próprio ruído não fabrique hesitações, e a mesma dupla de opções não faz hesitar de novo na mesma sessão. Hesitações: 148 → 98 por pessoa.
+
+**Decisão do criador:** fechar a P4c com as magnitudes atuais, sem forçar que todos os efeitos apareçam com a mesma intensidade no mundo ainda incompleto.
 
 **Próximo:** P4d (aquisição e perda), depois da avaliação do criador.

@@ -157,50 +157,76 @@ As magnitudes ficam em `traits.json`, seção `effects`, e são candidatas.
 | Esquecido | queda por inatividade; prática | a queda começa 3 dias antes | reaprende o que perdeu com custo × 0,7 | — |
 | Memória firme | queda por inatividade; impressões | a queda das capacidades × 0,5 | impressão ruim se apaga × 0,75 | — |
 | Observador | exploração | ao explorar, 1 pista do conteúdo de uma zona vizinha | exploração × 1,2 mais longa | — |
-| Indeciso | decisão | empate apertado (menos de 40 pontos entre as duas melhores) faz perder 5 min decidindo, uma vez por decisão | ruído × 0,7 | evento `hesitated` com `quirk_indeciso` |
+| Indeciso | decisão | empate apertado (menos de 40 pontos entre as duas melhores pela nota **sem o ruído**) faz perder 5 min decidindo; uma vez por decisão e uma vez por dupla de opções na sessão | ruído × 0,7 | evento `hesitated` com `quirk_indeciso` |
 | Maratonista | saciedade; disposição | com a sessão boa (nota parcial a partir de 600), a saciedade cresce × 0,6 | depois de uma sessão com mais do dobro da normal, o dia seguinte começa com −150 de disposição | — |
 | Procrastinador | início do dia; voltas | o começo atrasa de 15 a 60 min dentro da janela; sem a sessão mínima, tenta a próxima janela | perde tempo de jogo | evento `session_delayed` com `quirk_procrastinador` |
 
 ### 6.1 Medição
 
-Validação padrão (5 seeds × 1.000 × 90 dias), **Q0** (efeitos desligados) × **Q1** (ligados), com as mesmas pessoas e as mesmas traits. A tabela compara a média por pessoa de quem tem a trait. Resultados em `baselines/traits-efeitos/`.
+Validação padrão (5 seeds × 1.000 × 90 dias): **Q0**, todos os efeitos desligados, × **Q1**, todos os efeitos ligados. As pessoas e as traits são as mesmas.
+- **O que a tabela mostra:** a média por pessoa de quem tem a trait.
+- **Interações incluídas:** como cada pessoa tem em média duas traits, a variação também carrega o efeito das outras traits dela.
+- **Controle:** a variação do grupo sem a trait fica em `baselines/traits-efeitos/analise.md`.
+- **Números finais:** já com a correção do critério do Indeciso.
 
 | Trait (pessoas) | Atuação por pessoa em 90 dias | Efeito medido (Q0 → Q1) |
 |---|---|---|
-| Persistente (340) | manteve meta vencida 6,2 vezes; manteve o plano 0,4 vez | metas abandonadas 4,6 → 3,4; frustração 8,3 → 5,1; metas concluídas iguais |
-| Impulsivo (324) | revisou o plano 77 vezes; trocou de plano 11,9 vezes | andando 20,1% → 22,8%; satisfação 599 → 608; metas e horas iguais |
-| Colecionador (385) | contínuo, na nota | zonas conhecidas 14,4 → 14,8; nível 24,0 → 24,4; satisfação 598 → 609; **andando 20,8% → 24,6%** |
-| Otimizador (426) | contínuo, na nota | cidade 21,9% → 16,4%; caça e chefe 32,3% → 34,3%; nível 24,1 → 24,9; **satisfação 585 → 569** (a contrapartida) |
-| Resiliente (391) | contínuo | frustração 5,5 → 2,2; memórias 9,3 → 7,3; desistentes 0,8% → 0,5% |
-| Pavio curto (356) | frustração a mais 176 pontos | frustração 6,4 → 14,6; saídas com raiva 0,00 → 0,02; horas iguais |
+| Persistente (340) | manteve meta vencida 6,0 vezes; manteve o plano 0,3 vez | metas abandonadas 4,6 → 3,3; frustração 8,3 → 5,3; metas concluídas 21,4 → 21,6 |
+| Impulsivo (324) | revisou o plano 77 vezes; trocou de plano 12,3 vezes | andando 20,1% → 22,2%; satisfação 599 → 603; metas e horas iguais |
+| Colecionador (385) | contínuo, na nota | zonas conhecidas 14,4 → 14,8; nível 24,0 → 24,4; satisfação 598 → 605; **andando 20,8% → 24,4%** |
+| Otimizador (426) | contínuo, na nota | cidade 21,9% → 17,3%; caça e chefe 32,3% → 34,1%; nível 24,1 → 24,7; **satisfação 585 → 567** (a contrapartida) |
+| Resiliente (391) | contínuo | frustração 5,5 → 4,4; memórias 9,3 → 7,1; desistentes 0,8% → 0,5% |
+| Pavio curto (356) | frustração a mais 179 pontos; largou com raiva 0,1 vez | frustração 6,4 → 16,3; desistentes 2,3% → 2,8% |
 | Saudosista (443) | contínuo | memórias 9,4 → 11,7; volta de desistentes quase sem casos |
-| Rancoroso (363) | contínuo | cidade 23,1% → 21,8%; o resto igual |
+| Rancoroso (363) | contínuo | cidade 23,1% → 21,6%; satisfação 595 → 597 |
 | Estudioso (474) | +23 de Conhecimento; +45 min em visitas | Conhecimento 545 → 555; missões 1,9% → 2,0% |
-| Esquecido (320) | 5 dias de queda antecipada | Mecânica 482 → 477 (só em quem ficou dias sem jogar) |
-| Memória firme (403) | contínuo | Mecânica quase igual (poucas pausas longas em 90 dias) |
-| Observador (439) | 18,7 pistas; +271 min explorando | pistas 0,04 → 18,7; zonas conhecidas quase iguais |
-| Indeciso (362) | hesitou 148 vezes (742 min) | espera 0% → 5,0% do tempo conectado; nível 24,2 → 23,8 |
-| Maratonista (327) | 1,9 maratona; 2.046 min sem saciar | horas iguais (21,7 → 21,6); **frustração 3,1 → 5,9**; satisfação 581 → 576 |
-| Procrastinador (357) | 3.228 min de atraso; 2,8 janelas perdidas | **horas por semana 19,6 → 17,9**; nível 24,8 → 24,6 |
+| Esquecido (320) | 5 dias de queda antecipada | Mecânica 482 → 477 (em quem ficou dias sem jogar) |
+| Memória firme (403) | contínuo | Mecânica 486,0 → 486,4; Conhecimento 547 → 548; satisfação 586 → 585. Efeito pequeno: pausas longas são raras em 90 dias, e a segunda chance aos lugares age nas impressões, que não estão nesta tabela |
+| Observador (439) | 18,6 pistas; +266 min explorando | pistas 0,04 → 18,7; zonas conhecidas iguais |
+| Indeciso (362) | hesitou 98 vezes (489 min) | espera 0% → 3,5% do tempo conectado; nível 24,2 → 24,0 |
+| Maratonista (327) | 2,2 maratonas contadas; 2.047 min sem saciar | horas iguais (21,7 → 21,6); **frustração 3,1 → 5,6**; satisfação 581 → 575 |
+| Procrastinador (357) | 3.210 min de atraso; 2,9 janelas perdidas | **horas por semana 19,6 → 17,8**; nível 24,8 → 24,5 |
+
+**Frustração:** a média geral é baixa (cerca de 5 numa escala de 0 a 1000), porque poucas pessoas concentram quase toda. Por isso as diferenças relativas variam bastante de uma rodada para outra. Exemplo: o Resiliente deu 5,5 → 2,2 na rodada anterior e 5,5 → 4,4 nesta. O sentido se mantém nas duas.
+
+**Maratonista: duração das sessões e compensação** (seeds 1 e 2 × 1.000 × 28 dias, dias 7 a 27; Q0 × Q1):
+
+| Grupo | Versão | Duração da sessão normal: mediana · média · p90 | Maratonas (sessão com mais do dobro da normal) | Minutos num dia jogado | Minutos no dia seguinte a uma maratona |
+|---|---|---|---|---|---|
+| Maratonistas (111) | sem efeitos | 164 · 189 · 329 min | 0,73 por pessoa (3,3% das sessões) | 290 | 162 |
+| Maratonistas (111) | com efeitos | 166 · 192 · 334 min | 0,62 por pessoa (2,8%) | 295 | 134 |
+| Demais (1.880) | sem efeitos | 159 · 172 · 283 min | 0,56 por pessoa (2,8%) | 271 | 147 |
+| Demais (1.880) | com efeitos | 158 · 172 · 281 min | 0,55 por pessoa (2,7%) | 268 | 137 |
+
+- **A compensação existe:** no dia seguinte a uma maratona, o Maratonista joga 17% menos (162 → 134 min).
+- **As sessões quase não aumentam:** +2 a 3 min na média e no p90, e o número de maratonas não sobe (0,73 → 0,62, dentro da variação de uma amostra de cerca de 70 maratonas).
+- **Por quê:**
+  - a saciedade mais lenta só vale com a sessão boa;
+  - a maior parte das sessões longas termina pela janela (hora de dormir, obrigação), não pela saciedade.
+- **Conclusão:** o mecanismo funciona como definido; no mundo atual, a parte mais forte é a contrapartida. As magnitudes continuam candidatas, por decisão do criador.
 
 **Geral (todos):**
 - **Horas por semana:** 18,4 → 18,3.
 - **Validação:**
   - regras do cenário: 8 de 9, iguais;
-  - provisórias: 7 → 8 de 12. "Tempo na cidade" voltou para dentro (23,6% → 22,6%). "Andando ou esperando" foi de 20,0% para 20,7%, contando a espera do Indeciso (0,4% do total).
+  - provisórias: 7 → 8 de 12. "Tempo na cidade" voltou para dentro (23,6% → 22,8%). "Andando ou esperando" foi de 20,0% para 20,5%, contando a espera do Indeciso (0,25% do total).
 - **Nenhuma regra da rotina mudou.**
 
 **Interações inesperadas** (registradas, sem recalibrar):
 1. **Colecionador, Impulsivo e Indeciso andam ou esperam mais.**
-   - O Colecionador vai atrás do que nunca fez e anda 3,8 pontos a mais. O Impulsivo troca mais de plano: +2,6.
-   - O Indeciso perde 5% do tempo conectado decidindo. O empate de menos de 40 pontos é comum, porque o ruído da decisão é maior que isso.
+   - O Colecionador vai atrás do que nunca fez: +3,6 pontos. O Impulsivo troca mais de plano: +2,1.
+   - O Indeciso perde 3,5% do tempo decidindo. Mesmo sem o ruído, há muitas opções com notas parecidas.
    - Juntos, explicam a subida de "andando ou esperando".
-2. **Maratonista não joga mais horas.** A saciedade cresce mais devagar nas sessões boas, mas a disposição menor no dia seguinte compensa, e as maratonas trazem mais frustração (cansaço e sessões longas pesam na nota).
+2. **Maratonista:** horas iguais, sessões só um pouco maiores, compensação no dia seguinte e mais frustração (cansaço e sessões longas pesam na nota).
 3. **Partes quase inertes no mundo atual:**
    - **Largar com raiva** (Pavio curto) e **volta de desistentes** (Saudosista) quase não acontecem em 90 dias: as desistências ficam em 0,8%.
    - **Memória firme** e **Esquecido** dependem de pausas longas, também raras.
    - **Observador:** as pistas são de zonas vizinhas que, em geral, já são conhecidas, então quase não viram descoberta.
    - Esses efeitos devem pesar mais com combate, mortes e economia.
-4. **Procrastinador perde 1,7 h por semana,** como a contrapartida prevê. As janelas perdidas (2,8 em 90 dias) são raras.
+4. **Procrastinador perde 1,8 h por semana,** como a contrapartida prevê. As janelas perdidas (2,9 em 90 dias) são raras.
 
-O controle (quem não tem a trait) muda pouco: até 1 ponto em "cidade" e "andando", pelo efeito das outras traits que essas pessoas têm.
+**Correção durante o fechamento:** o empate do Indeciso era medido na nota com o ruído, e o próprio ruído fabricava hesitações. Agora:
+- a nota é comparada sem o fator de ruído;
+- a mesma dupla de opções não faz hesitar de novo na mesma sessão.
+
+Hesitações por pessoa: 148 → 98; tempo decidindo: 5,0% → 3,5%.
