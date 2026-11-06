@@ -2065,4 +2065,6 @@ Traits passam a ser adquiridas e perdidas por evidência de comportamento repeti
 - **Protetor de novatos (Etapa 3):** defesas de iniciantes atacados.
 - **Líder nato (M6):** grupos formados e liderados.
 
+**Decisão do criador (encerramento da P4):** P4 aprovada e encerrada, com os parâmetros atuais e as limitações documentadas. Os 21 dias jogados para perder uma trait inicial ficam adotados como valor candidato.
+
 **Próximo:** com a P4 encerrada, a próxima etapa do roteiro é a Etapa 1 (personagem).
