@@ -53,7 +53,11 @@ public sealed class GoalSystem
             // Leal (P4a): nao abandona meta por impaciencia.
             else if (C.PersonalityRules(p.PersonalityId)?.Rule != PersonalityRuleIds.SteadfastGoals
                      && t.Patience < S.ImpatientBelow && rng.ChancePermille(S.ImpatientDropChance * 1000 / patience)) Abandon(ch, g, "impatience");
-            else if (persistent && played - g.LastProgressPlayedTicks > baseStale) QuirkSystem.Count(p, "persistente_manteve_meta");
+            else if (persistent && played - g.LastProgressPlayedTicks > baseStale)
+            {
+                QuirkSystem.Count(p, "persistente_manteve_meta");
+                g.SurvivedByEffect = true;   // P4d: se concluir, foi pelo efeito, nao conta como evidencia
+            }
         }
         // Quantidade de metas e chance de adotar nao dependem da paciencia (ela so pesa na persistencia).
         if (ch.GoalList.Count >= S.MaxActive) return;
@@ -389,6 +393,8 @@ public sealed class GoalSystem
 
     private void Complete(Person p, Character ch, PersonalGoal g)
     {
+        // Persistente (P4d): concluir meta que passou por reveses e evidencia; se so continuou pelo efeito, nao.
+        if (g.SetbacksDuring > 0) QuirkSystem.Observe(C, p, QuirkIds.Persistente, true, false, g.SurvivedByEffect);
         ch.GoalList.Remove(g);
         ch.GoalsCompleted++;
         Ended?.Invoke(ch, g, true, "goal_completed");
@@ -401,6 +407,9 @@ public sealed class GoalSystem
     private void Abandon(Character ch, PersonalGoal g, string reason)
     {
         ch.GoalList.Remove(g);
+        // Persistente (P4d): desistir (sem progresso ou impaciencia) de meta que passou por reveses e evidencia contraria.
+        if (g.SetbacksDuring > 0 && reason is "no_progress" or "impatience")
+            QuirkSystem.Observe(C, _w.GetPerson(ch.PersonId), QuirkIds.Persistente, false, true);
         // Meta de nivel abandonada nao volta com o mesmo alvo antes da proxima subida de nivel.
         if (g.Type is GoalTypes.ReachLevel or GoalTypes.UnlockLevel) ch.BlockedLevelGoals.Add(LevelGoalKey(g.Type, g.Target, g.TargetValue));
         ch.GoalsAbandoned++;

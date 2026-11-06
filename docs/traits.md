@@ -18,7 +18,7 @@ As traits ficam separadas das outras camadas da pessoa:
 **Etapas:**
 - **P4b:** catálogo, sorteio, estado da pessoa e ficha.
 - **P4c:** efeitos das 15 traits da pessoa (seção 6). As traits de sistemas futuros continuam sem efeito até esses sistemas existirem.
-- **P4d:** aquisição e perda.
+- **P4d:** aquisição e perda por evidência (seção 7).
 
 No código o nome é `Quirk`, para não confundir com os atributos numéricos (`PersonTraits`), que vieram antes. O arquivo de conteúdo é `traits.json`.
 
@@ -26,7 +26,7 @@ No código o nome é `Quirk`, para não confundir com os atributos numéricos (`
 
 Cada trait declara:
 - **classificação** (`polarity`): `positive` ou `negative`;
-- **origem** (`acquisition`): `innate` (nasce com a pessoa), `acquired` (só por evidência, com o sistema dela) ou `both`;
+- **origem** (`acquisition`): `innate` (trait inicial: a pessoa já tinha ao entrar na simulação), `acquired` (só por evidência, com o sistema dela) ou `both`;
 - **`drawn`**: se entra no sorteio da criação;
 - **`system`**: de que sistema o efeito depende. Vazio = efeitos da própria pessoa (decisão, humor, memória, rotina); `M3`, `M5`, `M6`, `etapa3` ou `fabricacao`;
 - **`weight`**: peso base, e **`affinities`**: a coerência com a pessoa;
@@ -230,3 +230,65 @@ Validação padrão (5 seeds × 1.000 × 90 dias): **Q0**, todos os efeitos desl
 - a mesma dupla de opções não faz hesitar de novo na mesma sessão.
 
 Hesitações por pessoa: 148 → 98; tempo decidindo: 5,0% → 3,5%.
+
+## 7. Aquisição e perda (P4d)
+
+Configuração em `traits.json`, seção `acquisition`. Todos os valores são candidatos.
+
+### 7.1 Critérios
+
+- **Relógio:** tudo conta em **dias jogados**, isto é, os dias locais em que a pessoa jogou: a meia-vida da evidência, a confirmação, o intervalo entre aquisições e o intervalo depois de uma mudança.
+  - Um dia sem jogar não conta: a evidência não enfraquece, a confirmação não avança e nenhum intervalo passa.
+  - A avaliação é diária, à meia-noite local, e considera se a pessoa jogou no dia anterior.
+- **Oportunidade, comportamento e efeito são separados:**
+  - **oportunidade:** um acontecimento em que a trait podia se manifestar;
+  - **comportamento observado:** o que a pessoa fez nele, a favor ou contra;
+  - **efeito aplicado:** o que só aconteceu por causa da própria trait. Conta como oportunidade, não como evidência, para não haver autorreforço.
+- **Ausência de oportunidade não é evidência contrária.**
+  - A perda exige oportunidades reais recentes: a soma da evidência a favor e contra, com a meia-vida, precisa chegar a um mínimo.
+  - Inatividade, ou dias jogados sem os acontecimentos da trait, nunca apagam uma característica.
+- **Evidência com o significado da trait:** só contam os acontecimentos específicos abaixo; nenhuma conclusão ou experiência ruim qualquer conta.
+- **Histórico preservado:** cada mudança registra o dia, o dia jogado, a trait, se entrou ou saiu, a origem anterior (inicial ou adquirida), a evidência e o motivo. Perder e readquirir mantém tudo.
+
+| Trait | Oportunidade | A favor | Contra | Não conta (efeito) |
+|---|---|---|---|---|
+| Persistente (inicial ou adquirida) | uma meta que passou por revés enquanto ativa e chegou a um fim | concluí-la | desistir dela, por falta de progresso ou por impaciência | concluir uma meta que só continuou porque o efeito do Persistente prolongou o prazo |
+| Rancoroso (inicial ou adquirida) | voltar a um lugar com experiência ruim marcante ainda lembrada | outra experiência ruim marcante ali | uma experiência boa ali (a partir de +150), a segunda chance | — (a evidência usa a memória, que o efeito do Rancoroso não muda) |
+
+### 7.2 Regras (valores candidatos)
+
+- **Meia-vida da evidência:** 21 dias jogados. Cada acontecimento vale 1 ponto.
+- **Adquirir:**
+  - pelo menos 3 pontos a favor e taxa de pelo menos 75% (a favor ÷ a favor + contra);
+  - mantidos por 7 dias jogados seguidos;
+  - no máximo uma aquisição a cada 30 dias jogados, até 8 traits;
+  - respeitando as exclusões com outras traits e com a personalidade. Persistente não entra em quem é Leal, Inquieto ou tem Impulsivo.
+- **Perder uma trait adquirida:** pelo menos 3 pontos de oportunidades recentes e taxa de até 35%, mantidos por 7 dias jogados.
+- **Perder uma trait inicial:** só com evidência contrária forte e sustentada: pelo menos 6 pontos de oportunidades, taxa de até 20% e 21 dias jogados.
+- **Contra oscilação:**
+  - o limiar de aquisição fica acima do de perda;
+  - depois de uma mudança, a mesma trait não muda de novo antes de 30 dias jogados;
+  - há no máximo uma mudança por dia.
+- **Sistemas futuros:** só Persistente e Rancoroso têm avaliador. Traumatizado, Matador de novatos, Protetor de novatos e Líder nato esperam os acontecimentos de combate, PvP e grupos (critérios propostos no D-060).
+- **Causas:** eventos `trait_acquired` e `trait_lost`, com o motivo, a evidência a favor, a contra e o dia jogado.
+- **Ficha:** "adquirido em dd/mm" na linha do traço; no tooltip, a origem ("Traço inicial: a pessoa já tinha ao entrar na simulação"), o histórico e o que conta como evidência; e "Perdeu: …" para traits perdidas.
+
+### 7.3 Medição
+
+Validação padrão (5 seeds × 1.000 × 90 dias), **A0** (aquisição desligada) × **A1** (ligada), com as mesmas pessoas e todos os efeitos da P4c ligados. Resultados em `baselines/traits-aquisicao/`.
+
+- **Registrar evidência não muda a simulação:** A0 é idêntica à rodada da P4c com os efeitos ligados.
+- **Persistente:**
+  - **Mudanças:**
+    - 85 aquisições (1,7% das pessoas em 90 dias; mediana de 51 dias jogados por pessoa);
+    - 1 perda, de trait inicial;
+    - ninguém mudou duas vezes; nenhuma exclusão violada.
+  - **Aquisição:** no 56º dia jogado (mediana; de 30 a 79).
+  - **Evidência por pessoa:**
+    - quem não tem a trait: 2,0 oportunidades, 1,7 a favor e 0,3 contra;
+    - quem tem: 2,8 oportunidades, 2,4 a favor e 0,3 contra;
+    - só pelo efeito: 0,03 por pessoa. O autorreforço que ficou de fora é pequeno.
+- **Rancoroso:** nenhuma oportunidade. No mundo atual nenhuma atividade chega a ser uma experiência ruim marcante: a pior impressão de um lugar fica em −219, e o limiar de "marcante" é 350. Sem essa memória não há como voltar a um lugar marcado. O avaliador fica pronto para quando houver mortes e perdas (M3); nada foi forçado.
+- **Validação:** regras do cenário 8 de 9 e provisórias 8 de 12, iguais. Diferenças de até 0,6 ponto.
+- **Limite conhecido:** o efeito do Persistente também reduz as desistências por impaciência, que seriam evidência contrária. Quem tem a trait perde menos por isso; a perda continua possível quando a pessoa desiste mesmo com o efeito.
+

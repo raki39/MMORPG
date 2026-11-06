@@ -11,6 +11,8 @@ public sealed class QuirkCatalogDefinition
     public QuirkGenerationDefinition Generation { get; set; } = new();
     /// <summary>Efeitos das traits da pessoa (P4c): magnitudes configuraveis por trait.</summary>
     public QuirkEffectsDefinition Effects { get; set; } = new();
+    /// <summary>Aquisicao e perda por evidencia (P4d).</summary>
+    public QuirkAcquisitionDefinition Acquisition { get; set; } = new();
     public List<QuirkDefinition> Traits { get; set; } = new();
 }
 
@@ -37,6 +39,48 @@ public sealed class QuirkEffectsDefinition
     public IndecisiveEffect Indeciso { get; set; } = new();
     public MarathonEffect Maratonista { get; set; } = new();
     public ProcrastinatorEffect Procrastinador { get; set; } = new();
+}
+
+/// <summary>
+/// Aquisicao e perda de traits por evidencia (P4d). Relogio: DIAS JOGADOS (dias locais em que a
+/// pessoa jogou). Sem jogar, nada anda: a evidencia nao enfraquece e a confirmacao nao avanca.
+/// Evidencia e evidencia contraria saem de acontecimentos especificos de cada trait e perdem forca
+/// com meia-vida em dias jogados. Avaliadores so para traits cujos acontecimentos sao simulados.
+/// </summary>
+public sealed class QuirkAcquisitionDefinition
+{
+    public bool Enabled { get; set; } = true;
+    /// <summary>Meia-vida da evidencia, em dias jogados.</summary>
+    public int HalfLifePlayDays { get; set; } = 21;
+    /// <summary>Dias jogados seguidos com a condicao valendo para adquirir ou perder trait adquirida.</summary>
+    public int ConfirmPlayDays { get; set; } = 7;
+    /// <summary>Dias jogados seguidos para perder uma trait inicial (evidencia contraria forte e sustentada).</summary>
+    public int InitialConfirmPlayDays { get; set; } = 21;
+    /// <summary>No maximo uma aquisicao a cada isto de dias jogados.</summary>
+    public int PlayDaysBetweenAcquisitions { get; set; } = 30;
+    /// <summary>Depois de ganhar ou perder uma trait, ela nao muda de novo antes disto (dias jogados).</summary>
+    public int CooldownPlayDays { get; set; } = 30;
+    public AcquisitionRuleDefinition Persistente { get; set; } = new();
+    public AcquisitionRuleDefinition Rancoroso { get; set; } = new() { SecondChanceValence = 150 };
+}
+
+/// <summary>
+/// Regra de uma trait (milesimos de ponto; cada acontecimento vale 1000). Taxa = evidencia /
+/// (evidencia + contraria), em permille, sobre as oportunidades recentes (as duas somadas).
+/// </summary>
+public sealed class AcquisitionRuleDefinition
+{
+    /// <summary>Adquirir: evidencia recente minima e taxa minima.</summary>
+    public int AcquireEvidence { get; set; } = 3000;
+    public int AcquireRatePermille { get; set; } = 750;
+    /// <summary>Perder (trait adquirida): oportunidades recentes minimas e taxa maxima.</summary>
+    public int LoseMinOpportunities { get; set; } = 3000;
+    public int LoseRatePermille { get; set; } = 350;
+    /// <summary>Perder (trait inicial): exige mais oportunidades e taxa menor.</summary>
+    public int LoseInitialMinOpportunities { get; set; } = 6000;
+    public int LoseInitialRatePermille { get; set; } = 200;
+    /// <summary>Rancoroso: experiencia minima (valencia) que conta como segunda chance bem-sucedida.</summary>
+    public int SecondChanceValence { get; set; }
 }
 
 /// <summary>Persistente: depois de um reves, margem maior para trocar de plano; demora mais a abandonar metas.</summary>

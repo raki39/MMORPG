@@ -348,6 +348,10 @@ Efeitos desligados × ligados, com as mesmas pessoas (`baselines/traits-efeitos/
   - horas até o nível 20: 77,9 → 78,4 (já fora);
   - horas por semana do hardcore: 37,4 → 37,1.
 
+## D-060: aquisição e perda de traits (05/11/2026)
+
+Aquisição desligada × ligada, com as mesmas pessoas (`baselines/traits-aquisicao/`). Regras do cenário 8 de 9 e provisórias 8 de 12, iguais; diferenças de até 0,6 ponto. A aquisição desligada é idêntica à rodada da P4c: registrar evidência não muda a simulação.
+
 ## Próximos passos
 
 Roteiro por etapas (backlog):

@@ -360,6 +360,14 @@ public sealed class BehaviorSystem
                 if (PersonalitySystem.OnDaily(_w.Content, p, day) is { } pc)
                     _w.Emit("personality_changed", EventImportance.Normal, new[] { new EntityRef("person", p.Id) },
                         new[] { new EventCause(pc.Attribute, pc.Value) }, $"{pc.From}|{pc.To}|{pc.PositionPermille}");
+                // Traits (P4d): aquisicao e perda por evidencia, so em dia jogado (jogou no dia local anterior).
+                if (QuirkSystem.OnDaily(_w.Content, p, localDay, p.LastPlayedLocalDay == localDay - 1) is { } qc)
+                {
+                    var rule = QuirkSystem.RuleOf(_w.Content, qc.Id);
+                    _w.Emit(qc.Change == "acquired" ? "trait_acquired" : "trait_lost", EventImportance.Normal, new[] { new EntityRef("person", p.Id) },
+                        new[] { new EventCause(qc.Reason, qc.For), new EventCause("evidence_against", qc.Against), new EventCause("play_day", qc.PlayDay) },
+                        $"{qc.Id}|{qc.PreviousSource}");
+                }
                 _exp.OnDaily(p, ch);       // humor e memoria (D-038)
                 if (!_w.NeutralMood && !p.IsOnline && ReviewRetention(p, ch, day, rng)) continue;   // inativo ou desistiu (D-039)
             }

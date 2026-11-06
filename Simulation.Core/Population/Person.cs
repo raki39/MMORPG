@@ -318,6 +318,16 @@ public sealed class Person
     public IReadOnlyCollection<long> MarathonDays => MarathonDaysSet;
     /// <summary>Sessoes encerradas com raiva (frustracao), com ou sem trait.</summary>
     public int RageQuits { get; internal set; }
+    /// <summary>Dias locais jogados (relogio da aquisicao e perda de traits, P4d).</summary>
+    public int PlayDayCount { get; internal set; }
+    /// <summary>Dia jogado (PlayDayCount) da ultima aquisicao; -1 = nenhuma.</summary>
+    public int LastAcquisitionPlayDay { get; internal set; } = -1;
+    /// <summary>Evidencia de cada trait com avaliador (P4d).</summary>
+    internal SortedDictionary<string, QuirkEvidence> QuirkEvidenceMap { get; } = new(StringComparer.Ordinal);
+    public IReadOnlyDictionary<string, QuirkEvidence> QuirkEvidenceByTrait => QuirkEvidenceMap;
+    /// <summary>Historico de aquisicoes e perdas (preservado ao perder e readquirir).</summary>
+    internal List<QuirkChange> QuirkHistoryList { get; } = new();
+    public IReadOnlyList<QuirkChange> QuirkHistory => QuirkHistoryList;
     /// <summary>Renda do trabalho e apoio familiar (centavos/mes; sem efeito ate o M7).</summary>
     public long IncomeCentsPerMonth { get; internal set; }
     public long SupportCentsPerMonth { get; internal set; }
@@ -606,6 +616,29 @@ public static class GoalTypes
 }
 
 /// <summary>
+/// Evidencia de uma trait (P4d), em milesimos de ponto: comportamentos observados a favor e contra,
+/// e as oportunidades (acontecimentos em que a trait podia se manifestar). Enfraquece por dia jogado.
+/// </summary>
+public sealed class QuirkEvidence
+{
+    public int For { get; internal set; }
+    public int Against { get; internal set; }
+    /// <summary>Contagens brutas (medicao): oportunidades, a favor, contra e o que so aconteceu pelo efeito da trait.</summary>
+    public int Opportunities { get; internal set; }
+    public int ForCount { get; internal set; }
+    public int AgainstCount { get; internal set; }
+    public int EffectOnlyCount { get; internal set; }
+    /// <summary>Dias jogados seguidos com a condicao de mudanca valendo, e qual mudanca.</summary>
+    public int Streak { get; internal set; }
+    public string Pending { get; internal set; } = "";
+    /// <summary>Dia jogado da ultima mudanca desta trait (-1 = nunca).</summary>
+    public int LastChangePlayDay { get; internal set; } = -1;
+}
+
+/// <summary>Aquisicao ou perda de trait: dia local, dia jogado, trait, "acquired"/"lost", origem anterior e evidencia.</summary>
+public sealed record QuirkChange(long Day, int PlayDay, string Id, string Change, string PreviousSource, int For, int Against, string Reason);
+
+/// <summary>
 /// Objetivo pessoal (D-026/D-036): algo que a pessoa quer conseguir, escolhido pelo perfil e
 /// pela personalidade. Influencia as decisoes com o peso do comprometimento; nao obriga.
 /// </summary>
@@ -641,6 +674,10 @@ public sealed class PersonalGoal
     public int Progress { get; internal set; }
     /// <summary>Tempo conectado do personagem no ultimo avanco (abandono por falta de progresso).</summary>
     public long LastProgressPlayedTicks { get; internal set; }
+    /// <summary>Reveses que a pessoa sofreu com esta meta ativa (P4d: oportunidade de persistir).</summary>
+    public int SetbacksDuring { get; internal set; }
+    /// <summary>A meta so continuou porque o efeito do Persistente prolongou o prazo (nao conta como evidencia).</summary>
+    public bool SurvivedByEffect { get; internal set; }
 }
 
 /// <summary>Historico de uma quest para o personagem.</summary>

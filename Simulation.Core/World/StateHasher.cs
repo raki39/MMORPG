@@ -11,7 +11,7 @@ namespace Simulation.Core.World;
 /// </summary>
 public static class StateHasher
 {
-    public const int FormatVersion = 26;
+    public const int FormatVersion = 27;
 
     public static string Compute(WorldState w) => Compute(w, includeContentId: true);
 
@@ -90,7 +90,7 @@ public static class StateHasher
             foreach (var g in c.Goals)
             {
                 h.Str(g.Type); h.Str(g.Target); h.Int(g.TargetValue); h.Int(g.StartValue); h.Int(g.Commitment);
-                h.Str(g.MotiveKey); h.Int(g.MotiveValue); h.Long(g.SetTick); h.Int(g.Progress); h.Long(g.LastProgressPlayedTicks);
+                h.Str(g.MotiveKey); h.Int(g.MotiveValue); h.Long(g.SetTick); h.Int(g.Progress); h.Long(g.LastProgressPlayedTicks); h.Int(g.SetbacksDuring); h.Bool(g.SurvivedByEffect);
             }
             h.Int(c.GoalsSet); h.Int(c.GoalsCompleted); h.Int(c.GoalsAbandoned);
             h.Int(c.ZoneMinutesSpent.Count);
@@ -188,6 +188,16 @@ public static class StateHasher
         h.Int(p.MarathonDays.Count);
         foreach (var d in p.MarathonDays) h.Long(d);
         h.Int(p.RageQuits);
+        h.Int(p.PlayDayCount); h.Int(p.LastAcquisitionPlayDay);
+        h.Int(p.QuirkEvidenceByTrait.Count);
+        foreach (var kv in p.QuirkEvidenceByTrait)
+        {
+            var e = kv.Value;
+            h.Str(kv.Key); h.Int(e.For); h.Int(e.Against); h.Int(e.Opportunities); h.Int(e.ForCount); h.Int(e.AgainstCount); h.Int(e.EffectOnlyCount);
+            h.Int(e.Streak); h.Str(e.Pending); h.Int(e.LastChangePlayDay);
+        }
+        h.Int(p.QuirkHistory.Count);
+        foreach (var qc in p.QuirkHistory) { h.Long(qc.Day); h.Int(qc.PlayDay); h.Str(qc.Id); h.Str(qc.Change); h.Str(qc.PreviousSource); h.Int(qc.For); h.Int(qc.Against); h.Str(qc.Reason); }
         h.Int(t.LeisureBudgetCentsPerMonth); h.Int(t.WillingnessToPay); h.Int(t.PaidAdvantageSensitivity);
         h.Int(t.PreferredStartHour); h.Int(t.SessionMinutes); h.Int(t.GameImportance); h.Int(t.Habit); h.Int(t.ExtendTendency); h.Int(t.SelfControl); h.Int(t.Talent); h.Int(t.Variety); h.Int(t.Chronotype);
         h.Int(p.FreeEveShiftMinutes); h.Long(p.SleepUntilTick); h.Long(p.SleepShiftedDay);

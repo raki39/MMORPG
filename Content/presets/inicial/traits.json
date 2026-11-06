@@ -26,9 +26,16 @@
     "maratonista": { "goodScoreAbove": 600, "satietyPermille": 600, "marathonSessionsPermille": 2000, "nextDayDispositionPenaltyPermille": 150 },
     "procrastinador": { "minDelayMinutes": 15, "maxDelayMinutes": 60 }
   },
+  "acquisition": {
+    "enabled": true,
+    "halfLifePlayDays": 21, "confirmPlayDays": 7, "initialConfirmPlayDays": 21,
+    "playDaysBetweenAcquisitions": 30, "cooldownPlayDays": 30,
+    "persistente": { "acquireEvidence": 3000, "acquireRatePermille": 750, "loseMinOpportunities": 3000, "loseRatePermille": 350, "loseInitialMinOpportunities": 6000, "loseInitialRatePermille": 200 },
+    "rancoroso": { "acquireEvidence": 3000, "acquireRatePermille": 750, "loseMinOpportunities": 3000, "loseRatePermille": 350, "loseInitialMinOpportunities": 6000, "loseInitialRatePermille": 200, "secondChanceValence": 150 }
+  },
   "traits": [
     {
-      "id": "persistente", "name": "Persistente", "polarity": "positive",
+      "id": "persistente", "name": "Persistente", "polarity": "positive", "acquisition": "both",
       "effect": "Depois de um revés, mantém o plano com margem maior e demora mais a abandonar metas.",
       "tradeoff": "Insiste além do que compensa.",
       "affinities": [
@@ -99,7 +106,7 @@
       ]
     },
     {
-      "id": "rancoroso", "name": "Rancoroso", "polarity": "negative",
+      "id": "rancoroso", "name": "Rancoroso", "polarity": "negative", "acquisition": "both",
       "effect": "Lugares que deram errado ficam marcados por mais tempo.",
       "tradeoff": "Repete menos o que deu errado.",
       "affinities": [

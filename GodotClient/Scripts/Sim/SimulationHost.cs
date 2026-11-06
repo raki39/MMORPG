@@ -19,6 +19,9 @@ public sealed class CharacterView
     public string PersonalityId { get; init; } = "";
     /// <summary>Mudancas da personalidade principal (copia; vazia quase sempre).</summary>
     public IReadOnlyList<PersonalityChange> PersonalityHistory { get; init; } = Array.Empty<PersonalityChange>();
+    /// <summary>Traits atuais (P4d: podem ser adquiridas e perdidas) e o historico das mudancas (copias).</summary>
+    public IReadOnlyList<QuirkState> Quirks { get; init; } = Array.Empty<QuirkState>();
+    public IReadOnlyList<QuirkChange> QuirkHistory { get; init; } = Array.Empty<QuirkChange>();
     public int CharacterId { get; init; }
     public string Name { get; init; } = "";
     public string ClassId { get; init; } = "";
@@ -394,6 +397,8 @@ public sealed class SimulationHost : IDisposable
                 PersonId = c.PersonId,
                 PersonalityId = w.GetPerson(c.PersonId).PersonalityId,
                 PersonalityHistory = w.GetPerson(c.PersonId).PersonalityHistory is { Count: > 0 } ph ? ph.ToArray() : Array.Empty<PersonalityChange>(),
+                Quirks = QuirksOf(w.GetPerson(c.PersonId)).Quirks,
+                QuirkHistory = QuirksOf(w.GetPerson(c.PersonId)).History,
                 CharacterId = c.Id,
                 Name = c.Name,
                 ClassId = c.ClassId,
@@ -520,6 +525,18 @@ public sealed class SimulationHost : IDisposable
             });
         }
         return list;
+    }
+
+    // Copias das traits por pessoa, refeitas so quando o historico muda (sem alocar a cada quadro).
+    private readonly Dictionary<int, (int Version, QuirkState[] Quirks, QuirkChange[] History)> _quirkCache = new();
+
+    private (QuirkState[] Quirks, QuirkChange[] History) QuirksOf(Person p)
+    {
+        int version = p.QuirkHistory.Count;
+        if (_quirkCache.TryGetValue(p.Id, out var c) && c.Version == version) return (c.Quirks, c.History);
+        var entry = (version, p.Quirks.ToArray(), version == 0 ? Array.Empty<QuirkChange>() : p.QuirkHistory.ToArray());
+        _quirkCache[p.Id] = entry;
+        return (entry.Item2, entry.Item3);
     }
 
     private static MoodView MoodOf(PersonMood m) =>

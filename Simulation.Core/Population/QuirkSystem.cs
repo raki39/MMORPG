@@ -153,4 +153,97 @@ public static class QuirkSystem
         }
         return result;
     }
+
+    // ---------------- Aquisicao e perda (P4d) ----------------
+
+    /// <summary>Traits com avaliador de aquisicao e perda (acontecimentos ja simulados). As de combate e social esperam os sistemas.</summary>
+    public static readonly string[] Evaluators = { QuirkIds.Persistente, QuirkIds.Rancoroso };
+
+    public static bool HasEvaluator(string id) => Array.IndexOf(Evaluators, id) >= 0;
+
+    public static AcquisitionRuleDefinition RuleOf(ContentDatabase c, string id) =>
+        id == QuirkIds.Rancoroso ? c.QuirkCatalog.Acquisition.Rancoroso : c.QuirkCatalog.Acquisition.Persistente;
+
+    private static QuirkEvidence EvidenceOf(Person p, string id)
+    {
+        if (!p.QuirkEvidenceMap.TryGetValue(id, out var e)) p.QuirkEvidenceMap[id] = e = new QuirkEvidence();
+        return e;
+    }
+
+    /// <summary>
+    /// Uma oportunidade de manifestar a trait e o que a pessoa fez nela: a favor (+1000), contra
+    /// (+1000 na contraria) ou nada. "effectOnly": o comportamento so aconteceu pelo efeito da propria
+    /// trait (sem autorreforco: conta como oportunidade, nao como evidencia).
+    /// </summary>
+    public static void Observe(ContentDatabase c, Person p, string id, bool supports, bool contradicts, bool effectOnly = false)
+    {
+        if (!c.QuirkCatalog.Acquisition.Enabled || !HasEvaluator(id)) return;
+        var e = EvidenceOf(p, id);
+        e.Opportunities++;
+        if (effectOnly) { e.EffectOnlyCount++; return; }
+        if (supports) { e.For += 1000; e.ForCount++; }
+        else if (contradicts) { e.Against += 1000; e.AgainstCount++; }
+    }
+
+    /// <summary>
+    /// Avaliacao diaria (meia-noite local) da aquisicao e da perda. So anda em dia jogado (jogou no dia
+    /// local anterior): a evidencia enfraquece pela meia-vida, a confirmacao conta e os intervalos
+    /// passam. Sem jogar, nada muda: falta de oportunidade nao e evidencia contraria. No maximo uma
+    /// mudanca por dia. Devolve a mudanca aplicada, ou null.
+    /// </summary>
+    public static QuirkChange? OnDaily(ContentDatabase c, Person p, long localDay, bool playedYesterday)
+    {
+        var a = c.QuirkCatalog.Acquisition;
+        if (!a.Enabled || !playedYesterday) return null;
+        p.PlayDayCount++;
+        long factor = Behavior.DailySchedule.HalfLifeFactor(1, Math.Max(1, a.HalfLifePlayDays));
+        QuirkChange? applied = null;
+        foreach (var id in Evaluators)
+        {
+            if (!c.Quirks.TryGetValue(id, out var def)) continue;
+            var e = EvidenceOf(p, id);
+            e.For = (int)(e.For * factor / 1_000_000);
+            e.Against = (int)(e.Against * factor / 1_000_000);
+            var rule = RuleOf(c, id);
+            var state = p.QuirkList.FirstOrDefault(q => q.Id == id);
+            bool initial = state != null && state.Source == QuirkAcquisitions.Innate;
+            int total = e.For + e.Against;
+            int rate = total == 0 ? 0 : (int)((long)e.For * 1000 / total);
+            string want = "";
+            if (state == null && e.For >= rule.AcquireEvidence && rate >= rule.AcquireRatePermille) want = "acquire";
+            else if (state != null && total >= (initial ? rule.LoseInitialMinOpportunities : rule.LoseMinOpportunities)
+                     && rate <= (initial ? rule.LoseInitialRatePermille : rule.LoseRatePermille)) want = "lose";
+            if (want.Length == 0) { e.Streak = 0; e.Pending = ""; continue; }
+            if (e.Pending != want) { e.Pending = want; e.Streak = 0; }
+            e.Streak++;
+            int need = want == "lose" && initial ? a.InitialConfirmPlayDays : a.ConfirmPlayDays;
+            if (e.Streak < need || applied != null) continue;
+            if (e.LastChangePlayDay >= 0 && p.PlayDayCount - e.LastChangePlayDay < a.CooldownPlayDays) continue;
+            string previous;
+            if (want == "acquire")
+            {
+                if (def.Acquisition == QuirkAcquisitions.Innate) continue;   // o conteudo nao permite adquirir
+                if (p.QuirkList.Count >= c.QuirkCatalog.Generation.MaxTotal) { Count(p, id + "_bloqueada_pelo_total"); continue; }
+                if (p.LastAcquisitionPlayDay >= 0 && p.PlayDayCount - p.LastAcquisitionPlayDay < a.PlayDaysBetweenAcquisitions) continue;
+                if (!Compatible(c, def, p.QuirkList.Select(q => q.Id), p.PersonalityId)) { Count(p, id + "_bloqueada_por_exclusao"); continue; }
+                previous = p.QuirkHistoryList.LastOrDefault(h => h.Id == id)?.PreviousSource ?? "";
+                p.QuirkList.Add(new QuirkState(id, QuirkAcquisitions.Acquired, localDay));
+                p.LastAcquisitionPlayDay = p.PlayDayCount;
+            }
+            else
+            {
+                previous = state!.Source;
+                p.QuirkList.Remove(state);
+            }
+            string reason = id == QuirkIds.Persistente
+                ? (want == "acquire" ? "goals_after_setbacks" : "gave_up_after_setbacks")
+                : (want == "acquire" ? "repeated_bad_experience_same_place" : "second_chance_succeeded");
+            applied = new QuirkChange(localDay, p.PlayDayCount, id, want == "acquire" ? "acquired" : "lost", previous, e.For, e.Against, reason);
+            p.QuirkHistoryList.Add(applied);
+            e.LastChangePlayDay = p.PlayDayCount;
+            e.Streak = 0;
+            e.Pending = "";
+        }
+        return applied;
+    }
 }

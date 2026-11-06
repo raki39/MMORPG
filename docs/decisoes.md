@@ -2030,3 +2030,39 @@ As 15 traits da pessoa passaram a agir, cada uma no seu ponto de avaliação. De
 **Decisão do criador:** fechar a P4c com as magnitudes atuais, sem forçar que todos os efeitos apareçam com a mesma intensidade no mundo ainda incompleto.
 
 **Próximo:** P4d (aquisição e perda), depois da avaliação do criador.
+
+## D-060 — Aquisição e perda de traits (P4d)
+**Data:** 05/11/2026 · **Estado:** aceita (valores candidatos)
+
+Traits passam a ser adquiridas e perdidas por evidência de comportamento repetido, com avaliador para Persistente e Rancoroso. Maratonista fica para outra entrega, por decisão do criador. Detalhes em `traits.md`, seção 7.
+
+**Critérios definidos pelo criador e como foram aplicados:**
+1. **Ausência de oportunidade não é evidência contrária:** a perda exige oportunidades reais recentes. Inatividade ou dias sem os acontecimentos da trait não apagam nada.
+2. **Dias de calendário × dias jogados:** meia-vida, confirmação e intervalos contam em dias jogados. Sem jogar, nada avança.
+3. **Evidência com o significado da trait:**
+   - Persistente: concluir ou desistir de metas que passaram por revés;
+   - Rancoroso: voltar a um lugar com experiência ruim marcante e ter outra ruim (a favor) ou uma boa (contra).
+4. **Sem autorreforço:** o que só aconteceu pelo efeito da própria trait conta como oportunidade, não como evidência.
+5. **Histórico preservado:** origem anterior, evidência e motivo de cada mudança; perder e readquirir mantém tudo.
+
+**Valores candidatos:**
+- meia-vida de 21 dias jogados e confirmação de 7 (21 para perder uma trait inicial);
+- até 8 traits e uma aquisição a cada 30 dias jogados;
+- intervalo de 30 dias jogados depois de cada mudança;
+- adquirir: 3 pontos e 75% de taxa; perder a adquirida: 35%; perder a inicial: 6 pontos e 20%.
+
+**Nomes:** "trait inicial" (a pessoa já tinha ao entrar na simulação), não "de nascença", na interface e na documentação.
+
+**Medição** (5 seeds × 1.000 × 90 dias, aquisição desligada × ligada):
+- Registrar evidência não muda a simulação.
+- **Persistente:** 85 aquisições (1,7%), 1 perda de trait inicial; nenhuma oscilação nem exclusão violada.
+- **Rancoroso:** nenhuma oportunidade, porque o mundo atual não produz experiências ruins marcantes (a pior impressão é −219, e o limiar é 350).
+- **Validação:** igual.
+
+**Propostas para quando os acontecimentos existirem** (avaliadores desligados):
+- **Traumatizado (M3):** várias mortes para o mesmo tipo de inimigo numa janela curta. Contra: vencer esse inimigo depois.
+- **Matador de novatos (Etapa 3):** 5 mortes injustificadas de vítimas pelo menos 5 níveis abaixo em 30 dias jogados; perde depois de 60 dias jogados com oportunidade e sem o padrão.
+- **Protetor de novatos (Etapa 3):** defesas de iniciantes atacados.
+- **Líder nato (M6):** grupos formados e liderados.
+
+**Próximo:** com a P4 encerrada, a próxima etapa do roteiro é a Etapa 1 (personagem).

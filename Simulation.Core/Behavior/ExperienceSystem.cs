@@ -59,6 +59,11 @@ public sealed class ExperienceSystem
 
         string key2 = region.Id + "/" + a.Id;
         bool firstTimeHere = !p.Impressions.ContainsKey(key2);
+        // Rancoroso (P4d): voltar a um lugar com experiencia ruim marcante ainda lembrada e uma oportunidade:
+        // outra experiencia ruim marcante ali sustenta o rancor; uma boa (segunda chance) o contradiz.
+        if (p.MemoryList.Any(m => m.Kind == "awful_activity" && m.Subject == key2))
+            QuirkSystem.Observe(_w.Content, p, QuirkIds.Rancoroso, valence <= -Mem.NotableValence,
+                valence >= _w.Content.QuirkCatalog.Acquisition.Rancoroso.SecondChanceValence);
         int before = p.Impressions.GetValueOrDefault(key2);
         p.Impressions[key2] = before + (valence - before) * Mem.ImpressionLearn / 1000;
         if (firstTimeType) AddNovelty(p, M.NoveltyNewActivityType);
@@ -106,6 +111,7 @@ public sealed class ExperienceSystem
     {
         ch.SessionLedger.Points -= points;
         ch.LastSetbackTick = Now;   // Persistente (P4c) mantem o plano depois disto
+        foreach (var g in ch.GoalList) g.SetbacksDuring++;   // oportunidade de persistir nas metas ativas (P4d)
         // Pavio curto (P4c): a frustracao sobe mais rapido.
         if (QuirkSystem.Active(_w.Content, p, QuirkIds.PavioCurto))
         {

@@ -139,28 +139,18 @@ public static class TraitInfo
         return (more, less);
     }
 
-    /// <summary>Tooltip estruturado de uma trait.</summary>
-    public static string Tooltip(ContentDatabase c, QuirkDefinition q)
+    /// <summary>
+    /// Tooltip de uma trait, so com o que interessa ao jogador: nome e classificacao, origem (inicial ou
+    /// adquirida; e se ainda nao tem efeito), efeito e contrapartida.
+    /// </summary>
+    public static string Tooltip(ContentDatabase c, QuirkDefinition q, QuirkState? state = null, Func<long, string>? date = null)
     {
-        var (more, less) = Affinities(c, q);
-        var lines = new List<string>
-        {
-            $"{q.Name}|{PolarityLabel(q)}|#{PolarityColor(q).ToHtml(false)}",
-            $"^{(q.Acquisition == QuirkAcquisitions.Acquired ? "Traço adquirido" : "Traço de nascença")}",
-            "#Efeito",
-            q.Effect,
-        };
+        string origin = state != null && state.Source == QuirkAcquisitions.Acquired
+            ? $"Traço adquirido em {date?.Invoke(state.Day) ?? state.Day.ToString()}"
+            : "Traço inicial: a pessoa já tinha ao entrar na simulação";
+        if (!EffectActive(c, q)) origin += " · " + Status(c, q).ToLowerInvariant();
+        var lines = new List<string> { $"{q.Name}|{PolarityLabel(q)}|#{PolarityColor(q).ToHtml(false)}", "^" + origin, "#Efeito", q.Effect };
         if (q.Tradeoff.Length > 0) { lines.Add("#Contrapartida"); lines.Add(q.Tradeoff); }
-        lines.Add("#Situação");
-        lines.Add(q.System.Length == 0
-            ? (c.QuirkCatalog.Effects.Enabled ? "Ativo: age no seu ponto (decisão, humor, memória, sono ou rotina) e aparece como causa nas decisões e nos eventos." : "Os efeitos dos traços estão desligados no conteúdo.")
-            : $"Depende de {SystemName(q.System)}. Até lá o traço existe, mas não muda a simulação.");
-        if (more.Count > 0) lines.Add("~Mais provável com " + string.Join(", ", more) + ".");
-        if (less.Count > 0) lines.Add("~Menos provável com " + string.Join(", ", less) + ".");
-        if (q.Excludes.Count > 0)
-            lines.Add("~Não aparece junto com " + string.Join(", ", q.Excludes.Select(x => c.Quirks.TryGetValue(x, out var o) ? o.Name : x)) + ".");
-        if (q.ExcludesPersonalities.Count > 0)
-            lines.Add("~Não aparece em quem é " + string.Join(", ", q.ExcludesPersonalities.Select(x => PlayerModal.PersonalityOf(c, x).Label)) + ".");
         return string.Join("\n", lines);
     }
 }

@@ -1356,6 +1356,25 @@ public static class ContentValidator
         })
             if (value < lo || value > hi) v.Error(f, "effects." + name, $"Use de {lo} a {hi}.");
         if (fx.Procrastinador.MaxDelayMinutes < fx.Procrastinador.MinDelayMinutes) v.Error(f, "effects.procrastinador.maxDelayMinutes", "O atraso máximo não pode ser menor que o mínimo.");
+        // Aquisicao e perda (P4d): relogio em dias jogados.
+        var aq = set.Quirks.Acquisition;
+        foreach (var (name, value, lo, hi) in new (string, int, int, int)[]
+        {
+            ("halfLifePlayDays", aq.HalfLifePlayDays, 1, 365), ("confirmPlayDays", aq.ConfirmPlayDays, 1, 120), ("initialConfirmPlayDays", aq.InitialConfirmPlayDays, 1, 365),
+            ("playDaysBetweenAcquisitions", aq.PlayDaysBetweenAcquisitions, 0, 365), ("cooldownPlayDays", aq.CooldownPlayDays, 0, 365),
+        })
+            if (value < lo || value > hi) v.Error(f, "acquisition." + name, $"Use de {lo} a {hi}.");
+        foreach (var (key, r) in new[] { ("persistente", aq.Persistente), ("rancoroso", aq.Rancoroso) })
+        {
+            if (r.AcquireEvidence < 1000) v.Error(f, $"acquisition.{key}.acquireEvidence", "Use 1000 ou mais (cada acontecimento vale 1000).");
+            if (r.AcquireRatePermille is < 0 or > 1000 || r.LoseRatePermille is < 0 or > 1000 || r.LoseInitialRatePermille is < 0 or > 1000)
+                v.Error(f, $"acquisition.{key}", "Taxas de 0 a 1000.");
+            if (r.LoseRatePermille >= r.AcquireRatePermille) v.Error(f, $"acquisition.{key}.loseRatePermille", "A taxa de perda precisa ficar abaixo da de aquisição (histerese).");
+            if (r.LoseInitialRatePermille > r.LoseRatePermille || r.LoseInitialMinOpportunities < r.LoseMinOpportunities)
+                v.Error(f, $"acquisition.{key}", "Perder uma trait inicial exige evidência contrária mais forte que perder uma adquirida.");
+            if (r.LoseMinOpportunities < 1000) v.Error(f, $"acquisition.{key}.loseMinOpportunities", "Use 1000 ou mais: sem oportunidades reais, nada se perde.");
+        }
+        if (aq.InitialConfirmPlayDays < aq.ConfirmPlayDays) v.Error(f, "acquisition.initialConfirmPlayDays", "A confirmação para perder uma trait inicial não pode ser menor que a geral.");
 
         var ids = CheckIds(set.Quirks.Traits, f, "traits", v);
         var personalities = new HashSet<string>(set.Population.Personality.Types.Select(t => t.Id), StringComparer.Ordinal) { "equilibrado" };

@@ -609,31 +609,16 @@ public partial class PlayerModal : ModalFrame
         var c = _ctx.Content;
         string pid = CurrentPersonality(_ctx, _person.Id);
         var (picon, plabel, ptext) = MainPersonality();
-        var col = Column(12);
+        var col = Column(10);
 
-        // Personalidade principal: emblema redondo dourado, nome, regra e o atributo que a define.
+        // Personalidade e tracos no mesmo padrao: emblema de 30 px e o nome; a descricao fica no tooltip.
         col.AddChild(Section("Personalidade"));
-        var head = Row(12);
-        head.AddChild(new TraitBadge(picon, UiTokens.Accent, 40, round: true));
-        var info = Column(3);
-        info.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-        info.AddChild(ThemeFactory.Text(plabel, 15, UiTokens.TextPrimary, UiFonts.SemiBold));
-        info.AddChild(Wrap(ptext, UiTokens.FontSmall, UiTokens.TextSecondary));
-        head.AddChild(info);
-        var headTip = new TipPanel { TooltipText = PersonalityTip(pid, plabel, ptext), MouseFilter = MouseFilterEnum.Stop };
-        headTip.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
-        headTip.AddChild(head);
-        col.AddChild(headTip);
-        col.AddChild(Wrap(PersonalityBasis(pid), UiTokens.FontCaption, UiTokens.TextLabel));
-        var history = View?.PersonalityHistory ?? Array.Empty<PersonalityChange>();
-        if (history.Count > 0)
-        {
-            var last = history[^1];
-            col.AddChild(Wrap($"Mudou em {PtBr.ShortDate(_ctx.Calendar.ToDateTime(_ctx.Calendar.StartOfDay(last.Day)))}: era {PersonalityOf(c, last.From).Label}.", UiTokens.FontCaption, UiTokens.TextSecondary));
-        }
+        col.AddChild(TraitLine(new TraitBadge(picon, UiTokens.Accent, 30, round: true), plabel, null, PersonalityTip(pid, plabel, ptext)));
 
-        // Tracos: positivos primeiro, na ordem do sorteio.
-        var quirks = _person.Quirks.Select(q => c.Quirks.TryGetValue(q.Id, out var d) ? d : null).Where(d => d != null).Select(d => d!)
+        // Tracos atuais (P4d: podem mudar): positivos primeiro, na ordem em que entraram.
+        var states = View?.Quirks ?? _person.Quirks;
+        var quirkHistory = View?.QuirkHistory ?? Array.Empty<QuirkChange>();
+        var quirks = states.Select(q => c.Quirks.TryGetValue(q.Id, out var d) ? d : null).Where(d => d != null).Select(d => d!)
             .OrderBy(d => TraitInfo.IsPositive(d) ? 0 : 1).ToList();
         int pos = quirks.Count(TraitInfo.IsPositive), neg = quirks.Count - pos;
         string count = quirks.Count == 0 ? "nenhum" : $"{pos} + · {neg} −";
@@ -642,28 +627,39 @@ public partial class PlayerModal : ModalFrame
         {
             var w = c.QuirkCatalog.Generation.CountWeights;
             int none = w.Count > 0 ? (int)Math.Round(w[0] * 100.0 / Math.Max(1, w.Sum())) : 0;
-            col.AddChild(Wrap($"Nenhum traço marcante. Cerca de {none}% dos jogadores nascem assim; o comportamento vem da personalidade, das preferências e dos atributos.", UiTokens.FontSmall, UiTokens.TextSecondary));
+            col.AddChild(Wrap($"Nenhum traço marcante (cerca de {none}% dos jogadores).", UiTokens.FontSmall, UiTokens.TextSecondary));
         }
-        foreach (var q in quirks) col.AddChild(QuirkRow(q));
+        string Date(long day) => PtBr.ShortDate(_ctx.Calendar.ToDateTime(_ctx.Calendar.StartOfDay(day)));
+        foreach (var q in quirks)
+        {
+            var state = states.First(x => x.Id == q.Id);
+            var color = TraitInfo.PolarityColor(q);
+            col.AddChild(TraitLine(new TraitBadge(TraitInfo.QuirkIcon(q), color, 30, pending: !TraitInfo.EffectActive(c, q)),
+                q.Name, (TraitInfo.IsPositive(q) ? "+" : "−", color), TraitInfo.Tooltip(c, q, state, Date)));
+        }
+        // Traits perdidas (P4d): ficam no historico.
+        var lost = quirkHistory.Where(h => h.Change == "lost" && !states.Any(x => x.Id == h.Id)).Select(h => h.Id).Distinct().ToList();
+        if (lost.Count > 0)
+            col.AddChild(Wrap("Perdeu: " + string.Join(", ", lost.Select(id => c.Quirks.TryGetValue(id, out var d) ? d.Name : id)) + ".", UiTokens.FontCaption, UiTokens.TextSecondary));
         return col;
     }
 
-    private Control QuirkRow(QuirkDefinition q)
+    /// <summary>Linha padrao de personalidade ou traco: emblema, nome e (traco) o sinal; tooltip com a descricao.</summary>
+    private static Control TraitLine(Control badge, string name, (string Text, Color Color)? sign, string tooltip)
     {
-        var color = TraitInfo.PolarityColor(q);
         var row = Row(10);
-        row.AddChild(new TraitBadge(TraitInfo.QuirkIcon(q), color, 30, pending: !TraitInfo.EffectActive(_ctx.Content, q)));
-        var text = Column(2);
-        text.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-        var name = Row(6);
-        name.AddChild(ThemeFactory.Text(q.Name, UiTokens.FontBody, UiTokens.TextPrimary, UiFonts.Medium));
-        name.AddChild(ThemeFactory.Text(TraitInfo.IsPositive(q) ? "+" : "−", UiTokens.FontBody, color, UiFonts.SemiBold));
-        text.AddChild(name);
-        text.AddChild(Wrap(q.Effect, UiTokens.FontCaption, UiTokens.TextSecondary));
-        bool active = TraitInfo.EffectActive(_ctx.Content, q);
-        text.AddChild(ThemeFactory.Text(TraitInfo.Status(_ctx.Content, q), UiTokens.FontCaption, active ? color : UiTokens.TextDisabled));
-        row.AddChild(text);
-        var tip = new TipPanel { TooltipText = TraitInfo.Tooltip(_ctx.Content, q), MouseFilter = MouseFilterEnum.Stop };
+        badge.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        row.AddChild(badge);
+        var label = ThemeFactory.Text(name, UiTokens.FontBody, UiTokens.TextPrimary, UiFonts.Medium);
+        label.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        row.AddChild(label);
+        if (sign is { } sg)
+        {
+            var mark = ThemeFactory.Text(sg.Text, UiTokens.FontBody, sg.Color, UiFonts.SemiBold);
+            mark.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+            row.AddChild(mark);
+        }
+        var tip = new TipPanel { TooltipText = tooltip, MouseFilter = MouseFilterEnum.Stop };
         tip.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
         tip.AddChild(row);
         return tip;
@@ -688,13 +684,13 @@ public partial class PlayerModal : ModalFrame
 
     private string PersonalityTip(string id, string label, string text)
     {
-        var s = _ctx.Content.Personality;
-        var lines = new List<string> { $"{label}|Personalidade|#{UiTokens.Accent.ToHtml(false)}", "^Identidade central: uma por jogador", text };
-        lines.Add("#Como é definida");
-        lines.Add($"Vence o atributo de personalidade mais extremo, se estiver nos {(1000 - s.ThresholdPermille) / 20}% de um dos lados; senão, Equilibrado. A régua é a distribuição do conteúdo, não o servidor.");
-        lines.Add("#Mudança");
-        lines.Add($"Rara: só se os atributos de personalidade mudarem com margem e a mudança se mantiver por {s.ConfirmDays} dias seguidos.");
-        lines.Add("~As regras da personalidade aparecem no detalhe da decisão como o fator Personalidade, separadas dos efeitos graduais dos atributos.");
+        var lines = new List<string> { $"{label}|Personalidade|#{UiTokens.Accent.ToHtml(false)}", "^" + PersonalityBasis(id), text };
+        var history = View?.PersonalityHistory ?? Array.Empty<PersonalityChange>();
+        if (history.Count > 0)
+        {
+            var last = history[^1];
+            lines.Add($"~Mudou em {PtBr.ShortDate(_ctx.Calendar.ToDateTime(_ctx.Calendar.StartOfDay(last.Day)))}: era {PersonalityOf(_ctx.Content, last.From).Label}.");
+        }
         return string.Join("\n", lines);
     }
 

@@ -87,7 +87,8 @@ Uma etapa por vez, fechada por inteiro (testes, validação, documentação, exp
          - parâmetros de cronotipo e horários são candidatos; nenhum outro peso muda para compensar os resultados;
      - ~~P4b: estrutura das traits (geração, compatibilidades, ficha; feita antes da R6 a pedido do criador, com os efeitos desligados)~~ (D-057, `traits.md`). **Interface:** o card de Traits entra no lugar de "Inventário" na visão geral da ficha; o inventário vai depois para uma aba própria, "Personagem", com as informações do personagem;
      - ~~P4c: efeitos das traits ativas (inclui Maratonista e Procrastinador; no Procrastinador, se o atraso inviabilizar a sessão mínima, não começa naquela oportunidade e reconsidera numa próxima janela válida)~~ (D-059, `traits.md` seção 6);
-     - P4d: aquisição e perda;
+     - ~~P4d: aquisição e perda (Persistente e Rancoroso)~~ (D-060, `traits.md` seção 7);
+       - depois: Maratonista por maratonas repetidas (outra entrega); Traumatizado, Matador de novatos, Protetor de novatos e Líder nato com combate, PvP e grupos;
    - a reputação do personagem entra com a Etapa 3 e as finanças com o M7.
 2. **Etapa 1 — O personagem** (decisões no D-040):
    - estatísticas diretas por classe + nível + equipamento: vida, recurso de classe, ataque e defesa físicos e mágicos, velocidade de movimento (fórmulas no conteúdo; nomes sem confundir com os atributos do jogador);
