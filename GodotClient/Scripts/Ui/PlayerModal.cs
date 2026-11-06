@@ -1630,14 +1630,30 @@ public partial class PlayerModal : ModalFrame
             case "objective_completed":
             {
                 var oc = (e.Detail ?? "||").Split('|');
-                return ($"Concluiu o objetivo: {ObjectiveInfo.Title(_ctx.Content, oc[0], oc.Length > 1 ? oc[1] : "")}", UiTokens.Success);
+                return ($"Alcançou o objetivo: {ObjectiveInfo.Title(_ctx.Content, oc[0], oc.Length > 1 ? oc[1] : "")}", UiTokens.Success);
             }
             case "objective_set":
+            case "objective_paused":
+            case "objective_lost":
+            case "objective_abandoned":
+            case "objective_priority":
             {
                 var op = (e.Detail ?? "||").Split('|');
                 string tier = op.Length > 2 && op[2] == Simulation.Core.Content.ObjectiveTiers.General ? "geral" : "secundário";
-                return ($"Objetivo inicial ({tier}): {ObjectiveInfo.Title(_ctx.Content, op[0], op.Length > 1 ? op[1] : "")}", UiTokens.Accent);
+                string name = ObjectiveInfo.Title(_ctx.Content, op[0], op.Length > 1 ? op[1] : "");
+                bool initial = e.Causes.Count == 0 || e.Causes.All(c => !c.Factor.Contains(':') && c.Factor != Simulation.Core.Population.ObjectiveTriggers.MaxLevel);
+                return e.Type switch
+                {
+                    "objective_set" when initial => ($"Objetivo inicial ({tier}): {name}", UiTokens.Accent),
+                    "objective_set" => ($"Novo objetivo ({tier}): {name}", UiTokens.Accent),
+                    "objective_paused" => ($"Deixou de lado o objetivo: {name}", UiTokens.TextSecondary),
+                    "objective_lost" => ($"Perdeu a condição do objetivo: {name}", UiTokens.Warning),
+                    "objective_abandoned" => ($"Abandonou o objetivo: {name}", UiTokens.Danger),
+                    _ => ($"Mudou a prioridade: {name} ({tier})", UiTokens.AccentSoft),
+                };
             }
+            case "objective_gap":
+                return ("Buscou um objetivo novo e nenhum era relevante", UiTokens.Warning);
             case "goal_completed": return ($"Concluiu a meta: {GoalDetail(e.Detail)}", UiTokens.Success);
             case "goal_abandoned": return ($"Desistiu da meta: {GoalDetail(e.Detail)}{(e.Causes.Count > 0 && e.Causes[0].Factor == "impatience" ? " (impaciência)" : " (sem progresso)")}", UiTokens.TextSecondary);
             case "session_plan":

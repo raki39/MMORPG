@@ -93,8 +93,9 @@ Uma etapa por vez, fechada por inteiro (testes, validação, documentação, exp
 1b. **Objetivos pessoais** (pedido do criador antes da E1b; `objetivos.md`):
    - ~~O1: catálogo, sorteio inicial, viabilidade e aba Objetivos, sem influência~~ (D-062);
    - ~~O2: ligação com as metas (vínculo e motivo, adoção favorecida, preparação por requisito concreto e conhecido), conclusão com a maior recompensa, sem duplicar~~ (D-063);
-   - O3: evolução (surgimento por acontecimentos, prioridade, conclusão, abandono e substituição com motivo).
-2. **Etapa 1 — O personagem** (D-040; escopo reduzido no D-061, `personagem.md`; pausada antes da E1b até fechar os objetivos):
+   - ~~O3: evolução (conquista × condição, renovação por necessidade e oportunidade, falta registrada, prioridade, substituição e abandono com motivo)~~ (D-064);
+   - depois: condições alcançáveis e perdidas quando PvP, economia, guildas e fabricação existirem; atualizações de conteúdo (M7) como acontecimentos de renovação.
+2. **Etapa 1 — O personagem** (D-040; escopo reduzido no D-061, `personagem.md`; retoma na E1b com os objetivos fechados):
    - ~~E1a: modelo, estatísticas (com crítico), recurso por tipo, velocidade do personagem e índice de poder candidato~~ (D-061);
    - E1b: página Classes com criar, editar e duplicar; conteúdo personalizado persistido, presets preservados, ids estáveis; edição aplicada direto aos personagens existentes, com registro;
    - E1c: aba "Personagem" (classe, nível, XP, vida, recurso, estatísticas e decomposição do cálculo); Inventário e Banco não aparecem como prontos;

@@ -1,6 +1,6 @@
 # Objetivos pessoais
 
-Decisões no D-062 (O1) e no D-063 (O2). Entregas: **O1** (catálogo, dados, sorteio inicial, viabilidade e aba Objetivos, sem influência), **O2** (ligação com metas e satisfação) e **O3** (evolução).
+Decisões no D-062 (O1), no D-063 (O2) e no D-064 (O3). Entregas: **O1** (catálogo, dados, sorteio inicial, viabilidade e aba Objetivos, sem influência), **O2** (ligação com metas e satisfação) e **O3** (evolução).
 
 ## 1. Objetivo × meta
 
@@ -22,7 +22,7 @@ Decisões no D-062 (O1) e no D-063 (O2). Entregas: **O1** (catálogo, dados, sor
 |---|---|---|---|---|---|
 | Alcançar o nível máximo | nível = máximo | — (pode avançar) | — | 650 | longo |
 | Concluir a campanha principal | todas as missões principais | — (pode avançar) | nível mínimo da próxima missão principal | 450 | médio |
-| Conhecer todo o mundo | todas as zonas elegíveis do mundo (alcançáveis a partir da cidade inicial) | — (pode avançar) | — | 500 | longo |
+| Conhecer todo o mundo | todas as zonas elegíveis do mundo (alcançáveis a partir da cidade inicial) | — (pode avançar) | — | 500 | médio (no preset atual, de 15 zonas) |
 | Ter um personagem entre os mais fortes | classificação real de força, não o índice de poder | combate, classificações | nível máximo | 1000 | longo |
 | Completar os grandes desafios PvE | vencer os chefes do mundo | grupos, combate | nível do próximo chefe | 900 | longo |
 | Ser competitivo no PvP | posição relevante no PvP real | PvP real, classificações | nível da primeira atividade PvP | 900 | longo |
@@ -222,8 +222,108 @@ Rodadas pareadas: as mesmas pessoas e os mesmos objetivos, com a influência **d
   - **"Conhecer todo o mundo" é rápido neste mundo:** com 15 zonas, a maioria conhece quase todas em três semanas. O horizonte "longo" do catálogo não vale para o preset atual.
   - **Nível máximo em 55 dias** reflete a curva provisória de XP, a recalibrar na Etapa 2.
 
-## 8. Decisões já tomadas para a O3
+## 8. Evolução (O3)
 
-- **Deixar um objetivo de lado** por uma nova prioridade (substituição voluntária) não gera frustração automática. Isso é diferente de abandonar por experiência negativa.
-- **Estabilidade:** os objetivos mudam só por acontecimentos simulados, com motivo registrado.
-- **Conquistas e reveses** da meta e do objetivo podem ter significados diferentes, mas não duplicam a mesma recompensa emocional.
+Configuração em `objectives.json`: seção `evolution` (valores candidatos) e, em cada objetivo, `nature`, `opens` e `experienceTypes`.
+
+### 8.1 Conquista definitiva × condição a manter
+
+| Natureza | Objetivos | Ao cumprir o critério |
+|---|---|---|
+| **Conquista definitiva** | nível máximo, campanha principal, conhecer todo o mundo, grandes desafios PvE, equipamento raro | fica **concluída** para sempre e nunca volta como candidata |
+| **Condição a manter** | mais fortes, PvP competitivo, grande fortuna, criar e liderar guilda, participar de guilda, melhor fabricante, maiores comerciantes | fica **mantida**. Se o critério deixa de valer, passa a **perdida**: a conquista passada continua registrada (data, vezes alcançada e perdida) e a pessoa pode querer recuperá-la, com reforço de recuperação |
+
+- **Lugar na ficha:** concluídos e encerrados saem das vagas de ativos, liberam espaço e ficam no card "Conquistas e encerrados", com a data, o motivo e o resultado.
+- **Hoje:** nenhuma condição pode ser cumprida, porque todas dependem de sistemas futuros. A perda é conferida por teste, com um conteúdo de teste.
+- **Nível máximo × "mais forte":** o nível máximo é preparação para "Ter um personagem entre os mais fortes", mas não conclui essa ambição nem comprova força.
+
+### 8.2 Renovação
+
+- **Quando:** depois de um acontecimento, avaliado no dia jogado seguinte e respeitando o intervalo entre mudanças (7 dias jogados). Os acontecimentos são de dois tipos.
+  - **Necessidade:** concluiu, abandonou ou perdeu um objetivo, ou chegou ao nível máximo.
+    - A pessoa procura um objetivo novo entre todos os relevantes.
+    - Se nenhum for relevante, **registra a falta**: histórico "sem objetivo relevante", evento `objective_gap` e contador.
+    - A vaga não é preenchida. Na ficha, quem fica sem ambição ativa mostra "Sem ambição ativa: nenhum objetivo relevante no conteúdo".
+  - **Oportunidade:** conheceu uma zona com chefe ou PvP.
+    - Só pode vir o objetivo que esse conteúdo torna concreto: vencer chefes, se houver chefe, e PvP, se houver PvP.
+    - Não achar nada não é falta de conteúdo.
+- **Candidatas:**
+  - **ficam de fora:**
+    - os ativos e os mantidos;
+    - as conquistas concluídas;
+    - os abandonados há menos de 60 dias jogados;
+    - os já cumpridos;
+    - os sem parâmetro possível;
+    - os sem interesse real;
+  - **interesse real:** é o ajuste da O1 (ficha, ambição pela dedicação) vezes as experiências. O mínimo é 1,0; para objetivo de sistema futuro, 1,4.
+- **Peso de cada candidata:**
+  - **viabilidade:**
+    - pode avançar: 1,0;
+    - preparação conhecida: 0,8;
+    - sistema futuro sem preparação: 0,3;
+  - **relacionado** (`opens`): +80%, um só reforço.
+    - Vale de um objetivo alcançado (concluído ou mantido).
+    - De um objetivo ativo, só se ele for de sistema futuro e o novo tiver preparação concreta ou puder avançar.
+    - Exemplo: o nível máximo, depois de alcançado, abre chefes, PvP, "mais forte", fortuna, fabricação, guilda e equipamento raro. Enquanto ativo, não abre nada.
+  - **recuperar uma condição perdida:** +30%.
+- **Experiências reais:**
+  - as memórias marcantes boas aproximam e as ruins afastam, nos tipos de atividade do objetivo (por exemplo, caça para os chefes, exploração para o mundo, socializar para as guildas);
+  - patrulha, emboscada e chefe não contam, porque ainda não têm combate real.
+- **Vaga:**
+  - **sem objetivo geral ativo:** o novo entra como geral;
+  - **mais importante que o geral menos importante, com vaga de geral:** geral;
+  - **senão:** secundário;
+  - **vagas cheias:** o novo só entra se for mais importante, por uma margem, que o secundário menos importante. Esse secundário é **deixado de lado** (substituição voluntária, sem frustração) e pode voltar.
+- **Sem sequência fixa:** o sorteio é ponderado pela ficha de cada um; nenhum objetivo se repete com números maiores, e gerais e secundários continuam independentes.
+- **Atualizações de conteúdo** (M7) entram como novos acontecimentos quando existirem.
+
+### 8.3 Prioridade e abandono
+
+- **Promoção:** sem objetivo geral ativo, o secundário mais importante passa a geral, como consequência e sem intervalo.
+- **Estagnação:** um objetivo que podia avançar e ficou 30 dias jogados sem progresso perde 150 de importância. Se ficar abaixo de um secundário, os dois trocam de lugar.
+  - **Sistemas futuros nunca perdem prioridade por não avançar.**
+- **Abandono por experiência negativa:**
+  - acontece quando metas ligadas por **avanço real** são abandonadas em seguida: 2 + o comprometimento × 4 vezes (de 2 a 6);
+  - metas de preparação não contam;
+  - tem revés, frustração e memória, mas só a diferença para o revés da meta que o provocou (sem somar);
+  - o objetivo abandonado só volta como candidato depois de 60 dias jogados.
+- **Influência desligada:** a evolução continua registrando, sem efeito no humor nem no plano. **Sorteio desligado:** não há objetivos nem evolução.
+
+### 8.4 Medição (O3)
+
+Rodadas pareadas com as mesmas pessoas e a evolução **desligada** × **ligada** (5 seeds × 1.000 × 90 dias). Detalhes em `baselines/objetivos/O3/analise.md`.
+
+- **A desligada é idêntica à O2 ligada:** mesmo `validation.csv` e as mesmas colunas de `people.csv`.
+- **Mudanças em 90 dias** (por 100 pessoas):
+
+  | Mudança | Por 100 pessoas |
+  |---|---|
+  | objetivo novo | 78 |
+  | concluído | 44 |
+  | falta de objetivo relevante | 23 |
+  | promovido a geral | 10,5 |
+  | abandonado | 8,5 |
+  | perdeu importância | 5,7 |
+  | deixado de lado | 3,8 |
+
+- **Motivos dos objetivos novos:**
+  - oportunidade: 1.537 vezes, só chefes e PvP;
+  - objetivo concluído: 1.508;
+  - nível máximo: 636;
+  - abandono: 228.
+- **Mais adotados:** grandes desafios PvE, PvP, campanha principal, "mais fortes" e fabricação.
+- **Faltas de objetivo relevante:**
+  - 18,3% das pessoas tiveram ao menos uma;
+  - **38% de quem chegou ao nível máximo**.
+  - A falta de conteúdo de fim de jogo aparece, como pedido, sem progresso fictício.
+- **No nível máximo no fim** (1.781 pessoas):
+  - só 4,4% têm algum objetivo ativo que pode avançar ou tem preparação conhecida;
+  - os ativos são quase todos ambições de sistemas futuros: chefes 990, PvP 782, "mais fortes" 754, fabricação 641 e fortuna 548;
+  - sem nenhum objetivo ativo: 0,8% (5,9% com a evolução desligada).
+- **Abandonos:** quase todos da campanha principal (409 de 423), porque as metas de missão já eram abandonadas com frequência antes da O3.
+- **Comportamento:**
+  - objetivos ativos no fim: de 2,27 para 2,88 por pessoa;
+  - metas ligadas: de 28,1% para 30,6%;
+  - nível e horas: iguais;
+  - satisfação: −1,5. A queda aparece em 4 das 5 seeds e vem sobretudo de quem abandonou um objetivo (−4,9, o custo do abandono); entre os demais, −1,2;
+  - validação: regras do cenário 8 de 9 e provisórias 8 de 12, iguais.

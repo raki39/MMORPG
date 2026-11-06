@@ -11,7 +11,7 @@ namespace Simulation.Core.World;
 /// </summary>
 public static class StateHasher
 {
-    public const int FormatVersion = 30;
+    public const int FormatVersion = 31;
 
     public static string Compute(WorldState w) => Compute(w, includeContentId: true);
 
@@ -210,11 +210,13 @@ public static class StateHasher
         {
             h.Str(o.Id); h.Str(o.Param); h.Str(o.Tier); h.Int(o.Importance); h.Int(o.Commitment); h.Str(o.State); h.Str(o.Origin); h.Long(o.Day);
             h.Long(o.CompletedDay); h.Int(o.LinkedGoalsSet); h.Int(o.LinkedGoalsCompleted); h.Int(o.LinkedGoalsAbandoned);
+            h.Long(o.EndedDay); h.Int(o.EndedPlayDay); h.Str(o.EndReason); h.Int(o.LastProgress); h.Int(o.LastProgressPlayDay); h.Int(o.FailureStreak); h.Int(o.TimesHeld); h.Int(o.TimesLost);
             h.Int(o.Motives.Count);
             foreach (var (k, v) in o.Motives) { h.Str(k); h.Int(v); }
         }
         h.Int(p.ObjectiveHistory.Count);
         foreach (var oc in p.ObjectiveHistory) { h.Long(oc.Day); h.Str(oc.Id); h.Str(oc.Param); h.Str(oc.Change); h.Str(oc.Tier); h.Str(oc.Reason); }
+        h.Int(p.ObjectivePlayDays); h.Int(p.LastObjectiveChangePlayDay); h.Str(p.ObjectiveTrigger); h.Int(p.ObjectiveGaps); h.Long(p.LastObjectiveGapDay);
         h.Int(t.LeisureBudgetCentsPerMonth); h.Int(t.WillingnessToPay); h.Int(t.PaidAdvantageSensitivity);
         h.Int(t.PreferredStartHour); h.Int(t.SessionMinutes); h.Int(t.GameImportance); h.Int(t.Habit); h.Int(t.ExtendTendency); h.Int(t.SelfControl); h.Int(t.Talent); h.Int(t.Variety); h.Int(t.Chronotype);
         h.Int(p.FreeEveShiftMinutes); h.Long(p.SleepUntilTick); h.Long(p.SleepShiftedDay);

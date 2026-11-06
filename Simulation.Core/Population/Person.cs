@@ -337,6 +337,15 @@ public sealed class Person
     /// <summary>Historico dos objetivos: definicao, conclusao, mudanca de prioridade, abandono (motivo registrado).</summary>
     internal List<ObjectiveChange> ObjectiveHistoryList { get; } = new();
     public IReadOnlyList<ObjectiveChange> ObjectiveHistory => ObjectiveHistoryList;
+    /// <summary>Dias jogados (relogio da evolucao dos objetivos, O3).</summary>
+    public int ObjectivePlayDays { get; internal set; }
+    /// <summary>Dia jogado da ultima mudanca escolhida nos objetivos (-1 = nenhuma): intervalo entre mudancas.</summary>
+    public int LastObjectiveChangePlayDay { get; internal set; } = -1;
+    /// <summary>Acontecimento que pede revisao dos objetivos no proximo dia jogado ("" = nenhum).</summary>
+    public string ObjectiveTrigger { get; internal set; } = "";
+    /// <summary>Vezes em que a pessoa buscou um objetivo novo e nao achou nenhum relevante (falta de conteudo), e o ultimo dia.</summary>
+    public int ObjectiveGaps { get; internal set; }
+    public long LastObjectiveGapDay { get; internal set; } = -1;
     /// <summary>Renda do trabalho e apoio familiar (centavos/mes; sem efeito ate o M7).</summary>
     public long IncomeCentsPerMonth { get; internal set; }
     public long SupportCentsPerMonth { get; internal set; }
@@ -679,8 +688,20 @@ public sealed class PersonObjective
     public long Day { get; }
     /// <summary>O que mais pesou na escolha (afinidade ou ambicao) e quanto (termo - 1000).</summary>
     public IReadOnlyList<(string Key, int Value)> Motives { get; }
-    /// <summary>Dia em que foi concluido (-1 = nao concluido).</summary>
+    /// <summary>Dia em que foi concluido, ou em que a condicao foi alcancada pela primeira vez (-1 = nunca).</summary>
     public long CompletedDay { get; internal set; } = -1;
+    /// <summary>Dia em que saiu dos ativos por perda, substituicao ou abandono, e o motivo (O3).</summary>
+    public long EndedDay { get; internal set; } = -1;
+    public int EndedPlayDay { get; internal set; } = -1;
+    public string EndReason { get; internal set; } = "";
+    /// <summary>Ultimo progresso medido e o dia jogado em que mudou (estagnacao, O3).</summary>
+    public int LastProgress { get; internal set; } = -1;
+    public int LastProgressPlayDay { get; internal set; } = -1;
+    /// <summary>Metas ligadas por avanco real abandonadas em seguida (experiencia negativa, O3).</summary>
+    public int FailureStreak { get; internal set; }
+    /// <summary>Vezes em que a condicao foi alcancada e perdida (O3).</summary>
+    public int TimesHeld { get; internal set; }
+    public int TimesLost { get; internal set; }
     /// <summary>Metas ligadas a ele (O2): adotadas, concluidas e abandonadas.</summary>
     public int LinkedGoalsSet { get; internal set; }
     public int LinkedGoalsCompleted { get; internal set; }
@@ -690,9 +711,15 @@ public sealed class PersonObjective
 public static class ObjectiveStates
 {
     public const string Active = "active";
-    /// <summary>Deixado de lado (prioridade menor, substituicao voluntaria): O3.</summary>
+    /// <summary>Deixado de lado (prioridade menor, substituicao voluntaria): sem frustracao; pode voltar.</summary>
     public const string Paused = "paused";
+    /// <summary>Conquista definitiva concluida: fica concluida.</summary>
     public const string Completed = "completed";
+    /// <summary>Condicao alcancada e mantida agora (sai dos ativos; e acompanhada).</summary>
+    public const string Held = "held";
+    /// <summary>Condicao perdida depois de alcancada: a conquista passada continua registrada; pode querer recuperar.</summary>
+    public const string Lost = "lost";
+    /// <summary>Abandonado por experiencia negativa.</summary>
     public const string Abandoned = "abandoned";
 }
 

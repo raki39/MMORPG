@@ -17,7 +17,7 @@ namespace GodotClient;
 /// Argumentos (depois de "--"):
 ///   --world=PASTA  --seed=N  --population=N  --speed=N  --layer=normal|lotacao|perigo|nivel
 ///   --hour=H | --sim-minutes=N    avanca a simulacao antes de comecar (capturas)
-///   --open-person=ID | --open-zone=ID | --open-cluster   abre uma ficha ao iniciar
+///   --open-person=ID | --open-zone=ID | --open-cluster   abre uma ficha ao iniciar (auto, goal, objectives, longplan...)
 ///   --tab=N               aba inicial da ficha aberta
 ///   --screenshot=ARQ --frames=N    captura e encerra (--zoom=F, --focus=ZONA, --mouse=XxY)
 ///   --measure-seconds=S   imprime FPS medio e encerra
@@ -226,6 +226,9 @@ public partial class Main : Node
         {
             int id = p == "auto"
                 ? Enumerable.Range(1, _host.Snapshot.ByPerson.Length - 1).FirstOrDefault(i => _host.Snapshot.ByPerson[i] is { Status: Simulation.Core.Population.CharacterStatus.Doing } v && v.LastDecision != null)
+                : p == "objectives"   // capturas: quem mais mudou de objetivos (O3: concluidos, renovados, encerrados)
+                    ? Enumerable.Range(1, _host.Snapshot.ByPerson.Length - 1).Where(i => _host.Snapshot.ByPerson[i] != null)
+                        .OrderByDescending(i => _host.Snapshot.ByPerson[i]!.ObjectiveChanges).ThenBy(i => i).FirstOrDefault()
                 : p == "goal"   // capturas: primeiro jogador com objetivo pessoal ativo
                     ? Enumerable.Range(1, _host.Snapshot.ByPerson.Length - 1).FirstOrDefault(i => _host.Snapshot.ByPerson[i] is { } v && v.Goals.Count > 0)
                     : p == "longplan"   // capturas: plano da sessao com o nome mais longo (cards nao podem empilhar)

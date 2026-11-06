@@ -276,15 +276,16 @@ public class ObjectiveTests
         Assert.NotEmpty(registered);
         foreach (var p in registered)
         {
-            Assert.Equal(p.Objectives.Count, p.ObjectiveHistory.Count);
-            Assert.All(p.ObjectiveHistory, h => Assert.Equal(("set", ObjectiveSystem.InitialOrigin), (h.Change, h.Reason)));
+            // Os iniciais tem o registro "set/initial" (a O3 acrescenta mudancas depois, com outros motivos).
+            var initial = p.Objectives.Where(o => o.Origin == ObjectiveSystem.InitialOrigin).ToList();
+            Assert.Equal(initial.Count, p.ObjectiveHistory.Count(h => h.Change == "set" && h.Reason == ObjectiveSystem.InitialOrigin));
             var ch = e.World.GetCharacter(p.CharacterId);
             // O equipamento raro e da classe do personagem.
             foreach (var o in p.Objectives.Where(o => o.Id == "equipamento_raro"))
                 Assert.Contains(o.Param, ObjectiveSystem.ParamOptions(C, C.Objectives[o.Id], ch.ClassId));
         }
-        var set = events.Where(x => x.Type == "objective_set").ToList();
-        Assert.Equal(registered.Sum(p => p.Objectives.Count), set.Count);
+        var set = events.Where(x => x.Type == "objective_set" && x.Causes.All(c => c.Factor != ObjectiveTriggers.MaxLevel)).ToList();
+        Assert.True(set.Count >= registered.Sum(p => p.Objectives.Count(o => o.Origin == ObjectiveSystem.InitialOrigin)));
         Assert.All(set, x => Assert.NotEmpty(x.Causes));
     }
 

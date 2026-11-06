@@ -8,7 +8,10 @@
 | `O2/desligada/`, `O2/ligada/` | O2: as mesmas pessoas e objetivos com a influência desligada × ligada. O `people.csv` tem `objective_group`, `objectives_completed`, `objective_links`, `goals_linked_*`, `goals_prep_set` e `goals_by_type` |
 | `O2/analise.md` | comparação por grupo (acionáveis, só preparação, indisponíveis), objetivos concluídos, metas ligadas por objetivo e diferenças por seed |
 | `analisar_o2.py`, `analisar_o2_seeds.py` | scripts que geram `O2/analise.md` |
+| `O3/desligada/`, `O3/ligada/` | O3: as mesmas pessoas com a evolução desligada × ligada. O `people.csv` tem `objective_states`, `objective_history` (mudança:objetivo@dia:motivo), `objective_gaps`, `objectives_active_end` e `objectives_actionable_end` |
+| `O3/analise.md` e `analisar_o3.py` | mudanças, motivos, objetivos adotados, estado no fim por grupo e no nível máximo, abandonos e faltas |
 
 **Conferências:**
 - **O1:** `validation.csv` e `people.csv` são idênticos aos da E1a (`reports/e1a/val/`), fora a coluna nova. Os objetivos não mudam o comportamento.
 - **O2:** a rodada desligada é idêntica à O1 (`validation.csv` e as colunas antigas de `people.csv`). A ligada mostra o efeito da influência.
+- **O3:** a evolução desligada é idêntica à O2 ligada. A ligada mostra a renovação, as faltas e o fim de jogo.

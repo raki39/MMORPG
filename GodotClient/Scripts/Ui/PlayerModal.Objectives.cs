@@ -6,9 +6,10 @@ using GodotClient.Sim;
 namespace GodotClient.Ui;
 
 /// <summary>
-/// Aba Objetivos (O1): ambicoes da pessoa (gerais e secundarios pela importancia para ela), com
-/// horizonte, viabilidade, progresso quando mensuravel e a preparacao possivel separada da etapa
-/// final; metas atuais; historico. Na Visao geral, so uma linha com o objetivo principal.
+/// Aba Objetivos (O1 a O3): ambicoes ativas (gerais e secundarios pela importancia para a pessoa), com
+/// horizonte, viabilidade, progresso quando mensuravel e a preparacao separada da etapa final; metas
+/// atuais e os vinculos; conquistas e encerrados (concluidos, mantidos, perdidos, deixados de lado,
+/// abandonados), com data, motivo e resultado; historico. Na Visao geral, so uma linha.
 /// </summary>
 public partial class PlayerModal
 {
@@ -24,21 +25,97 @@ public partial class PlayerModal
             return Column(12, Card("Objetivos", Wrap("Ainda não entrou no jogo. A pessoa define suas ambições ao se registrar.", UiTokens.FontSmall, UiTokens.TextSecondary), info: ObjectivesInfo));
         var d = WatchedDetail;
         if (d == null) return Column(12, Card("Objetivos", Wrap("Carregando…", UiTokens.FontSmall, UiTokens.TextSecondary)));
-        // Ativos primeiro; concluidos ficam na lista, marcados.
-        var shown = d.Objectives.Where(o => o.State is ObjectiveStates.Active or ObjectiveStates.Completed)
-            .OrderBy(o => o.State == ObjectiveStates.Active ? 0 : 1).ToList();
-        var general = shown.Where(o => o.Tier == ObjectiveTiers.General).ToList();
-        var secondary = shown.Where(o => o.Tier == ObjectiveTiers.Secondary).ToList();
+        // So os ativos nas vagas; os encerrados (com data, motivo e resultado) ficam no card proprio.
+        var active = d.Objectives.Where(o => o.State == ObjectiveStates.Active).OrderByDescending(o => o.Importance).ToList();
+        var general = active.Where(o => o.Tier == ObjectiveTiers.General).ToList();
+        var secondary = active.Where(o => o.Tier == ObjectiveTiers.Secondary).ToList();
+        var closed = d.Objectives.Where(o => o.State != ObjectiveStates.Active).ToList();
+        string noGeneral = d.LastObjectiveGapDay >= 0 && active.Count == 0
+            ? $"Sem ambição ativa: em {DayText(d.LastObjectiveGapDay)} buscou um objetivo novo e não encontrou nenhum relevante no conteúdo atual."
+            : "Sem ambição geral ativa.";
 
         Control Count(int n) => ThemeFactory.Text(n.ToString(), UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Numbers);
         var row1 = Grid(12,
-            (Card("Objetivos gerais", ObjectiveList(general, "Sem ambição geral definida."), info: ObjectivesInfo, headerRight: Count(general.Count)), 6),
+            (Card("Objetivos gerais", ObjectiveList(general, noGeneral), info: ObjectivesInfo, headerRight: Count(general.Count)), 6),
             (Card("Objetivos secundários", ObjectiveList(secondary, "Nenhum projeto secundário: só as ambições gerais."),
                 info: "Projetos de menor prioridade\n~Podem ser do mesmo tema de um objetivo geral ou independentes. Um secundário também pode ser de longo prazo.", headerRight: Count(secondary.Count)), 6));
         var row2 = Grid(12,
-            (Card("Metas atuais", ObjectiveGoalsBody(v), info: "Metas de curto prazo e o que elas ajudam\n~Uma meta se liga a um objetivo só quando contribui de verdade: avanço real (nível para o nível máximo, missão principal para a campanha, zona nova para conhecer o mundo) ou preparação por um requisito que a pessoa conhece (o nível do chefe, do PvP, do item).\n~A meta ligada tem mais chance de ser adotada e mais comprometimento, pelo objetivo mais forte que ela atende. Metas também surgem por necessidade, oportunidade ou vontade do momento, sem ligação."), 6),
-            (Card("Histórico", ObjectiveHistoryBody(d), info: "Mudanças nos objetivos\n~Cada objetivo registra quando passou a valer e por quê. Conclusões, mudanças de prioridade e abandonos aparecem aqui com o motivo."), 6));
-        return Column(12, row1, row2);
+            (Card("Conquistas e encerrados", ClosedBody(closed), info: "Objetivos que saíram das vagas\n~Conquista definitiva (ex.: concluir a campanha) fica concluída. Condição a manter (ex.: estar entre os mais fortes, ter uma grande fortuna) pode ser alcançada e perdida depois; perder não apaga a conquista passada, e a pessoa pode querer recuperá-la.\n~Deixado de lado: trocado por uma prioridade nova, sem frustração. Abandonado: depois de experiências negativas (metas que o avançariam falharam em seguida).", headerRight: Count(closed.Count)), 6),
+            (Card("Metas atuais", ObjectiveGoalsBody(v), info: "Metas de curto prazo e o que elas ajudam\n~Uma meta se liga a um objetivo só quando contribui de verdade: avanço real (nível para o nível máximo, missão principal para a campanha, zona nova para conhecer o mundo) ou preparação por um requisito que a pessoa conhece (o nível do chefe, do PvP, do item).\n~A meta ligada tem mais chance de ser adotada e mais comprometimento, pelo objetivo mais forte que ela atende. Metas também surgem por necessidade, oportunidade ou vontade do momento, sem ligação."), 6));
+        var row3 = Grid(12,
+            (Card("Histórico", ObjectiveHistoryBody(d), info: "Mudanças nos objetivos\n~Cada mudança tem o motivo: o acontecimento que levou a um objetivo novo, a conclusão, a perda de uma condição, a troca de prioridade, a substituição ou o abandono. Quando a pessoa buscou um objetivo novo e nenhum era relevante, isso também fica registrado: falta de conteúdo do MMORPG."), 12));
+        return Column(12, row1, row2, row3);
+    }
+
+    private string DayText(long day) => PtBr.ShortDate(_ctx.Calendar.ToDateTime(_ctx.Calendar.StartOfDay(day)));
+
+    /// <summary>Encerrados: concluidos, mantidos, perdidos, deixados de lado e abandonados, com data, motivo e resultado.</summary>
+    private Control ClosedBody(List<ObjectiveView> closed)
+    {
+        var col = Column(10);
+        if (closed.Count == 0) col.AddChild(Wrap("Nenhum ainda. Concluídos e encerrados ficam aqui, com a data e o motivo.", UiTokens.FontSmall, UiTokens.TextSecondary));
+        int Order(ObjectiveView o) => o.State switch { ObjectiveStates.Held => 0, ObjectiveStates.Completed => 1, ObjectiveStates.Lost => 2, ObjectiveStates.Paused => 3, _ => 4 };
+        foreach (var o in closed.OrderBy(Order).ThenByDescending(o => Math.Max(o.CompletedDay, o.EndedDay)))
+        {
+            var (text, color) = o.State switch
+            {
+                ObjectiveStates.Completed => ($"Concluído em {DayText(o.CompletedDay)}", UiTokens.Success),
+                ObjectiveStates.Held => ($"Alcançado em {DayText(o.CompletedDay)} · mantido agora", UiTokens.Success),
+                ObjectiveStates.Lost => ($"Alcançado em {DayText(o.CompletedDay)} · perdido em {DayText(o.EndedDay)}", UiTokens.Warning),
+                ObjectiveStates.Paused => ($"Deixado de lado em {DayText(o.EndedDay)}: {ReasonPt(o.EndReason)}", UiTokens.TextSecondary),
+                _ => ($"Abandonado em {DayText(o.EndedDay)}: {ReasonPt(o.EndReason)}", UiTokens.Danger),
+            };
+            var r = Row(10);
+            r.AddChild(new TraitBadge(ObjectiveInfo.Icon(_ctx.Content, o.Id), color, 24));
+            var body = Column(2);
+            body.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+            var name = ThemeFactory.Text(ObjectiveInfo.Title(_ctx.Content, o.Id, o.Param), UiTokens.FontSmall, UiTokens.TextPrimary, UiFonts.Medium);
+            name.ClipText = true;
+            body.AddChild(name);
+            body.AddChild(ThemeFactory.Text(text, UiTokens.FontCaption, color));
+            r.AddChild(body);
+            var tip = new TipPanel
+            {
+                TooltipText = $"{ObjectiveInfo.Title(_ctx.Content, o.Id, o.Param)}|{ObjectiveInfo.TierPt(o.Tier)}\n{text}"
+                    + (o.TimesHeld > 0 ? $"\nVezes alcançado|{o.TimesHeld}" : "") + (o.TimesLost > 0 ? $"\nVezes perdido|{o.TimesLost}" : "")
+                    + (o.LinkedSet > 0 ? $"\nMetas ligadas|{o.LinkedSet} ({o.LinkedCompleted} concluídas)" : ""),
+                MouseFilter = MouseFilterEnum.Stop,
+            };
+            tip.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
+            tip.AddChild(r);
+            col.AddChild(tip);
+        }
+        return col;
+    }
+
+    /// <summary>Motivo de uma mudanca de objetivo, em portugues.</summary>
+    private string ReasonPt(string reason)
+    {
+        if (reason.Length == 0 || reason == ObjectiveSystem.InitialOrigin) return "";
+        var parts = reason.Split('|').Select(part =>
+        {
+            int colon = part.IndexOf(':');
+            string key = colon > 0 ? part[..colon] : part, arg = colon > 0 ? part[(colon + 1)..] : "";
+            string name = ObjectiveInfo.Title(_ctx.Content, arg, "");
+            return key switch
+            {
+                ObjectiveTriggers.Completed => $"depois de alcançar “{name}”",
+                ObjectiveTriggers.Abandoned => $"depois de abandonar “{name}”",
+                ObjectiveTriggers.ConditionLost => arg.Length == 0 ? "a condição deixou de valer" : $"depois de perder “{name}”",
+                ObjectiveTriggers.MaxLevel => "ao chegar ao nível máximo",
+                ObjectiveTriggers.ContentKnown => $"ao conhecer {_ctx.ZoneName(arg)}",
+                "related" => $"ligado a “{name}”",
+                "replaced" => $"trocado por “{name}”",
+                "repeated_failures" => "metas que o avançariam falharam em seguida",
+                "no_general" => "sem objetivo geral ativo",
+                "no_progress" => "sem progresso por muitos dias de jogo",
+                "level_up" => "ao subir de nível",
+                "quest_completed" => "ao concluir uma missão",
+                "zone_discovered" => "ao descobrir uma zona",
+                _ => part,
+            };
+        });
+        return string.Join(", ", parts);
     }
 
     private Control ObjectiveList(List<ObjectiveView> list, string empty)
@@ -185,11 +262,25 @@ public partial class PlayerModal
                 "set" when h.Reason == ObjectiveSystem.InitialOrigin => "Objetivo inicial",
                 "set" => "Novo objetivo",
                 "completed" => "Concluiu",
+                "held" => "Alcançou",
+                "lost" => "Perdeu",
+                "paused" => "Deixou de lado",
+                "resumed" => "Retomou",
+                "recovered" => "Quer recuperar",
+                "readopted" => "Voltou a querer",
+                "abandoned" => "Abandonou",
+                "promoted" => "Passou a geral",
+                "demoted" => "Passou a secundário",
+                "importance_down" => "Perdeu importância",
+                "gap" => "Sem objetivo relevante",
                 _ => h.Change,
             };
+            string why = ReasonPt(h.Reason);
             var r = Row(8);
-            r.AddChild(new Icon(ObjectiveInfo.Icon(_ctx.Content, h.Id), 14, h.Tier == ObjectiveTiers.General ? UiTokens.Accent : UiTokens.Info) { SizeFlagsVertical = SizeFlags.ShrinkCenter });
-            var l = ThemeFactory.Text($"{what}: {ObjectiveInfo.Title(_ctx.Content, h.Id, h.Param)} ({(h.Tier == ObjectiveTiers.General ? "geral" : "secundário")})", UiTokens.FontSmall, UiTokens.TextLabel);
+            r.AddChild(new Icon(h.Change == "gap" ? "circle-alert" : ObjectiveInfo.Icon(_ctx.Content, h.Id), 14,
+                h.Change == "gap" ? UiTokens.Warning : h.Tier == ObjectiveTiers.General ? UiTokens.Accent : UiTokens.Info) { SizeFlagsVertical = SizeFlags.ShrinkCenter });
+            string subject = h.Change == "gap" ? "buscou um objetivo novo e nenhum era relevante" : $"{ObjectiveInfo.Title(_ctx.Content, h.Id, h.Param)} ({(h.Tier == ObjectiveTiers.General ? "geral" : "secundário")})";
+            var l = ThemeFactory.Text($"{what}: {subject}{(why.Length > 0 ? " — " + why : "")}", UiTokens.FontSmall, UiTokens.TextLabel);
             l.SizeFlagsHorizontal = SizeFlags.ExpandFill;
             l.ClipText = true;
             r.AddChild(l);
@@ -204,6 +295,24 @@ public partial class PlayerModal
     {
         var main = d?.Objectives.Where(o => o.State == ObjectiveStates.Active).OrderBy(o => o.Tier == ObjectiveTiers.General ? 0 : 1)
             .ThenByDescending(o => o.Importance).FirstOrDefault();
+        if (d != null && main == null && d.LastObjectiveGapDay >= 0)
+        {
+            // Sem ambicao ativa por falta de objetivo relevante: aparece, porque e um problema do MMORPG.
+            var g = HoverRow(() => { if (_objectivesTab >= 0) SelectTab(_objectivesTab); }, "Sem ambição ativa|Falta de conteúdo\nBuscou um objetivo novo e nenhum era relevante no conteúdo atual.\n~Clique para abrir a aba Objetivos.");
+            g.CustomMinimumSize = new Vector2(0, 28);
+            var gr = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
+            gr.SetAnchorsPreset(LayoutPreset.FullRect);
+            gr.OffsetLeft = 4; gr.OffsetRight = -4;
+            gr.AddThemeConstantOverride("separation", 8);
+            gr.AddChild(new Icon("circle-alert", 16, UiTokens.Warning) { SizeFlagsVertical = SizeFlags.ShrinkCenter });
+            var gl = ThemeFactory.Text("Sem ambição ativa: nenhum objetivo relevante no conteúdo", UiTokens.FontSmall, UiTokens.Warning, UiFonts.Medium);
+            gl.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+            gl.VerticalAlignment = VerticalAlignment.Center;
+            gl.ClipText = true;
+            gr.AddChild(gl);
+            g.AddChild(gr);
+            return g;
+        }
         if (d == null || main == null) return null;
         int others = d.Objectives.Count(o => o.State == ObjectiveStates.Active) - 1;
         var c = _ctx.Content;

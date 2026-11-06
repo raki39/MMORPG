@@ -548,6 +548,22 @@ public static class ContentValidator
             ("completedPoints", inf.CompletedPoints, 0, 500), ("completedMemoryIntensity", inf.CompletedMemoryIntensity, 0, 1000),
         })
             if (value < lo || value > hi) v.Error(f, "influence." + name, $"Use de {lo} a {hi}.");
+        var ev = set.Objectives.Evolution;
+        foreach (var (name, value, lo, hi) in new (string, int, int, int)[]
+        {
+            ("maxGeneral", ev.MaxGeneral, 1, 2), ("maxSecondary", ev.MaxSecondary, 0, 5),
+            ("changeCooldownPlayDays", ev.ChangeCooldownPlayDays, 0, 365), ("abandonCooldownPlayDays", ev.AbandonCooldownPlayDays, 0, 3650),
+            ("stalePlayDays", ev.StalePlayDays, 1, 3650), ("staleImportanceDrop", ev.StaleImportanceDrop, 0, 1000),
+            ("failuresBase", ev.FailuresBase, 1, 50), ("failuresPerCommitment", ev.FailuresPerCommitment, 0, 50),
+            ("preparationFactorPermille", ev.PreparationFactorPermille, 0, 1000), ("futureFactorPermille", ev.FutureFactorPermille, 0, 1000),
+            ("minFitPermille", ev.MinFitPermille, 0, 10_000), ("futureMinFitPermille", ev.FutureMinFitPermille, 0, 10_000),
+            ("relatedBonusPermille", ev.RelatedBonusPermille, 0, 3000), ("recoverBonusPermille", ev.RecoverBonusPermille, 0, 3000),
+            ("experienceBoostPermille", ev.ExperienceBoostPermille, 0, 1000), ("experienceCap", ev.ExperienceCap, 1, 100),
+            ("substituteMarginPermille", ev.SubstituteMarginPermille, 0, 1000),
+            ("abandonedPoints", ev.AbandonedPoints, 0, 500), ("abandonedFrustration", ev.AbandonedFrustration, 0, 1000), ("abandonedMemoryIntensity", ev.AbandonedMemoryIntensity, 0, 1000),
+        })
+            if (value < lo || value > hi) v.Error(f, "evolution." + name, $"Use de {lo} a {hi}.");
+        if (ev.FutureMinFitPermille < ev.MinFitPermille) v.Error(f, "evolution.futureMinFitPermille", "Objetivo de sistema futuro exige interesse igual ou maior que os demais.");
 
         var ids = CheckIds(set.Objectives.Objectives, f, "objectives", v);
         var personalities = new HashSet<string>(set.Population.Personality.Types.Select(t => t.Id), StringComparer.Ordinal) { "equilibrado" };
@@ -565,6 +581,16 @@ public static class ContentValidator
             v.OneOf(f, p + ".horizon", o.Horizon, ObjectiveHorizons.All);
             if (o.Difficulty is < 0 or > 1000) v.Error(f, p + ".difficulty", "Use de 0 a 1000.");
             if (o.Weight < 0) v.Error(f, p + ".weight", "Peso não pode ser negativo.");
+            v.OneOf(f, p + ".nature", o.Nature, ObjectiveNatures.All);
+            foreach (var x in o.Opens)
+                if (!set.Objectives.Objectives.Any(y => y.Id == x) || x == o.Id) v.Error(f, p + ".opens", $"Objetivo '{x}' não existe ou é o próprio.");
+            foreach (var t in o.ExperienceTypes)
+            {
+                if (!ActivityTypes.All.Contains(t, StringComparer.Ordinal)) v.Error(f, p + ".experienceTypes", $"Tipo de atividade '{t}' desconhecido.");
+                // Patrulha, emboscada e chefe ainda sao abstratos: nao contam como experiencia de combate (D-064).
+                else if (t is ActivityTypes.Patrol or ActivityTypes.Ambush or ActivityTypes.Boss)
+                    v.Error(f, p + ".experienceTypes", $"'{t}' ainda não tem combate real e não conta como experiência.");
+            }
             for (int k = 0; k < o.Affinities.Count; k++)
             {
                 var a = o.Affinities[k];

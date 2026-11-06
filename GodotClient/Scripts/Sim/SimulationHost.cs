@@ -40,6 +40,8 @@ public sealed class CharacterView
     public long ActivityEndTick { get; init; }
     public long SessionEndTick { get; init; }
     public int KnownRegions { get; init; }
+    /// <summary>Mudancas registradas nos objetivos da pessoa (O3; capturas e listas).</summary>
+    public int ObjectiveChanges { get; init; }
     /// <summary>Registro imutavel criado pelo Core; seguro para ler fora da thread da simulacao.</summary>
     public DecisionRecord? LastDecision { get; init; }
     /// <summary>Quests em andamento (copia).</summary>
@@ -77,6 +79,12 @@ public sealed record ObjectiveView(string Id, string Param, string Tier, int Imp
     IReadOnlyList<(string Key, int Value)> Motives, ObjectiveAssessment Assessment)
 {
     public long CompletedDay { get; init; } = -1;
+    /// <summary>Saida dos ativos (O3): dia e motivo; vezes em que a condicao foi alcancada e perdida.</summary>
+    public long EndedDay { get; init; } = -1;
+    public string EndReason { get; init; } = "";
+    public int TimesHeld { get; init; }
+    public int TimesLost { get; init; }
+    public int FailureStreak { get; init; }
     /// <summary>Metas ligadas (O2): adotadas, concluidas e abandonadas.</summary>
     public int LinkedSet { get; init; }
     public int LinkedCompleted { get; init; }
@@ -91,6 +99,10 @@ public sealed record CharacterDetailView(int PersonId, long PlayedTicks, IReadOn
     /// <summary>Objetivos pessoais (O1), gerais primeiro, com a viabilidade calculada agora.</summary>
     public IReadOnlyList<ObjectiveView> Objectives { get; init; } = Array.Empty<ObjectiveView>();
     public IReadOnlyList<ObjectiveChange> ObjectiveHistory { get; init; } = Array.Empty<ObjectiveChange>();
+    /// <summary>Faltas de objetivo relevante (O3) e a ultima; acontecimento pendente de revisao.</summary>
+    public int ObjectiveGaps { get; init; }
+    public long LastObjectiveGapDay { get; init; } = -1;
+    public string ObjectiveTrigger { get; init; } = "";
     /// <summary>O que tem agradado (+) ou incomodado (-), acumulado e esmaecendo.</summary>
     public IReadOnlyDictionary<string, int> Drivers { get; init; } = new Dictionary<string, int>();
     /// <summary>Lugares que mais marcaram: melhores e piores impressoes ("zona/atividade").</summary>
@@ -435,6 +447,7 @@ public sealed class SimulationHost : IDisposable
                 ActivityEndTick = c.ActivityEndTick,
                 SessionEndTick = c.SessionEndTick,
                 KnownRegions = c.KnownRegions.Count,
+                ObjectiveChanges = w.GetPerson(c.PersonId).ObjectiveHistory.Count,
                 LastDecision = c.LastDecision,
                 ActiveQuests = c.ActiveQuests.Count == 0 ? Array.Empty<QuestProgressView>()
                     : c.ActiveQuests.Select(a => new QuestProgressView(a.QuestId, a.StepIndex, a.StepMinutes, a.AcceptedTick)).ToArray(),
@@ -482,8 +495,14 @@ public sealed class SimulationHost : IDisposable
                 SleepCutTotalMinutes = pw.SleepCutTotalMinutes,
                 Objectives = pw.Objectives.Select(o => new ObjectiveView(o.Id, o.Param, o.Tier, o.Importance, o.Commitment, o.State, o.Origin, o.Day,
                     o.Motives.ToArray(), ObjectiveSystem.Assess(w.Content, c, o))
-                    { CompletedDay = o.CompletedDay, LinkedSet = o.LinkedGoalsSet, LinkedCompleted = o.LinkedGoalsCompleted, LinkedAbandoned = o.LinkedGoalsAbandoned }).ToArray(),
+                    {
+                        CompletedDay = o.CompletedDay, LinkedSet = o.LinkedGoalsSet, LinkedCompleted = o.LinkedGoalsCompleted, LinkedAbandoned = o.LinkedGoalsAbandoned,
+                        EndedDay = o.EndedDay, EndReason = o.EndReason, TimesHeld = o.TimesHeld, TimesLost = o.TimesLost, FailureStreak = o.FailureStreak,
+                    }).ToArray(),
                 ObjectiveHistory = pw.ObjectiveHistory.ToArray(),
+                ObjectiveGaps = pw.ObjectiveGaps,
+                LastObjectiveGapDay = pw.LastObjectiveGapDay,
+                ObjectiveTrigger = pw.ObjectiveTrigger,
             };
         }
         return new SimSnapshot

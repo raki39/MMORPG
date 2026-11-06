@@ -10,6 +10,8 @@ public sealed class ObjectiveCatalogDefinition
     public ObjectiveGenerationDefinition Generation { get; set; } = new();
     /// <summary>Influencia (O2): pelas metas (adocao e comprometimento) e a conquista ao concluir.</summary>
     public ObjectiveInfluenceDefinition Influence { get; set; } = new();
+    /// <summary>Evolucao (O3): renovacao, prioridade, substituicao, abandono e condicoes mantidas.</summary>
+    public ObjectiveEvolutionDefinition Evolution { get; set; } = new();
     public List<ObjectiveDefinition> Objectives { get; set; } = new();
 }
 
@@ -61,6 +63,55 @@ public sealed class ObjectiveGenerationDefinition
     public List<string> RareItemRarities { get; set; } = new() { "rare", "epic" };
 }
 
+/// <summary>
+/// Evolucao dos objetivos (O3), avaliada uma vez por dia jogado, com intervalos configuraveis. Mudancas
+/// so por acontecimentos simulados, com motivo registrado. Valores candidatos.
+/// </summary>
+public sealed class ObjectiveEvolutionDefinition
+{
+    public bool Enabled { get; set; } = true;
+    /// <summary>Vagas de objetivos ativos (gerais e secundarios).</summary>
+    public int MaxGeneral { get; set; } = 2;
+    public int MaxSecondary { get; set; } = 3;
+    /// <summary>Dias jogados minimos entre mudancas escolhidas (adotar, substituir, abandonar, mudar prioridade).</summary>
+    public int ChangeCooldownPlayDays { get; set; } = 7;
+    /// <summary>Um objetivo abandonado so volta como candidato depois de tantos dias jogados.</summary>
+    public int AbandonCooldownPlayDays { get; set; } = 60;
+    /// <summary>Objetivo que pode avancar e nao avancou por tantos dias jogados perde importancia (sistemas futuros nunca).</summary>
+    public int StalePlayDays { get; set; } = 30;
+    public int StaleImportanceDrop { get; set; } = 150;
+    /// <summary>Abandono por experiencia negativa: metas ligadas (avanco real) abandonadas seguidas, base + comprometimento x por mil.</summary>
+    public int FailuresBase { get; set; } = 2;
+    public int FailuresPerCommitment { get; set; } = 4;
+    /// <summary>Renovacao: peso pela viabilidade (pode avancar = 1000; preparacao conhecida; sistema futuro).</summary>
+    public int PreparationFactorPermille { get; set; } = 800;
+    public int FutureFactorPermille { get; set; } = 300;
+    /// <summary>Interesse minimo (ajuste) para um objetivo ser relevante; mais alto para os de sistema futuro.</summary>
+    public int MinFitPermille { get; set; } = 1000;
+    public int FutureMinFitPermille { get; set; } = 1400;
+    /// <summary>Reforco de um objetivo relacionado ("opens") aos que a pessoa tem ou concluiu.</summary>
+    public int RelatedBonusPermille { get; set; } = 800;
+    /// <summary>Reforco para recuperar uma condicao perdida.</summary>
+    public int RecoverBonusPermille { get; set; } = 300;
+    /// <summary>Experiencias marcantes (memorias boas e ruins) nos tipos de atividade do objetivo: forca e teto da contagem.</summary>
+    public int ExperienceBoostPermille { get; set; } = 400;
+    public int ExperienceCap { get; set; } = 4;
+    /// <summary>Substituicao voluntaria: o novo precisa ser mais importante que o secundario deixado de lado, por esta margem.</summary>
+    public int SubstituteMarginPermille { get; set; } = 100;
+    /// <summary>Abandono por experiencia negativa: reves, frustracao e memoria.</summary>
+    public int AbandonedPoints { get; set; } = 100;
+    public int AbandonedFrustration { get; set; } = 80;
+    public int AbandonedMemoryIntensity { get; set; } = 600;
+}
+
+/// <summary>Natureza do objetivo: conquista definitiva ou condicao a manter (pode ser perdida e recuperada).</summary>
+public static class ObjectiveNatures
+{
+    public const string Achievement = "achievement";
+    public const string Condition = "condition";
+    public static readonly string[] All = { Achievement, Condition };
+}
+
 /// <summary>Um objetivo do catalogo. O criterio e de um tipo conhecido do Core (ObjectiveCriteria).</summary>
 public sealed class ObjectiveDefinition : IContentDefinition
 {
@@ -78,6 +129,12 @@ public sealed class ObjectiveDefinition : IContentDefinition
     public string Horizon { get; set; } = ObjectiveHorizons.Medium;
     /// <summary>Peso base no sorteio.</summary>
     public int Weight { get; set; } = 1000;
+    /// <summary>Conquista definitiva (fica concluida) ou condicao a manter (pode ser perdida; perder nao apaga a conquista).</summary>
+    public string Nature { get; set; } = ObjectiveNatures.Achievement;
+    /// <summary>Objetivos que este abre ou aproxima (renovacao, O3): reforco, nao sequencia obrigatoria.</summary>
+    public List<string> Opens { get; set; } = new();
+    /// <summary>Tipos de atividade cujas experiencias marcantes aproximam (boas) ou afastam (ruins) deste objetivo.</summary>
+    public List<string> ExperienceTypes { get; set; } = new();
     /// <summary>
     /// Coerencia com a pessoa (mesmas chaves das traits e mais "quirk.x", ter a trait): aumentam ou
     /// reduzem a chance e a importancia.

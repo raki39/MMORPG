@@ -2236,3 +2236,69 @@ Itens como instâncias, inventário, equipamento funcional, carteira e aplicaç�
 - **Achado:** "Conhecer todo o mundo" é concluído por 89% de quem o tem, na mediana em 20 dias. Neste mundo de 15 zonas, o horizonte "longo" não se confirma.
 
 **Próximo:** O3 (evolução), depois da avaliação do criador.
+
+## D-064 — Objetivos pessoais: evolução (O3)
+**Data:** 06/11/2026 · **Estado:** aceita (valores candidatos)
+
+**Decisões do criador:**
+- **Confirmações da O2:**
+  - requisitos limitados ao conhecimento da pessoa, visíveis ao gestor com a indicação;
+  - nível máximo como preparação para "mais fortes", sem concluir a ambição nem comprovar força;
+  - "Conhecer todo o mundo" conta as zonas elegíveis, com horizonte médio no preset, sem marcos por enquanto;
+  - pesos mantidos.
+- **Concluídos ficam no histórico:**
+  - saem dos ativos, liberam espaço e continuam acessíveis, com data, motivo e resultado;
+  - conquista definitiva ≠ condição a manter, que pode ser alcançada e perdida;
+  - perder não apaga a conquista, e a pessoa pode querer recuperá-la;
+  - os critérios ficam no conteúdo.
+- **Renovação, principalmente no fim de jogo:**
+  - pela ficha, pelos objetivos anteriores, pelas experiências reais e pelo conteúdo e requisitos conhecidos;
+  - o nível máximo não encerra a trajetória;
+  - sem sequência fixa e sem repetir com números maiores;
+  - sem preencher vagas artificialmente: a falta de objetivo relevante é registrada, como problema do MMORPG.
+- **Estabilidade:**
+  - mudanças de prioridade justificadas;
+  - substituição voluntária sem frustração;
+  - abandono por experiências negativas;
+  - intervalos configuráveis;
+  - sistemas futuros não perdem prioridade por não avançar.
+
+**Feito** (`objetivos.md`, seção 8):
+- **Natureza de cada objetivo no conteúdo** (`nature`): conquista ou condição.
+  - Os estados: concluído, mantido, perdido, deixado de lado e abandonado.
+  - Ficam registradas as datas, o motivo e as vezes alcançada e perdida.
+- **Avaliação diária por dia jogado:**
+  - progresso;
+  - condições perdidas;
+  - promoção sem geral;
+  - estagnação, só do que podia avançar;
+  - renovação depois de um acontecimento.
+- **Acontecimentos de necessidade** (concluir, abandonar, perder, nível máximo): procuram entre todos os relevantes e registram a falta.
+- **Oportunidade** (zona com chefe ou PvP): só o objetivo que aquele conteúdo torna concreto.
+- **Interesse real** (ajuste da O1 × experiências marcantes): mínimo 1,0, ou 1,4 para objetivo de sistema futuro.
+- **Pesos:**
+  - viabilidade: 1,0, 0,8 e 0,3;
+  - relacionados pelo conteúdo (`opens`): +80%, um só;
+  - recuperação: +30%.
+- **Abandono:** por metas ligadas de avanço real abandonadas em seguida (2 + 4 × comprometimento), com revés sem somar ao da meta.
+- **Intervalos:** 7 dias jogados entre mudanças e 60 para um abandonado voltar.
+- **Ficha:**
+  - card "Conquistas e encerrados";
+  - aviso de "sem ambição ativa" quando falta objetivo relevante;
+  - histórico com os motivos em texto.
+- **Capturas:** `--open-person=objectives`.
+- **Hash:** versão 31.
+
+**Desvios e motivos:**
+- **Oportunidade restrita ao conteúdo da zona, e sem registrar falta.** Na primeira medição, qualquer descoberta de zona com chefe ou PvP permitia adotar qualquer objetivo, e não achar nada contava como falta. Os ativos iam a 3,3 por pessoa e 48% tinham "falta". Isso era preencher vagas e chamar de falta o que era só uma oportunidade sem encaixe. Corrigido antes de fechar: 2,9 ativos e 18% com falta real.
+- **"Relacionado" só de objetivo alcançado,** ou de objetivo ativo de sistema futuro com preparação concreta. Na primeira versão, o nível máximo ainda ativo já "abria" a fortuna.
+- **Sorteio desligado desliga a evolução:** sem isso, a renovação dava objetivos a quem não devia ter nenhum.
+- **Defeito encontrado pelos testes:** ao ligar a O3 às metas, a meta concluída também recebia o revés de "meta abandonada", por um `else` deslocado. Corrigido antes da medição; o teste de recompensa da O2 pegou o erro.
+
+**Medição** (pareada, evolução desligada × ligada):
+- **A desligada é idêntica à O2.**
+- **Por 100 pessoas em 90 dias:** 78 objetivos novos, 44 concluídos, 23 faltas, 8,5 abandonos e 3,8 deixados de lado.
+- **Fim de jogo:** 38% de quem chegou ao nível máximo registrou falta. No fim, só 4,4% deles têm algum objetivo que pode avançar; os demais têm ambições de sistemas futuros.
+- **Comportamento:** metas ligadas de 28,1% para 30,6%; nível e horas iguais; satisfação −1,5 (o custo dos abandonos); validação igual.
+
+**Próximo:** com a camada de objetivos fechada, a Etapa 1 retoma na E1b (página Classes e editor), depois da avaliação do criador.

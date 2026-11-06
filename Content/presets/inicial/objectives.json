@@ -22,11 +22,35 @@
     "completedPoints": 150,
     "completedMemoryIntensity": 800
   },
+  "evolution": {
+    "enabled": true,
+    "maxGeneral": 2,
+    "maxSecondary": 3,
+    "changeCooldownPlayDays": 7,
+    "abandonCooldownPlayDays": 60,
+    "stalePlayDays": 30,
+    "staleImportanceDrop": 150,
+    "failuresBase": 2,
+    "failuresPerCommitment": 4,
+    "preparationFactorPermille": 800,
+    "futureFactorPermille": 300,
+    "minFitPermille": 1000,
+    "futureMinFitPermille": 1400,
+    "relatedBonusPermille": 800,
+    "recoverBonusPermille": 300,
+    "experienceBoostPermille": 400,
+    "experienceCap": 4,
+    "substituteMarginPermille": 100,
+    "abandonedPoints": 100,
+    "abandonedFrustration": 80,
+    "abandonedMemoryIntensity": 600
+  },
   "objectives": [
     {
       "id": "nivel_maximo", "name": "Alcançar o nível máximo", "icon": "trending-up",
       "description": "Levar o personagem até o nível máximo do jogo.",
       "criterion": "max_level", "difficulty": 650, "horizon": "long", "weight": 1000,
+      "nature": "achievement", "opens": ["grandes_desafios_pve", "pvp_competitivo", "mais_forte", "grande_fortuna", "melhor_fabricante", "fundar_guilda", "equipamento_raro"], "experienceTypes": [],
       "affinities": [
         { "key": "preferences.pve", "direction": "high", "strengthPermille": 500 },
         { "key": "traits.competitiveness", "direction": "high", "strengthPermille": 500 },
@@ -37,6 +61,7 @@
       "id": "campanha_principal", "name": "Concluir a campanha principal", "icon": "book-open",
       "description": "Completar todas as missões principais da história do mundo.",
       "criterion": "main_campaign", "difficulty": 450, "horizon": "medium", "weight": 800,
+      "nature": "achievement", "opens": ["conhecer_o_mundo", "grandes_desafios_pve", "nivel_maximo"], "experienceTypes": ["quest"],
       "affinities": [
         { "key": "preferences.pve", "direction": "high", "strengthPermille": 400 },
         { "key": "preferences.exploration", "direction": "high", "strengthPermille": 400 },
@@ -47,7 +72,8 @@
     {
       "id": "conhecer_o_mundo", "name": "Conhecer todo o mundo", "icon": "compass",
       "description": "Descobrir todas as zonas do mundo.",
-      "criterion": "all_zones", "difficulty": 500, "horizon": "long", "weight": 700,
+      "criterion": "all_zones", "difficulty": 500, "horizon": "medium", "weight": 700,
+      "nature": "achievement", "opens": ["campanha_principal", "grandes_desafios_pve"], "experienceTypes": ["explore"],
       "affinities": [
         { "key": "preferences.exploration", "direction": "high", "strengthPermille": 900 },
         { "key": "traits.variety", "direction": "high", "strengthPermille": 300 },
@@ -59,6 +85,7 @@
       "id": "mais_forte", "name": "Ter um personagem entre os mais fortes", "icon": "trophy",
       "description": "Estar entre os personagens mais fortes do servidor, pelo desempenho real em combate, não pelo índice de poder.",
       "criterion": "strength_ranking", "difficulty": 1000, "horizon": "long", "weight": 700,
+      "nature": "condition", "opens": ["nivel_maximo", "pvp_competitivo", "grandes_desafios_pve"], "experienceTypes": [],
       "affinities": [
         { "key": "traits.competitiveness", "direction": "high", "strengthPermille": 900 },
         { "key": "preferences.pvp", "direction": "high", "strengthPermille": 400 },
@@ -70,6 +97,7 @@
       "id": "grandes_desafios_pve", "name": "Completar os grandes desafios PvE", "icon": "skull",
       "description": "Derrotar os chefes do mundo.",
       "criterion": "defeat_bosses", "difficulty": 900, "horizon": "long", "weight": 700,
+      "nature": "achievement", "opens": ["equipamento_raro", "nivel_maximo"], "experienceTypes": ["hunt"],
       "affinities": [
         { "key": "preferences.pve", "direction": "high", "strengthPermille": 800 },
         { "key": "traits.competitiveness", "direction": "high", "strengthPermille": 300 },
@@ -80,6 +108,7 @@
       "id": "pvp_competitivo", "name": "Ser competitivo no PvP", "icon": "swords",
       "description": "Conquistar posições relevantes no PvP.",
       "criterion": "pvp_ranking", "difficulty": 900, "horizon": "long", "weight": 700,
+      "nature": "condition", "opens": ["nivel_maximo", "mais_forte"], "experienceTypes": [],
       "affinities": [
         { "key": "preferences.pvp", "direction": "high", "strengthPermille": 1000 },
         { "key": "traits.competitiveness", "direction": "high", "strengthPermille": 600 },
@@ -93,6 +122,7 @@
       "id": "grande_fortuna", "name": "Acumular uma grande fortuna", "icon": "coins",
       "description": "Possuir muita riqueza: o ouro guardado e, quando a economia existir, o patrimônio. Não é a soma de todo o ouro já recebido.",
       "criterion": "wealth", "difficulty": 800, "horizon": "long", "weight": 700,
+      "nature": "condition", "opens": ["grande_comerciante"], "experienceTypes": ["trade"],
       "affinities": [
         { "key": "preferences.trade", "direction": "high", "strengthPermille": 600 },
         { "key": "traits.opportunism", "direction": "high", "strengthPermille": 500 },
@@ -104,6 +134,7 @@
       "id": "fundar_guilda", "name": "Criar e liderar uma guilda", "icon": "crown",
       "description": "Fundar a própria guilda e mantê-la ativa.",
       "criterion": "found_guild", "difficulty": 850, "horizon": "long", "weight": 600,
+      "nature": "condition", "opens": ["entrar_guilda"], "experienceTypes": ["socialize"],
       "affinities": [
         { "key": "traits.sociability", "direction": "high", "strengthPermille": 600 },
         { "key": "preferences.social", "direction": "high", "strengthPermille": 400 },
@@ -117,6 +148,7 @@
       "id": "entrar_guilda", "name": "Participar de uma guilda compatível", "icon": "users",
       "description": "Entrar numa guilda com interesses parecidos com os seus.",
       "criterion": "join_guild", "difficulty": 200, "horizon": "short", "weight": 900,
+      "nature": "condition", "opens": ["fundar_guilda"], "experienceTypes": ["socialize"],
       "affinities": [
         { "key": "preferences.social", "direction": "high", "strengthPermille": 700 },
         { "key": "traits.sociability", "direction": "high", "strengthPermille": 500 },
@@ -130,6 +162,7 @@
       "id": "melhor_fabricante", "name": "Ser um dos melhores fabricantes", "icon": "hammer",
       "description": "Estar entre os melhores fabricantes de uma especialidade.",
       "criterion": "crafting_rank", "difficulty": 850, "horizon": "long", "weight": 600,
+      "nature": "condition", "opens": ["grande_fortuna"], "experienceTypes": ["gather"],
       "affinities": [
         { "key": "preferences.crafting", "direction": "high", "strengthPermille": 1000 },
         { "key": "traits.patience", "direction": "high", "strengthPermille": 300 },
@@ -140,6 +173,7 @@
       "id": "grande_comerciante", "name": "Ser um dos maiores comerciantes", "icon": "store",
       "description": "Ganhar prestígio no mercado: estar entre os comerciantes de maior volume e reputação. É reconhecimento, diferente de acumular fortuna.",
       "criterion": "trade_rank", "difficulty": 850, "horizon": "long", "weight": 450,
+      "nature": "condition", "opens": ["grande_fortuna"], "experienceTypes": ["trade"],
       "affinities": [
         { "key": "preferences.trade", "direction": "high", "strengthPermille": 700 },
         { "key": "traits.competitiveness", "direction": "high", "strengthPermille": 800 },
@@ -150,6 +184,7 @@
       "id": "equipamento_raro", "name": "Conquistar um equipamento raro", "icon": "gem",
       "description": "Obter um equipamento raro específico para o personagem.",
       "criterion": "rare_item", "difficulty": 350, "horizon": "medium", "weight": 900,
+      "nature": "achievement", "opens": ["grandes_desafios_pve"], "experienceTypes": ["hunt"],
       "affinities": [
         { "key": "preferences.pve", "direction": "high", "strengthPermille": 300 },
         { "key": "traits.competitiveness", "direction": "high", "strengthPermille": 200 },

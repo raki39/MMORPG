@@ -341,10 +341,12 @@ public static class ObjectiveSystem
     /// </summary>
     public static string Group(ContentDatabase c, Person p)
     {
-        if (p.ObjectiveList.Count == 0) return "";
+        // Pelos objetivos iniciais (os renovados na O3 nao mudam o grupo).
+        var initial = p.ObjectiveList.Where(o => o.Origin == InitialOrigin).ToList();
+        if (initial.Count == 0) return "";
         string Crit(PersonObjective o) => c.Objectives.TryGetValue(o.Id, out var d) ? d.Criterion : "";
-        if (p.ObjectiveList.Any(o => Crit(o) is ObjectiveCriteria.MaxLevel or ObjectiveCriteria.MainCampaign or ObjectiveCriteria.AllZones)) return "actionable";
-        if (p.ObjectiveList.Any(o => Crit(o) is ObjectiveCriteria.StrengthRanking or ObjectiveCriteria.DefeatBosses or ObjectiveCriteria.PvpRanking or ObjectiveCriteria.RareItem)) return "preparation";
+        if (initial.Any(o => Crit(o) is ObjectiveCriteria.MaxLevel or ObjectiveCriteria.MainCampaign or ObjectiveCriteria.AllZones)) return "actionable";
+        if (initial.Any(o => Crit(o) is ObjectiveCriteria.StrengthRanking or ObjectiveCriteria.DefeatBosses or ObjectiveCriteria.PvpRanking or ObjectiveCriteria.RareItem)) return "preparation";
         return "unavailable";
     }
 

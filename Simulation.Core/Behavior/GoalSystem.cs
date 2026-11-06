@@ -429,7 +429,12 @@ public sealed class GoalSystem
         if (g.Links.Count > 0)
         {
             ch.GoalsLinkedCompleted++;
-            foreach (var l in g.Links) if (p.ObjectiveList.FirstOrDefault(o => o.Id == l.ObjectiveId) is { } o) o.LinkedGoalsCompleted++;
+            foreach (var l in g.Links)
+                if (p.ObjectiveList.FirstOrDefault(o => o.Id == l.ObjectiveId) is { } o)
+                {
+                    o.LinkedGoalsCompleted++;
+                    if (l.Kind == ObjectiveLinkKinds.Advance) o.FailureStreak = 0;   // sucesso interrompe a sequencia de falhas (O3)
+                }
         }
         Ended?.Invoke(ch, g, true, "goal_completed");
         _w.Emit("goal_completed", EventImportance.Normal, new[] { new EntityRef("character", ch.Id) },
@@ -451,7 +456,13 @@ public sealed class GoalSystem
         {
             ch.GoalsLinkedAbandoned++;
             var person = _w.GetPerson(ch.PersonId);
-            foreach (var l in g.Links) if (person.ObjectiveList.FirstOrDefault(o => o.Id == l.ObjectiveId) is { } o) o.LinkedGoalsAbandoned++;
+            foreach (var l in g.Links)
+                if (person.ObjectiveList.FirstOrDefault(o => o.Id == l.ObjectiveId) is { } o)
+                {
+                    o.LinkedGoalsAbandoned++;
+                    // Falha de uma meta que avancaria o objetivo (O3). Preparacao nao conta: sistema futuro nao perde por nao avancar.
+                    if (l.Kind == ObjectiveLinkKinds.Advance && o.State == ObjectiveStates.Active) o.FailureStreak++;
+                }
         }
         Ended?.Invoke(ch, g, false, reason);
         _w.Emit("goal_abandoned", EventImportance.Low, new[] { new EntityRef("character", ch.Id) },

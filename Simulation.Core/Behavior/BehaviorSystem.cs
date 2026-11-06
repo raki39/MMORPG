@@ -83,6 +83,21 @@ public sealed class BehaviorSystem
             if (completed && g.Links.Count > 0) _lastLinkedGoal = (ch.Id, Now, md.GoalCompletedPoints, g.Links.Select(l => l.ObjectiveId).ToArray());
             if (completed) _exp.OnAchievement(p, ch, "goal_completed", subject, md.GoalCompletedPoints, 0, _w.Content.Memory.GoalCompletedIntensity);
             else _exp.OnSetback(p, ch, "goal_abandoned", subject, md.GoalAbandonedPoints, md.GoalAbandonedFrustration, _w.Content.Memory.GoalAbandonedIntensity);
+            // Objetivos (O3): falhas seguidas de metas que o avancariam levam a desistir dele (experiencia negativa).
+            if (!completed && g.Links.Count > 0 && !_w.Controlled && ObjectiveEvolution.CheckAbandon(_w.Content, p, LocalDay(p, Now)) is { } gaveUp)
+            {
+                var ev = _w.Content.ObjectiveCatalog.Evolution;
+                _w.Emit("objective_abandoned", EventImportance.Normal, new[] { new EntityRef("person", p.Id), new EntityRef("character", ch.Id) },
+                    new[] { new EventCause("repeated_failures", gaveUp.FailureStreak), new EventCause("commitment", gaveUp.Commitment) }, $"{gaveUp.Id}|{gaveUp.Param}|{gaveUp.Tier}");
+                // Efeito no humor e no plano so com a influencia ligada (desligada: registro, sem efeito). O mesmo
+                // acontecimento ja deu o reves da meta: so a diferenca para o maior (sem somar); a memoria e propria.
+                if (_w.Content.ObjectiveCatalog.Influence.Enabled)
+                {
+                    _exp.OnSetback(p, ch, "objective_abandoned", gaveUp.Id + "|" + gaveUp.Param, Math.Max(0, ev.AbandonedPoints - md.GoalAbandonedPoints),
+                        Math.Max(0, ev.AbandonedFrustration - md.GoalAbandonedFrustration), ev.AbandonedMemoryIntensity);
+                    RequestPlanReview(ch, "objective_abandoned");
+                }
+            }
         };
     }
 
@@ -385,6 +400,11 @@ public sealed class BehaviorSystem
                         new[] { new EventCause(qc.Reason, qc.For), new EventCause("evidence_against", qc.Against), new EventCause("play_day", qc.PlayDay) },
                         $"{qc.Id}|{qc.PreviousSource}");
                 }
+                // Objetivos (O3): evolucao em dia jogado (progresso, condicoes, prioridade, renovacao).
+                if (!_w.Controlled)   // cenario controlado: pessoas iguais por celula, sem objetivos
+                foreach (var oe in ObjectiveEvolution.OnDaily(_w.Content, p, ch, localDay, p.LastPlayedLocalDay == localDay - 1, _w.Seed))
+                    _w.Emit(oe.Type, EventImportance.Low, new[] { new EntityRef("person", p.Id) },
+                        new[] { new EventCause(oe.Reason, oe.Value) }, $"{oe.ObjectiveId}|{oe.Param}|{oe.Tier}");
                 _exp.OnDaily(p, ch);       // humor e memoria (D-038)
                 if (!_w.NeutralMood && !p.IsOnline && ReviewRetention(p, ch, day, rng)) continue;   // inativo ou desistiu (D-039)
             }
@@ -1457,6 +1477,9 @@ public sealed class BehaviorSystem
         _traits.OnRegionDiscovered(p);
         _goals.OnDiscovered(p, ch, zoneId);
         CheckObjectives(p, ch, "zone_discovered");
+        // Objetivos (O3): conhecer uma zona com chefe ou PvP traz requisitos novos conhecidos.
+        if (_w.Content.Regions[zoneId].AllActivities().Any(a => a.Type is ActivityTypes.Boss or ActivityTypes.Patrol or ActivityTypes.Ambush))
+            ObjectiveTriggers.Set(p, ObjectiveTriggers.ContentKnown + ":" + zoneId);
     }
 
     /// <summary>Ultima meta ligada concluida (personagem, instante, pontos, objetivos): evita somar a recompensa no mesmo acontecimento.</summary>
@@ -1475,9 +1498,13 @@ public sealed class BehaviorSystem
         foreach (var o in ObjectiveSystem.Achieved(_w.Content, p, ch))
         {
             long day = LocalDay(p, Now);
-            o.State = ObjectiveStates.Completed;
-            o.CompletedDay = day;
-            p.ObjectiveHistoryList.Add(new ObjectiveChange(day, o.Id, o.Param, "completed", o.Tier, cause));
+            // Conquista definitiva fica concluida; condicao a manter fica "mantida" e pode ser perdida (O3).
+            bool condition = _w.Content.Objectives.TryGetValue(o.Id, out var od) && od.Nature == ObjectiveNatures.Condition;
+            o.State = condition ? ObjectiveStates.Held : ObjectiveStates.Completed;
+            if (o.CompletedDay < 0) o.CompletedDay = day;
+            if (condition) o.TimesHeld++;
+            p.ObjectiveHistoryList.Add(new ObjectiveChange(day, o.Id, o.Param, condition ? "held" : "completed", o.Tier, cause));
+            ObjectiveTriggers.Set(p, ObjectiveTriggers.Completed + ":" + o.Id);
             _w.Emit("objective_completed", EventImportance.Normal, new[] { new EntityRef("person", p.Id), new EntityRef("character", ch.Id) },
                 new[] { new EventCause(cause, 1000), new EventCause("importance", o.Importance) }, $"{o.Id}|{o.Param}|{o.Tier}");
             if (!inf.Enabled) continue;
@@ -1540,6 +1567,8 @@ public sealed class BehaviorSystem
             RequestPlanReview(ch, "level_up");
             _goals.OnLevelUp(_w.GetPerson(ch.PersonId), ch);
             CheckObjectives(_w.GetPerson(ch.PersonId), ch, "level_up");
+            // Objetivos (O3): o nivel maximo nao encerra a trajetoria; pede revisao das ambicoes.
+            if (ch.Level >= _w.Content.Progression.LevelCap) ObjectiveTriggers.Set(_w.GetPerson(ch.PersonId), ObjectiveTriggers.MaxLevel);
         }
     }
 }
