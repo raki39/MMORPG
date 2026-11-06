@@ -74,7 +74,14 @@ public sealed class CharacterView
 
 /// <summary>Objetivo pessoal (O1) com a avaliacao do momento (copia imutavel para a ficha).</summary>
 public sealed record ObjectiveView(string Id, string Param, string Tier, int Importance, int Commitment, string State, string Origin, long Day,
-    IReadOnlyList<(string Key, int Value)> Motives, ObjectiveAssessment Assessment);
+    IReadOnlyList<(string Key, int Value)> Motives, ObjectiveAssessment Assessment)
+{
+    public long CompletedDay { get; init; } = -1;
+    /// <summary>Metas ligadas (O2): adotadas, concluidas e abandonadas.</summary>
+    public int LinkedSet { get; init; }
+    public int LinkedCompleted { get; init; }
+    public int LinkedAbandoned { get; init; }
+}
 
 /// <summary>Detalhe da pessoa com a ficha aberta (copiado so para ela, a cada publicacao).</summary>
 public sealed record CharacterDetailView(int PersonId, long PlayedTicks, IReadOnlyDictionary<string, long> ActivityTicks, IReadOnlyList<long> LevelTicks)
@@ -147,7 +154,11 @@ public sealed record PlanView(string FocusKey, string FocusType, string Reason, 
 public sealed record MemoryView(string Kind, string Subject, int Valence, int Intensity, long Tick, int Count);
 
 /// <summary>Objetivo pessoal (copia imutavel, D-036).</summary>
-public sealed record GoalView(string Type, string Target, int TargetValue, int StartValue, int Progress, int Commitment, string MotiveKey, int MotiveValue, long SetTick);
+public sealed record GoalView(string Type, string Target, int TargetValue, int StartValue, int Progress, int Commitment, string MotiveKey, int MotiveValue, long SetTick)
+{
+    /// <summary>Objetivos para os quais a meta contribui (O2); vazio = meta independente.</summary>
+    public IReadOnlyList<ObjectiveLink> Links { get; init; } = Array.Empty<ObjectiveLink>();
+}
 
 /// <summary>Progresso de uma quest ativa (copia imutavel).</summary>
 public sealed record QuestProgressView(string QuestId, int StepIndex, int StepMinutes, long AcceptedTick);
@@ -432,7 +443,8 @@ public sealed class SimulationHost : IDisposable
                 XpFromQuests = c.XpFromQuests,
                 PlayedTicks = c.PlayedTicksAt(w.Clock.Tick),
                 Goals = c.Goals.Count == 0 ? Array.Empty<GoalView>()
-                    : c.Goals.Select(g => new GoalView(g.Type, g.Target, g.TargetValue, g.StartValue, g.Progress, g.Commitment, g.MotiveKey, g.MotiveValue, g.SetTick)).ToArray(),
+                    : c.Goals.Select(g => new GoalView(g.Type, g.Target, g.TargetValue, g.StartValue, g.Progress, g.Commitment, g.MotiveKey, g.MotiveValue, g.SetTick)
+                        { Links = g.Links.Count == 0 ? Array.Empty<ObjectiveLink>() : g.Links.ToArray() }).ToArray(),
                 GoalsSet = c.GoalsSet,
                 GoalsCompleted = c.GoalsCompleted,
                 GoalsAbandoned = c.GoalsAbandoned,
@@ -469,7 +481,8 @@ public sealed class SimulationHost : IDisposable
                 LastSleepCutMinutes = pw.LastSleepCutMinutes,
                 SleepCutTotalMinutes = pw.SleepCutTotalMinutes,
                 Objectives = pw.Objectives.Select(o => new ObjectiveView(o.Id, o.Param, o.Tier, o.Importance, o.Commitment, o.State, o.Origin, o.Day,
-                    o.Motives.ToArray(), ObjectiveSystem.Assess(w.Content, c, o))).ToArray(),
+                    o.Motives.ToArray(), ObjectiveSystem.Assess(w.Content, c, o))
+                    { CompletedDay = o.CompletedDay, LinkedSet = o.LinkedGoalsSet, LinkedCompleted = o.LinkedGoalsCompleted, LinkedAbandoned = o.LinkedGoalsAbandoned }).ToArray(),
                 ObjectiveHistory = pw.ObjectiveHistory.ToArray(),
             };
         }

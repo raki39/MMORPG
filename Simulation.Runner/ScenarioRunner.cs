@@ -357,7 +357,7 @@ public static class ScenarioRunner
         + string.Join(",", PersonPreferences.Keys.Select(k => "pref_" + k)) + ","
         + string.Join(",", PeopleActivityTypes.Select(k => "min_" + k)) + ","
         + "target_level,h_to_target," + string.Join(",", PeopleActivityTypes.Select(k => "pre_min_" + k)) + ","
-        + "unlock_set,unlock_done,discover_set,discover_done,discover_set_non_exploration,personality,personality_initial,personality_changes,min_idle,min_played,traits,quirk_stats,rage_quits,goals_completed,goals_abandoned,frustration,satisfaction,engagement,novelty,game_knowledge,mechanical_skill,known_regions,hints,times_returned,memories,play_days,quirk_history,quirk_evidence,objectives\n";
+        + "unlock_set,unlock_done,discover_set,discover_done,discover_set_non_exploration,personality,personality_initial,personality_changes,min_idle,min_played,traits,quirk_stats,rage_quits,goals_completed,goals_abandoned,frustration,satisfaction,engagement,novelty,game_knowledge,mechanical_skill,known_regions,hints,times_returned,memories,play_days,quirk_history,quirk_evidence,objectives,objective_group,objectives_completed,objective_links,goals_linked_set,goals_linked_done,goals_linked_abandoned,goals_prep_set,goals_by_type\n";
 
     /// <summary>
     /// Uma linha por pessoa da campanha (people.csv): atributos de dedicacao, horas estimadas na
@@ -407,7 +407,14 @@ public static class ScenarioRunner
             .Append(string.Join("|", p.QuirkHistory.Select(h => $"{h.Id}:{h.Change}@{h.PlayDay}:{h.PreviousSource}")))
             .Append(string.Join("|", p.QuirkEvidenceByTrait.Select(kv => $"{kv.Key}:op{kv.Value.Opportunities}:a{kv.Value.ForCount}:c{kv.Value.AgainstCount}:ef{kv.Value.EffectOnlyCount}:f{kv.Value.For}:x{kv.Value.Against}")))
             // Objetivos pessoais (O1): id:parametro:importancia (g = geral, s = secundario).
-            .Append(string.Join("|", p.Objectives.Select(o => $"{o.Id}:{o.Param}:{(o.Tier == ObjectiveTiers.General ? "g" : "s")}{o.Importance}")))));
+            .Append(string.Join("|", p.Objectives.Select(o => $"{o.Id}:{o.Param}:{(o.Tier == ObjectiveTiers.General ? "g" : "s")}{o.Importance}")))
+            // O2: grupo de medicao, objetivos concluidos, metas ligadas por objetivo (adotadas/concluidas/abandonadas) e metas por tipo.
+            .Append(ObjectiveSystem.Group(w.Content, p))
+            .Append(string.Join("|", p.Objectives.Where(o => o.State == ObjectiveStates.Completed).Select(o => $"{o.Id}@{o.CompletedDay}")))
+            .Append(string.Join("|", p.Objectives.Where(o => o.LinkedGoalsSet > 0).Select(o => $"{o.Id}:{o.LinkedGoalsSet}/{o.LinkedGoalsCompleted}/{o.LinkedGoalsAbandoned}")))
+            .Append((ch?.GoalsLinkedSet ?? 0).ToString(inv)).Append((ch?.GoalsLinkedCompleted ?? 0).ToString(inv))
+            .Append((ch?.GoalsLinkedAbandoned ?? 0).ToString(inv)).Append((ch?.GoalsPreparationSet ?? 0).ToString(inv))
+            .Append(ch == null ? "" : string.Join("|", ch.GoalsSetByType.Select(kv => kv.Key + ":" + kv.Value.ToString(inv))))));
             sb.Append('\n');
         }
         return sb.ToString();

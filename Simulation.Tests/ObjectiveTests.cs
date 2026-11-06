@@ -237,11 +237,14 @@ public class ObjectiveTests
     }
 
     [Fact]
-    public void Simulacao_ObjetivosNaoMudamOComportamento()
+    public void Simulacao_ObjetivosSemInfluencia_NaoMudamOComportamento()
     {
+        // Objetivos sorteados com a influencia (O2) desligada: o comportamento e o mesmo de sem objetivos.
+        var noInfluence = TestSupport.FreshPresetSet();
+        noInfluence.Objectives.Influence.Enabled = false;
         var off = TestSupport.FreshPresetSet();
         off.Objectives.Generation.Enabled = false;
-        var a = Engine(C, 150);
+        var a = Engine(ContentDatabase.Create(noInfluence), 150);
         var b = Engine(ContentDatabase.Create(off), 150);
         a.AdvanceTo(SimTime.Days(4));
         b.AdvanceTo(SimTime.Days(4));

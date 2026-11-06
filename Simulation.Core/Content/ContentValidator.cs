@@ -541,6 +541,13 @@ public static class ContentValidator
             if (value < lo || value > hi) v.Error(f, "generation." + name, $"Use de {lo} a {hi}.");
         foreach (var r in g.RareItemRarities)
             if (!Rarities.All.Contains(r, StringComparer.Ordinal)) v.Error(f, "generation.rareItemRarities", $"Raridade '{r}' desconhecida.");
+        var inf = set.Objectives.Influence;
+        foreach (var (name, value, lo, hi) in new (string, int, int, int)[]
+        {
+            ("adoptionBoostPermille", inf.AdoptionBoostPermille, 0, 3000), ("commitmentBoostPermille", inf.CommitmentBoostPermille, 0, 1000),
+            ("completedPoints", inf.CompletedPoints, 0, 500), ("completedMemoryIntensity", inf.CompletedMemoryIntensity, 0, 1000),
+        })
+            if (value < lo || value > hi) v.Error(f, "influence." + name, $"Use de {lo} a {hi}.");
 
         var ids = CheckIds(set.Objectives.Objectives, f, "objectives", v);
         var personalities = new HashSet<string>(set.Population.Personality.Types.Select(t => t.Id), StringComparer.Ordinal) { "equilibrado" };

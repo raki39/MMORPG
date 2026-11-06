@@ -71,6 +71,7 @@ public sealed class BehaviorSystem
                 first ? md.NoveltyNewQuest : 0, main ? _w.Content.Memory.MainQuestIntensity : 0);
             _traits.OnQuestCompleted(p);
             _goals.OnQuestCompleted(p, ch, questId);
+            CheckObjectives(p, ch, "quest_completed");
         };
         _goals.Ended = (ch, g, completed, reason) =>
         {
@@ -78,6 +79,8 @@ public sealed class BehaviorSystem
             var p = _w.GetPerson(ch.PersonId);
             var md = _w.Content.Mood;
             string subject = g.Type + "|" + g.Target + "|" + g.TargetValue;
+            // Meta ligada concluida: se o mesmo acontecimento concluir o objetivo, vale a maior recompensa (O2).
+            if (completed && g.Links.Count > 0) _lastLinkedGoal = (ch.Id, Now, md.GoalCompletedPoints, g.Links.Select(l => l.ObjectiveId).ToArray());
             if (completed) _exp.OnAchievement(p, ch, "goal_completed", subject, md.GoalCompletedPoints, 0, _w.Content.Memory.GoalCompletedIntensity);
             else _exp.OnSetback(p, ch, "goal_abandoned", subject, md.GoalAbandonedPoints, md.GoalAbandonedFrustration, _w.Content.Memory.GoalAbandonedIntensity);
         };
@@ -1453,6 +1456,38 @@ public sealed class BehaviorSystem
             _w.Content.Memory.DiscoveryIntensity * curiosity / 1000);
         _traits.OnRegionDiscovered(p);
         _goals.OnDiscovered(p, ch, zoneId);
+        CheckObjectives(p, ch, "zone_discovered");
+    }
+
+    /// <summary>Ultima meta ligada concluida (personagem, instante, pontos, objetivos): evita somar a recompensa no mesmo acontecimento.</summary>
+    private (int CharacterId, long Tick, int Points, string[] Objectives) _lastLinkedGoal = (0, -1, 0, Array.Empty<string>());
+
+    /// <summary>
+    /// Conclusao de objetivos (O2): depois de um acontecimento que pode cumprir o criterio (nivel,
+    /// missao, descoberta), marca os objetivos cumpridos, com historico, evento e causa. Com a
+    /// influencia ligada, conquista e memoria; se o mesmo acontecimento ja concluiu uma meta ligada a
+    /// ele, so a diferenca para a maior recompensa (sem soma). A memoria do objetivo e propria: outro significado.
+    /// </summary>
+    internal void CheckObjectives(Person p, Character ch, string cause)
+    {
+        if (p.ObjectiveList.Count == 0) return;
+        var inf = _w.Content.ObjectiveCatalog.Influence;
+        foreach (var o in ObjectiveSystem.Achieved(_w.Content, p, ch))
+        {
+            long day = LocalDay(p, Now);
+            o.State = ObjectiveStates.Completed;
+            o.CompletedDay = day;
+            p.ObjectiveHistoryList.Add(new ObjectiveChange(day, o.Id, o.Param, "completed", o.Tier, cause));
+            _w.Emit("objective_completed", EventImportance.Normal, new[] { new EntityRef("person", p.Id), new EntityRef("character", ch.Id) },
+                new[] { new EventCause(cause, 1000), new EventCause("importance", o.Importance) }, $"{o.Id}|{o.Param}|{o.Tier}");
+            if (!inf.Enabled) continue;
+            int points = inf.CompletedPoints;
+            var last = _lastLinkedGoal;
+            if (last.CharacterId == ch.Id && last.Tick == Now && Array.IndexOf(last.Objectives, o.Id) >= 0)
+                points = Math.Max(0, points - last.Points);
+            _exp.OnAchievement(p, ch, "objective_completed", o.Id + "|" + o.Param, points, 0, inf.CompletedMemoryIntensity);
+            RequestPlanReview(ch, "objective_completed");
+        }
     }
 
     /// <summary>Tipo da atividade atual; "idle" quando esperando sem opcao viavel.</summary>
@@ -1504,6 +1539,7 @@ public sealed class BehaviorSystem
             Combat.CharacterStats.RestoreOutOfCombat(_w.Content, ch);
             RequestPlanReview(ch, "level_up");
             _goals.OnLevelUp(_w.GetPerson(ch.PersonId), ch);
+            CheckObjectives(_w.GetPerson(ch.PersonId), ch, "level_up");
         }
     }
 }

@@ -15,6 +15,13 @@
     "commitmentLoyaltyPermille": 150,
     "rareItemRarities": ["rare", "epic"]
   },
+  "influence": {
+    "enabled": true,
+    "adoptionBoostPermille": 1000,
+    "commitmentBoostPermille": 400,
+    "completedPoints": 150,
+    "completedMemoryIntensity": 800
+  },
   "objectives": [
     {
       "id": "nivel_maximo", "name": "Alcançar o nível máximo", "icon": "trending-up",

@@ -8,7 +8,8 @@ using Simulation.Core.World;
 namespace Simulation.Core.Behavior;
 
 /// <summary>
-/// Metas de curto prazo (D-026/D-036; ambicoes de longo prazo ficam para uma etapa futura). Ao conectar, a pessoa pode adotar um objetivo escolhido
+/// Metas de curto prazo (D-026/D-036; as ambicoes de longo prazo sao os objetivos pessoais, D-062: a meta
+/// que contribui para um deles ganha peso na adocao e comprometimento, O2). Ao conectar, a pessoa pode adotar um objetivo escolhido
 /// pelos tracos (que vem do perfil e mudam com a experiencia): chegar a um nivel, descobrir uma
 /// zona, concluir uma missao ou praticar a atividade preferida. O objetivo vira um fator a mais
 /// na decisao, com o peso do comprometimento; nao obriga. Sem progresso, ou por impaciencia,
@@ -64,17 +65,45 @@ public sealed class GoalSystem
         if (!rng.ChancePermille(S.AdoptChance)) return;
         var options = Candidates(p, ch, rng);
         if (options.Count == 0) return;
-        var pick = options[rng.PickWeighted(options.Select(o => o.Weight).ToList())];
-        var g2 = new PersonalGoal(pick.Type, pick.Target, pick.TargetValue, pick.StartValue, CommitmentOf(t),
+        // Objetivos pessoais (O2): a meta que contribui de verdade para um objetivo ganha peso na adocao
+        // (so o maior reforco entre os objetivos atendidos). Metas sem vinculo continuam como antes.
+        var links = options.Select(o => ObjectiveSystem.Links(C, p, ch, o.Type, o.Target)).ToList();
+        var weights = options.Select((o, i) => ObjectiveSystem.AdoptionWeight(C, p, o.Weight, links[i])).ToList();
+        int k = rng.PickWeighted(weights);
+        var pick = options[k];
+        var pickLinks = links[k];
+        int commitment = ObjectiveSystem.LinkedCommitment(C, p, CommitmentOf(t), pickLinks);
+        var g2 = new PersonalGoal(pick.Type, pick.Target, pick.TargetValue, pick.StartValue, commitment,
             pick.MotiveKey, p.MotiveValue(pick.MotiveKey), Now, played);
+        g2.LinkList.AddRange(pickLinks);
         ch.GoalList.Add(g2);
         ch.GoalsSet++;
-        _w.Emit("goal_set", EventImportance.Low, new[] { new EntityRef("character", ch.Id) },
-            new[] { new EventCause(pick.MotiveKey, p.MotiveValue(pick.MotiveKey)), new EventCause("commitment", g2.Commitment) },
+        ch.GoalsSetByTypeMap[pick.Type] = ch.GoalsSetByTypeMap.GetValueOrDefault(pick.Type) + 1;
+        var causes = new List<EventCause> { new(pick.MotiveKey, p.MotiveValue(pick.MotiveKey)), new("commitment", g2.Commitment) };
+        if (pickLinks.Count > 0)
+        {
+            ch.GoalsLinkedSet++;
+            if (pickLinks.Any(l => l.Kind == ObjectiveLinkKinds.Preparation)) ch.GoalsPreparationSet++;
+            foreach (var l in pickLinks)
+            {
+                if (p.ObjectiveList.FirstOrDefault(o => o.Id == l.ObjectiveId) is not { } o) continue;
+                o.LinkedGoalsSet++;
+                causes.Add(new EventCause("objective:" + l.ObjectiveId + ":" + l.Kind, o.Importance));
+            }
+        }
+        _w.Emit("goal_set", EventImportance.Low, new[] { new EntityRef("character", ch.Id) }, causes.ToArray(),
             $"{pick.Type}|{pick.Target}|{pick.TargetValue}");
     }
 
     private readonly record struct Candidate(string Type, string Target, int TargetValue, int StartValue, int Weight, string MotiveKey);
+
+    /// <summary>Candidatas e pesos efetivos (com o reforco dos objetivos), para testes e diagnostico.</summary>
+    internal List<(string Type, string Target, int Weight, int Effective, IReadOnlyList<ObjectiveLink> Links)> CandidateWeights(Person p, Character ch, DeterministicRng rng) =>
+        Candidates(p, ch, rng).Select(o =>
+        {
+            var links = ObjectiveSystem.Links(C, p, ch, o.Type, o.Target);
+            return (o.Type, o.Target, o.Weight, ObjectiveSystem.AdoptionWeight(C, p, o.Weight, links), (IReadOnlyList<ObjectiveLink>)links);
+        }).ToList();
 
     /// <summary>
     /// Objetivos possiveis agora (um por tipo), com o peso vindo das preferencias (gosto), da
@@ -397,6 +426,11 @@ public sealed class GoalSystem
         if (g.SetbacksDuring > 0) QuirkSystem.Observe(C, p, QuirkIds.Persistente, true, false, g.SurvivedByEffect);
         ch.GoalList.Remove(g);
         ch.GoalsCompleted++;
+        if (g.Links.Count > 0)
+        {
+            ch.GoalsLinkedCompleted++;
+            foreach (var l in g.Links) if (p.ObjectiveList.FirstOrDefault(o => o.Id == l.ObjectiveId) is { } o) o.LinkedGoalsCompleted++;
+        }
         Ended?.Invoke(ch, g, true, "goal_completed");
         _w.Emit("goal_completed", EventImportance.Normal, new[] { new EntityRef("character", ch.Id) },
             new[] { new EventCause(g.MotiveKey, g.MotiveValue) }, $"{g.Type}|{g.Target}|{g.TargetValue}");
@@ -413,6 +447,12 @@ public sealed class GoalSystem
         // Meta de nivel abandonada nao volta com o mesmo alvo antes da proxima subida de nivel.
         if (g.Type is GoalTypes.ReachLevel or GoalTypes.UnlockLevel) ch.BlockedLevelGoals.Add(LevelGoalKey(g.Type, g.Target, g.TargetValue));
         ch.GoalsAbandoned++;
+        if (g.Links.Count > 0)
+        {
+            ch.GoalsLinkedAbandoned++;
+            var person = _w.GetPerson(ch.PersonId);
+            foreach (var l in g.Links) if (person.ObjectiveList.FirstOrDefault(o => o.Id == l.ObjectiveId) is { } o) o.LinkedGoalsAbandoned++;
+        }
         Ended?.Invoke(ch, g, false, reason);
         _w.Emit("goal_abandoned", EventImportance.Low, new[] { new EntityRef("character", ch.Id) },
             new[] { new EventCause(reason, 1000) }, $"{g.Type}|{g.Target}|{g.TargetValue}");

@@ -2179,3 +2179,60 @@ Itens como instâncias, inventário, equipamento funcional, carteira e aplicaç�
 - só 31,6% têm um geral que pode avançar agora, porque o resto depende de sistemas futuros, sem progresso fictício.
 
 **Próximo:** O2 (ligação com as metas e satisfação), depois da avaliação do criador.
+
+## D-063 — Objetivos pessoais: ligação com metas e satisfação (O2)
+**Data:** 06/11/2026 · **Estado:** aceita (valores candidatos)
+
+**Decisões do criador:**
+- O1 aprovada, mantendo os 31,6% sem progresso fictício.
+- "Ser um dos maiores comerciantes" continua distinto de fortuna, com volume e reputação medidos quando a economia existir.
+- "Conhecer todo o mundo" é conhecer **todas as zonas elegíveis do mundo**. As zonas são critério provisório aceito, e marcos não são apresentados como concluídos sem registro.
+- **Na O2:**
+  - vínculo só por avanço real ou preparação por requisito conhecido, sem nível como preparação genérica;
+  - metas independentes mantidas;
+  - só o maior reforço, sem acréscimo extra;
+  - influência só pela adoção e pelo comprometimento das metas;
+  - a maior recompensa emocional quando o mesmo acontecimento conclui meta e objetivo.
+- **Medição:** separar quem tem objetivos acionáveis, quem tem preparação disponível e quem só tem objetivos indisponíveis; mostrar adoção e conclusão das metas vinculadas, mudança de atividades e progressão.
+- **Interface:** completar a conferência visual em 1366×768.
+
+**Feito** (`objetivos.md`, seção 7):
+- **Vínculo meta → objetivo** guardado na meta, com o tipo (avanço ou preparação) e de onde vem:
+  - nível → nível máximo;
+  - missão principal → campanha;
+  - zona elegível nova → mundo;
+  - nível → preparação de chefe, PvP, item, "mais forte" ou próxima missão principal, só com o requisito ainda não cumprido e **conhecido pela pessoa** (zona conhecida ou pista).
+- **Influência:**
+  - peso da candidata × (1 + 1,0 × importância × comprometimento do objetivo mais forte);
+  - comprometimento da meta adotada + 0,4 × importância × comprometimento da distância até 1000.
+  - A meta independente não muda.
+- **Conclusão** do objetivo depois de nível, missão ou descoberta, com histórico, evento e causa. A conquista vale 150 pontos e a memória tem intensidade 800. No mesmo acontecimento de uma meta ligada vale a maior recompensa, sem soma.
+- **"Conhecer todo o mundo"** passou a contar as zonas elegíveis, alcançáveis a partir da cidade inicial.
+- **Contadores e estado:** metas por tipo, ligadas (adotadas, concluídas, abandonadas, com preparação) e por objetivo. O hash está na versão 30.
+- **Interface:**
+  - vínculos nas metas e "meta independente";
+  - metas ligadas e conclusão em cada objetivo;
+  - nota quando a pessoa ainda não conhece o lugar do requisito.
+- **1366×768:**
+  - as ações do cabeçalho viram ícone com tooltip quando não cabem, e as abas ficam numa linha;
+  - o botão principal desativado continua visível;
+  - os cards empilham, como define o kit.
+
+**Desvios e motivos:**
+- **Requisito conhecido pela pessoa:** a pessoa só se prepara para o chefe ou para o PvP se conhece a zona ou tem a pista. Isso segue o D-055 (sem pista, ela não sabe o que há numa zona desconhecida). A ficha ainda mostra o requisito ao gestor.
+- **"Mais forte" usa o nível máximo como preparação.** É o exemplo do próprio criador ("querer um personagem forte pode motivar uma meta de nível"), e é um requisito concreto: os mais fortes estão no nível máximo.
+- **Nenhuma candidata nova gerada por objetivo:** as metas existentes já cobrem os próximos passos concretos, e uma candidata a mais seria um segundo caminho de influência.
+- **Interface:** o `--scroll` das capturas agora é reaplicado por alguns quadros, porque em 1366 a página empilhada cresce depois do primeiro quadro.
+
+**Medição** (pareada, influência desligada × ligada):
+- **A desligada é idêntica à O1.**
+- **Metas ligadas:** de 25,5% para 28,1% das metas (de 33,0% para 36,1% entre os acionáveis; de 20,5% para 23,1% entre os de só preparação; 0 entre os indisponíveis).
+- **Ligadas concluídas:** de 81,7% para 82,9%.
+- **Nível:** +0,18.
+- **Tempo socializando:** −0,46 ponto.
+- **Satisfação:** +2,9.
+- **Sinal:** o mesmo nas 5 seeds.
+- **Validação:** igual.
+- **Achado:** "Conhecer todo o mundo" é concluído por 89% de quem o tem, na mediana em 20 dias. Neste mundo de 15 zonas, o horizonte "longo" não se confirma.
+
+**Próximo:** O3 (evolução), depois da avaliação do criador.

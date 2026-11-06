@@ -126,17 +126,17 @@ public partial class PlayerModal : ModalFrame
         else Fact("Status", "Interessado (sem conta)", UiTokens.Warning, "", "user");
 
         bool on = v != null && v.Status != CharacterStatus.Offline;
-        Actions.AddChild(Action("Seguir no mapa", "Seguir no mapa\n~Volta ao mapa acompanhando este jogador.", () => { _ctx.FocusPerson(_person.Id, true); Close(); }, primary: true, enabled: on));
-        Actions.AddChild(Action("Localizar", "Localizar\n~Volta ao mapa centralizado no jogador.", () => { _ctx.FocusPerson(_person.Id, false); Close(); }, enabled: on));
-        _favorite = Action(FavText(), "Favoritar\n~Acompanha este jogador (favoritos desta sessão).", ToggleFavorite);
+        Actions.AddChild(Action("Seguir no mapa", "Seguir no mapa\n~Volta ao mapa acompanhando este jogador.", () => { _ctx.FocusPerson(_person.Id, true); Close(); }, primary: true, enabled: on, icon: "locate-fixed"));
+        Actions.AddChild(Action("Localizar", "Localizar\n~Volta ao mapa centralizado no jogador.", () => { _ctx.FocusPerson(_person.Id, false); Close(); }, enabled: on, icon: "map-pin"));
+        _favorite = Action(FavText(), "Favoritar\n~Acompanha este jogador (favoritos desta sessão).", ToggleFavorite, icon: "star");
         Actions.AddChild(_favorite);
         if (v != null && v.Status == CharacterStatus.Doing && v.ActivityId.Length > 0
             && _ctx.Content.Regions[v.TargetRegionId].AreaOfActivity(v.ActivityId) is { } area)
         {
             string z = v.TargetRegionId, a = area.Id;
-            Actions.AddChild(Action("Ver área", $"{area.Name}\n~Abre a página da área onde está.", () => _ctx.OpenArea(z, a)));
+            Actions.AddChild(Action("Ver área", $"{area.Name}\n~Abre a página da área onde está.", () => _ctx.OpenArea(z, a), icon: "map"));
         }
-        else if (v != null) Actions.AddChild(Action("Ver zona", "Ver zona\n~Abre a página da zona atual.", () => _ctx.OpenZone(v.RegionId)));
+        else if (v != null) Actions.AddChild(Action("Ver zona", "Ver zona\n~Abre a página da zona atual.", () => _ctx.OpenZone(v.RegionId), icon: "map"));
     }
 
     /// <summary>Botao so com icone (setas, acoes compactas).</summary>
@@ -172,7 +172,7 @@ public partial class PlayerModal : ModalFrame
     private void ToggleFavorite()
     {
         if (!_ctx.Favorites.Remove(_person.Id)) _ctx.Favorites.Add(_person.Id);
-        _favorite.Text = FavText();
+        SetActionLabel(_favorite, FavText());
     }
 
     // ---------------- Metricas derivadas (relatorio do analista) ----------------
@@ -537,7 +537,7 @@ public partial class PlayerModal : ModalFrame
             col.AddChild(Section("Objetivo principal"));
             col.AddChild(objective);
         }
-        col.AddChild(Section("Metas", ThemeFactory.Text($"{v.GoalsCompleted} concluídas · {v.GoalsAbandoned} abandonadas", UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Numbers)));
+        col.AddChild(Section("Metas", ThemeFactory.Text($"{N(v.GoalsCompleted, "concluída", "concluídas")} · {N(v.GoalsAbandoned, "abandonada", "abandonadas")}", UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Numbers)));
         if (v.Goals.Count == 0)
             col.AddChild(Wrap("Sem meta agora. Nem todo jogador tem uma o tempo todo; ao conectar, pode adotar uma conforme as preferências, a competitividade e a personalidade.", UiTokens.FontSmall, UiTokens.TextSecondary));
         foreach (var g in v.Goals)
@@ -547,7 +547,9 @@ public partial class PlayerModal : ModalFrame
             var motive = AttributeInfo.Name(g.MotiveKey);
             var tip = new TipPanel
             {
-                TooltipText = $"{text}\nMotivo|{motive} {UiTokens.To20(g.MotiveValue)}\nComprometimento|{g.Commitment / 10}%\nDesde|{PtBr.ShortDate(_ctx.Calendar.ToDateTime(g.SetTick))}\n~Meta de curto prazo: influencia as escolhas sem obrigar; vira um fator a mais na decisão, com o peso do comprometimento (paciência e lealdade). Sem progresso por muitas horas de jogo, é abandonada (os pacientes insistem mais).",
+                TooltipText = $"{text}\nMotivo|{motive} {UiTokens.To20(g.MotiveValue)}\nComprometimento|{g.Commitment / 10}%\nDesde|{PtBr.ShortDate(_ctx.Calendar.ToDateTime(g.SetTick))}"
+                    + (g.Links.Count > 0 ? $"\nAjuda|{LinksText(g.Links)}" : "\nAjuda|nenhum objetivo (meta independente)")
+                    + "\n~Meta de curto prazo: influencia as escolhas sem obrigar; vira um fator a mais na decisão, com o peso do comprometimento (paciência e lealdade; mais alto quando a meta serve a um objetivo). Sem progresso por muitas horas de jogo, é abandonada (os pacientes insistem mais).",
                 MouseFilter = MouseFilterEnum.Stop,
             };
             tip.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
@@ -1625,6 +1627,11 @@ public partial class PlayerModal : ModalFrame
             case "quest_step_completed": return ($"Cumpriu uma etapa de {QuestName((e.Detail ?? "").Split('#')[0])}", UiTokens.Info);
             case "quest_completed": return ($"Entregou a missão {QuestName(e.Detail)}", UiTokens.Success);
             case "goal_set": return ($"Nova meta: {GoalDetail(e.Detail)}", UiTokens.Accent);
+            case "objective_completed":
+            {
+                var oc = (e.Detail ?? "||").Split('|');
+                return ($"Concluiu o objetivo: {ObjectiveInfo.Title(_ctx.Content, oc[0], oc.Length > 1 ? oc[1] : "")}", UiTokens.Success);
+            }
             case "objective_set":
             {
                 var op = (e.Detail ?? "||").Split('|');

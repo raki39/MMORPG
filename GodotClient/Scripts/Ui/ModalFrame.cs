@@ -15,6 +15,8 @@ public partial class ModalFrame : Control
     private readonly PanelContainer _panel;
     private readonly List<(string Name, Func<Control> Build, bool Live)> _tabs = new();
     private readonly List<Button> _tabButtons = new();
+    private HBoxContainer _tabsRow = null!;
+    private bool _compactActions;
     private readonly HFlowContainer _tabBar;
     private readonly ScrollContainer _scroll;
     private readonly HFlowContainer _facts;
@@ -89,6 +91,9 @@ public partial class ModalFrame : Control
         var tabsRow = new HBoxContainer();
         tabsRow.AddThemeConstantOverride("separation", 12);
         headCol.AddChild(tabsRow);
+        _tabsRow = tabsRow;
+        // Telas estreitas (1366): se abas e acoes nao cabem numa linha, as acoes com icone viram so icone.
+        tabsRow.Resized += () => CallDeferred(nameof(UpdateCompactActions));
         _tabBar = new HFlowContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
         _tabBar.AddThemeConstantOverride("h_separation", 2);
         _tabBar.AddThemeConstantOverride("v_separation", 0);
@@ -190,7 +195,23 @@ public partial class ModalFrame : Control
     private void RestoreScroll(int value) => _scroll.ScrollVertical = value;
 
     /// <summary>Rola o corpo da pagina (capturas automaticas).</summary>
-    public void ScrollTo(int value) => CallDeferred(nameof(RestoreScroll), value);
+    public void ScrollTo(int value)
+    {
+        // Capturas: reaplica por alguns quadros, ate a pagina terminar de crescer (cards empilhados em 1366).
+        _pendingScroll = value;
+        _pendingScrollFrames = 30;
+        SetProcess(true);
+    }
+
+    private int _pendingScroll;
+    private int _pendingScrollFrames;
+
+    public override void _Process(double delta)
+    {
+        if (_pendingScrollFrames <= 0) { SetProcess(false); return; }
+        _pendingScrollFrames--;
+        _scroll.ScrollVertical = _pendingScroll;
+    }
 
     /// <summary>Sai da pagina (o cliente volta ao mapa).</summary>
     public void Close()
@@ -268,11 +289,23 @@ public partial class ModalFrame : Control
     public static Control InfoIcon(string tooltip) =>
         new InfoGlyph { TooltipText = tooltip, CustomMinimumSize = new Vector2(16, 16), SizeFlagsVertical = SizeFlags.ShrinkCenter };
 
-    public static Button Action(string text, string tip, Action onPress, bool primary = false, bool enabled = true)
+    /// <summary>
+    /// Botao de acao do cabecalho. Com icone, em tela estreita ele mostra so o icone (o rotulo fica no
+    /// tooltip), para as abas caberem numa linha.
+    /// </summary>
+    public static Button Action(string text, string tip, Action onPress, bool primary = false, bool enabled = true, string icon = "")
     {
         var b = new TipButton { Text = text, TooltipText = tip, Disabled = !enabled, FocusMode = FocusModeEnum.None, CustomMinimumSize = new Vector2(0, 28) };
         b.AddThemeFontOverride("font", UiFonts.Medium);
         b.AddThemeFontSizeOverride("font_size", 12);
+        b.SetMeta("label", text);
+        if (icon.Length > 0 && Icons.Has(icon))
+        {
+            b.SetMeta("icon", icon);
+            var ic = primary ? UiTokens.Background : UiTokens.TextLabel;
+            foreach (var state in new[] { "icon_normal_color", "icon_hover_color", "icon_pressed_color", "icon_focus_color" }) b.AddThemeColorOverride(state, ic);
+            b.AddThemeColorOverride("icon_disabled_color", UiTokens.TextDisabled);   // fundo desativado e escuro, inclusive no primario
+        }
         if (primary)
         {
             b.AddThemeStyleboxOverride("normal", ThemeFactory.Box(UiTokens.Accent, 12, radius: 3));
@@ -285,6 +318,51 @@ public partial class ModalFrame : Control
         }
         b.Pressed += onPress;
         return b;
+    }
+
+    /// <summary>Troca o rotulo de uma acao respeitando o modo compacto (so icone).</summary>
+    public void SetActionLabel(Button b, string text)
+    {
+        b.SetMeta("label", text);
+        if (!(_compactActions && b.HasMeta("icon"))) b.Text = text;
+    }
+
+    /// <summary>Compacta as acoes com icone quando abas + acoes (com rotulo) nao cabem na linha.</summary>
+    private void UpdateCompactActions()
+    {
+        if (!IsInsideTree() || _tabsRow.Size.X <= 0) return;
+        float tabs = 0;
+        foreach (var t in _tabButtons) tabs += t.GetCombinedMinimumSize().X;
+        tabs += 2 * Math.Max(0, _tabButtons.Count - 1);
+        float full = 0;
+        int n = 0;
+        foreach (var child in Actions.GetChildren())
+        {
+            if (child is not Button b || !b.Visible) continue;
+            string label = b.HasMeta("label") ? b.GetMeta("label").AsString() : b.Text;
+            full += UiFonts.Medium.GetStringSize(label, HorizontalAlignment.Left, -1, 12).X + 28;
+            n++;
+        }
+        full += 6 * Math.Max(0, n - 1);
+        bool compact = tabs + 12 + full > _tabsRow.Size.X;
+        if (compact == _compactActions) return;
+        _compactActions = compact;
+        foreach (var child in Actions.GetChildren())
+        {
+            if (child is not Button b || !b.HasMeta("icon")) continue;
+            if (compact)
+            {
+                b.Text = "";
+                b.Icon = Icons.Get(b.GetMeta("icon").AsString(), 16);
+                b.CustomMinimumSize = new Vector2(32, 28);
+            }
+            else
+            {
+                b.Text = b.GetMeta("label").AsString();
+                b.Icon = null;
+                b.CustomMinimumSize = new Vector2(0, 28);
+            }
+        }
     }
 
     /// <summary>Linha rotulo / barra fina / valor.</summary>

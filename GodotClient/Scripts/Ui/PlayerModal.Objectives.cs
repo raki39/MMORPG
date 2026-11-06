@@ -24,9 +24,11 @@ public partial class PlayerModal
             return Column(12, Card("Objetivos", Wrap("Ainda não entrou no jogo. A pessoa define suas ambições ao se registrar.", UiTokens.FontSmall, UiTokens.TextSecondary), info: ObjectivesInfo));
         var d = WatchedDetail;
         if (d == null) return Column(12, Card("Objetivos", Wrap("Carregando…", UiTokens.FontSmall, UiTokens.TextSecondary)));
-        var active = d.Objectives.Where(o => o.State == ObjectiveStates.Active).ToList();
-        var general = active.Where(o => o.Tier == ObjectiveTiers.General).ToList();
-        var secondary = active.Where(o => o.Tier == ObjectiveTiers.Secondary).ToList();
+        // Ativos primeiro; concluidos ficam na lista, marcados.
+        var shown = d.Objectives.Where(o => o.State is ObjectiveStates.Active or ObjectiveStates.Completed)
+            .OrderBy(o => o.State == ObjectiveStates.Active ? 0 : 1).ToList();
+        var general = shown.Where(o => o.Tier == ObjectiveTiers.General).ToList();
+        var secondary = shown.Where(o => o.Tier == ObjectiveTiers.Secondary).ToList();
 
         Control Count(int n) => ThemeFactory.Text(n.ToString(), UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Numbers);
         var row1 = Grid(12,
@@ -34,7 +36,7 @@ public partial class PlayerModal
             (Card("Objetivos secundários", ObjectiveList(secondary, "Nenhum projeto secundário: só as ambições gerais."),
                 info: "Projetos de menor prioridade\n~Podem ser do mesmo tema de um objetivo geral ou independentes. Um secundário também pode ser de longo prazo.", headerRight: Count(secondary.Count)), 6));
         var row2 = Grid(12,
-            (Card("Metas atuais", ObjectiveGoalsBody(v), info: "Metas de curto prazo\n~Chegar a um nível, descobrir uma zona, concluir uma missão ou praticar uma atividade. Influenciam as escolhas sem obrigar. Metas também surgem por necessidade, oportunidade ou vontade do momento, sem ligação com as ambições."), 6),
+            (Card("Metas atuais", ObjectiveGoalsBody(v), info: "Metas de curto prazo e o que elas ajudam\n~Uma meta se liga a um objetivo só quando contribui de verdade: avanço real (nível para o nível máximo, missão principal para a campanha, zona nova para conhecer o mundo) ou preparação por um requisito que a pessoa conhece (o nível do chefe, do PvP, do item).\n~A meta ligada tem mais chance de ser adotada e mais comprometimento, pelo objetivo mais forte que ela atende. Metas também surgem por necessidade, oportunidade ou vontade do momento, sem ligação."), 6),
             (Card("Histórico", ObjectiveHistoryBody(d), info: "Mudanças nos objetivos\n~Cada objetivo registra quando passou a valer e por quê. Conclusões, mudanças de prioridade e abandonos aparecem aqui com o motivo."), 6));
         return Column(12, row1, row2);
     }
@@ -69,7 +71,10 @@ public partial class PlayerModal
         var tags = Row(6);
         tags.AddChild(ThemeFactory.Text(horizon, UiTokens.FontCaption, UiTokens.TextSecondary));
         tags.AddChild(ThemeFactory.Text("·", UiTokens.FontCaption, UiTokens.TextDisabled));
-        tags.AddChild(ThemeFactory.Text(a.CriterionMet ? "Critério cumprido" : ObjectiveInfo.ViabilityPt(a.Viability), UiTokens.FontCaption, a.CriterionMet ? UiTokens.Success : vc, UiFonts.Medium));
+        bool done = o.State == ObjectiveStates.Completed;
+        string state = done ? $"Concluído em {PtBr.ShortDate(_ctx.Calendar.ToDateTime(_ctx.Calendar.StartOfDay(o.CompletedDay)))}"
+            : a.CriterionMet ? "Critério cumprido" : ObjectiveInfo.ViabilityPt(a.Viability);
+        tags.AddChild(ThemeFactory.Text(state, UiTokens.FontCaption, done || a.CriterionMet ? UiTokens.Success : vc, UiFonts.Medium));
         body.AddChild(tags);
 
         // Progresso so quando mensuravel com o que existe (sem progresso ficticio).
@@ -78,16 +83,21 @@ public partial class PlayerModal
             var pr = Row(8);
             var bar = new ThinBar(a.Progress / (float)Math.Max(1, a.ProgressTotal), vc) { CustomMinimumSize = new Vector2(0, 4), SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsVertical = SizeFlags.ShrinkCenter };
             pr.AddChild(bar);
-            pr.AddChild(ThemeFactory.Text($"{a.Progress} de {a.ProgressTotal}", UiTokens.FontCaption, UiTokens.TextLabel, UiFonts.Numbers));
+            string unit = def?.Criterion switch { ObjectiveCriteria.MainCampaign => " missões", ObjectiveCriteria.AllZones => " zonas", ObjectiveCriteria.MaxLevel => "", _ => "" };
+            pr.AddChild(ThemeFactory.Text($"{a.Progress} de {a.ProgressTotal}{unit}", UiTokens.FontCaption, UiTokens.TextLabel, UiFonts.Numbers));
             body.AddChild(pr);
         }
         // Preparacao possivel (requisito concreto) separada da etapa final indisponivel.
-        if (a.PreparationLevel > 0)
-            body.AddChild(Hint("footprints", $"Preparação: nível {a.PreparationLevel} ({ObjectiveInfo.SubjectPt(_ctx, a.PreparationSubject)})", UiTokens.Warning));
+        if (done) { }
+        else if (a.PreparationLevel > 0)
+            body.AddChild(Hint("footprints", $"Preparação: nível {a.PreparationLevel} ({ObjectiveInfo.SubjectPt(_ctx, a.PreparationSubject)})"
+                + (a.PreparationKnown ? "" : " · a pessoa ainda não conhece este lugar"), a.PreparationKnown ? UiTokens.Warning : UiTokens.TextSecondary));
         else if (a.Viability == ObjectiveViability.Future && HasPreparationKind(def))
             body.AddChild(Hint("circle-check", "Requisitos de nível conhecidos: cumpridos", UiTokens.Success));
         if (a.MissingSystems.Count > 0)
             body.AddChild(Hint("hourglass", "Etapa final indisponível: depende de " + string.Join(" e ", a.MissingSystems.Select(ObjectiveInfo.SystemPt)), UiTokens.TextSecondary));
+        if (o.LinkedSet > 0)
+            body.AddChild(Hint("link", $"Metas ligadas: {N(o.LinkedSet, "adotada", "adotadas")} · {N(o.LinkedCompleted, "concluída", "concluídas")} · {N(o.LinkedAbandoned, "abandonada", "abandonadas")}", UiTokens.TextSecondary));
         row.AddChild(body);
 
         var tip = new TipPanel { TooltipText = ObjectiveTip(o, def), MouseFilter = MouseFilterEnum.Stop };
@@ -143,11 +153,26 @@ public partial class PlayerModal
         foreach (var g in v.Goals)
         {
             var (icon, text, progress) = GoalText(v, g);
-            col.AddChild(GoalRow(icon, text, progress, UiTokens.Accent));
+            var item = Column(4, GoalRow(icon, text, progress, UiTokens.Accent));
+            item.AddChild(g.Links.Count == 0
+                ? Hint("circle", "Meta independente: não está ligada a nenhum objetivo", UiTokens.TextSecondary)
+                : Hint("link", "Ajuda: " + LinksText(g.Links), UiTokens.AccentSoft));
+            col.AddChild(item);
         }
-        col.AddChild(ThemeFactory.Text($"{v.GoalsCompleted} concluídas · {v.GoalsAbandoned} abandonadas", UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Numbers));
+        col.AddChild(ThemeFactory.Text($"{N(v.GoalsCompleted, "concluída", "concluídas")} · {N(v.GoalsAbandoned, "abandonada", "abandonadas")}", UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Numbers));
         return col;
     }
+
+    /// <summary>Quantidade com singular ou plural (1 concluída, 2 concluídas).</summary>
+    private static string N(int n, string one, string many) => $"{n} {(n == 1 ? one : many)}";
+
+    /// <summary>"Objetivo (avanço)" ou "Objetivo (preparação: nível do chefe)", separados por ponto.</summary>
+    private string LinksText(IReadOnlyList<ObjectiveLink> links) =>
+        string.Join(" · ", links.Select(l =>
+        {
+            string name = _ctx.Content.Objectives.TryGetValue(l.ObjectiveId, out var d) ? d.Name : l.ObjectiveId;
+            return l.Kind == ObjectiveLinkKinds.Advance ? $"{name} (avanço)" : $"{name} (preparação: {ObjectiveInfo.SubjectPt(_ctx, l.Subject)})";
+        }));
 
     private Control ObjectiveHistoryBody(CharacterDetailView d)
     {
@@ -159,6 +184,7 @@ public partial class PlayerModal
             {
                 "set" when h.Reason == ObjectiveSystem.InitialOrigin => "Objetivo inicial",
                 "set" => "Novo objetivo",
+                "completed" => "Concluiu",
                 _ => h.Change,
             };
             var r = Row(8);

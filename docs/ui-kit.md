@@ -31,7 +31,7 @@ Referência para qualquer tela nova. Estilo de dossiê de jogo de gestão: escur
    - a faixa de dados (`Fact`): ícone ou marcador, valor de 15 px, rótulo de 11 px e filetes entre células;
    - um destaque à direita (`Highlight`), por exemplo o meio-medidor;
    - abas de texto com 14 px, alinhadas ao nome; a ativa é dourada e sublinhada;
-   - ações à direita das abas.
+   - ações à direita das abas. Se abas e ações não cabem numa linha (1366×768), as ações com ícone mostram só o ícone, com o rótulo no tooltip, e as abas continuam numa linha só.
 2. **Corpo:** linhas de cards numa **grade de 12 colunas** (`Grid` / `SpanRow`).
    - Cada card ocupa N colunas, com vão de 12 px.
    - As divisas caem sempre nas mesmas linhas verticais, de preferência 3, 6 e 9. Linhas diferentes podem ter cards de tamanhos diferentes, mas as bordas coincidem.

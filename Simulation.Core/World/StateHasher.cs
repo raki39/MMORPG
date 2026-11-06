@@ -11,7 +11,7 @@ namespace Simulation.Core.World;
 /// </summary>
 public static class StateHasher
 {
-    public const int FormatVersion = 29;
+    public const int FormatVersion = 30;
 
     public static string Compute(WorldState w) => Compute(w, includeContentId: true);
 
@@ -92,8 +92,13 @@ public static class StateHasher
             {
                 h.Str(g.Type); h.Str(g.Target); h.Int(g.TargetValue); h.Int(g.StartValue); h.Int(g.Commitment);
                 h.Str(g.MotiveKey); h.Int(g.MotiveValue); h.Long(g.SetTick); h.Int(g.Progress); h.Long(g.LastProgressPlayedTicks); h.Int(g.SetbacksDuring); h.Bool(g.SurvivedByEffect);
+                h.Int(g.Links.Count);
+                foreach (var l in g.Links) { h.Str(l.ObjectiveId); h.Str(l.Kind); h.Str(l.Subject); }
             }
             h.Int(c.GoalsSet); h.Int(c.GoalsCompleted); h.Int(c.GoalsAbandoned);
+            h.Int(c.GoalsSetByType.Count);
+            foreach (var kv in c.GoalsSetByType) { h.Str(kv.Key); h.Int(kv.Value); }
+            h.Int(c.GoalsLinkedSet); h.Int(c.GoalsLinkedCompleted); h.Int(c.GoalsLinkedAbandoned); h.Int(c.GoalsPreparationSet);
             h.Int(c.ZoneMinutesSpent.Count);
             foreach (var kv in c.ZoneMinutesSpent) { h.Str(kv.Key); h.Int(kv.Value); }
             // Plano da sessao e tedio (D-037).
@@ -204,6 +209,7 @@ public static class StateHasher
         foreach (var o in p.Objectives)
         {
             h.Str(o.Id); h.Str(o.Param); h.Str(o.Tier); h.Int(o.Importance); h.Int(o.Commitment); h.Str(o.State); h.Str(o.Origin); h.Long(o.Day);
+            h.Long(o.CompletedDay); h.Int(o.LinkedGoalsSet); h.Int(o.LinkedGoalsCompleted); h.Int(o.LinkedGoalsAbandoned);
             h.Int(o.Motives.Count);
             foreach (var (k, v) in o.Motives) { h.Str(k); h.Int(v); }
         }

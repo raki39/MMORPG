@@ -92,7 +92,7 @@ Uma etapa por vez, fechada por inteiro (testes, validação, documentação, exp
    - a reputação do personagem entra com a Etapa 3 e as finanças com o M7.
 1b. **Objetivos pessoais** (pedido do criador antes da E1b; `objetivos.md`):
    - ~~O1: catálogo, sorteio inicial, viabilidade e aba Objetivos, sem influência~~ (D-062);
-   - O2: ligação com as metas (vínculo e motivo, adoção favorecida, preparação por requisito concreto), satisfação na conclusão e no abandono, sem duplicar;
+   - ~~O2: ligação com as metas (vínculo e motivo, adoção favorecida, preparação por requisito concreto e conhecido), conclusão com a maior recompensa, sem duplicar~~ (D-063);
    - O3: evolução (surgimento por acontecimentos, prioridade, conclusão, abandono e substituição com motivo).
 2. **Etapa 1 — O personagem** (D-040; escopo reduzido no D-061, `personagem.md`; pausada antes da E1b até fechar os objetivos):
    - ~~E1a: modelo, estatísticas (com crítico), recurso por tipo, velocidade do personagem e índice de poder candidato~~ (D-061);

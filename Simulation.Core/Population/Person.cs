@@ -679,6 +679,12 @@ public sealed class PersonObjective
     public long Day { get; }
     /// <summary>O que mais pesou na escolha (afinidade ou ambicao) e quanto (termo - 1000).</summary>
     public IReadOnlyList<(string Key, int Value)> Motives { get; }
+    /// <summary>Dia em que foi concluido (-1 = nao concluido).</summary>
+    public long CompletedDay { get; internal set; } = -1;
+    /// <summary>Metas ligadas a ele (O2): adotadas, concluidas e abandonadas.</summary>
+    public int LinkedGoalsSet { get; internal set; }
+    public int LinkedGoalsCompleted { get; internal set; }
+    public int LinkedGoalsAbandoned { get; internal set; }
 }
 
 public static class ObjectiveStates
@@ -736,6 +742,23 @@ public sealed class PersonalGoal
     public int SetbacksDuring { get; internal set; }
     /// <summary>A meta so continuou porque o efeito do Persistente prolongou o prazo (nao conta como evidencia).</summary>
     public bool SurvivedByEffect { get; internal set; }
+    /// <summary>
+    /// Objetivos para os quais a meta contribui de verdade (O2), com o motivo: avanco real ou
+    /// preparacao por requisito conhecido. Vazia = meta independente (necessidade, oportunidade, vontade).
+    /// </summary>
+    internal List<ObjectiveLink> LinkList { get; } = new();
+    public IReadOnlyList<ObjectiveLink> Links => LinkList;
+}
+
+/// <summary>Vinculo de uma meta com um objetivo (O2): tipo (advance ou preparation) e de onde vem (zona, missao, requisito).</summary>
+public sealed record ObjectiveLink(string ObjectiveId, string Kind, string Subject);
+
+public static class ObjectiveLinkKinds
+{
+    /// <summary>A meta avanca o criterio do objetivo (nivel, missao principal, zona).</summary>
+    public const string Advance = "advance";
+    /// <summary>A meta cumpre parte de um requisito conhecido (nivel minimo do chefe, do PvP, do item...).</summary>
+    public const string Preparation = "preparation";
 }
 
 /// <summary>Historico de uma quest para o personagem.</summary>
@@ -887,6 +910,14 @@ public sealed class Character
     public int GoalsSet { get; internal set; }
     public int GoalsCompleted { get; internal set; }
     public int GoalsAbandoned { get; internal set; }
+    /// <summary>Metas adotadas por tipo (medicao).</summary>
+    internal SortedDictionary<string, int> GoalsSetByTypeMap { get; } = new(StringComparer.Ordinal);
+    public IReadOnlyDictionary<string, int> GoalsSetByType => GoalsSetByTypeMap;
+    /// <summary>Metas ligadas a objetivos (O2): adotadas, concluidas, abandonadas; e as que tinham vinculo de preparacao.</summary>
+    public int GoalsLinkedSet { get; internal set; }
+    public int GoalsLinkedCompleted { get; internal set; }
+    public int GoalsLinkedAbandoned { get; internal set; }
+    public int GoalsPreparationSet { get; internal set; }
 
     /// <summary>Tempo conectado ate o instante informado, incluindo a sessao em andamento.</summary>
     public long PlayedTicksAt(long now) =>

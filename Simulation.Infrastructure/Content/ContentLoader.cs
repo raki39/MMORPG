@@ -92,7 +92,7 @@ public static class ContentLoader
         if (quests != null) set.Quests = new QuestCatalog { Settings = quests.Settings, Boards = quests.Boards, Quests = quests.Quests };
         set.Combat = Parse<CombatFile>(texts, ContentValidator.CombatFile, issues)?.Combat ?? new CombatRulesDefinition();
         if (Parse<ObjectivesFile>(texts, ContentValidator.ObjectivesFile, issues) is { } objectives)
-            set.Objectives = new ObjectiveCatalogDefinition { Generation = objectives.Generation, Objectives = objectives.Objectives };
+            set.Objectives = new ObjectiveCatalogDefinition { Generation = objectives.Generation, Influence = objectives.Influence, Objectives = objectives.Objectives };
         var traits = Parse<TraitsFile>(texts, ContentValidator.TraitsFile, issues);
         if (traits != null) set.Quirks = new QuirkCatalogDefinition { Generation = traits.Generation, Effects = traits.Effects, Acquisition = traits.Acquisition, Traits = traits.Traits };
 
@@ -181,6 +181,7 @@ public sealed class ProgressionFile : VersionedFile { public ProgressionDefiniti
 public sealed class ObjectivesFile : VersionedFile
 {
     public ObjectiveGenerationDefinition Generation { get; set; } = new();
+    public ObjectiveInfluenceDefinition Influence { get; set; } = new();
     public List<ObjectiveDefinition> Objectives { get; set; } = new();
 }
 

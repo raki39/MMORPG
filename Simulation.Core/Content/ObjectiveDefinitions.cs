@@ -8,7 +8,28 @@ namespace Simulation.Core.Content;
 public sealed class ObjectiveCatalogDefinition
 {
     public ObjectiveGenerationDefinition Generation { get; set; } = new();
+    /// <summary>Influencia (O2): pelas metas (adocao e comprometimento) e a conquista ao concluir.</summary>
+    public ObjectiveInfluenceDefinition Influence { get; set; } = new();
     public List<ObjectiveDefinition> Objectives { get; set; } = new();
+}
+
+/// <summary>
+/// Influencia dos objetivos (O2). So pelas metas: a meta candidata que contribui de verdade para um
+/// objetivo (avanco real ou preparacao por requisito conhecido) ganha peso na adocao, e a meta
+/// adotada ganha comprometimento. Vale so o maior reforco entre os objetivos atendidos (ter mais
+/// objetivos nao da vantagem). Nenhum bonus direto nas atividades. Desligada: os vinculos e as
+/// conclusoes continuam registrados, sem efeito (medicao pareada).
+/// </summary>
+public sealed class ObjectiveInfluenceDefinition
+{
+    public bool Enabled { get; set; } = true;
+    /// <summary>Peso da meta candidata x (1 + reforco x importancia x comprometimento do objetivo).</summary>
+    public int AdoptionBoostPermille { get; set; } = 1000;
+    /// <summary>Parte da distancia do comprometimento da meta ate 1000 que o objetivo fecha (x importancia x comprometimento).</summary>
+    public int CommitmentBoostPermille { get; set; } = 400;
+    /// <summary>Conquista ao concluir um objetivo (pontos da sessao) e intensidade da memoria.</summary>
+    public int CompletedPoints { get; set; } = 150;
+    public int CompletedMemoryIntensity { get; set; } = 800;
 }
 
 /// <summary>Sorteio dos objetivos iniciais (no registro). Valores candidatos.</summary>

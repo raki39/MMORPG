@@ -1,3 +1,5 @@
+using System.Runtime.CompilerServices;
+using Simulation.Core.Behavior;
 using Simulation.Core.Content;
 using Simulation.Core.Random;
 
@@ -19,10 +21,11 @@ public static class ObjectiveViability
 /// mensuravel com o que existe) e a preparacao possivel por requisito concreto do conteudo, mostrada
 /// separada da etapa final (que pode estar indisponivel).
 /// </summary>
-/// <param name="PreparationLevel">Nivel exigido por um requisito conhecido ainda nao cumprido (0 = nenhum).</param>
+/// <param name="PreparationLevel">Nivel exigido por um requisito do conteudo ainda nao cumprido (0 = nenhum).</param>
 /// <param name="PreparationSubject">De onde vem o requisito: missao, "zona/atividade" ou item.</param>
+/// <param name="PreparationKnown">A pessoa conhece o requisito (zona conhecida ou pista; missao de quadro conhecido; o item e o nivel maximo ela ja sabe).</param>
 public sealed record ObjectiveAssessment(string Viability, IReadOnlyList<string> MissingSystems, int Progress, int ProgressTotal,
-    int PreparationLevel, string PreparationSubject, bool CriterionMet)
+    int PreparationLevel, string PreparationSubject, bool CriterionMet, bool PreparationKnown = true)
 {
     public bool Measurable => ProgressTotal > 0;
 }
@@ -185,8 +188,14 @@ public static class ObjectiveSystem
                 break;
             }
             case ObjectiveCriteria.AllZones:
-                total = c.Regions.Count; progress = ch?.KnownRegions.Count ?? 0; met = progress >= total;
+            {
+                // Zonas elegiveis: alcancaveis a partir da cidade inicial. Marcos de exploracao nao contam (nao sao registrados).
+                var eligible = EligibleZones(c);
+                total = eligible.Count;
+                progress = ch == null ? 0 : ch.KnownRegions.Count(eligible.Contains);
+                met = total > 0 && progress >= total;
                 break;
+            }
             case ObjectiveCriteria.StrengthRanking:
                 // Os mais fortes estao no nivel maximo: requisito concreto de preparacao (nao o indice de poder).
                 if (level < cap) prepLevel = cap;
@@ -209,7 +218,134 @@ public static class ObjectiveSystem
                 break;
         }
         string viability = missing.Count > 0 ? ObjectiveViability.Future : prepLevel > 0 ? ObjectiveViability.Preparation : ObjectiveViability.Now;
-        return new ObjectiveAssessment(viability, missing, progress, total, prepLevel, prepSubject, missing.Count == 0 && met);
+        return new ObjectiveAssessment(viability, missing, progress, total, prepLevel, prepSubject, missing.Count == 0 && met,
+            prepLevel == 0 || KnowsRequirement(c, ch, prepSubject));
+    }
+
+    /// <summary>
+    /// A pessoa conhece o requisito? Atividade ("zona/atividade"): conhece a zona ou tem a pista. Missao:
+    /// conhece a zona do quadro. Item escolhido por ela e o nivel maximo: sim. Sem isso, nao ha
+    /// preparacao para ela (nao sabe onde fica o chefe nem o nivel dele).
+    /// </summary>
+    public static bool KnowsRequirement(ContentDatabase c, Character? ch, string subject)
+    {
+        if (ch == null || subject.Length == 0 || c.Items.ContainsKey(subject)) return true;
+        if (c.Quests.TryGetValue(subject, out var q))
+            return c.QuestBoards.TryGetValue(q.BoardId, out var b) && ch.KnownRegions.Contains(b.RegionId);
+        int slash = subject.IndexOf('/');
+        if (slash > 0) return ch.KnownRegions.Contains(subject[..slash]) || ch.ContentHints.Contains(subject);
+        return true;
+    }
+
+    private static readonly ConditionalWeakTable<ContentDatabase, HashSet<string>> EligibleCache = new();
+
+    /// <summary>Zonas elegiveis para "conhecer todo o mundo": alcancaveis a partir da cidade inicial pelas conexoes.</summary>
+    public static IReadOnlySet<string> EligibleZones(ContentDatabase c) => EligibleCache.GetValue(c, db =>
+    {
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        string start = db.World.StartingRegionId;
+        if (!db.Regions.ContainsKey(start)) return seen;
+        var stack = new Stack<string>();
+        seen.Add(start);
+        stack.Push(start);
+        while (stack.Count > 0)
+            foreach (var con in db.Regions[stack.Pop()].Connections)
+                if (db.Regions.ContainsKey(con.To) && seen.Add(con.To)) stack.Push(con.To);
+        return seen;
+    });
+
+    // ---------------- Ligacao com as metas (O2) ----------------
+
+    /// <summary>
+    /// Para quais objetivos ativos uma meta contribui de verdade, e por que. Avanco real: nivel para o
+    /// nivel maximo; missao principal para a campanha; zona elegivel desconhecida para conhecer o mundo.
+    /// Preparacao: nivel, so quando o objetivo tem um requisito de nivel concreto, ainda nao cumprido e
+    /// conhecido pela pessoa (chefe, PvP, item, proxima missao principal, nivel maximo para "mais forte").
+    /// Guilda, fortuna, fabricacao e comercio nao tem meta ligada: nenhum requisito existe ainda.
+    /// </summary>
+    public static List<ObjectiveLink> Links(ContentDatabase c, Person p, Character ch, string goalType, string target)
+    {
+        var list = new List<ObjectiveLink>();
+        bool levelGoal = goalType is GoalTypes.ReachLevel or GoalTypes.UnlockLevel;
+        foreach (var o in p.ObjectiveList)
+        {
+            if (o.State != ObjectiveStates.Active || !c.Objectives.TryGetValue(o.Id, out var def)) continue;
+            var a = Assess(c, ch, o);
+            if (a.CriterionMet) continue;
+            bool prep = levelGoal && a.PreparationLevel > ch.Level && a.PreparationKnown;
+            switch (def.Criterion)
+            {
+                case ObjectiveCriteria.MaxLevel:
+                    if (levelGoal) list.Add(new ObjectiveLink(o.Id, ObjectiveLinkKinds.Advance, ""));
+                    break;
+                case ObjectiveCriteria.MainCampaign:
+                    if (goalType == GoalTypes.CompleteQuest && c.Quests.TryGetValue(target, out var q) && q.Category == QuestCategories.Main)
+                        list.Add(new ObjectiveLink(o.Id, ObjectiveLinkKinds.Advance, target));
+                    else if (prep) list.Add(new ObjectiveLink(o.Id, ObjectiveLinkKinds.Preparation, a.PreparationSubject));
+                    break;
+                case ObjectiveCriteria.AllZones:
+                    if (goalType == GoalTypes.DiscoverZone && EligibleZones(c).Contains(target) && !ch.KnownRegions.Contains(target))
+                        list.Add(new ObjectiveLink(o.Id, ObjectiveLinkKinds.Advance, target));
+                    break;
+                case ObjectiveCriteria.StrengthRanking:
+                case ObjectiveCriteria.DefeatBosses:
+                case ObjectiveCriteria.PvpRanking:
+                case ObjectiveCriteria.RareItem:
+                    if (prep) list.Add(new ObjectiveLink(o.Id, ObjectiveLinkKinds.Preparation, a.PreparationSubject));
+                    break;
+            }
+        }
+        return list;
+    }
+
+    /// <summary>Reforco de um objetivo (permille): forca x importancia x comprometimento.</summary>
+    public static int Strength(int boostPermille, PersonObjective o) =>
+        (int)((long)boostPermille * o.Importance / 1000 * o.Commitment / 1000);
+
+    /// <summary>O objetivo mais forte entre os vinculos (so ele conta: mais objetivos nao somam).</summary>
+    public static PersonObjective? Strongest(Person p, IReadOnlyList<ObjectiveLink> links)
+    {
+        PersonObjective? best = null;
+        foreach (var l in links)
+        {
+            var o = p.ObjectiveList.FirstOrDefault(x => x.Id == l.ObjectiveId);
+            if (o != null && (best == null || o.Importance * (long)o.Commitment > best.Importance * (long)best.Commitment)) best = o;
+        }
+        return best;
+    }
+
+    /// <summary>Peso da meta candidata com o maior reforco entre os objetivos que ela atende.</summary>
+    public static int AdoptionWeight(ContentDatabase c, Person p, int weight, IReadOnlyList<ObjectiveLink> links)
+    {
+        var inf = c.ObjectiveCatalog.Influence;
+        if (!inf.Enabled || Strongest(p, links) is not { } o) return weight;
+        return (int)Math.Min(1_000_000L, (long)weight * (1000 + Strength(inf.AdoptionBoostPermille, o)) / 1000);
+    }
+
+    /// <summary>Comprometimento da meta ligada: fecha parte da distancia ate 1000 pelo objetivo mais forte.</summary>
+    public static int LinkedCommitment(ContentDatabase c, Person p, int commitment, IReadOnlyList<ObjectiveLink> links)
+    {
+        var inf = c.ObjectiveCatalog.Influence;
+        if (!inf.Enabled || Strongest(p, links) is not { } o) return commitment;
+        return Math.Min(1000, commitment + (1000 - commitment) * Strength(inf.CommitmentBoostPermille, o) / 1000);
+    }
+
+    /// <summary>Objetivos ativos com o criterio cumprido agora (conclusao, O2).</summary>
+    public static List<PersonObjective> Achieved(ContentDatabase c, Person p, Character ch) =>
+        p.ObjectiveList.Where(o => o.State == ObjectiveStates.Active && Assess(c, ch, o).CriterionMet).ToList();
+
+    /// <summary>
+    /// Grupo de medicao pelos objetivos sorteados: "actionable" (algum pode avancar com o que existe:
+    /// nivel maximo, campanha, mundo), "preparation" (nenhum, mas algum tem preparacao por requisito de
+    /// nivel) ou "unavailable" (so objetivos de sistemas futuros sem requisito). "" = sem objetivos.
+    /// </summary>
+    public static string Group(ContentDatabase c, Person p)
+    {
+        if (p.ObjectiveList.Count == 0) return "";
+        string Crit(PersonObjective o) => c.Objectives.TryGetValue(o.Id, out var d) ? d.Criterion : "";
+        if (p.ObjectiveList.Any(o => Crit(o) is ObjectiveCriteria.MaxLevel or ObjectiveCriteria.MainCampaign or ObjectiveCriteria.AllZones)) return "actionable";
+        if (p.ObjectiveList.Any(o => Crit(o) is ObjectiveCriteria.StrengthRanking or ObjectiveCriteria.DefeatBosses or ObjectiveCriteria.PvpRanking or ObjectiveCriteria.RareItem)) return "preparation";
+        return "unavailable";
     }
 
     /// <summary>Chefes do mundo ("zona/atividade") e o nivel minimo de cada um.</summary>
