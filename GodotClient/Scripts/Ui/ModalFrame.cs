@@ -21,7 +21,12 @@ public partial class ModalFrame : Control
     private readonly ScrollContainer _scroll;
     /// <summary>Faixa de dados numa linha so (D-068): ao lado do titulo se couber, senao numa linha abaixo.</summary>
     private readonly HBoxContainer _facts;
+    private readonly PanelContainer _factsPanel;
     private readonly ClipRow _factsClip;
+    private readonly HBoxContainer _tags;
+    private readonly ClipRow _tagsClip;
+    /// <summary>Coluna ao lado do titulo: a barra de dados e, embaixo, as etiquetas (D-068).</summary>
+    private readonly VBoxContainer _factsCol;
     private readonly HBoxContainer _top;
     private readonly VBoxContainer _headCol;
     private readonly Label _crumb;
@@ -84,20 +89,34 @@ public partial class ModalFrame : Control
         top.AddThemeConstantOverride("separation", 28);
         headCol.AddChild(top);
         _top = top;
-        Header = new VBoxContainer { SizeFlagsVertical = SizeFlags.ShrinkCenter, CustomMinimumSize = new Vector2(280, 0) };
+        Header = new VBoxContainer { SizeFlagsVertical = SizeFlags.ShrinkCenter, CustomMinimumSize = new Vector2(220, 0) };
         Header.AddThemeConstantOverride("separation", 2);
         top.AddChild(Header);
+        // Faixa de dados (D-068): uma barra unica, como painel de status, logo depois do titulo.
         _facts = new HBoxContainer { SizeFlagsVertical = SizeFlags.ShrinkCenter };
         _facts.AddThemeConstantOverride("separation", 0);
-        // A faixa fica com quase toda a sobra da linha (o destaque so encosta a direita).
-        _factsClip = new ClipRow { SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsVertical = SizeFlags.ShrinkCenter, SizeFlagsStretchRatio = 1000 };
-        _factsClip.AddChild(_facts);
-        top.AddChild(_factsClip);
+        _factsPanel = new PanelContainer { Visible = false };
+        _factsPanel.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
+        _factsPanel.AddChild(_facts);
+        _factsClip = new ClipRow { SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        _factsClip.AddChild(_factsPanel);
+        // Etiquetas (caracteristicas) logo abaixo da barra, alinhadas a ela.
+        _tags = new HBoxContainer();
+        _tags.AddThemeConstantOverride("separation", 0);
+        _tagsClip = new ClipRow { SizeFlagsHorizontal = SizeFlags.ExpandFill, Visible = false };
+        _tagsClip.AddChild(_tags);
+        // A coluna fica com quase toda a sobra da linha (o destaque so encosta a direita).
+        _factsCol = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsVertical = SizeFlags.ShrinkCenter, SizeFlagsStretchRatio = 1000 };
+        _factsCol.AddThemeConstantOverride("separation", 6);
+        _factsCol.AddChild(_factsClip);
+        _factsCol.AddChild(_tagsClip);
+        top.AddChild(_factsCol);
         // O destaque encosta a direita, com a faixa de dados ao lado do titulo ou numa linha abaixo.
         Highlight = new HBoxContainer { SizeFlagsVertical = SizeFlags.ShrinkCenter, SizeFlagsHorizontal = SizeFlags.ExpandFill, Alignment = BoxContainer.AlignmentMode.End };
         top.AddChild(Highlight);
         // Sem largura ao lado do titulo, a faixa desce para uma linha propria (sempre uma linha so).
         top.Resized += () => CallDeferred(nameof(PlaceFacts));
+
 
         var tabsRow = new HBoxContainer();
         tabsRow.AddThemeConstantOverride("separation", 12);
@@ -210,6 +229,7 @@ public partial class ModalFrame : Control
     /// </summary>
     public void Fact(string label, string value, Color? color = null, string tooltip = "", string icon = "")
     {
+        _factsPanel.Visible = true;
         if (_facts.GetChildCount() > 0)
             _facts.AddChild(new ColorRect { Color = UiTokens.Divider, CustomMinimumSize = new Vector2(1, 30), SizeFlagsVertical = SizeFlags.ShrinkCenter });
         const int size = 14;
@@ -237,18 +257,48 @@ public partial class ModalFrame : Control
         CallDeferred(nameof(PlaceFacts));
     }
 
+    /// <summary>Largura de cada etiqueta (igual para todas e para qualquer pessoa).</summary>
+    public int TagWidth { get; set; } = 185;
+
+    /// <summary>
+    /// Etiqueta (D-068): sem fundo, todas com a mesma largura e filetes entre elas; em cima o rotulo curto que
+    /// diz o que e, embaixo o icone e o valor (valor longo com reticencias); a explicacao fica no tooltip.
+    /// </summary>
+    public void Tag(string icon, string caption, string value, Color iconColor, string tooltip)
+    {
+        if (_tags.GetChildCount() > 0)
+            _tags.AddChild(new ColorRect { Color = UiTokens.Divider, CustomMinimumSize = new Vector2(1, 34), SizeFlagsVertical = SizeFlags.ShrinkCenter });
+        var p = new TipPanel { TooltipText = tooltip, MouseFilter = MouseFilterEnum.Stop, CustomMinimumSize = new Vector2(TagWidth, 0) };
+        p.AddThemeStyleboxOverride("panel", new StyleBoxEmpty { ContentMarginLeft = 12, ContentMarginRight = 8 });
+        var col = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
+        col.AddThemeConstantOverride("separation", 2);
+        col.AddChild(ThemeFactory.Text(caption, UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Medium));
+        var r = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
+        r.AddThemeConstantOverride("separation", 7);
+        r.AddChild(new Icon(icon, 14, iconColor) { SizeFlagsVertical = SizeFlags.ShrinkCenter });
+        var v = ThemeFactory.Text(value, UiTokens.FontSmall, UiTokens.TextPrimary, UiFonts.SemiBold);
+        v.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+        v.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        r.AddChild(v);
+        col.AddChild(r);
+        p.AddChild(col);
+        _tags.AddChild(p);
+        _tagsClip.Visible = true;
+        CallDeferred(nameof(PlaceFacts));
+    }
+
     /// <summary>A faixa de dados fica ao lado do titulo se couber; senao, numa linha propria logo abaixo.</summary>
     private void PlaceFacts()
     {
-        if (!IsInstanceValid(_factsClip)) return;
-        float need = _facts.GetCombinedMinimumSize().X;
+        if (!IsInstanceValid(_factsCol)) return;
+        float need = Mathf.Max(_factsPanel.GetCombinedMinimumSize().X, _tagsClip.Visible ? _tags.GetCombinedMinimumSize().X : 0);
         float side = _top.Size.X - Header.GetCombinedMinimumSize().X - Highlight.GetCombinedMinimumSize().X - 28 * 2 - 8;
         bool below = need > side;
-        bool isBelow = _factsClip.GetParent() == _headCol;
+        bool isBelow = _factsCol.GetParent() == _headCol;
         if (below == isBelow) return;
-        _factsClip.GetParent().RemoveChild(_factsClip);
-        if (below) { _headCol.AddChild(_factsClip); _headCol.MoveChild(_factsClip, _top.GetIndex() + 1); }
-        else { _top.AddChild(_factsClip); _top.MoveChild(_factsClip, Header.GetIndex() + 1); }
+        _factsCol.GetParent().RemoveChild(_factsCol);
+        if (below) { _headCol.AddChild(_factsCol); _headCol.MoveChild(_factsCol, _top.GetIndex() + 1); }
+        else { _top.AddChild(_factsCol); _top.MoveChild(_factsCol, Header.GetIndex() + 1); }
     }
 
     public override void _Ready()

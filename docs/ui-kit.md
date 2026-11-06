@@ -29,7 +29,10 @@ Referência para qualquer tela nova. Estilo de dossiê de jogo de gestão: escur
    - a trilha discreta;
    - nome com 28 px seminegrito (24 px na ficha da pessoa) e subtítulo com 13 px;
    - a faixa de dados (`Fact`): ícone ou marcador, valor de 14 px, rótulo de 11 px e filetes entre células. Fica **numa linha só** (D-068): ao lado do título quando cabe, senão numa linha própria logo abaixo. Valor longo termina em reticências e mostra o texto inteiro no tooltip;
-   - na ficha da pessoa, o estado vai na faixa (nível, status, zona, conhece, perfil, horas jogadas) e as características viram **etiquetas** com ícone abaixo do nome (preferências, personalidade, talento, experiência);
+   - **na ficha da pessoa** (D-068):
+     - à esquerda, o nome e o texto em duas colunas alinhadas (classe e papel | nível; status | zona; pessoa | horas jogadas), com largura fixa;
+     - ao lado, as **etiquetas** (perfil, preferências, personalidade, talento, experiência): sem fundo, todas da mesma largura, filetes entre elas, rótulo curto em cima e ícone e valor embaixo;
+     - o medidor de ritmo à direita;
    - um destaque à direita (`Highlight`), por exemplo o meio-medidor;
    - abas de texto com 14 px, alinhadas ao nome; a ativa é dourada e sublinhada;
    - ações à direita das abas. Se abas e ações não cabem numa linha (1366×768), as ações com ícone mostram só o ícone, com o rótulo no tooltip, e as abas continuam numa linha só.

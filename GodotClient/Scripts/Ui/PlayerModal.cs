@@ -71,68 +71,65 @@ public partial class PlayerModal : ModalFrame
         arrows.AddChild(IconButton("chevron-right", next > 0 ? $"Próximo jogador\n~{NameOf(next)} (ordem por nível)" : "Último da lista", () => _ctx.OpenPerson(next), next > 0));
         nameRow.AddChild(arrows);
         Header.AddChild(nameRow);
-        // Classe e papel do personagem e, na mesma linha, a pessoa por tras dele (D-068).
-        var sub = new HBoxContainer();
-        sub.AddThemeConstantOverride("separation", 7);
+        // Cabecalho (D-068): a esquerda, o texto que identifica, em duas colunas alinhadas (classe | nivel;
+        // status | zona; pessoa | horas jogadas), com largura fixa; ao lado, as etiquetas das caracteristicas.
+        Header.CustomMinimumSize = new Vector2(392, 0);
         if (v != null)
         {
-            sub.AddChild(new Icon(icon, 15, RoleColor(cls?.Role)));
-            sub.AddChild(ThemeFactory.Text($"{cls?.Name} · {RolePt(cls?.Role)}", UiTokens.FontBody, UiTokens.TextLabel, UiFonts.Medium));
-            sub.AddChild(ThemeFactory.Text("·", UiTokens.FontBody, UiTokens.TextDisabled));
-        }
-        sub.AddChild(new Icon("user", 14, UiTokens.TextSecondary) { SizeFlagsVertical = SizeFlags.ShrinkCenter });
-        sub.AddChild(ThemeFactory.Text(_person.Name, UiTokens.FontBody, UiTokens.TextSecondary));
-        Header.AddChild(sub);
-
-        if (v != null)
-        {
-            bool online = v.Status != CharacterStatus.Offline;
             var prog = _ctx.Content.Progression;
             long need = ProgressionRules.XpToNextLevel(prog, v.Level);
             string stage = (ProgressionRules.StageRate(prog, v.Level) / 1000.0).ToString("0.##", CultureInfo.GetCultureInfo("pt-BR"));
-            Fact("Nível", v.Level.ToString(), UiTokens.Accent, v.Level >= prog.LevelCap
+            string levelTip = v.Level >= prog.LevelCap
                 ? $"Nível {v.Level}\n~Nível máximo atual ({prog.LevelCap})."
-                : $"Nível {v.Level}\nXP|{PtBr.Int(v.Experience)} / {PtBr.Int(need)}\nPara o próximo|{v.Experience * 100 / Math.Max(1, need)}%\nTaxa da faixa|×{stage}\n~Faixas de nível mais altas rendem menos XP.", "award");
+                : $"Nível {v.Level}\nXP|{PtBr.Int(v.Experience)} / {PtBr.Int(need)}\nPara o próximo|{v.Experience * 100 / Math.Max(1, need)}%\nTaxa da faixa|×{stage}\n~Faixas de nível mais altas rendem menos XP.";
+            bool online = v.Status != CharacterStatus.Offline;
             var (stText, stColor, stTip) = v.State switch
             {
                 LifecycleState.Quit => ("Desistiu", UiTokens.Danger, "Desistiu do jogo\n~Saiu pelo que mais incomodava (veja Humor). Pode voltar pela saudade dos bons momentos."),
                 LifecycleState.Inactive => ("Inativo", UiTokens.Warning, $"Inativo\nÚltimo dia jogado|{PtBr.ShortDate(_ctx.Calendar.ToDateTime(_ctx.Calendar.StartOfDay(v.LastPlayedDay)))}\n~Mais de 14 dias sem jogar: volta com chance menor, conforme a intenção de continuar."),
                 _ => (online ? "Conectado" : "Desconectado", online ? UiTokens.Success : UiTokens.TextSecondary, ""),
             };
-            Fact("Status", stText, stColor, stTip, "activity");
-            Fact("Zona", _ctx.ZoneName(v.RegionId), UiTokens.TextSecondary, "", "map-pin");
-            Fact("Conhece", $"{v.KnownRegions}/{_ctx.Content.Regions.Count}", UiTokens.TextSecondary, "Zonas conhecidas\n~Só zonas conhecidas entram nas decisões. Viajar e explorar revelam mais.", "compass");
-            Fact("Perfil", ProfileName, color, $"Perfil {ProfileName} · dedicação\n~{ProfileHint(_person.ProfileId)}\n~O perfil gera importância do jogo, hábito e duração normal da sessão, com variação individual e sobreposição entre perfis. As horas saem do tempo livre e das decisões.", "user");
             double hours = v.PlayedTicks / (double)Simulation.Core.Time.SimTime.TicksPerHour;
-            Fact("Jogadas", $"{PtBr.Decimal(hours)} h", UiTokens.TextSecondary, $"Horas jogadas\n~Tempo conectado desde o cadastro.", "hourglass");
+            var grid = new GridContainer { Columns = 2 };
+            grid.AddThemeConstantOverride("h_separation", 22);
+            grid.AddThemeConstantOverride("v_separation", 1);
+            grid.AddChild(Seg(icon, $"{cls?.Name} · {RolePt(cls?.Role)}", RoleColor(cls?.Role), UiTokens.TextLabel, "", UiFonts.Medium, 150));
+            grid.AddChild(Seg("award", $"Nível {v.Level}", UiTokens.Accent, UiTokens.Accent, levelTip, UiFonts.SemiBold, 190));
+            grid.AddChild(Seg("activity", stText, stColor, online ? UiTokens.TextPrimary : UiTokens.TextLabel, stTip, UiFonts.Medium, 150));
+            grid.AddChild(Seg("map-pin", _ctx.ZoneName(v.RegionId), UiTokens.TextSecondary, UiTokens.TextLabel,
+                $"{(online ? "Zona atual" : "Última zona")}: {_ctx.ZoneName(v.RegionId)}\n~Conhece {v.KnownRegions} de {_ctx.Content.Regions.Count} zonas. Só zonas conhecidas entram nas decisões; viajar e explorar revelam mais.", null, 190));
+            grid.AddChild(Seg("user", _person.Name, UiTokens.TextSecondary, UiTokens.TextSecondary, $"{_person.Name}\n~Pessoa por trás do personagem.", null, 150));
+            grid.AddChild(Seg("hourglass", $"{PtBr.Decimal(hours)} h jogadas", UiTokens.TextSecondary, UiTokens.TextSecondary, "Horas jogadas\n~Tempo conectado desde o cadastro.", null, 190));
+            Header.AddChild(grid);
 
-            // Caracteristicas da pessoa (D-068): etiquetas com icone abaixo do nome, separadas do estado.
-            var tags = new HBoxContainer();
-            tags.AddThemeConstantOverride("separation", 6);
+            // Caracteristicas da pessoa: o grupo principal de etiquetas.
+            Tag("user", "Perfil", ProfileName, color, $"Perfil {ProfileName} · dedicação\n~{ProfileHint(_person.ProfileId)}\n~O perfil gera importância do jogo, hábito e duração normal da sessão, com variação individual e sobreposição entre perfis. As horas saem do tempo livre e das decisões.");
             var prefs = _person.Preferences;
             var main = PreferenceInfo.Predominant(prefs);
-            tags.AddChild(TagChip(PreferenceInfo.ByKey[main[0]].Icon, PreferenceInfo.Summary(prefs), UiTokens.AccentSoft, PreferencesTip(prefs)));
+            Tag(PreferenceInfo.ByKey[main[0]].Icon, "Preferências", PreferenceInfo.Summary(prefs), UiTokens.AccentSoft, PreferencesTip(prefs));
             var (picon, plabel, ptext) = MainPersonality();
-            tags.AddChild(TagChip(picon, plabel, UiTokens.AccentSoft, $"Personalidade: {plabel}\n~{ptext}"));
+            Tag(picon, "Personalidade", plabel, UiTokens.AccentSoft, $"Personalidade: {plabel}\n~{ptext}");
             int talent = _person.Traits.Talent;
-            tags.AddChild(TagChip("sparkles", $"Talento {AttributeInfo.TalentTier(talent).ToLowerInvariant()}", UiTokens.Accent,
-                $"Talento: {AttributeInfo.TalentTier(talent)}\nValor|{UiTokens.To20(talent)} / 20\n~{AttributeInfo.TalentHint(talent)}\n~Talento é do jogador (a pessoa): define o potencial e a velocidade com que Mecânica, Conhecimento e Coordenação evoluem. Não muda e não é experiência."));
+            Tag("sparkles", "Talento", AttributeInfo.TalentTier(talent), UiTokens.Accent,
+                $"Talento: {AttributeInfo.TalentTier(talent)}\nValor|{UiTokens.To20(talent)} / 20\n~{AttributeInfo.TalentHint(talent)}\n~Talento é do jogador (a pessoa): define o potencial e a velocidade com que Mecânica, Conhecimento e Coordenação evoluem. Não muda e não é experiência.");
             string exp = AttributeInfo.ExperienceTier(hours);
-            tags.AddChild(TagChip("clock", exp, UiTokens.TextLabel,
-                $"Experiência: {exp}\nHoras jogadas|{PtBr.Decimal(hours)} h\nConhecimento|{UiTokens.To20(_person.Traits.GameKnowledge)} / 20\n~Vem da prática neste jogo: Novato (< 10 h), Iniciante (< 50 h), Experiente (< 200 h), Veterano. O Conhecimento cresce com ela; o Conhecimento inicial varia de pessoa para pessoa, sem depender do perfil."));
-            Header.AddChild(new Control { CustomMinimumSize = new Vector2(0, 4) });
-            Header.AddChild(tags);
+            Tag("clock", "Experiência", exp, UiTokens.TextSecondary,
+                $"Experiência: {exp}\nHoras jogadas|{PtBr.Decimal(hours)} h\nConhecimento|{UiTokens.To20(_person.Traits.GameKnowledge)} / 20\n~Vem da prática neste jogo: Novato (< 10 h), Iniciante (< 50 h), Experiente (< 200 h), Veterano. O Conhecimento cresce com ela; o Conhecimento inicial varia de pessoa para pessoa, sem depender do perfil.");
 
             var e = Engagement();
             var gauge = new SemiGauge
             {
-                CustomMinimumSize = new Vector2(156, 78), Value = Mathf.Clamp(e.Pct / 1.2f, 0, 1), Center = $"{e.Pct * 100:0}%",
+                CustomMinimumSize = new Vector2(144, 72), Value = Mathf.Clamp(e.Pct / 1.2f, 0, 1), Center = $"{e.Pct * 100:0}%",
                 Caption = $"Ritmo de jogo · {e.Days} dia{(e.Days == 1 ? "" : "s")}", Verdict = EngagementVerdict(e.Pct), Color = RatingColor(EngagementScore(e.Pct)),
                 TooltipText = $"Ritmo de jogo\nJogou|{e.Played} min\nPrevisto pela rotina|{e.Expected} min\nDias com sessão|{e.DaysPlayed} de {e.Days}\n~Minutos jogados ÷ minutos previstos pela rotina (sessão típica × dias por semana) nos últimos {e.Days} dias, contando hoje até agora. O engajamento (vontade de jogar) fica no card Humor.",
             };
             Highlight.AddChild(gauge);
         }
-        else Fact("Status", "Interessado (sem conta)", UiTokens.Warning, "", "user");
+        else
+        {
+            Header.AddChild(Seg("user", _person.Name, UiTokens.TextSecondary, UiTokens.TextSecondary, "Pessoa"));
+            Header.AddChild(Seg("activity", "Interessado (sem conta)", UiTokens.Warning, UiTokens.TextLabel, "Ainda não criou conta no MMORPG."));
+        }
 
         bool on = v != null && v.Status != CharacterStatus.Offline;
         Actions.AddChild(Action("Seguir no mapa", "Seguir no mapa\n~Volta ao mapa acompanhando este jogador.", () => { _ctx.FocusPerson(_person.Id, true); Close(); }, primary: true, enabled: on, icon: "locate-fixed"));
@@ -148,18 +145,26 @@ public partial class PlayerModal : ModalFrame
         else if (v != null) Actions.AddChild(Action("Ver zona", "Ver zona\n~Abre a página da zona atual.", () => _ctx.OpenZone(v.RegionId), icon: "map"));
     }
 
-    /// <summary>Etiqueta de caracteristica no cabecalho (D-068): icone, texto e a explicacao no tooltip.</summary>
-    private static Control TagChip(string icon, string text, Color color, string tip)
+    /// <summary>
+    /// Trecho do texto do cabecalho: icone e texto, com explicacao no tooltip. maxWidth (px) limita o texto
+    /// (reticencias), para o bloco ter a mesma largura para qualquer pessoa.
+    /// </summary>
+    private static Control Seg(string icon, string text, Color iconColor, Color textColor, string tip = "", Font? font = null, int maxWidth = 0)
     {
-        var p = new TipPanel { TooltipText = tip, MouseFilter = MouseFilterEnum.Stop };
-        var sb = new StyleBoxFlat { BgColor = new Color(color, 0.08f), BorderColor = new Color(color, 0.32f), ContentMarginLeft = 8, ContentMarginRight = 10, ContentMarginTop = 2, ContentMarginBottom = 3 };
-        sb.SetBorderWidthAll(1);
-        sb.SetCornerRadiusAll(10);
-        p.AddThemeStyleboxOverride("panel", sb);
+        var p = new TipPanel { TooltipText = tip, MouseFilter = tip.Length > 0 ? MouseFilterEnum.Stop : MouseFilterEnum.Ignore };
+        p.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
         var r = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
-        r.AddThemeConstantOverride("separation", 6);
-        r.AddChild(new Icon(icon, 14, color) { SizeFlagsVertical = SizeFlags.ShrinkCenter });
-        r.AddChild(ThemeFactory.Text(text, UiTokens.FontSmall, color == UiTokens.TextLabel ? UiTokens.TextLabel : color.Lightened(0.12f), UiFonts.Medium));
+        r.AddThemeConstantOverride("separation", 7);
+        if (icon.Length > 0) r.AddChild(new Icon(icon, 14, iconColor) { SizeFlagsVertical = SizeFlags.ShrinkCenter });
+        var f = font ?? UiFonts.Regular;
+        var l = ThemeFactory.Text(text, UiTokens.FontBody, textColor, f);
+        if (maxWidth > 0)
+        {
+            float natural = f.GetStringSize(text, HorizontalAlignment.Left, -1, UiTokens.FontBody).X + 2;
+            l.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+            l.CustomMinimumSize = new Vector2(Mathf.Min(natural, maxWidth), 0);
+        }
+        r.AddChild(l);
         p.AddChild(r);
         return p;
     }

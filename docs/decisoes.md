@@ -2623,14 +2623,15 @@ Itens como instâncias, inventário, equipamento funcional, carteira e aplicaç�
 
 **Tela baixa (decisão do criador depois da etapa 1):** em 1366×768, a seção mantém as suas linhas, com cards mais baixos e rolagem dentro do card. Antes, cada linha virava uma tela, e os cards ficavam esticados. Só passa para a tela seguinte se uma linha ficaria abaixo de 180 px.
 
-**Etapa 2 — cabeçalho (feita):**
-- **Faixa de dados numa linha só,** em todas as páginas: ao lado do título quando cabe, senão numa linha própria logo abaixo. Antes, a faixa quebrava em duas ou três linhas desencontradas. Valor longo termina em reticências, com o texto inteiro no tooltip. O valor passou de 15 para 14 px.
+**Etapa 2 — cabeçalho (feita, refeita com o criador):**
 - **Ficha da pessoa:**
-  - a faixa mostra o estado: nível, status, zona, zonas conhecidas, perfil e horas jogadas (as horas antes só apareciam no tooltip da experiência);
-  - as características viram etiquetas com ícone abaixo do nome: preferências, personalidade, talento e experiência, com os mesmos tooltips;
-  - classe, papel e a pessoa ficam numa linha;
-  - nome de 28 para 24 px, retrato de 104 para 92 px e medidor de ritmo menor, encostado à direita.
-- **Ações:** ficaram na linha das abas, onde cabem e em 1366 viram só ícones. O plano previa subi-las para a linha do nome, mas lá disputariam espaço com as etiquetas e o medidor.
-- **Resultado:** nenhuma informação saiu. Em 1920 o cabeçalho ficou 6 px mais baixo, e em 1366 os nove dados deixaram de ocupar três linhas.
+  - **à esquerda do retrato,** o nome e, embaixo, o texto que identifica em duas colunas alinhadas: classe e papel | **Nível** (em destaque, com o XP no tooltip); status | zona (as zonas conhecidas ficam no tooltip da zona e em Estatísticas); pessoa | horas jogadas. O bloco tem largura fixa (392 px), e o texto longo termina em reticências, com tooltip;
+  - **ao lado, as etiquetas** (perfil, preferências, personalidade, talento, experiência): sem fundo, todas da mesma largura (185 px), separadas por filetes; em cima o rótulo curto, embaixo o ícone e o valor;
+  - **medidor de ritmo** à direita, menor.
+- **Mesma posição para qualquer jogador:** a altura do cabeçalho é a do original; em 1366, as etiquetas descem para uma linha própria.
+- **Outras páginas** (zona, missão, área, listas): a faixa de dados fica **numa linha só**, sem fundo, ao lado do título quando cabe e numa linha própria quando não. Valor longo termina em reticências, com tooltip. Valor com 14 px.
+- **Rejeitado pelo criador no caminho:** etiquetas redondas e coloridas sem rótulo; barra de dados com fundo compartilhado; características separadas do grupo principal; nível e zona como etiquetas.
+- **Ações:** ficaram na linha das abas (em 1366 viram ícones).
+- **Nenhuma informação saiu.**
 
 **Próximo:** etapa 3, as abas da ficha.
