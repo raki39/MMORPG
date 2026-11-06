@@ -27,8 +27,9 @@ Referência para qualquer tela nova. Estilo de dossiê de jogo de gestão: escur
 1. **Cabeçalho:**
    - à esquerda, retrato ou emblema (`Art`), que ocupa a altura toda;
    - a trilha discreta;
-   - nome com 28 px seminegrito e subtítulo com 13 px;
-   - a faixa de dados (`Fact`): ícone ou marcador, valor de 15 px, rótulo de 11 px e filetes entre células;
+   - nome com 28 px seminegrito (24 px na ficha da pessoa) e subtítulo com 13 px;
+   - a faixa de dados (`Fact`): ícone ou marcador, valor de 14 px, rótulo de 11 px e filetes entre células. Fica **numa linha só** (D-068): ao lado do título quando cabe, senão numa linha própria logo abaixo. Valor longo termina em reticências e mostra o texto inteiro no tooltip;
+   - na ficha da pessoa, o estado vai na faixa (nível, status, zona, conhece, perfil, horas jogadas) e as características viram **etiquetas** com ícone abaixo do nome (preferências, personalidade, talento, experiência);
    - um destaque à direita (`Highlight`), por exemplo o meio-medidor;
    - abas de texto com 14 px, alinhadas ao nome; a ativa é dourada e sublinhada;
    - ações à direita das abas. Se abas e ações não cabem numa linha (1366×768), as ações com ícone mostram só o ícone, com o rótulo no tooltip, e as abas continuam numa linha só.
@@ -42,7 +43,7 @@ Referência para qualquer tela nova. Estilo de dossiê de jogo de gestão: escur
    - **card de altura fixa** (`FillCard`): a altura vem do layout, nunca do conteúdo, então é igual para qualquer jogador. Se o conteúdo passar, rola dentro do card (barra fina), e a rolagem interna se mantém nas atualizações ao vivo;
    - gráficos marcados com `Grow` crescem com o card;
    - a **roda do mouse salta de tela em tela** (animação curta). Dentro de um card com conteúdo maior, a roda rola o card primeiro;
-   - **em 1366×768**, as linhas que não cabem numa tela passam para a seguinte, e uma linha de cards empilhados vira uma linha por card;
+   - **em 1366×768**, a seção mantém as suas linhas, com cards mais baixos e rolagem dentro do card. Só passa para a tela seguinte se uma linha ficaria abaixo de 180 px. Uma linha de cards empilhados vira uma linha por card;
    - capturas: `--section=N` abre a tela N; `--wheel=N` gira a roda N vezes.
 4. **Visão geral:** só cards com dados que já existem.
    - O que depende de sistemas futuros fica numa aba própria com o marco ("Combate · M3", "Inventário · M5").

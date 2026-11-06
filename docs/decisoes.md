@@ -2621,4 +2621,16 @@ Itens como instâncias, inventário, equipamento funcional, carteira e aplicaç�
 
 **Pendências vistas em 1366** (conteúdo, nas próximas etapas): dias da Ocupação e valores do Sono cortados com reticências.
 
-**Próximo:** etapa 2, o cabeçalho da ficha.
+**Tela baixa (decisão do criador depois da etapa 1):** em 1366×768, a seção mantém as suas linhas, com cards mais baixos e rolagem dentro do card. Antes, cada linha virava uma tela, e os cards ficavam esticados. Só passa para a tela seguinte se uma linha ficaria abaixo de 180 px.
+
+**Etapa 2 — cabeçalho (feita):**
+- **Faixa de dados numa linha só,** em todas as páginas: ao lado do título quando cabe, senão numa linha própria logo abaixo. Antes, a faixa quebrava em duas ou três linhas desencontradas. Valor longo termina em reticências, com o texto inteiro no tooltip. O valor passou de 15 para 14 px.
+- **Ficha da pessoa:**
+  - a faixa mostra o estado: nível, status, zona, zonas conhecidas, perfil e horas jogadas (as horas antes só apareciam no tooltip da experiência);
+  - as características viram etiquetas com ícone abaixo do nome: preferências, personalidade, talento e experiência, com os mesmos tooltips;
+  - classe, papel e a pessoa ficam numa linha;
+  - nome de 28 para 24 px, retrato de 104 para 92 px e medidor de ritmo menor, encostado à direita.
+- **Ações:** ficaram na linha das abas, onde cabem e em 1366 viram só ícones. O plano previa subi-las para a linha do nome, mas lá disputariam espaço com as etiquetas e o medidor.
+- **Resultado:** nenhuma informação saiu. Em 1920 o cabeçalho ficou 6 px mais baixo, e em 1366 os nove dados deixaram de ocupar três linhas.
+
+**Próximo:** etapa 3, as abas da ficha.

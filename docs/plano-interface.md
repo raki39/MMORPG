@@ -61,7 +61,7 @@ O Lucide continua nas ações e nas linhas de dados.
 ## Etapas
 
 1. **Base do layout:** página em telas, linhas por peso, cards fixos com rolagem interna, rolagem de tela em tela. Aplicada na Rotina. **Feita.**
-2. Cabeçalho da ficha.
+2. Cabeçalho da ficha. **Feita.**
 3. Reorganização das abas da ficha.
 4. Emblemas e ícones do jogo.
 5. Zona, área, missão e listas.

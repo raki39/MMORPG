@@ -6,9 +6,10 @@ namespace GodotClient.Ui;
 /// Pagina em secoes de tela inteira (D-068). Cada secao ocupa exatamente a altura visivel do corpo da
 /// pagina; dentro dela, as linhas dividem a altura por peso, cada uma com um minimo legivel, e os cards
 /// preenchem a linha (a altura vem do layout, nunca do conteudo: o card e igual para qualquer jogador).
-/// Se as linhas de uma secao nao cabem na tela (1366×768), a secao continua na tela seguinte; uma linha
-/// de cards que empilha na largura estreita vira uma linha por card. A rolagem da pagina salta de tela
-/// em tela (ModalFrame); o conteudo que passa do card rola dentro dele.
+/// Em tela baixa (1366×768) a secao mantem as suas linhas, com cards mais baixos e rolagem dentro do card;
+/// so passa para a tela seguinte se uma linha ficaria abaixo do piso (180 px). Uma linha de cards que
+/// empilha na largura estreita vira uma linha por card. A rolagem da pagina salta de tela em tela
+/// (ModalFrame); o conteudo que passa do card rola dentro dele.
 /// </summary>
 public partial class ScreenPage : Container
 {
@@ -36,8 +37,11 @@ public partial class ScreenPage : Container
         return this;
     }
 
-    /// <summary>Linha da secao atual: peso na altura da tela e altura minima (px).</summary>
-    public ScreenPage Add(Control row, int weight = 1, int min = 280)
+    /// <summary>
+    /// Linha da secao atual: peso na altura da tela e piso (px). Abaixo do piso a linha passa para a tela
+    /// seguinte; acima dele, a secao fica junta e o conteudo que passar rola dentro do card.
+    /// </summary>
+    public ScreenPage Add(Control row, int weight = 1, int min = 180)
     {
         row.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         _rows.Add(new Row { Node = row, Weight = Math.Max(1, weight), Min = Math.Max(0, min), Section = _section });

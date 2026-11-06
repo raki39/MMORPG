@@ -556,6 +556,32 @@ public partial class SpanRow : Container
 }
 
 /// <summary>
+/// Conteiner de uma linha que nao alarga quem o contem (D-068): a altura minima e a do filho, a largura
+/// minima e zero; o que passar da largura e cortado (o filho define reticencias e tooltip).
+/// </summary>
+public partial class ClipRow : Container
+{
+    public ClipRow() { ClipContents = true; MouseFilter = MouseFilterEnum.Pass; }
+
+    public override Vector2 _GetMinimumSize()
+    {
+        float h = 0;
+        foreach (var c in GetChildren().OfType<Control>()) if (c.Visible) h = Mathf.Max(h, c.GetCombinedMinimumSize().Y);
+        return new Vector2(0, h);
+    }
+
+    public override void _Notification(int what)
+    {
+        if (what != NotificationSortChildren) return;
+        foreach (var c in GetChildren().OfType<Control>())
+        {
+            var m = c.GetCombinedMinimumSize();
+            FitChildInRect(c, new Rect2(0, Mathf.Round((Size.Y - m.Y) / 2f), Mathf.Max(m.X, 0), m.Y));
+        }
+    }
+}
+
+/// <summary>
 /// Textura sutil dos cards (grao fino + hachura diagonal leve), gerada uma vez por codigo,
 /// deterministica (hash inteiro, sem RNG). Branca com alfa baixo: so da acabamento ao fundo.
 /// </summary>

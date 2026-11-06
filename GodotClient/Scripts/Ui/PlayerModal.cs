@@ -57,12 +57,12 @@ public partial class PlayerModal : ModalFrame
         string icon = ClassIcon(cls);
         Art.AddChild(new PortraitBadge(_person.AppearanceSeed, color, v?.Name ?? _person.Name)
         {
-            CustomMinimumSize = new Vector2(104, 104), SizeFlagsVertical = SizeFlags.ShrinkBegin, ClassIcon = v != null ? icon : "",
+            CustomMinimumSize = new Vector2(92, 92), SizeFlagsVertical = SizeFlags.ShrinkBegin, ClassIcon = v != null ? icon : "",
         });
 
         var nameRow = new HBoxContainer();
         nameRow.AddThemeConstantOverride("separation", 10);
-        nameRow.AddChild(ThemeFactory.Text(v?.Name ?? _person.Name, 28, UiTokens.TextPrimary, UiFonts.SemiBold));
+        nameRow.AddChild(ThemeFactory.Text(v?.Name ?? _person.Name, 24, UiTokens.TextPrimary, UiFonts.SemiBold));
         if (_ctx.Favorites.Contains(_person.Id)) nameRow.AddChild(new Icon("star", 18, UiTokens.Accent));
         var (prev, next) = Neighbors();
         var arrows = new HBoxContainer { SizeFlagsVertical = SizeFlags.ShrinkCenter };
@@ -71,16 +71,18 @@ public partial class PlayerModal : ModalFrame
         arrows.AddChild(IconButton("chevron-right", next > 0 ? $"Próximo jogador\n~{NameOf(next)} (ordem por nível)" : "Último da lista", () => _ctx.OpenPerson(next), next > 0));
         nameRow.AddChild(arrows);
         Header.AddChild(nameRow);
+        // Classe e papel do personagem e, na mesma linha, a pessoa por tras dele (D-068).
         var sub = new HBoxContainer();
         sub.AddThemeConstantOverride("separation", 7);
         if (v != null)
         {
-            sub.AddChild(new Icon(icon, 16, RoleColor(cls?.Role)));
+            sub.AddChild(new Icon(icon, 15, RoleColor(cls?.Role)));
             sub.AddChild(ThemeFactory.Text($"{cls?.Name} · {RolePt(cls?.Role)}", UiTokens.FontBody, UiTokens.TextLabel, UiFonts.Medium));
-            Header.AddChild(sub);
+            sub.AddChild(ThemeFactory.Text("·", UiTokens.FontBody, UiTokens.TextDisabled));
         }
-        // Nome da pessoa por tras do personagem, numa linha propria.
-        Header.AddChild(ThemeFactory.Text(_person.Name, UiTokens.FontBody, UiTokens.TextSecondary));
+        sub.AddChild(new Icon("user", 14, UiTokens.TextSecondary) { SizeFlagsVertical = SizeFlags.ShrinkCenter });
+        sub.AddChild(ThemeFactory.Text(_person.Name, UiTokens.FontBody, UiTokens.TextSecondary));
+        Header.AddChild(sub);
 
         if (v != null)
         {
@@ -101,23 +103,30 @@ public partial class PlayerModal : ModalFrame
             Fact("Zona", _ctx.ZoneName(v.RegionId), UiTokens.TextSecondary, "", "map-pin");
             Fact("Conhece", $"{v.KnownRegions}/{_ctx.Content.Regions.Count}", UiTokens.TextSecondary, "Zonas conhecidas\n~Só zonas conhecidas entram nas decisões. Viajar e explorar revelam mais.", "compass");
             Fact("Perfil", ProfileName, color, $"Perfil {ProfileName} · dedicação\n~{ProfileHint(_person.ProfileId)}\n~O perfil gera importância do jogo, hábito e duração normal da sessão, com variação individual e sobreposição entre perfis. As horas saem do tempo livre e das decisões.", "user");
+            double hours = v.PlayedTicks / (double)Simulation.Core.Time.SimTime.TicksPerHour;
+            Fact("Jogadas", $"{PtBr.Decimal(hours)} h", UiTokens.TextSecondary, $"Horas jogadas\n~Tempo conectado desde o cadastro.", "hourglass");
+
+            // Caracteristicas da pessoa (D-068): etiquetas com icone abaixo do nome, separadas do estado.
+            var tags = new HBoxContainer();
+            tags.AddThemeConstantOverride("separation", 6);
             var prefs = _person.Preferences;
             var main = PreferenceInfo.Predominant(prefs);
-            Fact("Preferências", PreferenceInfo.Summary(prefs), UiTokens.AccentSoft, PreferencesTip(prefs), PreferenceInfo.ByKey[main[0]].Icon);
+            tags.AddChild(TagChip(PreferenceInfo.ByKey[main[0]].Icon, PreferenceInfo.Summary(prefs), UiTokens.AccentSoft, PreferencesTip(prefs)));
             var (picon, plabel, ptext) = MainPersonality();
-            Fact("Personalidade", plabel, UiTokens.AccentSoft, $"{plabel}\n~{ptext}", picon);
+            tags.AddChild(TagChip(picon, plabel, UiTokens.AccentSoft, $"Personalidade: {plabel}\n~{ptext}"));
             int talent = _person.Traits.Talent;
-            Fact("Talento", AttributeInfo.TalentTier(talent), UiTokens.Accent,
-                $"Talento: {AttributeInfo.TalentTier(talent)}\nValor|{UiTokens.To20(talent)} / 20\n~{AttributeInfo.TalentHint(talent)}\n~Talento é do jogador (a pessoa): define o potencial e a velocidade com que Mecânica, Conhecimento e Coordenação evoluem. Não muda e não é experiência.", "sparkles");
-            double hours = v.PlayedTicks / (double)Simulation.Core.Time.SimTime.TicksPerHour;
+            tags.AddChild(TagChip("sparkles", $"Talento {AttributeInfo.TalentTier(talent).ToLowerInvariant()}", UiTokens.Accent,
+                $"Talento: {AttributeInfo.TalentTier(talent)}\nValor|{UiTokens.To20(talent)} / 20\n~{AttributeInfo.TalentHint(talent)}\n~Talento é do jogador (a pessoa): define o potencial e a velocidade com que Mecânica, Conhecimento e Coordenação evoluem. Não muda e não é experiência."));
             string exp = AttributeInfo.ExperienceTier(hours);
-            Fact("Experiência", exp, UiTokens.TextSecondary,
-                $"Experiência: {exp}\nHoras jogadas|{PtBr.Decimal(hours)} h\nConhecimento|{UiTokens.To20(_person.Traits.GameKnowledge)} / 20\n~Vem da prática neste jogo: Novato (< 10 h), Iniciante (< 50 h), Experiente (< 200 h), Veterano. O Conhecimento cresce com ela; o Conhecimento inicial varia de pessoa para pessoa, sem depender do perfil.", "clock");
+            tags.AddChild(TagChip("clock", exp, UiTokens.TextLabel,
+                $"Experiência: {exp}\nHoras jogadas|{PtBr.Decimal(hours)} h\nConhecimento|{UiTokens.To20(_person.Traits.GameKnowledge)} / 20\n~Vem da prática neste jogo: Novato (< 10 h), Iniciante (< 50 h), Experiente (< 200 h), Veterano. O Conhecimento cresce com ela; o Conhecimento inicial varia de pessoa para pessoa, sem depender do perfil."));
+            Header.AddChild(new Control { CustomMinimumSize = new Vector2(0, 4) });
+            Header.AddChild(tags);
 
             var e = Engagement();
             var gauge = new SemiGauge
             {
-                CustomMinimumSize = new Vector2(168, 84), Value = Mathf.Clamp(e.Pct / 1.2f, 0, 1), Center = $"{e.Pct * 100:0}%",
+                CustomMinimumSize = new Vector2(156, 78), Value = Mathf.Clamp(e.Pct / 1.2f, 0, 1), Center = $"{e.Pct * 100:0}%",
                 Caption = $"Ritmo de jogo · {e.Days} dia{(e.Days == 1 ? "" : "s")}", Verdict = EngagementVerdict(e.Pct), Color = RatingColor(EngagementScore(e.Pct)),
                 TooltipText = $"Ritmo de jogo\nJogou|{e.Played} min\nPrevisto pela rotina|{e.Expected} min\nDias com sessão|{e.DaysPlayed} de {e.Days}\n~Minutos jogados ÷ minutos previstos pela rotina (sessão típica × dias por semana) nos últimos {e.Days} dias, contando hoje até agora. O engajamento (vontade de jogar) fica no card Humor.",
             };
@@ -137,6 +146,22 @@ public partial class PlayerModal : ModalFrame
             Actions.AddChild(Action("Ver área", $"{area.Name}\n~Abre a página da área onde está.", () => _ctx.OpenArea(z, a), icon: "map"));
         }
         else if (v != null) Actions.AddChild(Action("Ver zona", "Ver zona\n~Abre a página da zona atual.", () => _ctx.OpenZone(v.RegionId), icon: "map"));
+    }
+
+    /// <summary>Etiqueta de caracteristica no cabecalho (D-068): icone, texto e a explicacao no tooltip.</summary>
+    private static Control TagChip(string icon, string text, Color color, string tip)
+    {
+        var p = new TipPanel { TooltipText = tip, MouseFilter = MouseFilterEnum.Stop };
+        var sb = new StyleBoxFlat { BgColor = new Color(color, 0.08f), BorderColor = new Color(color, 0.32f), ContentMarginLeft = 8, ContentMarginRight = 10, ContentMarginTop = 2, ContentMarginBottom = 3 };
+        sb.SetBorderWidthAll(1);
+        sb.SetCornerRadiusAll(10);
+        p.AddThemeStyleboxOverride("panel", sb);
+        var r = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
+        r.AddThemeConstantOverride("separation", 6);
+        r.AddChild(new Icon(icon, 14, color) { SizeFlagsVertical = SizeFlags.ShrinkCenter });
+        r.AddChild(ThemeFactory.Text(text, UiTokens.FontSmall, color == UiTokens.TextLabel ? UiTokens.TextLabel : color.Lightened(0.12f), UiFonts.Medium));
+        p.AddChild(r);
+        return p;
     }
 
     /// <summary>Botao so com icone (setas, acoes compactas).</summary>

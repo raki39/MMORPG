@@ -19,7 +19,11 @@ public partial class ModalFrame : Control
     private bool _compactActions;
     private readonly HFlowContainer _tabBar;
     private readonly ScrollContainer _scroll;
-    private readonly HFlowContainer _facts;
+    /// <summary>Faixa de dados numa linha so (D-068): ao lado do titulo se couber, senao numa linha abaixo.</summary>
+    private readonly HBoxContainer _facts;
+    private readonly ClipRow _factsClip;
+    private readonly HBoxContainer _top;
+    private readonly VBoxContainer _headCol;
     private readonly Label _crumb;
     private int _current = -1;
 
@@ -73,20 +77,27 @@ public partial class ModalFrame : Control
         var headCol = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
         headCol.AddThemeConstantOverride("separation", 6);
         headRow.AddChild(headCol);
+        _headCol = headCol;
         _crumb = ThemeFactory.Text("", UiTokens.FontCaption, UiTokens.TextDisabled, UiFonts.Medium);
         headCol.AddChild(_crumb);
         var top = new HBoxContainer();
         top.AddThemeConstantOverride("separation", 28);
         headCol.AddChild(top);
+        _top = top;
         Header = new VBoxContainer { SizeFlagsVertical = SizeFlags.ShrinkCenter, CustomMinimumSize = new Vector2(280, 0) };
         Header.AddThemeConstantOverride("separation", 2);
         top.AddChild(Header);
-        _facts = new HFlowContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsVertical = SizeFlags.ShrinkCenter };
-        _facts.AddThemeConstantOverride("h_separation", 0);
-        _facts.AddThemeConstantOverride("v_separation", 8);
-        top.AddChild(_facts);
-        Highlight = new HBoxContainer { SizeFlagsVertical = SizeFlags.ShrinkCenter };
+        _facts = new HBoxContainer { SizeFlagsVertical = SizeFlags.ShrinkCenter };
+        _facts.AddThemeConstantOverride("separation", 0);
+        // A faixa fica com quase toda a sobra da linha (o destaque so encosta a direita).
+        _factsClip = new ClipRow { SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsVertical = SizeFlags.ShrinkCenter, SizeFlagsStretchRatio = 1000 };
+        _factsClip.AddChild(_facts);
+        top.AddChild(_factsClip);
+        // O destaque encosta a direita, com a faixa de dados ao lado do titulo ou numa linha abaixo.
+        Highlight = new HBoxContainer { SizeFlagsVertical = SizeFlags.ShrinkCenter, SizeFlagsHorizontal = SizeFlags.ExpandFill, Alignment = BoxContainer.AlignmentMode.End };
         top.AddChild(Highlight);
+        // Sem largura ao lado do titulo, a faixa desce para uma linha propria (sempre uma linha so).
+        top.Resized += () => CallDeferred(nameof(PlaceFacts));
 
         var tabsRow = new HBoxContainer();
         tabsRow.AddThemeConstantOverride("separation", 12);
@@ -190,25 +201,54 @@ public partial class ModalFrame : Control
     private Dictionary<string, int> _cardScroll = new();
     private void RestoreCardScroll() { ApplyCardScroll(_scroll, _cardScroll); _cardScroll = new(); }
 
-    /// <summary>Dado-chave do cabecalho: valor em cima, rotulo embaixo, separado por filete.</summary>
+    /// <summary>Largura maxima do valor de um dado; acima disso, reticencias e o texto inteiro no tooltip.</summary>
+    private const int FactValueMax = 230;
+
+    /// <summary>
+    /// Dado-chave do cabecalho: valor em cima, rotulo embaixo, separado por filete. A faixa fica numa linha so
+    /// (D-068); valor longo termina em reticencias, com o texto inteiro no tooltip.
+    /// </summary>
     public void Fact(string label, string value, Color? color = null, string tooltip = "", string icon = "")
     {
         if (_facts.GetChildCount() > 0)
-            _facts.AddChild(new ColorRect { Color = UiTokens.Divider, CustomMinimumSize = new Vector2(1, 34), SizeFlagsVertical = SizeFlags.ShrinkCenter });
+            _facts.AddChild(new ColorRect { Color = UiTokens.Divider, CustomMinimumSize = new Vector2(1, 30), SizeFlagsVertical = SizeFlags.ShrinkCenter });
+        const int size = 14;
+        var font = UiFonts.Numbers;
+        float natural = font.GetStringSize(value, HorizontalAlignment.Left, -1, size).X + 2;
+        bool trimmed = natural > FactValueMax;
+        if (trimmed) tooltip = tooltip.Length > 0 ? $"{value}\n~{tooltip.Replace("\n", " · ")}" : value;
         var cell = new TipPanel { TooltipText = tooltip, MouseFilter = tooltip.Length > 0 ? MouseFilterEnum.Stop : MouseFilterEnum.Ignore };
-        cell.AddThemeStyleboxOverride("panel", new StyleBoxEmpty { ContentMarginLeft = 18, ContentMarginRight = 18 });
+        cell.AddThemeStyleboxOverride("panel", new StyleBoxEmpty { ContentMarginLeft = 16, ContentMarginRight = 16 });
         var c = new VBoxContainer();
         c.AddThemeConstantOverride("separation", 1);
         var v = new HBoxContainer();
         v.AddThemeConstantOverride("separation", 7);
-        if (icon.Length > 0) v.AddChild(new Icon(icon, 16, color ?? UiTokens.TextSecondary));
+        if (icon.Length > 0) v.AddChild(new Icon(icon, 15, color ?? UiTokens.TextSecondary));
         else if (color is { } dot && dot != UiTokens.TextPrimary && dot != UiTokens.TextSecondary)
             v.AddChild(new ColorRect { Color = dot, CustomMinimumSize = new Vector2(7, 7), SizeFlagsVertical = SizeFlags.ShrinkCenter });
-        v.AddChild(ThemeFactory.Text(value, 15, UiTokens.TextPrimary, UiFonts.Numbers));
+        var text = ThemeFactory.Text(value, size, UiTokens.TextPrimary, font);
+        text.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+        text.CustomMinimumSize = new Vector2(Mathf.Min(natural, FactValueMax), 0);
+        v.AddChild(text);
         c.AddChild(v);
         c.AddChild(ThemeFactory.Text(label, UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Medium));
         cell.AddChild(c);
         _facts.AddChild(cell);
+        CallDeferred(nameof(PlaceFacts));
+    }
+
+    /// <summary>A faixa de dados fica ao lado do titulo se couber; senao, numa linha propria logo abaixo.</summary>
+    private void PlaceFacts()
+    {
+        if (!IsInstanceValid(_factsClip)) return;
+        float need = _facts.GetCombinedMinimumSize().X;
+        float side = _top.Size.X - Header.GetCombinedMinimumSize().X - Highlight.GetCombinedMinimumSize().X - 28 * 2 - 8;
+        bool below = need > side;
+        bool isBelow = _factsClip.GetParent() == _headCol;
+        if (below == isBelow) return;
+        _factsClip.GetParent().RemoveChild(_factsClip);
+        if (below) { _headCol.AddChild(_factsClip); _headCol.MoveChild(_factsClip, _top.GetIndex() + 1); }
+        else { _top.AddChild(_factsClip); _top.MoveChild(_factsClip, Header.GetIndex() + 1); }
     }
 
     public override void _Ready()
