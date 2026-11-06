@@ -57,6 +57,8 @@ public sealed class PersonTraits
     // Rotina (P2): horario preferido para jogar (local) e duracao habitual; a frequencia vem da
     // importancia do jogo, do habito e do tempo livre das obrigacoes.
     public int PreferredStartHour;
+    /// <summary>Cronotipo (R6): 0 = muito matinal, 1000 = muito notivago.</summary>
+    public int Chronotype;
     public int SessionMinutes;
     /// <summary>Importancia do jogo entre os lazeres (permille): o principal diferencial do "hardcore", nao o tempo livre.</summary>
     public int GameImportance;
@@ -86,7 +88,7 @@ public sealed class PersonTraits
         "sociability" => Sociability, "aggressiveness" => Aggressiveness, "patience" => Patience, "loyalty" => Loyalty,
         "riskAversion" => RiskAversion, "mechanicalSkill" => MechanicalSkill, "gameKnowledge" => GameKnowledge,
         "coordination" => Coordination, "cheatPropensity" => CheatPropensity, "opportunism" => Opportunism,
-        "variety" => Variety, "competitiveness" => Competitiveness,
+        "variety" => Variety, "competitiveness" => Competitiveness, "chronotype" => Chronotype,
         _ => throw new ArgumentException($"Traço desconhecido: {key}"),
     };
 
@@ -110,6 +112,7 @@ public sealed class PersonTraits
             case "cheatPropensity": CheatPropensity = value; break;
             case "opportunism": Opportunism = value; break;
             case "variety": Variety = value; break;
+            case "chronotype": Chronotype = value; break;
             case "competitiveness": Competitiveness = value; break;
             default: throw new ArgumentException($"Traço desconhecido: {key}");
         }
@@ -295,6 +298,12 @@ public sealed class Person
     public int SleepNeedMinutes { get; internal set; } = 480;
     /// <summary>Hora preferida de dormir (minutos desde a meia-noite anterior; acima de 1440 = madrugada).</summary>
     public int BedtimeMinute { get; internal set; } = 1425;
+    /// <summary>Vespera de folga (R6): minutos a mais na hora de dormir quando o dia seguinte e livre (0 = nao desloca).</summary>
+    public int FreeEveShiftMinutes { get; internal set; }
+    /// <summary>Sono deslocado (R6): acorda neste instante, depois do acordar planejado; 0 = nada deslocado.</summary>
+    public long SleepUntilTick { get; internal set; }
+    /// <summary>Dia local cujo acordar ja foi deslocado (uma vez por noite).</summary>
+    public long SleepShiftedDay { get; internal set; } = -1;
 
     /// <summary>Traits (P4b): de 0 a 6 na criacao, em ordem de sorteio. Efeitos na P4c; aquisicao e perda na P4d.</summary>
     internal List<QuirkState> QuirkList { get; } = new();
@@ -412,6 +421,8 @@ public sealed class DayPlanRecord
     public bool FreeDay { get; }
     /// <summary>Sono da noite anterior (planejado) e deficit depois da conta do dia (P3).</summary>
     public int SleepMinutes { get; internal set; }
+    /// <summary>Minutos que acordou depois do planejado por ter ido dormir mais tarde (sono deslocado, R6).</summary>
+    public int SleepShiftMinutes { get; internal set; }
     public int DeficitMinutes { get; internal set; }
     /// <summary>Sessoes no expediente remoto (pausa ou escapada) e minutos sobrepostos ao trabalho (D-044).</summary>
     public int WorkSessions { get; }

@@ -371,6 +371,8 @@ Elas são recalibradas com a curva de XP na Etapa 2.
 
 ## 11. Parâmetros e hipóteses (`population.json`, seção `routine`)
 
+> Horários (R6, D-058): cronotipo, faixa contínua pela meia-noite, véspera de folga, turno noturno e sono deslocado estão em `horarios.md`.
+
 São hipóteses configuráveis, a menos que a coluna diga outra coisa. Os valores são os do preset inicial.
 
 | Parâmetro | Valor | O que representa |

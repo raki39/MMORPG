@@ -25,6 +25,7 @@ public class DayAccountingTests
         p.SleepNeedMinutes = need;
         p.BedtimeMinute = bedtime;
         p.SleepDeficitMinutes = 0;
+        p.FreeEveShiftMinutes = 0;   // sem vespera de folga (R6): estes testes medem a hora natural
         return p;
     }
 
@@ -94,7 +95,8 @@ public class DayAccountingTests
                 var rec = p.DayPlans.FirstOrDefault(r => r.LocalDay == d);
                 if (rec == null) continue;   // fora da agenda guardada
                 if (starts.TryGetValue(p.Id, out var again) && again.Any(t => t > tick && t <= wake)) continue;   // voltou a jogar antes de acordar
-                Assert.Equal((int)((wake - tick) / SimTime.TicksPerMinute), rec.SleepMinutes);
+                // Do inicio real ao acordar real: o acordar planejado mais o sono deslocado (R6), contado uma vez.
+                Assert.Equal((int)((wake - tick) / SimTime.TicksPerMinute) + rec.SleepShiftMinutes, rec.SleepMinutes);
                 checkedNights++;
             }
         }
@@ -216,7 +218,8 @@ public class DayAccountingTests
         Assert.Equal(sunday.Bed - 1440, monday.SleepStart);              // noite normal de domingo para segunda
         Assert.True(monday.NightShiftAhead);
         Assert.True(monday.ShiftDeparture > 0 && monday.ShiftDeparture < 22 * 60);
-        Assert.All(monday.Windows, x => Assert.True(x.End <= monday.ShiftDeparture));   // nenhuma janela depois da saida
+        Assert.All(monday.Windows.Except(monday.OptionalWindows), x => Assert.True(x.End <= monday.ShiftDeparture));   // nenhuma janela depois da saida
+        Assert.All(monday.OptionalWindows, x => Assert.True(x.Start >= monday.Bed));   // so a possivel, depois do turno (R6)
         Assert.True(monday.Bed > 1440 + 6 * 60);                          // o sono so comeca depois do turno
         Assert.DoesNotContain(monday.Timeline(), t => t.Kind == "sleep" && t.Start >= monday.Wake);   // sair para o turno nao e dormir
     }

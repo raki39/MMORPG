@@ -66,7 +66,7 @@ public class PopulationTests
                          t.Patience, t.Loyalty, t.RiskAversion, t.MechanicalSkill, t.GameKnowledge, t.Coordination,
                          t.CheatPropensity, t.Opportunism, t.WillingnessToPay, t.PaidAdvantageSensitivity, t.GameImportance, t.Habit })
                 Assert.InRange(v, 0, 1000);
-            Assert.InRange(t.PreferredStartHour, 0, 23);
+            Assert.InRange(t.PreferredStartHour, 0, 29);   // faixa continua: 24 a 29 = 0h a 5h (R6)
             Assert.InRange(t.SessionMinutes, 10, 720);
             Assert.True(t.LeisureBudgetCentsPerMonth >= 0);
             Assert.Equal(LifecycleState.PotentialInterested, p.State);

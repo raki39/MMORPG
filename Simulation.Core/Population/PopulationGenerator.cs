@@ -26,6 +26,10 @@ public static class PopulationGenerator
     public const string DedicationStreamName = "population.dedication";
     /// <summary>Fluxo proprio das preferencias e da competitividade (atributos novos): nao muda os antigos.</summary>
     public const string InterestsStreamName = "population.interests";
+    /// <summary>Fluxo proprio do cronotipo e da vespera de folga (R6): nao muda o fluxo dos demais atributos.</summary>
+    public const string ChronotypeStreamName = "population.chronotype";
+    /// <summary>Limites da hora natural de dormir (minutos desde a meia-noite anterior): 20h a 09h do dia seguinte.</summary>
+    public const int BedtimeMin = 1200, BedtimeMax = 1980;
 
     /// <summary>Atributos de dedicacao, gerados pelo perfil.</summary>
     public static readonly string[] DedicationKeys = { "sessionMinutes", "gameImportance", "habit" };
@@ -41,14 +45,14 @@ public static class PopulationGenerator
         ("mechanicalSkill", 0, 1000), ("gameKnowledge", 0, 1000), ("coordination", 0, 1000),
         ("cheatPropensity", 0, 1000), ("opportunism", 0, 1000),
         ("leisureBudgetCentsPerMonth", 0, 1_000_000), ("willingnessToPay", 0, 1000), ("paidAdvantageSensitivity", 0, 1000),
-        ("preferredStartHour", 0, 23), ("sessionMinutes", 10, 720), ("gameImportance", 0, 1000), ("habit", 0, 1000),
+        ("preferredStartHour", 0, 29), ("sessionMinutes", 10, 720), ("gameImportance", 0, 1000), ("habit", 0, 1000),
         ("talent", 0, 1000), ("variety", 0, 1000),
     };
 
     /// <summary>Chaves que podem entrar em ligacoes (sorteadas antes da rotina, fora da dedicacao).</summary>
     public static IEnumerable<string> LinkableKeys() =>
         MainOrder.Select(m => m.Key).Where(k => !DedicationKeys.Contains(k)).Select(k => "traits." + k)
-            .Concat(PersonPreferences.Keys.Select(k => "preferences." + k)).Append("traits.competitiveness");
+            .Concat(PersonPreferences.Keys.Select(k => "preferences." + k)).Append("traits.competitiveness").Append("traits.chronotype");
 
     /// <summary>
     /// Gera a pessoa. Com "cell" (cenario controlado, R4): perfil e ocupacao fixos, atributos e
@@ -78,6 +82,12 @@ public static class PopulationGenerator
         foreach (var key in PersonPreferences.Keys)
             draws["preferences." + key] = First(irng, mean, PreferenceRangeOf(content.PreferenceRanges, key), 0, 1000);
         draws["traits.competitiveness"] = First(irng, mean, content.PopulationTraits.Competitiveness, 0, 1000);
+        // Cronotipo e vespera de folga (R6): fluxo proprio, na mesma ordem sempre.
+        var crng = new DeterministicRng(RngStreams.DeriveSeed(campaignSeed, ChronotypeStreamName, personId));
+        draws["traits.chronotype"] = First(crng, mean, content.PopulationTraits.Chronotype, 0, 1000);
+        var fe = content.Routine.FreeEve;
+        bool hasFreeEve = mean ? fe.ChancePermille >= 500 : crng.ChancePermille(fe.ChancePermille);
+        var freeEveDraw = First(crng, mean, fe.Minutes, 0, 600);
 
         // Fase 2: dedicacao compartilhada e ligacoes; depois o valor de cada posicao.
         int influence = content.Dedication.InfluencePermille;
@@ -113,6 +123,8 @@ public static class PopulationGenerator
         var t = new PersonTraits();
         foreach (var (key, _, _) in MainOrder) Assign(t, key, Value("traits." + key));
         t.Competitiveness = Value("traits.competitiveness");
+        t.Chronotype = Value("traits.chronotype");
+        long chronoPosition = draws["traits.chronotype"].Triangular && !mean ? FinalPosition("traits.chronotype") : TraitDraw.Scale / 2;
 
         ulong appearance = RngStreams.DeriveSeed(campaignSeed, AppearanceStreamName, personId);
         var person = new Person(personId, name, profile.Id, appearance, t);
@@ -120,7 +132,17 @@ public static class PopulationGenerator
         // Personalidade principal (P4a): pelos atributos de nascenca, na distribuicao do preset.
         person.PersonalityId = PersonalitySystem.Classify(content, t);
         AssignLocality(person, content, rng, mean);   // depois dos tracos: nao altera populacoes ja geradas
-        AssignRoutine(person, content, rng, cell?.Occupation, mean);    // depois da localidade (P2)
+        // Vespera de folga (R6): so para quem tem; notivagos deslocam mais (parte vem do cronotipo).
+        int freeEve = 0;
+        if (hasFreeEve)
+        {
+            var fr = freeEveDraw.Range;
+            freeEve = freeEveDraw.Triangular && !mean
+                ? TraitDraw.Triangular(TraitDraw.Combine(chronoPosition, freeEveDraw.Own, fe.ChronotypeInfluencePermille), fr.Min!.Value, fr.Mode!.Value, fr.Max!.Value)
+                : freeEveDraw.Value;
+        }
+        person.FreeEveShiftMinutes = Math.Clamp(freeEve, 0, 600) / 5 * 5;
+        AssignRoutine(person, content, rng, cell?.Occupation, mean, chronoPosition);    // depois da localidade (P2)
         // Traits (P4b): fluxo proprio, por ultimo (usam perfil, personalidade, atributos, conduta,
         // autocontrole e preferencias). No cenario controlado ficam vazias: pessoas iguais por celula.
         if (cell == null) person.QuirkList.AddRange(QuirkSystem.Draw(content, person, campaignSeed));
@@ -167,6 +189,7 @@ public static class PopulationGenerator
         "leisureBudgetCentsPerMonth" => t.LeisureBudgetCentsPerMonth, "willingnessToPay" => t.WillingnessToPay,
         "paidAdvantageSensitivity" => t.PaidAdvantageSensitivity, "preferredStartHour" => t.PreferredStartHour,
         "extendTendency" => t.ExtendTendency, "selfControl" => t.SelfControl, "talent" => t.Talent, "variety" => t.Variety,
+        "chronotype" => t.Chronotype,
         _ => throw new ArgumentException($"Atributo desconhecido: {key}"),
     };
 
@@ -215,7 +238,7 @@ public static class PopulationGenerator
     /// horario e deslocamento, folga da escala, sono, renda e apoio (P2). A renda nao tem efeito
     /// ate o M7.
     /// </summary>
-    private static void AssignRoutine(Person person, ContentDatabase content, DeterministicRng rng, string? occupationId, bool mean)
+    private static void AssignRoutine(Person person, ContentDatabase content, DeterministicRng rng, string? occupationId, bool mean, long chronoPosition)
     {
         var occs = content.OccupationsOrdered;
         if (occs.Count == 0) return;
@@ -240,7 +263,13 @@ public static class PopulationGenerator
         // Escala 5x2: a segunda folga e o dia seguinte (sem sorteio novo).
         person.DayOff2Index = person.DayOffIndex >= 0 && occ.DaysOff >= 2 && dayOffDays.Contains((person.DayOffIndex + 1) % 7) ? (person.DayOffIndex + 1) % 7 : -1;
         person.SleepNeedMinutes = Roll(rng, mean, rs.SleepNeedMinutes, 300, 660);
-        person.BedtimeMinute = Roll(rng, mean, rs.BedtimeMinute, 1260, 1680) / 5 * 5;
+        // Hora natural de dormir (R6): no formato triangular, parte vem do cronotipo (posicao
+        // compartilhada) e parte e individual; mesmos tres sorteios do fluxo principal de antes.
+        var bed = First(rng, mean, rs.BedtimeMinute, BedtimeMin, BedtimeMax);
+        person.BedtimeMinute = (bed.Triangular && !mean
+            ? Math.Clamp(TraitDraw.Triangular(TraitDraw.Combine(chronoPosition, bed.Own, rs.ChronotypeBedtimeInfluencePermille),
+                bed.Range.Min!.Value, bed.Range.Mode!.Value, bed.Range.Max!.Value), BedtimeMin, BedtimeMax)
+            : bed.Value) / 5 * 5;
         int factor = content.Localities.TryGetValue(person.ResidenceId, out var loc) ? loc.IncomeFactorPermille : 1000;
         person.IncomeCentsPerMonth = (long)Roll(rng, mean, occ.Income, 0, 100_000_000) * factor / 1000;
         person.SupportCentsPerMonth = rng.ChancePermille(occ.SupportChancePermille) ? (long)Roll(rng, mean, occ.Support, 0, 100_000_000) * factor / 1000 : 0;

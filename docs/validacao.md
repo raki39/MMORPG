@@ -327,6 +327,14 @@ Medição com as mesmas pessoas, sem e com as regras (`baselines/personalidade/`
 
 Com e sem traits, as mesmas pessoas (`baselines/traits/`). Os efeitos ficam desligados até a P4c, então a simulação precisa ser idêntica, e é: `validation.csv` igual e nenhuma coluna comum do `people.csv` diferente. A distribuição das traits está em `traits.md`, seção 5.
 
+## D-058: variedade de horários (05/11/2026)
+
+Antes × depois com as mesmas pessoas (`baselines/horarios/`). Nenhuma meta mudou.
+
+- **Regras do cenário:** 8 de 9 (antes, 7). O fim de semana deixou de ser instável; as horas do casual continuam fora (10,0 h).
+- **Provisórias:** 7 de 12. "Tempo na cidade" (23,6%) e "andando ou esperando" (20,0%) ficaram instáveis no limite; os valores praticamente não mudaram.
+- **Madrugada:** a presença por hora local está em `horarios.md`, seção 7. Não há meta de presença mínima na madrugada, por decisão do criador.
+
 ## Próximos passos
 
 Roteiro por etapas (backlog):

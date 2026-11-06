@@ -47,7 +47,7 @@
     "mechanicalSkill": { "mean": 460, "spread": 470 }, "gameKnowledge": { "mean": 480, "spread": 570 }, "coordination": { "mean": 470, "spread": 440 },
     "cheatPropensity": { "mean": 80, "spread": 140 }, "opportunism": { "mean": 330, "spread": 480 }, "competitiveness": { "min": 0, "mode": 250, "max": 950 },
     "leisureBudgetCentsPerMonth": { "mean": 7590, "spread": 7580 }, "willingnessToPay": { "mean": 470, "spread": 340 }, "paidAdvantageSensitivity": { "mean": 610, "spread": 440 },
-    "preferredStartHour": { "mean": 19, "spread": 6 }, "extendTendency": { "mean": 480, "spread": 580 }, "selfControl": { "mean": 550, "spread": 370 }, "talent": { "mean": 470, "spread": 400 }, "variety": { "min": 160, "mode": 490, "max": 820 }
+    "preferredStartHour": { "min": 7, "mode": 20, "max": 28 }, "chronotype": { "min": 0, "mode": 500, "max": 1000 }, "extendTendency": { "mean": 480, "spread": 580 }, "selfControl": { "mean": 550, "spread": 370 }, "talent": { "mean": 470, "spread": 400 }, "variety": { "min": 160, "mode": 490, "max": 820 }
   },
   "preferences": {
     "pve": { "min": 0, "mode": 680, "max": 1000 }, "pvp": { "min": 0, "mode": 10, "max": 1000 }, "crafting": { "min": 0, "mode": 350, "max": 1000 }, "trade": { "min": 0, "mode": 170, "max": 1000 },
@@ -61,7 +61,8 @@
     { "trait": "traits.pvp", "anchor": "preferences.pvp", "influencePermille": 500 },
     { "trait": "traits.trade", "anchor": "preferences.trade", "influencePermille": 500 },
     { "trait": "traits.exploration", "anchor": "preferences.exploration", "influencePermille": 500 },
-    { "trait": "traits.socializing", "anchor": "preferences.social", "influencePermille": 500 }
+    { "trait": "traits.socializing", "anchor": "preferences.social", "influencePermille": 500 },
+    { "trait": "traits.preferredStartHour", "anchor": "traits.chronotype", "influencePermille": 350 }
   ],
   "names": {
     "firstNames": [
@@ -142,7 +143,9 @@
     "noise": 50, "activityDurationMin": 800, "activityDurationMax": 1250, "idleRethinkMinutes": 20
   },
   "routine": {
-    "sleepNeedMinutes": { "mean": 470, "spread": 45 }, "bedtimeMinute": { "mean": 1425, "spread": 75 },
+    "sleepNeedMinutes": { "mean": 470, "spread": 45 }, "bedtimeMinute": { "min": 1260, "mode": 1410, "max": 1710 }, "chronotypeBedtimeInfluencePermille": 700,
+    "freeEve": { "chancePermille": 650, "minutes": { "min": 15, "mode": 60, "max": 180 }, "chronotypeInfluencePermille": 500 },
+    "nightShiftOffContinuityPermille": 500, "postShiftWindowMinutes": 90, "postShiftTirednessPermille": 400, "sleepShift": true,
     "prepMinutes": 45, "arrivalMinutes": 45, "minWindowMinutes": 30, "minSessionMinutes": 20,
     "freeDayChanceBonus": 350, "fullFreeMinutes": 600, "habitStreakPermille": 250, "habitHistoryDays": 7,
     "maxSessionsPerDay": 5, "dispositionSpreadPermille": 200,

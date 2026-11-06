@@ -16,7 +16,7 @@ public class CoherenceTests
     private static readonly List<Person> People = Enumerable.Range(1, 4000).Select(i => PopulationGenerator.Generate(i, C, 7)).ToList();
 
     private static List<DailySchedule.DayLayout> Week(Person p) =>
-        Enumerable.Range(0, 7).Select(d => DailySchedule.Build(p, C.Occupations[p.OccupationId], RS, d, false, false, false)).ToList();
+        Enumerable.Range(0, 7).Select(d => DailySchedule.Build(p, C.Occupations[p.OccupationId], RS, d, false, false, false, freeEve: false)).ToList();
 
     [Fact]
     [Trait("Classe", "Regra do preset")]
@@ -24,8 +24,14 @@ public class CoherenceTests
     {
         foreach (var p in People.Where(p => !DailySchedule.HasNightShift(C.Occupations[p.OccupationId])))
             foreach (var day in Week(p).Where(d => !d.FreeDay))
-                Assert.True(day.Wake >= ContentValidator.EarliestDayShiftWakeMinute,
-                    $"{p.OccupationId} acorda às {day.Wake / 60:00}:{day.Wake % 60:00}");
+            {
+                // A obrigacao nunca obriga a acordar de madrugada; acordar cedo por conta propria
+                // (cronotipo muito matinal, R6) e possivel: ai o acordar e o natural, depois do sono necessario.
+                Assert.True(DailySchedule.LatestWake(day, RS) >= ContentValidator.EarliestDayShiftWakeMinute,
+                    $"{p.OccupationId} precisa acordar às {DailySchedule.LatestWake(day, RS) / 60:00}h");
+                if (day.Wake < ContentValidator.EarliestDayShiftWakeMinute)
+                    Assert.True(day.Wake >= day.SleepStart + p.SleepNeedMinutes, $"{p.OccupationId} acorda às {day.Wake / 60:00}:{day.Wake % 60:00} sem completar o sono");
+            }
     }
 
     [Fact]

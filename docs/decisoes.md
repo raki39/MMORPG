@@ -1951,3 +1951,43 @@ O criador pediu o card de traits na visão geral, no lugar do Inventário, com �
 - **Exclusões:** nenhuma violada.
 
 **Próximo:** R6 (variedade de horários); depois a P4c (efeitos) e a P4d (aquisição e perda).
+
+## D-058 — Variedade de horários (R6)
+**Data:** 05/11/2026 · **Estado:** aceita (parâmetros candidatos)
+
+O diagnóstico da rotina, pedido pelo criador, mostrou que ninguém jogava entre 1h e 8h da hora local. A causa estava na geração: sono e horário preferido saíam de faixas estreitas, quem não tem obrigação dormia como todo mundo e o turno noturno voltava às 23h45 em toda folga. O criador aprovou a correção, com cuidados. Detalhes em `horarios.md`.
+
+**O que entrou:**
+1. **Cronotipo:**
+   - atributo novo, em fluxo próprio;
+   - entra em parte na hora natural de dormir (70%) e no horário preferido (35%), com variação individual;
+   - hora natural de dormir com os dois extremos (21h00 a 04h30, moda 23h30);
+   - horário preferido de 7h às 04h do dia seguinte.
+   - As obrigações continuam limitando.
+2. **Faixa contínua que atravessa a meia-noite** (03h depois das 23h). É uma regra única para o início do dia, a janela e o horário habitual.
+3. **Véspera de folga:** deslocamento individual (65% têm; 15 a 180 min), respeitando obrigação, compromisso e necessidade de sono.
+4. **Turno da noite:**
+   - na folga, continua perto do ritmo dos turnos;
+   - depois do turno, janela de até 90 min como possibilidade: não conta como tempo livre, o cansaço pesa contra e não há nova chance diária.
+5. **Sono deslocado × cortado:** quem foi dormir tarde acorda mais tarde se nada obriga; só o que falta vira déficit.
+6. **Tela:** o próximo login realmente agendado; sem ele, a tela diz isso.
+
+**Desvio registrado:** para quem trabalha no turno da noite com horário preferido antes de acordar (14h, acordando às 15h50), a regra antiga jogava o horário para o dia seguinte. Agora ele vale o acordar. É correção do mesmo princípio da faixa contínua.
+
+**Medição:** antes × depois com as mesmas pessoas (2 seeds × 1.000 × 28 dias), por ocupação e hora local.
+- **Madrugada:** de 0,3% para 3,1% do tempo jogado, sem mínimo forçado. Às 02h do servidor, de 13 para 29 conectados por 1.000.
+- **Controles:** pico e horas iguais.
+- **Sono deslocado:** 7% a 8% dos dias livres, sem aumento de déficit.
+- **Validação padrão:** regras do cenário 8 de 9 (antes, 7); provisórias 7 de 12 (antes, 8), por duas metas que ficaram instáveis no limite.
+
+**Conferências pedidas pelo criador:**
+- **Déficit de quem trabalha e estuda à noite:** 98,8% vem da agenda (6,6 h de sono possíveis de segunda a quinta). Acontece sem jogar e se recupera no fim de semana pelas regras existentes. É a rotina da ocupação, não defeito; nada foi compensado.
+- **Janela depois do turno:** as contas estão corretas. O jogo entra na agenda do dia e o sono real começa ao sair, deslocando ou reduzindo conforme a obrigação seguinte. Não há tempo fora das 24 h nem sobreposição com obrigações (0 casos em 214). A ficha passou a mostrar essa janela separada do tempo livre.
+
+**Correções durante a conferência:**
+- a sessão adiada pelo sono deslocado podia invadir o deslocamento; agora fica limitada à janela;
+- a véspera de folga definia o horário habitual dos dias úteis; agora o costume vem dos dias típicos.
+
+**Decisão do criador:** manter o cronotipo em 70% e o bônus do Agressivo em +150 como candidatos; não recalibrar por correlação nem para recuperar metas antigas.
+
+**Próximo:** P4c (efeitos das traits) e P4d (aquisição e perda).

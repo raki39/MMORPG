@@ -93,6 +93,8 @@ public class SessionLimitTests
             var (d, day, start) = WakingDay(w, s.P, s.Start);
             int end = start + (int)((s.End - s.Start) / SimTime.TicksPerMinute);
             if (end <= day.Bed) continue;
+            // Depois do turno da noite (R6): a janela possivel fica depois da chegada; nao avanca alem dela.
+            if (day.OptionalWindows.FirstOrDefault(x => start >= x.Start && start < x.End) is { End: > 0 } post) { Assert.True(end <= post.End); continue; }
             // Avancou sobre o sono: a janela da sessao termina na hora de deitar (nao em obrigacao, preparo,
             // deslocamento ou compromisso) e o dia nao termina saindo para um turno.
             Assert.False(day.NightShiftAhead);

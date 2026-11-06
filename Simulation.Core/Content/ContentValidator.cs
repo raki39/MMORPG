@@ -224,7 +224,17 @@ public static class ContentValidator
         }
         var r = set.Population.Routine;
         Range("routine", "sleepNeedMinutes", r.SleepNeedMinutes, 240, 720, v, PopulationFile);
-        Range("routine", "bedtimeMinute", r.BedtimeMinute, 1200, 1800, v, PopulationFile);
+        Range("routine", "bedtimeMinute", r.BedtimeMinute, 1200, 1980, v, PopulationFile);
+        Range("routine", "freeEve.minutes", r.FreeEve.Minutes, 0, 600, v, PopulationFile);
+        foreach (var (name, value, lo, hi) in new (string, int, int, int)[]
+        {
+            ("chronotypeBedtimeInfluencePermille", r.ChronotypeBedtimeInfluencePermille, 0, 1000), ("freeEve.chancePermille", r.FreeEve.ChancePermille, 0, 1000),
+            ("freeEve.chronotypeInfluencePermille", r.FreeEve.ChronotypeInfluencePermille, 0, 1000), ("nightShiftOffContinuityPermille", r.NightShiftOffContinuityPermille, 0, 1000),
+            ("postShiftWindowMinutes", r.PostShiftWindowMinutes, 0, 240), ("postShiftTirednessPermille", r.PostShiftTirednessPermille, 0, 5000),
+        })
+            if (value < lo || value > hi) v.Error(PopulationFile, "routine." + name, $"Use de {lo} a {hi}.");
+        if (r.BedtimeMinute.IsTriangular && r.ChronotypeBedtimeInfluencePermille > 0 && !set.Population.Traits.Chronotype.IsTriangular)
+            v.Error(PopulationFile, "traits.chronotype", "O cronotipo precisa do formato min, mode e max para entrar na hora de dormir.");
         if (r.BedtimeAdaptMinutes is < 0 or > 240) v.Error(PopulationFile, "routine.bedtimeAdaptMinutes", "Use de 0 a 240 minutos.");
         if (r.PreferredDelayMaxMinutes is < 0 or > 600) v.Error(PopulationFile, "routine.preferredDelayMaxMinutes", "Use de 0 a 600 minutos.");
         foreach (var (name, value, lo, hi) in new (string, int, int, int)[]
@@ -1093,7 +1103,8 @@ public static class ContentValidator
                      "riskAversion", "mechanicalSkill", "gameKnowledge", "coordination", "cheatPropensity", "opportunism", "competitiveness",
                      "willingnessToPay", "paidAdvantageSensitivity", "extendTendency", "selfControl", "talent", "variety" })
             Permille("traits", key, Population.PopulationGenerator.TraitRangeOf(popTraits, key), v);
-        Range("traits", "preferredStartHour", popTraits.PreferredStartHour, 0, 23, v);
+        Range("traits", "preferredStartHour", popTraits.PreferredStartHour, 0, 29, v);
+        Range("traits", "chronotype", popTraits.Chronotype, 0, 1000, v);
         Range("traits", "leisureBudgetCentsPerMonth", popTraits.LeisureBudgetCentsPerMonth, 0, 1_000_000, v);
         foreach (var key in Population.PersonPreferences.Keys)
             Permille("preferences", key, Population.PopulationGenerator.PreferenceRangeOf(set.Population.Preferences, key), v);

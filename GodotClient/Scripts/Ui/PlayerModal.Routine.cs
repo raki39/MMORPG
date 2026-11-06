@@ -125,6 +125,8 @@ public partial class PlayerModal
             if (d.CommuteMinutes > 0) lines.Add(($"Deslocamento: {d.CommuteMinutes} min no dia", UiTokens.TextSecondary));
             lines.Add((d.NightShift ? $"Acorda {Clock(d.Wake)} · sai para o turno às {Clock(d.ShiftDeparture)} · dorme às {Clock(d.Bed)} (depois do turno)" : $"Acorda {Clock(d.Wake)} · dorme {Clock(d.Bed)}", UiTokens.TextSecondary));
             lines.Add(($"Tempo livre: {Hours(d.FreeMinutes)}" + (d.Windows.Count > 0 ? $" ({string.Join(", ", d.Windows.Select(w => $"{Clock(w.Start)}–{Clock(w.End)}"))})" : ""), d.FreeDay ? UiTokens.Success : UiTokens.Info));
+            if (d.PostShiftWindows.Count > 0)
+                lines.Add(($"Depois do turno, se quiser jogar: {string.Join(", ", d.PostShiftWindows.Select(w => $"{Clock(w.Start)}–{Clock(w.End)}"))} (não é tempo livre: sai do sono, que se desloca)", UiTokens.TextSecondary));
             var br = d.Segments.Where(s => s.Kind == "break").ToList();
             if (br.Count > 0) lines.Add(($"Pausa do trabalho (pode jogar): {string.Join(", ", br.Select(b => $"{Clock(b.Start)}–{Clock(b.End)}"))}", UiTokens.Info));
             lines.Add(d.PlannedStart >= 0

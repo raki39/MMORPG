@@ -131,19 +131,22 @@ public sealed class BehaviorSystem
         // deficit muda depois. Dia passado nunca planejado: sem recuperacao; dia futuro: pelo deficit atual.
         int? recovery = p.RecoveryByDay.TryGetValue(localDay, out int fixedRecovery) ? fixedRecovery
             : localDay < LocalDay(p, Now) ? 0 : null;
-        var day = DailySchedule.Build(p, OccOf(p), rs, Dow(date), hol, prevHol, nextHol, null, recovery);
-        var c = CommitmentOf(p, localDay, day, cal.KindOf(date) != DayKind.Weekday || Dow(date) == p.DayOffIndex);
-        return c == null ? day : DailySchedule.Build(p, OccOf(p), rs, Dow(date), hol, prevHol, nextHol, c, recovery);
+        var occ = OccOf(p);
+        var next = date.AddDays(1);
+        var c = CommitmentOf(p, localDay, DailySchedule.Blocks(p, occ, Dow(date), hol).Count == 0, cal.KindOf(date) != DayKind.Weekday || Dow(date) == p.DayOffIndex);
+        // Compromisso de amanha (R6): a hora de dormir de hoje respeita o sono necessario antes dele.
+        var nc = CommitmentOf(p, localDay + 1, DailySchedule.Blocks(p, occ, Dow(next), nextHol).Count == 0, cal.KindOf(next) != DayKind.Weekday || Dow(next) == p.DayOffIndex);
+        return DailySchedule.Build(p, occ, rs, Dow(date), hol, prevHol, nextHol, c, recovery, nc?.Start ?? -1);
     }
 
     /// <summary>
     /// Compromisso ocasional de um dia livre (D-046): sorteio proprio por pessoa e dia (o mesmo
     /// dia da sempre o mesmo resultado), chance baixa e maior para quem e sociavel.
     /// </summary>
-    private (int Start, int End, string Id)? CommitmentOf(Person p, long localDay, DailySchedule.DayLayout day, bool eligibleDay)
+    private (int Start, int End, string Id)? CommitmentOf(Person p, long localDay, bool freeDay, bool eligibleDay)
     {
         var rs = _w.Content.Routine;
-        if (!day.FreeDay || !eligibleDay || rs.Commitments.Count == 0 || rs.CommitmentChancePermille <= 0) return null;
+        if (!freeDay || !eligibleDay || rs.Commitments.Count == 0 || rs.CommitmentChancePermille <= 0) return null;
         var rng = Rng("routine.commitment", p.Id * 100_000L + localDay);
         int soc = Math.Clamp(p.Traits.Sociability, 0, 1000);
         if (!rng.ChancePermille(rs.CommitmentChancePermille * (600 + soc * 800 / 1000) / 1000)) return null;
@@ -446,15 +449,35 @@ public sealed class BehaviorSystem
         var day = LayoutOf(p, localDay);
         long dayStart = LocalDayStart(p, localDay);
         long planned = dayStart + day.SleepStart * SimTime.TicksPerMinute;
+        long plannedWake = dayStart + day.Wake * SimTime.TicksPerMinute;
         long start = planned;
         if (p.IsOnline) start = Now;   // ainda jogando ao amanhecer: nao dormiu
         else if (p.LastLogoutTick > planned && p.LastLogoutTick <= Now) start = p.LastLogoutTick;
         int slept = (int)Math.Max(0, (Now - start) / SimTime.TicksPerMinute);
-        int cut = (int)Math.Max(0, (start - planned) / SimTime.TicksPerMinute);
+        // Deslocar o sono (R6): foi dormir mais tarde e nada obriga a acordar agora: acorda mais tarde,
+        // ate completar o sono necessario ou ate a obrigacao/compromisso de hoje. Uma vez por noite.
+        if (rs.SleepShift && !p.IsOnline && p.SleepShiftedDay != localDay && slept < p.SleepNeedMinutes && Now == plannedWake)
+        {
+            p.SleepShiftedDay = localDay;
+            int latest = DailySchedule.LatestWake(day, rs);
+            long target = Now + (long)(p.SleepNeedMinutes - slept) * SimTime.TicksPerMinute;
+            if (latest != int.MaxValue) target = Math.Min(target, dayStart + latest * SimTime.TicksPerMinute);
+            target = Math.Min(target, dayStart + (day.Bed - rs.MinWindowMinutes) * SimTime.TicksPerMinute);
+            if (target - Now >= 5 * SimTime.TicksPerMinute)
+            {
+                p.SleepUntilTick = target;
+                _w.Scheduler.Schedule(target, EvWake, p.Id, localDay);
+                return;
+            }
+        }
+        int shifted = (int)Math.Max(0, (Now - plannedWake) / SimTime.TicksPerMinute);
+        // O que avancou sobre o sono planejado, menos o que foi recuperado acordando mais tarde.
+        int cut = Math.Max(0, (int)Math.Max(0, (start - planned) / SimTime.TicksPerMinute) - shifted);
+        p.SleepUntilTick = 0;
         p.SleepDeficitMinutes = Math.Clamp(p.SleepDeficitMinutes + DailySchedule.DeficitChange(p.SleepNeedMinutes, slept, rs), 0, DailySchedule.MaxDeficit(p, rs));
         if (cut > 0) { p.LastSleepCutMinutes = cut; p.SleepCutTotalMinutes += cut; }
         foreach (var rec in p.PlanList)
-            if (rec.LocalDay == localDay) { rec.SleepMinutes = slept; rec.DeficitMinutes = p.SleepDeficitMinutes; }
+            if (rec.LocalDay == localDay) { rec.SleepMinutes = slept; rec.DeficitMinutes = p.SleepDeficitMinutes; rec.SleepShiftMinutes = shifted; }
         // Dormiu: a saciedade de ontem nao passa para hoje (v3). Quem amanheceu jogando segue com a sua.
         if (!p.IsOnline) { p.Satiety = 0; p.SatietyTick = Now; p.Unfinished = false; }
     }
@@ -608,6 +631,18 @@ public sealed class BehaviorSystem
     {
         var p = _w.GetPerson((int)ev.TargetId);
         if (!_w.Server.IsOpen || p.CharacterId == 0 || p.State == LifecycleState.Quit) return;
+        if (p.SleepUntilTick > Now)
+        {
+            // Dormindo mais (sono deslocado, R6): comeca depois de acordar e se preparar, se ainda houver janela.
+            long at = p.SleepUntilTick + _w.Content.Routine.PrepMinutes * SimTime.TicksPerMinute;
+            long windowEnd = -1;
+            foreach (var (s, e, _) in p.OpenWindows)
+                if (s <= at && at < e && e > windowEnd) windowEnd = e;
+            int planned = (int)(ev.Payload % 1_000_000);
+            int left = windowEnd < 0 ? 0 : (int)Math.Min(planned, (windowEnd - at) / SimTime.TicksPerMinute);   // a sessao continua dentro da janela
+            if (left >= _w.Content.Routine.MinSessionMinutes) _w.Scheduler.Schedule(at, EvSessionStart, p.Id, ev.Payload - planned + left);
+            return;
+        }
         StartSession(p, (int)(ev.Payload % 1_000_000), (int)(ev.Payload / 1_000_000 % 10), ev.Payload / 100_000_000 - 1, (int)(ev.Payload / 10_000_000 % 10));
     }
 
@@ -808,11 +843,20 @@ public sealed class BehaviorSystem
             if (LocalDayStart(p, d) + day.Bed * SimTime.TicksPerMinute != bedTick) continue;
             var next = LayoutOf(p, d + 1);
             int plannedSleep = next.Wake - next.SleepStart;
-            int shortfall = Math.Max(0, p.SleepNeedMinutes - plannedSleep);
-            int byDeficit = DailySchedule.MaxDeficit(p, rs) - p.SleepDeficitMinutes - shortfall;
+            // Deslocar o sono (R6): se nada obriga a acordar na hora planejada, parte do que passar da
+            // hora de deitar e recuperado acordando mais tarde; so o resto vira deficit.
+            int room = 0;
+            if (rs.SleepShift)
+            {
+                int latest = DailySchedule.LatestWake(next, rs);
+                room = Math.Max(0, Math.Min(latest == int.MaxValue ? p.SleepNeedMinutes : latest - next.Wake, next.Bed - rs.MinWindowMinutes - next.Wake));
+                room = Math.Min(room, p.SleepNeedMinutes);
+            }
+            int effective = plannedSleep + room;
+            int byDeficit = DailySchedule.MaxDeficit(p, rs) - p.SleepDeficitMinutes + (effective - p.SleepNeedMinutes);
             // O teto por noite e compartilhado: o que outra sessao ja cortou deste mesmo periodo sai do total.
             int used = p.SleepCutBedTick == bedTick ? p.SleepCutUsedMinutes : 0;
-            return Math.Max(0, Math.Min(rs.MaxSleepCutMinutes, Math.Min(byDeficit, plannedSleep - rs.MinSleepMinutes)) - used);
+            return Math.Max(0, Math.Min(rs.MaxSleepCutMinutes, Math.Min(byDeficit, effective - rs.MinSleepMinutes)) - used);
         }
         return 0;
     }
@@ -957,13 +1001,17 @@ public sealed class BehaviorSystem
     {
         var p = _w.GetPerson((int)ev.TargetId);
         if (!_w.Server.IsOpen || p.CharacterId == 0 || p.IsOnline || p.State is LifecycleState.Quit or LifecycleState.Banned) return;
+        if (p.SleepUntilTick > Now) return;   // dormindo (sono deslocado, R6)
         var rs = _w.Content.Routine;
         long planDay = ev.Payload;
         var plan = PlanOf(p, planDay);
         if (plan == null || plan.Sittings >= rs.MaxSessionsPerDay) return;
         SatietyToNow(p);
         int pull = PullNow(p, plan, LastExperienceDelta(p), 1000, true);
-        int chance = DailySchedule.Choice(pull, plan.SessionPriority, DailySchedule.StopPressure(p.Satiety, DailySchedule.Fatigue(p, rs), rs));
+        // Depois do turno da noite (R6): o cansaco do turno pesa contra jogar antes de dormir.
+        int nowMin = (int)((Now - LocalDayStart(p, planDay)) / SimTime.TicksPerMinute);
+        int tired = LayoutOf(p, planDay).OptionalWindows.Any(w => w.Start <= nowMin && nowMin < w.End) ? rs.PostShiftTirednessPermille : 0;
+        int chance = DailySchedule.Choice(pull, plan.SessionPriority, DailySchedule.StopPressure(p.Satiety, DailySchedule.Fatigue(p, rs), rs) + tired);
         if (!Rng("routine.return", p.Id * 100_000L + planDay * 10 + plan.Sittings).ChancePermille(chance)) { plan.DeclinedReturns++; return; }
         long windowEnd = -1;
         foreach (var (s, e, _) in p.OpenWindows)

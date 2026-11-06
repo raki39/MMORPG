@@ -63,6 +63,15 @@ public sealed class EventScheduler
         return true;
     }
 
+    /// <summary>Primeiro evento pendente de um tipo (sem ordenar a fila; empate pela sequencia), ou null.</summary>
+    public ScheduledEvent? EarliestOf(string type)
+    {
+        ScheduledEvent? best = null;
+        foreach (var e in _heap)
+            if (e.Type == type && (best == null || Compare(e, best) < 0)) best = e;
+        return best;
+    }
+
     /// <summary>Copia ordenada (para hash, save e inspecao).</summary>
     public List<ScheduledEvent> SnapshotOrdered()
     {

@@ -48,9 +48,14 @@ public static class DailySchedule
         /// <summary>Quando o dia acordado termina e o sono comeca.</summary>
         public int Bed { get; internal set; }
         public List<(int Start, int End)> Windows { get; } = new();
+        /// <summary>
+        /// Janelas que sao so possibilidade (R6): depois do turno da noite, antes de dormir. Ficam em
+        /// Windows (a pessoa pode jogar nelas), mas nao contam como tempo livre do dia nem adiam o sono planejado.
+        /// </summary>
+        public List<(int Start, int End)> OptionalWindows { get; } = new();
         /// <summary>Sem obrigacoes neste dia acordado (folga, fim de semana, feriado, sem ocupacao).</summary>
         public bool FreeDay { get; internal set; }
-        public int FreeMinutes => Windows.Sum(w => w.End - w.Start);
+        public int FreeMinutes => Windows.Where(w => !OptionalWindows.Contains(w)).Sum(w => w.End - w.Start);
         /// <summary>Compromisso ocasional do dia livre (D-046): inicio, fim e id; nao conta como obrigacao.</summary>
         public List<(int Start, int End, string Id)> Commitments { get; } = new();
         /// <summary>Minutos de obrigacao hoje, com deslocamento (carga do dia).</summary>
@@ -141,9 +146,9 @@ public static class DailySchedule
     /// a chegada; senao a hora natural de dormir, cedo o bastante para a obrigacao de amanha e
     /// nunca antes de voltar e comer. Minutos nas coordenadas do proprio dia (pode passar de 1440).
     /// </summary>
-    private static int DayEndOf(Person p, RoutineSettingsDefinition rs,
+    private static int DayEndOf(Person p, OccupationDefinition? occ, RoutineSettingsDefinition rs,
         List<(int Start, int End, int Commute, string Label, ObligationBlockDefinition Def)> day,
-        List<(int Start, int End, int Commute, string Label, ObligationBlockDefinition Def)> next)
+        List<(int Start, int End, int Commute, string Label, ObligationBlockDefinition Def)> next, int nextCommitStart, bool freeEve = true)
     {
         var night = day.Where(o => o.End > 1440).ToList();
         if (night.Count > 0)
@@ -152,7 +157,16 @@ public static class DailySchedule
             return n.End + n.Commute + (n.Commute > 0 ? rs.ArrivalMinutes : 0);
         }
         int bed = p.BedtimeMinute;
+        if (HasNightShift(occ))
+        {
+            // Folga do turno da noite (R6): continua perto do ritmo dos dias de turno, sem voltar de uma vez a hora natural.
+            if (NightSleepStart(p, occ, rs) is int ws && ws > bed) bed += (ws - bed) * rs.NightShiftOffContinuityPermille / 1000;
+        }
+        else if (freeEve && next.Count == 0 && p.FreeEveShiftMinutes > 0 && occ != null && occ.Blocks.Count > 0)
+            bed += p.FreeEveShiftMinutes;   // vespera de folga (R6): deslocamento individual
         if (next.Count > 0) bed = Math.Min(bed, 1440 + next[0].Start - next[0].Commute - rs.PrepMinutes - p.SleepNeedMinutes);
+        // Compromisso de amanha (R6): acorda a tempo, com o sono necessario.
+        if (nextCommitStart >= 0) bed = Math.Min(bed, 1440 + nextCommitStart - rs.PrepMinutes - p.SleepNeedMinutes);
         if (day.Count > 0)
         {
             var last = day[^1];
@@ -170,7 +184,7 @@ public static class DailySchedule
     /// recoveryMinutes: a recuperacao decidida para este dia (null: pelo deficit atual).
     /// </summary>
     public static DayLayout Build(Person p, OccupationDefinition? occ, RoutineSettingsDefinition rs, int dow, bool holiday, bool prevHoliday, bool nextHoliday,
-        (int Start, int End, string Id)? commitment = null, int? recoveryMinutes = null)
+        (int Start, int End, string Id)? commitment = null, int? recoveryMinutes = null, int nextCommitStart = -1, bool freeEve = true)
     {
         var today = Blocks(p, occ, dow, holiday);
         var prev = Blocks(p, occ, (dow + 6) % 7, prevHoliday);
@@ -178,7 +192,7 @@ public static class DailySchedule
         var day = new DayLayout();
 
         // Sono que termina hoje: comeca no fim do dia acordado de ontem.
-        day.SleepStart = DayEndOf(p, rs, prev, today) - 1440;
+        day.SleepStart = DayEndOf(p, occ, rs, prev, today, commitment?.Start ?? -1, freeEve) - 1440;
         day.DaySleeper = prev.Any(o => o.End > 1440);
         int recovery = Math.Max(0, recoveryMinutes ?? Math.Min(p.SleepDeficitMinutes, rs.RecoveryFreeNightMinutes));
         int natural = day.SleepStart + p.SleepNeedMinutes;
@@ -186,7 +200,7 @@ public static class DailySchedule
         int wake = Math.Max(day.SleepStart, Math.Min(natural + recovery, limit));
         day.RecoveryMinutes = Math.Max(0, wake - natural);
         day.Wake = wake;
-        day.Bed = DayEndOf(p, rs, today, next);
+        day.Bed = DayEndOf(p, occ, rs, today, next, nextCommitStart, freeEve);
 
         // Obrigacoes: de casa (deslocamento antes e depois) ou em sequencia direta.
         day.Parts.Add(new Segment(wake, Math.Min(wake + rs.PrepMinutes, day.Bed), "prep"));
@@ -249,7 +263,60 @@ public static class DailySchedule
             if (cursor >= day.Bed) break;
         }
         AddWindow(day, cursor, day.Bed, rs);
+
+        // Depois do turno da noite (R6): pode jogar um pouco antes de dormir. E so possibilidade: nao
+        // conta como tempo livre e o sono planejado comeca na chegada; se jogar, o sono se desloca.
+        if (day.NightShiftAhead && rs.PostShiftWindowMinutes >= rs.MinSessionMinutes)
+        {
+            int ps = day.Bed, pe = day.Bed + rs.PostShiftWindowMinutes;
+            if (next.Count > 0) pe = Math.Min(pe, 1440 + next[0].Start - next[0].Commute - rs.PrepMinutes - p.SleepNeedMinutes);
+            if (pe - ps >= rs.MinSessionMinutes) { day.Windows.Add((ps, pe)); day.OptionalWindows.Add((ps, pe)); }
+        }
         return day;
+    }
+
+    /// <summary>
+    /// Inicio do sono nos dias de turno da noite (R6): a chegada depois do turno, em minutos desde a
+    /// meia-noite do dia em que o turno comeca (passa de 1440). null se a ocupacao nao tem turno da noite.
+    /// </summary>
+    public static int? NightSleepStart(Person p, OccupationDefinition? occ, RoutineSettingsDefinition rs)
+    {
+        if (occ == null) return null;
+        int? best = null;
+        foreach (var b in occ.Blocks)
+        {
+            int s = ContentValidator.ParseClock(b.Start), e = ContentValidator.ParseClock(b.End);
+            if (s < 0 || e < 0 || e > s) continue;
+            int commute = b.CommuteMinutes * p.CommutePermille / 1000;
+            int arrive = e + 1440 + p.ShiftOffsetMinutes + commute + (commute > 0 ? rs.ArrivalMinutes : 0);
+            if (best == null || arrive > best) best = arrive;
+        }
+        return best;
+    }
+
+    /// <summary>
+    /// Ultimo minuto em que a pessoa ainda pode acordar hoje sem atrasar a obrigacao (com o
+    /// deslocamento) ou o compromisso, contando o preparo (R6). int.MaxValue se nada obriga.
+    /// </summary>
+    public static int LatestWake(DayLayout day, RoutineSettingsDefinition rs)
+    {
+        int limit = int.MaxValue;
+        if (day.Blocks.Count > 0) limit = day.Blocks[0].Start - rs.PrepMinutes;   // o bloco ja comeca na saida de casa
+        foreach (var c in day.Commitments) limit = Math.Min(limit, c.Start - rs.PrepMinutes);
+        return limit;
+    }
+
+    /// <summary>
+    /// Minuto do dia acordado para um horario do relogio (R6), numa faixa continua que atravessa a
+    /// meia-noite: horario antes de acordar e a madrugada seguinte quando o dia acordado chega perto
+    /// dela (03h vem depois das 23h); senao e cedo demais para hoje (vale o acordar). 25 h = 01h.
+    /// </summary>
+    public static int AwakeMinute(int minute, DayLayout day)
+    {
+        int m = ((minute % 1440) + 1440) % 1440;
+        if (m >= day.Wake) return m;
+        int late = m + 1440;
+        return Math.Max(0, late - day.Bed) <= day.Wake - m ? late : m;
     }
 
     private static void AddWindow(DayLayout day, int start, int end, RoutineSettingsDefinition rs)
@@ -383,7 +450,7 @@ public static class DailySchedule
     {
         var usable = day.Windows.Where(w => w.End - w.Start >= rs.MinSessionMinutes).ToList();
         if (usable.Count == 0) return -1;
-        if (target < day.Wake) target += 1440;   // costume de madrugada: depois da meia-noite
+        target = AwakeMinute(target, day);   // faixa continua: madrugada depois da meia-noite (R6)
         var last = usable[^1];
         int latest = last.End - Math.Min(Math.Max(rs.MinSessionMinutes, sessionMinutes), last.End - last.Start);
         int step = Math.Max(1, rs.StartStepMinutes);
@@ -398,7 +465,8 @@ public static class DailySchedule
             {
                 if (isLast && t >= latest) return Math.Max(ws, latest);
                 if (t >= target) return t;
-                int q = Choice(pull, priority, push + (int)Math.Min(100_000, (long)(target - t) * rs.EarlyStartResistancePerHour / 60));
+                int tired = day.OptionalWindows.Contains((ws, we)) ? rs.PostShiftTirednessPermille : 0;   // depois do turno (R6)
+                int q = Choice(pull, priority, push + tired + (int)Math.Min(100_000, (long)(target - t) * rs.EarlyStartResistancePerHour / 60));
                 survive = survive * (60_000 - (long)q * step) / 60_000;
                 if (1_000_000 - survive > u) return t;
             }
@@ -444,7 +512,7 @@ public static class DailySchedule
     public static bool PlaceMain(DayLayout day, int preferredMinute, int desired, RoutineSettingsDefinition rs, out int window, out int start, out int minutes)
     {
         window = -1; start = 0; minutes = 0;
-        if (preferredMinute < day.Wake) preferredMinute += 1440;   // preferido de madrugada: depois da meia-noite
+        preferredMinute = AwakeMinute(preferredMinute, day);   // faixa continua (R6)
         int best = -1, bestDist = int.MaxValue, bestLen = 0;
         for (int i = 0; i < day.Windows.Count; i++)
         {
@@ -507,14 +575,15 @@ public static class DailySchedule
     {
         int drawn = p.Traits.PreferredStartHour;
         var week = new List<DayLayout>();
-        for (int d = 0; d < 7; d++) week.Add(Build(p, occ, rs, d, false, false, false));
+        // O habito vem dos dias tipicos: a vespera de folga (R6) e excecao da semana, nao define o costume.
+        for (int d = 0; d < 7; d++) week.Add(Build(p, occ, rs, d, false, false, false, freeEve: false));
         var (pool, session) = PreferredPool(week, Math.Max(rs.MinSessionMinutes, p.Traits.SessionMinutes), rs);
         if (pool.Count == 0) return drawn;
         int imp = Math.Clamp(p.Traits.GameImportance, 0, 1000);
         var targets = new List<int>();
         foreach (var d in pool)
         {
-            int taste = drawn * 60 < d.Wake ? drawn * 60 + 1440 : drawn * 60;
+            int taste = AwakeMinute(drawn * 60, d);
             var fit = d.Windows.Where(w => w.End - w.Start >= session).ToList();
             if (fit.Count == 0) fit = d.Windows.Where(w => w.End - w.Start >= rs.MinSessionMinutes).ToList();
             if (fit.Count == 0) continue;
@@ -570,7 +639,7 @@ public static class DailySchedule
     /// </summary>
     public static bool StartsAtPreferred(DayLayout day, int hour, int session, RoutineSettingsDefinition rs)
     {
-        int pref = hour * 60 < day.Wake ? hour * 60 + 1440 : hour * 60;   // como no PlaceMain
+        int pref = AwakeMinute(hour * 60, day);   // como no PlaceMain
         return PlaceMain(day, hour * 60, session, rs, out _, out int start, out _) && start >= pref && start - pref < 60;
     }
 

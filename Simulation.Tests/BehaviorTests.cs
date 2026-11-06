@@ -69,7 +69,7 @@ public class BehaviorTests
             int minute = (int)((s.Tick - BehaviorSystem.LocalDayStart(p, cal)) / SimTime.TicksPerMinute);
             var day = w.Behavior.LayoutOf(p, cal);
             if (minute < day.Wake) { minute += 1440; day = w.Behavior.LayoutOf(p, cal - 1); }
-            int taste = p.Traits.PreferredStartHour * 60 < day.Wake ? p.Traits.PreferredStartHour * 60 + 1440 : p.Traits.PreferredStartHour * 60;
+            int taste = DailySchedule.AwakeMinute(p.Traits.PreferredStartHour * 60, day);   // faixa continua (R6)
             bool windowOpensLater = !day.Windows.Any(x => x.Start <= taste - jitter && taste - jitter < x.End);
             if (minute > taste + jitter + step && !windowOpensLater) late++;
         }

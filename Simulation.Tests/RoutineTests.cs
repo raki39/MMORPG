@@ -24,6 +24,7 @@ public class RoutineTests
         p.DayOffIndex = -1;
         p.SleepNeedMinutes = 480;
         p.BedtimeMinute = 1410;
+        p.FreeEveShiftMinutes = 0;   // sem vespera de folga (R6): estes testes medem a hora natural
         return p;
     }
 
@@ -60,11 +61,14 @@ public class RoutineTests
         var p = Standard("turno_noturno");
         var tuesday = Day(p, 1);
         Assert.True(tuesday.Wake >= 14 * 60, $"acorda {tuesday.Wake / 60}h");
-        Assert.Single(tuesday.Windows);
-        Assert.True(tuesday.Windows[0].End <= 22 * 60 - 30);   // sai para o turno
+        var before = Assert.Single(tuesday.Windows.Except(tuesday.OptionalWindows));
+        Assert.True(before.End <= 22 * 60 - 30);   // sai para o turno
+        Assert.All(tuesday.OptionalWindows, x => Assert.True(x.Start >= tuesday.Bed));   // depois do turno: so possibilidade (R6)
         var saturday = Day(p, 5);   // depois do turno de sexta: dorme de manha e joga a noite
         Assert.True(saturday.Wake >= 14 * 60);
-        Assert.Equal(1410, saturday.Bed);
+        // Folga (R6): continua perto do ritmo dos turnos, a meio caminho da hora natural (23h30).
+        int ws = DailySchedule.NightSleepStart(p, C.Occupations[p.OccupationId], RS)!.Value;
+        Assert.Equal(1410 + (ws - 1410) * RS.NightShiftOffContinuityPermille / 1000, saturday.Bed);
     }
 
     [Fact]

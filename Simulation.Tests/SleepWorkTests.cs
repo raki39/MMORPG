@@ -26,6 +26,7 @@ public class SleepWorkTests
         p.SleepNeedMinutes = 480;
         p.BedtimeMinute = 1410;
         p.SleepDeficitMinutes = 0;
+        p.FreeEveShiftMinutes = 0;   // sem vespera de folga (R6): estes testes medem a hora natural
         return p;
     }
 

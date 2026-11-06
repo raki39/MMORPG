@@ -92,6 +92,8 @@ public sealed record CharacterDetailView(int PersonId, long PlayedTicks, IReadOn
 public sealed record WeekDayView(int Dow, IReadOnlyList<(int Start, int End, string Label)> Obligations, int Wake, int Bed,
     IReadOnlyList<(int Start, int End)> Windows, int FreeMinutes, bool FreeDay)
 {
+    /// <summary>Depois do turno da noite (R6): janela possivel, fora do tempo livre; se jogar, sai do sono.</summary>
+    public IReadOnlyList<(int Start, int End)> PostShiftWindows { get; init; } = Array.Empty<(int, int)>();
     /// <summary>
     /// O dia de 0 a 24 h em trechos (para a agenda grafica): sleep, free, work, study, care,
     /// remote (trabalho remoto), break (pausa do remoto) e commute. Inclui o que vem da vespera
@@ -155,6 +157,12 @@ public sealed class SimSnapshot
     public int PersonsTotal { get; init; }
     public int Registered { get; init; }
     public int Online { get; init; }
+    /// <summary>
+    /// Proximo inicio de sessao agendado (R6; so calculado com ninguem conectado): instante e pessoa;
+    /// -1 se nao ha nenhum agendado agora (cada pessoa decide a meia-noite local se e quando joga).
+    /// </summary>
+    public long NextLoginTick { get; init; } = -1;
+    public int NextLoginPersonId { get; init; }
     /// <summary>Retencao (D-039): inativos e desistentes agora.</summary>
     public int Inactive { get; init; }
     public int Quit { get; init; }
@@ -460,6 +468,8 @@ public sealed class SimulationHost : IDisposable
             PersonsTotal = w.Persons.Count,
             Registered = w.Characters.Count,
             Online = w.OnlineCount,
+            NextLoginTick = w.OnlineCount == 0 && w.Scheduler.EarliestOf(Simulation.Core.Behavior.BehaviorSystem.EvSessionStart) is { } nl ? nl.Tick : -1,
+            NextLoginPersonId = w.OnlineCount == 0 && w.Scheduler.EarliestOf(Simulation.Core.Behavior.BehaviorSystem.EvSessionStart) is { } np ? (int)np.TargetId : 0,
             Inactive = inactive,
             Quit = quit,
             ByPerson = byPerson,
@@ -492,8 +502,9 @@ public sealed class SimulationHost : IDisposable
             foreach (var r in day.Remote)
                 foreach (var (bs, be) in r.Breaks) segs.Add((bs, be, "break"));   // pausa: sobreposicao autorizada dentro do trabalho
             var ex = estimate[dow];
-            list.Add(new WeekDayView(dow, obligations, day.Wake, day.Bed, day.Windows.ToArray(), day.FreeMinutes, day.FreeDay)
+            list.Add(new WeekDayView(dow, obligations, day.Wake, day.Bed, day.Windows.Except(day.OptionalWindows).ToArray(), day.FreeMinutes, day.FreeDay)
             {
+                PostShiftWindows = day.OptionalWindows.ToArray(),
                 Segments = segs,
                 ObligationMinutes = Sum("work", "study", "care", "remote"),
                 CommuteMinutes = Sum("commute", "transfer"),

@@ -580,9 +580,18 @@ public partial class Main
         if (empty)
         {
             var now = _host!.Calendar.ToDateTime(snap.Tick);
+            // Sem previsao inventada (R6): o proximo login realmente agendado, ou o aviso de que nao ha nenhum.
+            string next = "Nenhum login agendado agora: cada jogador decide à meia-noite do seu fuso se e quando joga.";
+            if (snap.NextLoginTick >= 0)
+            {
+                var at = _host.Calendar.ToDateTime(snap.NextLoginTick);
+                string who = snap.NextLoginPersonId > 0 && snap.NextLoginPersonId <= _host.Persons.Count ? $" ({_host.Persons[snap.NextLoginPersonId - 1].Name})" : "";
+                string day = at.Date == now.Date ? "" : at.Date == now.Date.AddDays(1) ? "amanhã " : $"{at:dd/MM} ";
+                next = $"Próximo login agendado: {day}{at.Hour:00}:{at.Minute:00}{who}.";
+            }
             _emptyText.Text = skipping
                 ? "Avançando o tempo até alguém conectar…"
-                : $"Ninguém conectado às {now.Hour:00}:{now.Minute:00}. Os jogadores entram pela rotina deles (a maioria entre 19h e 22h).";
+                : $"Ninguém conectado às {now.Hour:00}:{now.Minute:00}. {next}";
             _skipButton.Visible = !skipping;
             _emptyBanner.Visible = true;
         }

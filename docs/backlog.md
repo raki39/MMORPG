@@ -69,7 +69,7 @@ Uma etapa por vez, fechada por inteiro (testes, validação, documentação, exp
      - ~~P4a: personalidade principal no Core (régua do preset, mudança rara com margem e confirmação, regras próprias)~~ (D-056);
        - depois: regras da Etapa 3 e dos grupos (M6);
        - ~~repetição do Inquieto contada em minutos de jogo, com limite configurável, em vez de ciclos~~ (feita; P2 em `baselines/personalidade/`);
-     - **R6, variedade de horários** (aprovada pelo criador; logo depois da P4a). O diagnóstico mostrou ninguém jogando entre 1 h e 8 h da hora local, porque o sono e o horário preferido saem de faixas estreitas. A correção:
+     - ~~**R6, variedade de horários**~~ (D-058, `horarios.md`; aprovada pelo criador; feita depois da P4b). O diagnóstico mostrou ninguém jogando entre 1 h e 8 h da hora local, porque o sono e o horário preferido saem de faixas estreitas. A correção:
        - cronotipo com os dois extremos (matinais e notívagos) e concentração no meio. Ele influencia só em parte o sono e o horário preferido, com variação individual: ser notívago não obriga a preferir jogar de madrugada;
        - dormir e acordar mais tarde na véspera de folga: deslocamento individual e configurável, nem todo mundo tem, e respeita compromissos e necessidade de sono;
        - turno noturno: jogar depois do turno é uma possibilidade, não uma janela obrigatória (cansaço, vontade e disponibilidade decidem). Na folga, a rotina continua a dos dias de trabalho em vez de voltar de uma vez ao sono das 23h45;

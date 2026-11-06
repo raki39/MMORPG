@@ -87,7 +87,17 @@ public sealed class PopulationTraitsDefinition
 
     // Rotina
     /// <summary>Hora preferida de inicio de sessao (0..23).</summary>
+    /// <summary>
+    /// Horario preferido para comecar a jogar (hora local). Faixa continua que atravessa a
+    /// meia-noite (R6): 24 = meia-noite, 27 = 03h do dia seguinte; 03h vem depois das 23h.
+    /// </summary>
     public TraitRange PreferredStartHour { get; set; } = new();
+    /// <summary>
+    /// Cronotipo (R6): tendencia individual de horario, 0 = muito matinal, 1000 = muito notivago.
+    /// Entra em parte na hora natural de dormir e, menos, no horario preferido; as obrigacoes
+    /// continuam limitando o que e possivel. Fluxo de sorteio proprio.
+    /// </summary>
+    public TraitRange Chronotype { get; set; } = new() { Min = 0, Mode = 500, Max = 1000 };
     /// <summary>Tendencia a prolongar a sessao (P3): quanto a sessao "puxa".</summary>
     public TraitRange ExtendTendency { get; set; } = new();
     /// <summary>Autocontrole (P3): respeitar o horario planejado e o trabalho.</summary>
@@ -681,6 +691,17 @@ public sealed class BehaviorSettingsDefinition
 /// Planejador da rotina (P2, D-043): janelas livres a partir das obrigacoes, do sono e do
 /// deslocamento; a vontade de jogar decide se e quanto. Minutos e permille.
 /// </summary>
+/// <summary>Vespera de folga (R6): deslocamento individual da hora de dormir quando o dia seguinte e livre.</summary>
+public sealed class FreeEveDefinition
+{
+    /// <summary>Chance de a pessoa ter o deslocamento (nem todo mundo dorme mais tarde na vespera).</summary>
+    public int ChancePermille { get; set; } = 650;
+    /// <summary>Minutos a mais, para quem tem (triangular).</summary>
+    public TraitRange Minutes { get; set; } = new() { Min = 15, Mode = 60, Max = 180 };
+    /// <summary>Quanto o cronotipo entra no deslocamento (notivagos deslocam mais).</summary>
+    public int ChronotypeInfluencePermille { get; set; } = 500;
+}
+
 public sealed class RoutineSettingsDefinition
 {
     /// <summary>Necessidade de sono (minutos por noite).</summary>
@@ -746,6 +767,24 @@ public sealed class RoutineSettingsDefinition
     /// cedo; a hora natural de dormir fica no maximo isto depois da hora tipica dos dias de obrigacao.
     /// </summary>
     public int BedtimeAdaptMinutes { get; set; } = 60;
+    /// <summary>Cronotipo (R6): quanto a posicao do cronotipo entra na hora natural de dormir (permille; o resto e individual).</summary>
+    public int ChronotypeBedtimeInfluencePermille { get; set; } = 700;
+    /// <summary>Vespera de folga (R6): quem tem obrigacoes pode dormir mais tarde quando o dia seguinte e livre.</summary>
+    public FreeEveDefinition FreeEve { get; set; } = new();
+    /// <summary>
+    /// Turno da noite (R6): na folga, a hora de dormir fica entre a hora natural e o horario de
+    /// dormir dos dias de turno (permille do caminho; 0 = volta a hora natural, 1000 = igual aos dias de turno).
+    /// </summary>
+    public int NightShiftOffContinuityPermille { get; set; } = 500;
+    /// <summary>Turno da noite (R6): depois de chegar do turno, a pessoa pode jogar por ate isto antes de dormir (possibilidade, nao obrigacao).</summary>
+    public int PostShiftWindowMinutes { get; set; } = 90;
+    /// <summary>Turno da noite (R6): cansaco depois do turno, somado a vontade de parar ao decidir jogar nessa janela (permille).</summary>
+    public int PostShiftTirednessPermille { get; set; } = 400;
+    /// <summary>
+    /// Deslocar o sono (R6): quem foi dormir mais tarde que o planejado acorda mais tarde, se nada
+    /// obriga a acordar antes (obrigacao, compromisso). So o que falta ate a necessidade de sono vira deficit.
+    /// </summary>
+    public bool SleepShift { get; set; } = true;
     /// <summary>
     /// Vontade e horario (D-045): quanto o menos interessado espera depois de ficar livre para
     /// comecar a jogar (importancia 0); quem tem importancia maxima comeca assim que fica livre.

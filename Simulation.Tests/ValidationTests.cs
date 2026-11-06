@@ -29,6 +29,7 @@ public class ValidationTests
         casual.Id = "trabalhador";
         casual.Name = "Trabalhador";
         set.Population.Traits.PreferredStartHour = new TraitRange { Mean = 21, Spread = 2 };
+        set.Population.Links.RemoveAll(l => l.Trait == "traits.preferredStartHour");   // a ligacao com o cronotipo exige o formato triangular
         casual.GameImportance = new TraitRange { Min = 700, Mode = 800, Max = 900 };
         set.Population.Profiles = new List<PopulationProfileDefinition> { casual };
         set.Occupations = set.Occupations.Where(o => o.Id == "comercial").ToList();
