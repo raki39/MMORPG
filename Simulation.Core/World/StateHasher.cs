@@ -11,7 +11,7 @@ namespace Simulation.Core.World;
 /// </summary>
 public static class StateHasher
 {
-    public const int FormatVersion = 33;
+    public const int FormatVersion = 34;
 
     public static string Compute(WorldState w) => Compute(w, includeContentId: true);
 
@@ -68,6 +68,9 @@ public static class StateHasher
             foreach (var r in c.BlockedGoals) h.Str(r);
             h.Int(c.BlockedTargets.Count);
             foreach (var r in c.BlockedTargets) h.Str(r);
+            h.Int(c.ZoneBlocks.Count);
+            foreach (var kv in c.ZoneBlocks) { h.Str(kv.Key); h.Int(kv.Value.Level); h.Int(kv.Value.KnownReveal); h.Int(kv.Value.Hints); h.Str(kv.Value.Quests); }
+            h.Str(c.BoardExpectation);
             h.Int(c.DecisionCount); h.Str(c.LastActivityKey); h.Int(c.RepeatCount); h.Int(c.RepeatMinutes); h.Long(c.LastSetbackTick); h.Bool(c.Hesitated); h.Str(c.LastHesitationPair);
             if (c.LastDecision != null)
             {

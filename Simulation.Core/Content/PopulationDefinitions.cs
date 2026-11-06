@@ -391,6 +391,13 @@ public sealed class GoalSettingsDefinition
     /// durante a meta largada), no mesmo estado.
     /// </summary>
     public bool LevelBlockAnyTarget { get; set; }
+    /// <summary>
+    /// Meta de descoberta bloqueada (D-067a): subir de nivel so libera quando o nivel novo alcanca um requisito
+    /// que faltava para revelar a zona (a faixa e a atividade do lugar que a revela). Zona que ja era acessivel
+    /// precisa de outra mudanca concreta: rota (conhecer um lugar que a revela), conhecimento (pista sobre ela)
+    /// ou progresso pertinente (missao ativa com etapa num lugar que a revela). Desligado: toda subida libera (D-066).
+    /// </summary>
+    public bool ZoneUnblockByRequirement { get; set; }
     /// <summary>Peso maximo de uma meta na nota de uma opcao (com comprometimento 1000).</summary>
     public int Weight { get; set; } = 200;
     /// <summary>Teto da soma das metas numa opcao (permille do peso).</summary>

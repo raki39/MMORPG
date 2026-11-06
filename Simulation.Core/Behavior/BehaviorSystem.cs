@@ -151,14 +151,16 @@ public sealed class BehaviorSystem
 
     /// <summary>
     /// Compromisso ocasional de um dia livre (D-046): sorteio proprio por pessoa e dia (o mesmo
-    /// dia da sempre o mesmo resultado), chance baixa e maior para quem e sociavel.
+    /// dia da sempre o mesmo resultado), chance baixa e maior para quem e sociavel. E da vida real:
+    /// usa a sociabilidade sorteada da pessoa, nao a do jogo, que muda com o tempo e mudaria o
+    /// compromisso de um dia ja vivido (D-067a).
     /// </summary>
     private (int Start, int End, string Id)? CommitmentOf(Person p, long localDay, bool freeDay, bool eligibleDay)
     {
         var rs = _w.Content.Routine;
         if (!freeDay || !eligibleDay || rs.Commitments.Count == 0 || rs.CommitmentChancePermille <= 0) return null;
         var rng = Rng("routine.commitment", p.Id * 100_000L + localDay);
-        int soc = Math.Clamp(p.Traits.Sociability, 0, 1000);
+        int soc = Math.Clamp(p.BaseTraits.Sociability, 0, 1000);
         if (!rng.ChancePermille(rs.CommitmentChancePermille * (600 + soc * 800 / 1000) / 1000)) return null;
         var kind = rs.Commitments[rng.PickWeighted(rs.Commitments.Select(k => Math.Max(0, k.Weight) * (k.Social ? 500 + soc : 1000)).ToList())];
         int from = ContentValidator.ParseClock(kind.StartFrom), to = ContentValidator.ParseClock(kind.StartTo);
@@ -1282,6 +1284,10 @@ public sealed class BehaviorSystem
         ch.TargetRegionId = best.Region.Id;
         ch.ActivityId = best.Activity.Id;
         _w.AddOccupancy(best.Region.Id, best.Activity.Id, +1);
+        // Ida ao quadro para aceitar (D-067a): o que a pessoa espera pegar na chegada, para registrar o que mudou se nada der.
+        ch.BoardExpectation = "";
+        if (_quests.UsesPlan && best.Factors.Any(f => f.Key == "quest_offer") && _quests.BoardAt(best.Region.Id, best.Activity.Id) is { } goingTo)
+            ch.BoardExpectation = string.Join(",", _quests.PlanBoard(p, ch, goingTo, _quests.ActionTick(p, Now + best.Plan.Minutes * SimTime.TicksPerMinute, best.Activity)).Select(x => x.Offer.Id));
 
         ch.Waypoints.Clear();
         ch.Waypoints.AddRange(best.Plan.Waypoints);

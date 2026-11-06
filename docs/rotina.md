@@ -123,6 +123,7 @@ A regra que amarra tudo (D-045) é a coerência: turno, sono, hora preferida, du
    | resolver pendências | 09:00–12:00 | 1h30–3h | 2 | não |
 
    - Chance: 7% × (0,6 + 0,8 × sociabilidade). O sorteio é próprio da pessoa e do dia.
+   - A sociabilidade é a sorteada da pessoa (vida real), não a do jogo, que muda com o tempo: o compromisso de um dia não muda depois (D-067a).
    - O compromisso termina 15 min antes de dormir, seguido de chegada.
    - **Simplificação registrada:** compromissos ainda não cortam sono.
 6. **Partes sem sobreposição e janelas livres:** as partes acordadas (preparo, deslocamento, obrigação, refeição, transferência, espera, chegada, compromisso) nunca se sobrepõem. As janelas livres são o que sobra entre elas (mínimo 30 min). `Timeline()` pinta cada minuto do dia uma única vez; as brechas curtas viram "acordado".

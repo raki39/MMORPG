@@ -84,12 +84,12 @@ public static class ActivityScoring
                         bool ownPath = personality?.Rule == PersonalityRuleIds.OwnPath;
                         // Diario (D-066): tambem e opcao quando uma troca de prioridade vale a pena. Visita coerente
                         // (D-067): so se o plano da visita faz algo (o mesmo plano que a acao no quadro segue).
-                        // O plano vale para quando a pessoa chegar ao quadro (o tempo ate o reset corre na viagem).
+                        // O plano vale para quando a pessoa pegar as missoes no quadro (o tempo ate o reset corre na viagem e na acao).
                         if (ready == 0 && quests.UsesPlan && person != null)
                             boardTrip = routes.Plan(ch.Position, ch.RegionId, region.Id, routes.Layout.Spot(region.Id, a.Id), moveSpeed);
                         bool offer = ready == 0 && (content.QuestSettings.Journal.Enabled && person != null
                             ? quests.UsesPlan
-                                ? boardTrip!.Reachable && quests.PlanBoard(person, ch, board, now + boardTrip.Minutes * Time.SimTime.TicksPerMinute).Count > 0
+                                ? boardTrip!.Reachable && quests.PlanBoard(person, ch, board, quests.ActionTick(person, now + boardTrip.Minutes * Time.SimTime.TicksPerMinute, a)).Count > 0
                                 : quests.Offers(ch, board).Any(q => (!ownPath || quests.FitsTaste(pr, q)) && quests.CanTake(person, ch, q))
                             : quests.CanAccept(ch) && quests.Offers(ch, board).Any(q => !ownPath || quests.FitsTaste(pr, q)));
                         if (ready == 0 && !offer) continue;

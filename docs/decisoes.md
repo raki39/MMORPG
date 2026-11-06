@@ -2536,3 +2536,57 @@ Itens como instâncias, inventário, equipamento funcional, carteira e aplicaç�
 **Encontrado na conferência:** o teste do sono deslocado (R6) depende da seed. Falha em 1 de 24 seeds com ou sem o D-067 ("acorda mais tarde") e passa na seed do teste. Fica no backlog.
 
 **Próximo:** avaliação do criador; depois, a E1b.
+
+## D-067a — Readoção da descoberta, visitas sem resultado e duas correções da rotina
+**Data:** 06/11/2026 · **Estado:** aceita
+
+**Decisões do criador:**
+- D-067 aprovada com os parâmetros candidatos, sem compensar a queda de satisfação, nível ou quantidade de missões;
+- descoberta: a subida de nível só deixa reconsiderar quando o nível novo muda um requisito relevante da zona; zona que já era acessível precisa de outra mudança concreta (rota, conhecimento ou progresso pertinente); sem bloqueio definitivo;
+- sono deslocado: investigar a falha na seed apontada e corrigir a causa, sem trocar a seed;
+- as visitas sem resultado podem ficar se forem mudanças durante a viagem, com motivo registrado.
+
+**1. Readoção da descoberta** (`population.json`, `goals.zoneUnblockByRequirement`):
+- **como a zona se revela:** entrar numa zona com saída para ela, ou explorar numa zona ligada a uma vizinha dela.
+- **requisito de nível:** o menor nível em que uma dessas ações fica acessível, pela faixa do lugar e pela atividade (a mais baixa entre as escolhas livres e individuais; para explorar, a de exploração).
+  - Exemplo: Covil do Rei Goblin, nível 3 (explorar as Colinas). Para quem já passou disso, subir de nível não muda nada.
+- **ao largar a meta**, guarda o retrato do momento. Na revisão das metas, ela volta só com mudança desde então, registrada em `goal_reconsidered` e mostrada na ficha:
+  - **nível:** o nível novo alcançou o requisito que faltava;
+  - **rota:** a pessoa passou a conhecer um lugar que revela a zona;
+  - **conhecimento:** ganhou pista sobre a zona;
+  - **progresso pertinente:** aceitou missão com etapa num lugar que a revela;
+  - continua valendo adotar o objetivo de conhecer o mundo (D-066).
+- **nada é definitivo:** a zona continua sendo descoberta ao passar pelos lugares, e qualquer mudança acima devolve a meta.
+
+**2. Visitas sem resultado:**
+- **registro:** a pessoa guarda o que esperava pegar quando decide ir ao quadro. Se na hora nada vale mais, `board_visit_empty` registra o que mudou em cada missão esperada (a oferta saiu, já tinha a missão, não dava mais tempo antes do reset, o motivo enfraqueceu, a vaga ficou para uma meta ou a troca deixou de valer). A ficha mostra o motivo.
+- **defeito encontrado:** quase todas eram "não dava mais tempo antes do reset". A decisão avaliava o plano na chegada, mas as missões são pegas no fim da ação no quadro (4 a 6 min; mais para o Estudioso). O plano passou a valer para esse instante. De 97 para 17 visitas, todas com motivo (16 por tempo, 1 por motivo enfraquecido).
+
+**3. Teste do sono deslocado (R6): defeito do teste.**
+- Nas seeds 17 (com o D-067) e 6 (sem), a pessoa escolhida tinha 1 minuto de déficit de sono. No planejamento do dia, a recuperação (R2) fica fixada e adia o acordar em 1 minuto.
+- O teste lia a agenda antes do planejamento e conferia 1 minuto antes do acordar real. No acordar real, o sono foi deslocado normalmente (por exemplo, até 11:05).
+- Correção: o teste lê a agenda fixada, a mesma que a simulação usa. Conferido em 40 seeds, com e sem o D-067; a seed do teste não mudou.
+
+**4. Compromisso do dia livre (D-046): defeito da simulação.**
+- Achado pelo teste do corte de sono, que passou a falhar nesta entrega. O compromisso de um dia é um sorteio fixo da pessoa e do dia, mas a chance e o tipo usavam a sociabilidade atual, que muda com o jogo. Assim, o compromisso de um dia já vivido mudava depois. No caso visto, o compromisso das 11:58 às 15:35 virou das 20:05 às 22:08, e a sessão daquela tarde parecia ter invadido o compromisso novo.
+- Correção: o compromisso é da vida real e usa a sociabilidade sorteada da pessoa (`BaseTraits`). A sociabilidade do jogo segue mudando e pesando nas atividades. Teste novo: o compromisso de um dia não muda quando a sociabilidade do jogo muda (falha com o código antigo).
+- **Hash:** versão 34.
+
+**Medição nas mesmas pessoas** (5 seeds × 1.000 × 90 dias; `baselines/metas-missao/d067a_variantes.md`):
+
+| | D-067 | + descoberta e visitas | + compromisso estável (preset) |
+|---|---|---|---|
+| metas de descobrir zona: encerradas / abandonadas / concluídas | 3.131 / 517 / 2.614 | 3.002 / 316 / 2.686 | 2.996 / 312 / 2.684 |
+| mesmo alvo de zona abandonado 3+ vezes (pares) | 53 | 0 | 0 |
+| todos os pares com 3+ abandonos | 238 | 174 | 170 |
+| descoberta reconsiderada: missão / rota / pista / nível | — | 41 / 12 / 3 / 3 | 40 / 12 / 3 / 3 |
+| visitas sem resultado (com motivo registrado) | 97 (0) | 19 (19) | 17 (17) |
+| nível em 90 dias / satisfação | 24,8 / 588 | 24,9 / 589 | 24,9 / 589 |
+| andando ou esperando | 20,7% | 20,7% | 20,7% |
+
+- **Toda readoção da mesma zona** depois de largar (12 casos) veio depois de uma mudança registrada. Nenhuma no mesmo estado.
+- **Zonas conhecidas no fim:** 14,6 em média, igual.
+- **Os demais abandonos repetidos** têm mudança registrada entre os ciclos: a pessoa voltou a praticar, ou subiu de nível (nível e desbloqueio, D-055). Um caso aparecia como "nada registrado" e era exploração em andamento no momento do abandono, contada ao terminar.
+- **Validação:** cenário 8 de 9, provisórias 7 de 12, iguais.
+
+**Próximo:** a pedido do criador, um ponto ligado às interfaces antes da E1b.

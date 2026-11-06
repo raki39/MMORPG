@@ -75,7 +75,9 @@ for k, v in rep.items():
         days = (hi - lo) / DAY
         if k[2] == 'practice_activity': why = 'voltou a praticar' if prac else ('subiu de nivel' if lv else 'nada registrado')
         elif k[2] == 'reach_level': why = 'subiu de nivel' if lv else 'nada registrado'
-        elif k[2] == 'discover_zone': why = 'subiu de nivel' if lv else ('objetivo adotado' if obj else 'nada registrado')
+        elif k[2] == 'discover_zone':
+            rec = [x[3].split('=')[0] for x in mid if x[1] == 'goal_reconsidered' and x[2] == 'discover_zone|' + k[3]]
+            why = ('reconsiderada: ' + rec[0]) if rec else 'subiu de nivel' if lv else ('objetivo adotado' if obj else 'nada registrado')
         else: why = 'missao avancou' if any(x[1] in ('quest_step_completed', 'quest_accepted') and x[2].split('#')[0] == k[3] for x in mid) else 'nada registrado'
         summary[(k[2], why)] += 1
         examples[(k[2], why)].append((k, a, b, days, lv, prac))
@@ -84,6 +86,7 @@ for kk, v in sorted(summary.items()): print(f'  {kk}: {v}')
 for ty in ('practice_activity', 'reach_level', 'discover_zone'):
     rows = [r for k, v in rep.items() if k[2] == ty for r in v]
     durs = sorted((int(r['end_tick']) - int(r['set_tick'])) / DAY for r in rows)
+    if not durs: print(f'  {ty}: nenhum par'); continue
     print(f"  {ty}: abandonos {len(rows)}; motivos {dict(Counter(r['reason'] for r in rows))}; dias ate largar (mediana) {durs[len(durs)//2]:.1f}; alvos {dict(Counter(k[3] for k in rep if k[2]==ty).most_common(6))}")
 print('\nExemplos:')
 for kk in sorted(examples):
@@ -101,4 +104,4 @@ gaps.sort()
 print(' escolhas:', dict(pc), '; intervalo (dias) mediana', round(gaps[len(gaps)//2], 1), 'p10', round(gaps[len(gaps)//10], 1))
 print('\n## alcancar nivel readotada sem subir de nivel: intervalo (dias)')
 g2 = sorted(days for (ty, why), lst in examples.items() if ty == 'reach_level' and why == 'nada registrado' for k, a, b, days, lv, prac in lst)
-print(' n', len(g2), 'mediana', round(g2[len(g2)//2], 2), 'p75', round(g2[len(g2)*3//4], 2))
+print(' n', len(g2), ('mediana %.2f p75 %.2f' % (g2[len(g2)//2], g2[len(g2)*3//4])) if g2 else '')

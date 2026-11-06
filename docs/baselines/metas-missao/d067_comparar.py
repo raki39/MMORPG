@@ -5,6 +5,9 @@ from collections import Counter, defaultdict
 M, REP, CONTENT = sys.argv[1], sys.argv[2], sys.argv[3]
 VARS = [('base', f'{M}/d066_v123', f'{REP}/d066/v123'), ('v1', f'{M}/d067_v1', f'{REP}/d067/v1'),
         ('v12', f'{M}/d067_v12', f'{REP}/d067/v12'), ('v123', f'{M}/d067_v123', f'{REP}/d067/v123')]
+if len(sys.argv) > 4 and sys.argv[4] == 'd067a':   # D-067a: D-067 final x descoberta pelo requisito
+    VARS = [('D-067', f'{M}/d067_v123', f'{REP}/d067/v123'), ('D-067a: descoberta', f'{M}/d067_v1234z', f'{REP}/d067/v1234z'),
+            ('D-067a: + compromisso estavel (preset)', f'{M}/d067_v1234', f'{REP}/d067/v1234')]
 TPM = 600
 qj = json.load(io.open(CONTENT + '/quests.json', encoding='utf-8'))
 CAT = {q['id']: q['category'] for q in qj['quests']}
@@ -25,7 +28,7 @@ def diag(d):
     s = {}
     st = defaultdict(lambda: {'visit': None, 'dailies': {}, 'expired': {}, 'last': None, 'sess': None})
     V = Counter(); T = Counter(); only_daily = [0, 0.0]; useless_chain = 0
-    sec_theme = Counter()
+    sec_theme = Counter(); reconsidered = Counter(); empty_ev = Counter()
     D = Counter(); reacc = Counter(); motive = Counter(); same_zone = 0; swap = 0; done = Counter(); dropped = Counter()
     level_up_ticks = defaultdict(list)
     def close(c, tick, by):
@@ -94,12 +97,19 @@ def diag(d):
                 D['expirou: ' + k] += 1
                 c['expired'][det] = x['worked'] or x['step']
         elif t == 'level_up': level_up_ticks[key].append(tick)
+        elif t == 'goal_reconsidered': reconsidered[e['causes'].split('=')[0]] += 1
+        elif t == 'board_visit_empty':
+            empty_ev['visitas com motivo registrado'] += 1
+            for x in e['causes'].split('|'): empty_ev[x.split('=')[0]] += 1
     tot_v = sum(V.values())
     s['visitas ao quadro'] = tot_v
     for k in [('aceitar', 'so aceitou'), ('aceitar', 'troca'), ('aceitar', 'sem resultado'), ('aceitar', 'interrompida'),
               ('entregar', 'entregou e aceitou'), ('entregar', 'so entregou'), ('entregar', 'interrompida')]:
         s[f'  {k[0]}: {k[1]}'] = V[k]
     s['  visitas sem resultado logo apos outra sem resultado'] = useless_chain
+    s['  sem resultado com motivo registrado (board_visit_empty)'] = empty_ev['visitas com motivo registrado']
+    for k in ('no_slot', 'no_longer_offered', 'already_taken', 'no_time_before_reset', 'less_interest', 'expired_untouched'):
+        if empty_ev[k]: s[f'    motivo: {k}'] = empty_ev[k]
     s['viagem ao quadro (h)'] = round((T['aceitar'] + T['entregar'] + T['outro']) / 60)
     s['  para aceitar (h)'] = round(T['aceitar'] / 60)
     s['  para entregar (h)'] = round(T['entregar'] / 60)
@@ -139,6 +149,11 @@ def diag(d):
         for a, b in zip(lst, lst[1:]):
             if a['completed'] == '0' and not any(int(a['end_tick']) < t <= int(b['set_tick']) for t in level_up_ticks[key]): same += 1
     s['meta de nivel readotada sem subir de nivel'] = same
+    Z = [r for r in ends if r['type'] == 'discover_zone']
+    s['metas de descobrir zona encerradas'] = len(Z)
+    s['  abandonadas'] = sum(r['completed'] == '0' for r in Z)
+    s['  concluidas'] = sum(r['completed'] == '1' for r in Z)
+    for k in ('level_requirement', 'route', 'knowledge', 'quest_on_the_way'): s[f'descoberta reconsiderada: {k}'] = reconsidered[k]
     return s
 
 def people(r):
@@ -169,7 +184,7 @@ keys = []
 for v in res.values():
     for k in v:
         if k not in keys: keys.append(k)
-print('| Medida | Base (D-066) | v1 defeitos | v12 + aceite avaliado | v123 + prazo da pronta |')
-print('|---|---|---|---|---|')
+print('| Medida | ' + ' | '.join(n for n, _, _ in VARS) + ' |')
+print('|---' * (len(VARS) + 1) + '|')
 for k in keys:
     print(f'| {k} | ' + ' | '.join(str(res[n].get(k, '—')) for n, _, _ in VARS) + ' |')

@@ -115,6 +115,28 @@ public class QuestAcceptanceTests
         Assert.DoesNotContain(Evaluate(w, p, ch), o => IsBoard(o, Aurora));   // sem ida ao quadro a toa
     }
 
+    [Fact]
+    public void VisitaSemResultado_RegistraOQueMudouNaViagem()
+    {
+        var (_, w, p, ch) = World(C);
+        var quests = w.Behavior.Quests;
+        Taste(p, 950);
+        Active(w, ch, "vila_principal_2");
+        Active(w, ch, "vila_secundaria_ursos");
+        var plan = quests.PlanBoard(p, ch, Aurora);
+        Assert.NotEmpty(plan);
+        ch.BoardExpectation = string.Join(",", plan.Select(x => x.Offer.Id));          // o que esperava ao decidir ir
+        // Durante a viagem, uma meta de missao de outro quadro passa a guardar a ultima vaga.
+        var other = C.Quests.Values.First(q => q.BoardId == "quadro_forte_do_vau" && q.Category == QuestCategories.Main);
+        ch.GoalList.Add(new PersonalGoal(GoalTypes.CompleteQuest, other.Id, 1, 0, 500, "patience", 500, w.Clock.Tick, ch.PlayedTicks));
+        w.Events.Drain();
+        var region = C.Regions[Aurora.RegionId];
+        quests.OnActivityDone(ch, region, region.FindActivity(Aurora.ActivityId)!, 5);
+        var ev = w.Events.Drain().Single(x => x.Type == "board_visit_empty");
+        Assert.Contains(ev.Causes, c => c.Factor == "no_slot");
+        Assert.Equal("", ch.BoardExpectation);
+    }
+
     // ---------------- Aceite avaliado ----------------
 
     [Fact]

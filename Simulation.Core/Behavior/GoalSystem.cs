@@ -45,6 +45,7 @@ public sealed class GoalSystem
     /// <summary>Ao conectar: abandona o que nao anda, e talvez adota um objetivo novo.</summary>
     internal void Review(Person p, Character ch, DeterministicRng rng)
     {
+        RefreshZoneBlocks(ch);   // mudanca concreta libera a meta de descoberta bloqueada (D-067a)
         var t = p.Traits;
         long played = ch.PlayedTicksAt(Now);
         long staleTicks = (S.StaleBaseHours * 1000L + S.StaleExtraHoursAtMaxPatience * (long)t.Patience) * SimTime.TicksPerHour / 1000;
@@ -394,7 +395,97 @@ public sealed class GoalSystem
             ch.BlockedTargetSet.RemoveWhere(k => k.StartsWith(GoalTypes.CompleteQuest + "|", StringComparison.Ordinal)
                 && C.Quests.TryGetValue(k[(GoalTypes.CompleteQuest.Length + 1)..], out var q) && q.Category == QuestCategories.Main);
         if (d.Criterion == ObjectiveCriteria.AllZones)
+        {
             ch.BlockedTargetSet.RemoveWhere(k => k.StartsWith(GoalTypes.DiscoverZone + "|", StringComparison.Ordinal));
+            ch.ZoneBlockMap.Clear();
+        }
+    }
+
+    // ---------------- Descoberta bloqueada (D-067a) ----------------
+
+    private readonly Dictionary<string, (HashSet<string> Enter, HashSet<string> Explore, int Level)> _reveal = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// Como a zona se revela: entrar numa zona com saida para ela, ou explorar numa zona ligada a uma vizinha
+    /// dela. E o menor nivel em que uma dessas acoes fica acessivel: a faixa do lugar (nivel minimo) e a
+    /// atividade (a mais baixa entre as escolhas livres e individuais; para explorar, a de exploracao).
+    /// </summary>
+    internal (HashSet<string> Enter, HashSet<string> Explore, int Level) Reveal(string zoneId)
+    {
+        if (_reveal.TryGetValue(zoneId, out var r)) return r;
+        var enter = new HashSet<string>(StringComparer.Ordinal);
+        var explore = new HashSet<string>(StringComparer.Ordinal);
+        int level = int.MaxValue;
+        foreach (var z in C.Regions.Values.OrderBy(z => z.Id, StringComparer.Ordinal))
+        {
+            // Escolhas livres e individuais (ponto de missao so com a etapa; recrutamento so com grupos).
+            var solo = z.AllActivities().Where(a => a.MinGroupSize <= 1 && a.Type is not (ActivityTypes.Quest or ActivityTypes.Recruit)).ToList();
+            if (z.Connections.Any(c => c.To == zoneId) && solo.Count > 0)
+            {
+                enter.Add(z.Id);
+                level = Math.Min(level, Math.Max(z.LevelMin, solo.Min(a => a.MinLevel)));
+            }
+            var exploreActs = solo.Where(a => a.Type == ActivityTypes.Explore).ToList();
+            if (z.Id != zoneId && exploreActs.Count > 0 && z.Connections.Any(c => C.Regions.TryGetValue(c.To, out var n) && n.Connections.Any(c2 => c2.To == zoneId)))
+            {
+                explore.Add(z.Id);
+                level = Math.Min(level, Math.Max(z.LevelMin, exploreActs.Min(a => a.MinLevel)));
+            }
+        }
+        r = (enter, explore, level == int.MaxValue ? 0 : level);
+        _reveal[zoneId] = r;
+        return r;
+    }
+
+    private ZoneBlockSnapshot Snapshot(Character ch, string zoneId)
+    {
+        var (enter, explore, _) = Reveal(zoneId);
+        int known = enter.Concat(explore).Distinct(StringComparer.Ordinal).Count(z => ch.Known.Contains(z));
+        string prefix = zoneId + "/";
+        int hints = ch.Hints.Count(h => h.StartsWith(prefix, StringComparison.Ordinal));
+        var quests = ch.ActiveQuestList.Where(a => PassesBy(a, enter, explore)).Select(a => a.QuestId).OrderBy(x => x, StringComparer.Ordinal);
+        return new ZoneBlockSnapshot(ch.Level, known, hints, string.Join(",", quests));
+    }
+
+    /// <summary>A missao ativa tem etapa num lugar que revela a zona (entrar nele, ou explorar nele).</summary>
+    private bool PassesBy(ActiveQuest a, HashSet<string> enter, HashSet<string> explore)
+    {
+        if (!C.Quests.TryGetValue(a.QuestId, out var q)) return false;
+        for (int i = a.StepIndex; i < q.Steps.Count; i++)
+        {
+            var s = q.Steps[i];
+            if (enter.Contains(s.RegionId)) return true;
+            if (explore.Contains(s.RegionId) && C.Regions.TryGetValue(s.RegionId, out var z) && z.FindActivity(s.ActivityId)?.Type == ActivityTypes.Explore) return true;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Meta de descoberta bloqueada (D-067a): volta a ser considerada so com mudanca concreta desde o bloqueio,
+    /// com o motivo registrado (goal_reconsidered): o nivel novo alcancou o requisito que faltava para revelar a
+    /// zona; a pessoa passou a conhecer um lugar que a revela (rota); ganhou pista sobre ela (conhecimento); ou
+    /// aceitou uma missao com etapa num lugar que a revela (progresso pertinente). Zona ja descoberta sai da lista.
+    /// </summary>
+    internal void RefreshZoneBlocks(Character ch)
+    {
+        if (!S.ZoneUnblockByRequirement || ch.ZoneBlockMap.Count == 0) return;
+        foreach (var (zone, snap) in ch.ZoneBlockMap.ToList())
+        {
+            string key = TargetKey(GoalTypes.DiscoverZone, zone);
+            if (!ch.BlockedTargetSet.Contains(key) || ch.Known.Contains(zone)) { ch.ZoneBlockMap.Remove(zone); ch.BlockedTargetSet.Remove(key); continue; }
+            var (_, _, level) = Reveal(zone);
+            var now = Snapshot(ch, zone);
+            string? why = null;
+            if (level > snap.Level && level <= ch.Level) why = "level_requirement";
+            else if (now.KnownReveal > snap.KnownReveal) why = "route";
+            else if (now.Hints > snap.Hints) why = "knowledge";
+            else if (now.Quests.Length > 0 && now.Quests.Split(',').Any(id => !snap.Quests.Split(',').Contains(id, StringComparer.Ordinal))) why = "quest_on_the_way";
+            if (why == null) continue;
+            ch.ZoneBlockMap.Remove(zone);
+            ch.BlockedTargetSet.Remove(key);
+            _w.Emit("goal_reconsidered", EventImportance.Low, new[] { new EntityRef("character", ch.Id) },
+                new[] { new EventCause(why, 1000) }, key);
+        }
     }
 
     /// <summary>
@@ -484,9 +575,11 @@ public sealed class GoalSystem
 
     internal void OnLevelUp(Person p, Character ch)
     {
-        // Subir de nivel e mudanca relevante: metas de nivel abandonadas podem voltar; zonas tambem (D-066).
+        // Subir de nivel e mudanca relevante: metas de nivel abandonadas podem voltar; zonas tambem (D-066),
+        // ou, com o requisito (D-067a), so as que o nivel novo tornou acessiveis (na proxima revisao).
         ch.BlockedLevelGoals.Clear();
-        ch.BlockedTargetSet.RemoveWhere(k => k.StartsWith(GoalTypes.DiscoverZone + "|", StringComparison.Ordinal));
+        if (!S.ZoneUnblockByRequirement)
+            ch.BlockedTargetSet.RemoveWhere(k => k.StartsWith(GoalTypes.DiscoverZone + "|", StringComparison.Ordinal));
         foreach (var g in ch.GoalList.ToList())
         {
             if (g.Type != GoalTypes.ReachLevel && g.Type != GoalTypes.UnlockLevel) continue;
@@ -567,7 +660,11 @@ public sealed class GoalSystem
         // Meta de nivel abandonada nao volta com o mesmo alvo antes da proxima subida de nivel.
         if (g.Type is GoalTypes.ReachLevel or GoalTypes.UnlockLevel) ch.BlockedLevelGoals.Add(LevelGoalKey(g.Type, g.Target, g.TargetValue));
         // Demais metas largadas por falta de progresso ou impaciencia: nao voltam ate avanco ou mudanca relevante (D-066).
-        else if (S.ReadoptBlockEnabled && reason is "no_progress" or "impatience") ch.BlockedTargetSet.Add(TargetKey(g.Type, g.Target));
+        else if (S.ReadoptBlockEnabled && reason is "no_progress" or "impatience")
+        {
+            ch.BlockedTargetSet.Add(TargetKey(g.Type, g.Target));
+            if (g.Type == GoalTypes.DiscoverZone && S.ZoneUnblockByRequirement) ch.ZoneBlockMap[g.Target] = Snapshot(ch, g.Target);
+        }
         ch.GoalsAbandoned++;
         if (g.Links.Count > 0)
         {

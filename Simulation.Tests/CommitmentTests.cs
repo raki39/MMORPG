@@ -11,6 +11,39 @@ public class CommitmentTests
 {
     private static ContentDatabase C => TestSupport.Preset;
 
+    /// <summary>
+    /// O compromisso de um dia nao muda depois (D-067a): ele e da vida real e usa a sociabilidade sorteada,
+    /// nao a do jogo. Antes, a sociabilidade que muda com o tempo mudava o compromisso de um dia ja vivido.
+    /// </summary>
+    [Fact]
+    [Trait("Classe", "Invariante")]
+    public void Compromisso_DoDia_NaoMudaQuandoASociabilidadeDoJogoMuda()
+    {
+        var e = TestSupport.NewEngine(21, 300);
+        e.Submit(new SetServerOpenCommand(true), SimTime.Hours(8));
+        e.AdvanceTo(SimTime.Days(1));
+        var w = e.World;
+        int found = 0;
+        foreach (var p in w.Persons.OrderBy(x => x.Id))
+        {
+            for (long d = 1; d < 30 && found < 20; d++)
+            {
+                var before = w.Behavior.LayoutOf(p, d).Commitments.ToList();
+                if (before.Count == 0) continue;
+                int soc = p.Traits.Sociability;
+                foreach (int v in new[] { 0, 1000 })
+                {
+                    p.Traits.Sociability = v;
+                    Assert.Equal(before, w.Behavior.LayoutOf(p, d).Commitments.ToList());
+                }
+                p.Traits.Sociability = soc;
+                found++;
+            }
+            if (found >= 20) break;
+        }
+        Assert.True(found >= 5, $"dias com compromisso conferidos: {found}");
+    }
+
     [Fact]
     [Trait("Classe", "Invariante")]
     public void Compromisso_SoEmDiaLivre_Raro_ESemSessaoDurante()

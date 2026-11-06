@@ -49,6 +49,18 @@ public sealed class QuestSystem
     /// <summary>Escolha de ir ao quadro e acao nele pelo mesmo plano (D-067).</summary>
     public bool UsesPlan => J.Enabled && (J.ConsistentVisits || A.Enabled);
 
+    /// <summary>
+    /// Instante em que a pessoa pega as missoes no quadro, visto da decisao de ir (D-067a): a chegada mais a
+    /// duracao mais longa da acao no quadro (as ofertas sao aceitas no fim dela; o Estudioso demora mais).
+    /// </summary>
+    public long ActionTick(Person p, long arrival, ActivityDefinition boardActivity)
+    {
+        int minutes = Math.Max(1, boardActivity.TypicalMinutes * C.Behavior.ActivityDurationMax / 1000);
+        if (boardActivity.Type == ActivityTypes.Quest && QuirkSystem.Active(C, p, QuirkIds.Estudioso))
+            minutes = Math.Max(minutes, minutes * C.QuirkCatalog.Effects.Estudioso.VisitStepPermille / 1000);
+        return arrival + minutes * SimTime.TicksPerMinute;
+    }
+
     /// <summary>Proximo reset diario do servidor (instante), a partir de agora ou do instante dado.</summary>
     public long NextResetTick(long from = -1)
     {
@@ -174,7 +186,10 @@ public sealed class QuestSystem
         // Visita coerente (D-067): faz o que o plano diz, o mesmo que tornou o quadro uma opcao.
         if (UsesPlan)
         {
-            foreach (var act in PlanBoard(person, ch, board))
+            var acts = PlanBoard(person, ch, board);
+            if (acts.Count == 0 && ch.BoardExpectation.Length > 0) Missed(person, ch, board, ch.BoardExpectation);
+            ch.BoardExpectation = "";
+            foreach (var act in acts)
             {
                 if (act.Drop != null)
                     Drop(ch, act.Drop, "replaced:" + act.Offer.Id, Value(person, ch, C.Quests[act.Drop.QuestId], act.Drop), Value(person, ch, act.Offer, null));
@@ -430,6 +445,31 @@ public sealed class QuestSystem
     /// <summary>Diaria que expirou intocada, no mesmo estado: so volta depois de a pessoa fazer a atividade da etapa ou ter meta de praticar o tema.</summary>
     private bool IdleBlocked(Character ch, QuestDefinition q) =>
         A.IdleExpiryBlock && ch.QuestLog.TryGetValue(q.Id, out var rec) && rec.IdleExpired && !PracticeGoalFor(ch, q);
+
+    /// <summary>
+    /// A pessoa foi ao quadro para pegar missoes e, na chegada, nada mais valia (D-067a): registra o que mudou
+    /// na viagem para cada uma (board_visit_empty), sem frustracao.
+    /// </summary>
+    private void Missed(Person p, Character ch, QuestBoardDefinition board, string expected)
+    {
+        var reasons = new SortedDictionary<string, int>(StringComparer.Ordinal);
+        foreach (var id in expected.Split(','))
+        {
+            if (!C.Quests.TryGetValue(id, out var q)) continue;
+            var it = A.Enabled ? Interest(p, ch, q, board, ch.ActiveQuestList) : default;
+            string why;
+            if (ch.ActiveQuestList.Any(a => a.QuestId == id)) why = "already_taken";
+            else if (!Offers(ch, board).Any(x => x.Id == id)) why = "no_longer_offered";
+            else if (A.Enabled && IdleBlocked(ch, q)) why = "expired_untouched";
+            else if (A.Enabled && !FitsBeforeReset(p, ch, q, it.Travel)) why = "no_time_before_reset";
+            else if (A.Enabled && it.Interest < A.MinInterest) why = "less_interest";
+            else why = "no_slot";
+            reasons[why] = (reasons.TryGetValue(why, out int n) ? n : 0) + 1;
+        }
+        if (reasons.Count == 0) return;
+        _w.Emit("board_visit_empty", EventImportance.Low, new[] { new EntityRef("character", ch.Id) },
+            reasons.Select(kv => new EventCause(kv.Key, kv.Value)).ToArray(), board.Id);
+    }
 
     /// <summary>Aceita a oferta, largando a missao mais fraca se preciso (troca de prioridade). Devolve se aceitou.</summary>
     private bool Take(Person p, Character ch, QuestDefinition offer, string why)

@@ -1385,6 +1385,7 @@ public partial class PlayerModal : ModalFrame
             case "goal_set": icon = "target"; break;
             case "goal_completed": icon = "trophy"; break;
             case "goal_abandoned": icon = "circle-x"; break;
+            case "goal_reconsidered": icon = "repeat"; break;
             case "trait_changed": icon = "activity"; break;
             case "session_plan": icon = "flag"; break;
             case "plan_changed": icon = "flag"; break;
@@ -1681,6 +1682,35 @@ public partial class PlayerModal : ModalFrame
             case "objective_gap":
                 return ("Buscou um objetivo novo e nenhum era relevante", UiTokens.Warning);
             case "goal_completed": return ($"Concluiu a meta: {GoalDetail(e.Detail)}", UiTokens.Success);
+            case "board_visit_empty":
+            {
+                // D-067a: foi ao quadro para pegar missoes e, na chegada, nada mais valia: o que mudou na viagem.
+                var bvWhy = e.Causes.Select(c => c.Factor switch
+                {
+                    "already_taken" => "já estava com a missão",
+                    "no_longer_offered" => "a oferta não estava mais disponível",
+                    "expired_untouched" => "a diária tinha vencido sem ser feita",
+                    "no_time_before_reset" => "não dava mais tempo antes do reset",
+                    "less_interest" => "o motivo enfraqueceu no caminho",
+                    _ => "a vaga ficou para uma meta ou a troca deixou de valer",
+                }).Distinct();
+                return ($"Chegou ao quadro e não pegou nada ({string.Join("; ", bvWhy)})", UiTokens.TextSecondary);
+            }
+            case "goal_reconsidered":
+            {
+                // D-067a: a meta de descoberta largada volta a ser considerada por uma mudança concreta.
+                var gr = (e.Detail ?? "|").Split('|');
+                string zone = gr.Length > 1 ? _ctx.ZoneName(gr[1]) : "";
+                string grWhy = e.Causes.Count == 0 ? "" : e.Causes[0].Factor switch
+                {
+                    "level_requirement" => "o nível novo alcançou o que faltava",
+                    "route" => "conheceu um caminho que leva até lá",
+                    "knowledge" => "ganhou uma pista sobre a zona",
+                    "quest_on_the_way" => "tem uma missão que passa por lá",
+                    _ => "",
+                };
+                return ($"Voltou a considerar descobrir {zone}{(grWhy.Length > 0 ? $" ({grWhy})" : "")}", UiTokens.Info);
+            }
             case "goal_abandoned":
             {
                 string goalWhy = e.Causes.Count == 0 ? "" : e.Causes[0].Factor switch

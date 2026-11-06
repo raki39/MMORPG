@@ -798,6 +798,27 @@ public static class ObjectiveLinkKinds
 }
 
 /// <summary>Historico de uma quest para o personagem.</summary>
+/// <summary>
+/// Retrato de uma meta de descoberta bloqueada (D-067a): nivel, quantas zonas que revelam a zona a pessoa
+/// conhecia, pistas sobre ela e missoes ativas com etapa num lugar que a revela.
+/// </summary>
+public sealed class ZoneBlockSnapshot
+{
+    public ZoneBlockSnapshot(int level, int knownReveal, int hints, string quests)
+    {
+        Level = level;
+        KnownReveal = knownReveal;
+        Hints = hints;
+        Quests = quests;
+    }
+
+    public int Level { get; }
+    public int KnownReveal { get; }
+    public int Hints { get; }
+    /// <summary>Ids das missoes, em ordem ordinal, separados por virgula.</summary>
+    public string Quests { get; }
+}
+
 public sealed class QuestRecord
 {
     public int Completions { get; internal set; }
@@ -905,6 +926,17 @@ public sealed class Character
     /// <summary>Metas largadas ("tipo|alvo") que nao voltam ate avanco ou mudanca relevante (D-066).</summary>
     internal SortedSet<string> BlockedTargetSet { get; } = new(StringComparer.Ordinal);
     public IReadOnlyCollection<string> BlockedTargets => BlockedTargetSet;
+    /// <summary>
+    /// Zonas com meta de descoberta bloqueada (D-067a): o retrato do momento do bloqueio, para saber se
+    /// houve mudanca concreta (nivel que muda um requisito, rota, pista ou missao no caminho).
+    /// </summary>
+    internal SortedDictionary<string, ZoneBlockSnapshot> ZoneBlockMap { get; } = new(StringComparer.Ordinal);
+    /// <summary>
+    /// Missoes que a pessoa esperava pegar quando decidiu ir ao quadro (ids separados por virgula; vazio: nenhuma
+    /// ou outra atividade). Se na chegada nada acontece, o motivo de cada uma fica registrado (D-067a).
+    /// </summary>
+    public string BoardExpectation { get; internal set; } = "";
+    public IReadOnlyDictionary<string, ZoneBlockSnapshot> ZoneBlocks => ZoneBlockMap;
     public int DecisionCount { get; internal set; }
     public string LastActivityKey { get; internal set; } = "";
     public int RepeatCount { get; internal set; }

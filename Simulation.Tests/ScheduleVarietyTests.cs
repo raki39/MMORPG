@@ -223,6 +223,16 @@ public class ScheduleVarietyTests
             // Simula ter ficado acordado ate 3 h antes do acordar planejado (sem sessao): a saida do jogo foi tarde.
             e.AdvanceTo(plannedWake - SimTime.Hours(3));
             if (p.IsOnline) continue;
+            // A agenda de um dia ainda nao planejado usa o deficit atual; no planejamento a recuperacao (R2) fica
+            // fixada e pode mover o acordar (1 minuto de deficit = 1 minuto mais tarde). Vale a agenda fixada, a
+            // mesma que a simulacao usa no acordar.
+            if (!p.RecoveryByDay.ContainsKey(day)) continue;
+            lay = w.Behavior.LayoutOf(p, day);
+            plannedWake = start + lay.Wake * SimTime.TicksPerMinute;
+            latest = DailySchedule.LatestWake(lay, w.Content.Routine);
+            free = (latest == int.MaxValue || latest - lay.Wake >= p.SleepNeedMinutes) && lay.Bed - lay.Wake >= p.SleepNeedMinutes + 120;
+            tight = latest != int.MaxValue && latest - lay.Wake <= 5;
+            if ((free && shiftedCase) || (tight && cutCase) || (!free && !tight)) continue;
             p.LastLogoutTick = w.Clock.Tick;
             int deficit = p.SleepDeficitMinutes;
             e.AdvanceTo(plannedWake + 1);
