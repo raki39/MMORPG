@@ -41,31 +41,49 @@ public partial class ZoneModal : ModalFrame
 
     private void BuildHeader()
     {
-        var row = new HBoxContainer();
-        row.AddThemeConstantOverride("separation", 18);
-        var emblem = new ZoneEmblem(_zone) { CustomMinimumSize = new Vector2(52, 52), SizeFlagsVertical = SizeFlags.ShrinkCenter };
-        emblem.CustomMinimumSize = new Vector2(84, 84);
-        Art.AddChild(emblem);
-        var col = new VBoxContainer { Alignment = BoxContainer.AlignmentMode.Center, SizeFlagsHorizontal = SizeFlags.ExpandFill };
-        col.AddThemeConstantOverride("separation", 2);
-        col.AddChild(ThemeFactory.Text(_zone.Name, 28, UiTokens.TextPrimary, UiFonts.SemiBold));
-        string sub = _zone.IsCity ? $"{PtBr.Function(_zone.Function)} nível {_zone.CityLevel} · {PtBr.Biome(_zone.Biome)} · todos os níveis"
-            : $"{PtBr.Function(_zone.Function)} · {PtBr.Biome(_zone.Biome)} · níveis {_zone.LevelMin}–{_zone.LevelMax}";
-        col.AddChild(ThemeFactory.Text(sub, UiTokens.FontBody, UiTokens.TextSecondary));
+        // Cabecalho (D-068): emblema; titulo e o texto que identifica em duas colunas alinhadas; ao lado, as
+        // regras da zona em etiquetas; a direita, a lotacao agora.
+        Art.AddChild(new ZoneEmblem(_zone) { CustomMinimumSize = new Vector2(92, 92), SizeFlagsVertical = SizeFlags.ShrinkBegin });
+        var title = new HBoxContainer();
+        title.AddThemeConstantOverride("separation", 10);
+        title.AddChild(TitleText(_zone.Name));
         if (_ctx.Drafts.TryGetValue(_zone.Id, out var d) && d.Saved && d.DiffersFrom(_zone))
-            col.AddChild(ThemeFactory.Chip("Rascunho não publicado", UiTokens.Warning, dot: true));
-        row.AddChild(col);
-        Header.AddChild(row);
-
+        {
+            var chip = ThemeFactory.Chip("Rascunho não publicado", UiTokens.Warning, dot: true);
+            chip.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+            title.AddChild(chip);
+        }
+        Header.AddChild(title);
+        Header.CustomMinimumSize = new Vector2(390, 0);   // largura fixa: as etiquetas comecam no mesmo lugar em toda zona
         int people = _map.PeopleInZone(_zone.Id);
-        Fact("Jogadores", people.ToString(), UiTokens.Info, "Jogadores na zona agora\n~Inclui quem está andando pelas estradas da zona.");
-        Fact("Lotação", $"{people * 100 / Math.Max(1, _zone.Capacity)}%", WorldMapView.Ramp(Mathf.Clamp(people / (float)Math.Max(1, _zone.Capacity) * 4f, 0, 1)), $"Lotação\nJogadores|{people}\nCapacidade|{_zone.Capacity}");
-        Fact("Níveis", _zone.IsCity ? "Todos" : $"{_zone.LevelMin}–{_zone.LevelMax}", UiTokens.AccentSoft);
-        Fact("Combate", PtBr.Pvp(_zone.Pvp), _zone.Pvp == PvpRules.Open ? UiTokens.Danger : UiTokens.Success);
-        Fact("Morte", PtBr.Death(_zone.DeathRule), _zone.DeathRule == DeathRules.FullLoot ? UiTokens.Danger : _zone.DeathRule == DeathRules.Partial ? UiTokens.Warning : UiTokens.TextSecondary);
-        Fact("Controle", PtBr.Control(_zone.Control));
-        Fact("Perigo", ((int)(WorldMapView.DangerOf(_zone) * 100)).ToString(), WorldMapView.Ramp(WorldMapView.DangerOf(_zone)), "Índice de perigo\n~Risco das atividades, PvP e regra de morte.");
-        Fact("Áreas", _zone.Areas.Count.ToString());
+        string kind = _zone.IsCity ? $"{PtBr.Function(_zone.Function)} nível {_zone.CityLevel} · {PtBr.Biome(_zone.Biome)}" : $"{PtBr.Function(_zone.Function)} · {PtBr.Biome(_zone.Biome)}";
+        string exits = string.Join(", ", _zone.Connections.Select(c => _ctx.ZoneName(c.To)));
+        Header.AddChild(InfoGrid(
+            Info(_zone.IsCity ? "landmark" : "map", kind, ZoneAccent(_zone), UiTokens.TextLabel, "", UiFonts.Medium, 176),
+            Info("trending-up", _zone.IsCity ? "Todos os níveis" : $"Níveis {_zone.LevelMin}–{_zone.LevelMax}", UiTokens.AccentSoft, UiTokens.AccentSoft,
+                "Faixa de nível da zona\n~Orientação: o XP vem do nível do desafio de cada atividade.", UiFonts.SemiBold, 150),
+            Info("users", $"{people} jogadores agora", UiTokens.Info, UiTokens.TextLabel, "Jogadores na zona agora\n~Inclui quem está andando pelas estradas da zona.", null, 176),
+            Info("layers", $"{_zone.Areas.Count} áreas", UiTokens.TextSecondary, UiTokens.TextLabel, "Áreas da zona\n~Lista na Visão geral.", null, 150),
+            Info("door-open", $"{_zone.Connections.Count} saídas", UiTokens.TextSecondary, UiTokens.TextSecondary, $"Saídas\n~{exits}", null, 176),
+            Info("user-check", $"capacidade {_zone.Capacity}", UiTokens.TextSecondary, UiTokens.TextSecondary, "Capacidade\n~Acima dela a zona fica lotada e as atividades disputadas.", null, 150)));
+
+        TagWidth = 170;
+        bool pvp = _zone.Pvp == PvpRules.Open;
+        Tag("swords", "Combate", PtBr.Pvp(_zone.Pvp), pvp ? UiTokens.Danger : UiTokens.Success, pvp ? "Combate entre jogadores liberado nesta zona." : "Sem combate entre jogadores nesta zona.");
+        Tag("skull", "Morte", PtBr.Death(_zone.DeathRule), _zone.DeathRule == DeathRules.FullLoot ? UiTokens.Danger : _zone.DeathRule == DeathRules.Partial ? UiTokens.Warning : UiTokens.TextSecondary,
+            "Regra de morte\n~O que se perde ao morrer nesta zona.");
+        Tag("flag", "Controle", PtBr.Control(_zone.Control), UiTokens.TextSecondary, "Controle da zona\n~Quem domina o território (guildas chegam no M6).");
+        float danger = WorldMapView.DangerOf(_zone);
+        Tag("siren", "Perigo", ((int)(danger * 100)).ToString(), WorldMapView.Ramp(danger), "Índice de perigo\n~Risco das atividades, PvP e regra de morte.");
+
+        float occ = people / (float)Math.Max(1, _zone.Capacity);
+        Highlight.AddChild(new SemiGauge
+        {
+            CustomMinimumSize = new Vector2(140, 70), Value = Mathf.Clamp(occ, 0, 1), Center = $"{people * 100 / Math.Max(1, _zone.Capacity)}%",
+            Caption = "Lotação agora", Verdict = occ < 0.05f ? "Vazia" : occ < 0.3f ? "Tranquila" : occ < 0.7f ? "Movimentada" : "Lotada",
+            Color = WorldMapView.Ramp(Mathf.Clamp(occ * 4f, 0, 1)),
+            TooltipText = $"Lotação\nJogadores|{people}\nCapacidade|{_zone.Capacity}",
+        });
 
         Actions.AddChild(Action("Aproximar no mapa", "Centraliza e aproxima a zona", () => { _ctx.FocusZone(_zone.Id); Close(); }, primary: true));
         Actions.AddChild(Action("Observar em 3D", "Disponível a partir do M4", () => { }, enabled: false));

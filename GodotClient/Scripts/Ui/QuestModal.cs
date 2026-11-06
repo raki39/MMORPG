@@ -57,26 +57,39 @@ public partial class QuestModal : ModalFrame
         _ => q.RepeatCooldownDays > 0 ? $"Repetível a cada {q.RepeatCooldownDays} dias" : "Uma vez por personagem",
     };
 
+    /// <summary>Repeticao em poucas palavras (cabecalho); a frase inteira fica no tooltip.</summary>
+    public static string RepetitionShort(QuestDefinition q) => q.Category switch
+    {
+        QuestCategories.Main => "Uma vez por personagem",
+        QuestCategories.Daily => "Renova todo dia",
+        _ => q.RepeatCooldownDays > 0 ? $"A cada {q.RepeatCooldownDays} dias" : "Uma vez por personagem",
+    };
+
     private QuestStatsView? Stats => _ctx.Snapshot().QuestStats.TryGetValue(_quest.Id, out var s) ? s : null;
 
     private void BuildHeader()
     {
+        // Cabecalho (D-068): emblema da categoria; titulo e o texto que identifica em duas colunas alinhadas;
+        // ao lado, os numeros da missao em etiquetas.
         var color = CategoryColor(_quest.Category);
-        Art.AddChild(new EmblemBox(_quest.Category == QuestCategories.Main ? "crown" : _quest.Category == QuestCategories.Daily ? "sun" : "scroll-text", color) { CustomMinimumSize = new Vector2(84, 84) });
-        var col = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
-        col.AddThemeConstantOverride("separation", 2);
-        col.AddChild(ThemeFactory.Text(_quest.Name, 28, UiTokens.TextPrimary, UiFonts.SemiBold));
-        string sub = CategoryName(_quest.Category) + (_board != null ? $" · {_board.Name} · {_ctx.ZoneName(_board.RegionId)}" : "") + " · " + Repetition(_quest);
-        col.AddChild(ThemeFactory.Text(sub, UiTokens.FontBody, UiTokens.TextSecondary));
-        Header.AddChild(col);
+        string icon = _quest.Category == QuestCategories.Main ? "crown" : _quest.Category == QuestCategories.Daily ? "sun" : "scroll-text";
+        Art.AddChild(new EmblemBox(icon, color) { CustomMinimumSize = new Vector2(92, 92) });
+        Header.AddChild(TitleText(_quest.Name));
+        Header.CustomMinimumSize = new Vector2(410, 0);   // largura fixa: as etiquetas comecam no mesmo lugar em toda missao
+        Header.AddChild(InfoGrid(
+            Info(icon, CategoryName(_quest.Category), color, color, "", UiFonts.SemiBold, 172),
+            Info("repeat", RepetitionShort(_quest), UiTokens.TextSecondary, UiTokens.TextLabel, $"Repetição\n~{Repetition(_quest)}", null, 172),
+            Info("scroll-text", _board?.Name ?? "Sem quadro", UiTokens.TextSecondary, UiTokens.TextLabel, _board?.Name ?? "", null, 172),
+            Info("map-pin", _board != null ? _ctx.ZoneName(_board.RegionId) : "—", UiTokens.TextSecondary, UiTokens.TextLabel, "Zona do quadro", null, 172)));
 
         var s = Stats;
-        Fact("Nível mínimo", _quest.MaxLevel > 0 ? $"{_quest.MinLevel}–{_quest.MaxLevel}" : $"{_quest.MinLevel}+", UiTokens.Info);
-        Fact("Etapas", (_quest.Steps.Count + 1).ToString(), color, "Objetivos no mundo + entrega no quadro");
-        Fact("XP", PtBr.Int(QuestSystem.RewardXp(_ctx.Content, Math.Max(_quest.MinLevel, _quest.RecommendedLevel), _quest)), UiTokens.Success,
+        TagWidth = 150;
+        Tag("trending-up", "Nível", _quest.MaxLevel > 0 ? $"{_quest.MinLevel}–{_quest.MaxLevel}" : $"{_quest.MinLevel}+", UiTokens.Info, "Nível para aceitar");
+        Tag("list", "Etapas", (_quest.Steps.Count + 1).ToString(), color, "Objetivos no mundo + entrega no quadro");
+        Tag("sparkles", "XP", PtBr.Int(QuestSystem.RewardXp(_ctx.Content, Math.Max(_quest.MinLevel, _quest.RecommendedLevel), _quest)), UiTokens.Success,
             _quest.ScalesWithLevel ? "XP de referência\n~Diária: o XP acompanha o nível de quem entrega." : "XP no nível recomendado\n~Abaixo ou acima do nível, rende menos.");
-        Fact("Concluíram", s == null ? "0" : PtBr.Int(s.UniqueCompleters), UiTokens.AccentSoft, "Personagens diferentes que já entregaram");
-        Fact("Fazendo agora", s == null ? "0" : PtBr.Int(s.Active), UiTokens.Info);
+        Tag("circle-check", "Concluíram", s == null ? "0" : PtBr.Int(s.UniqueCompleters), UiTokens.AccentSoft, "Personagens diferentes que já entregaram");
+        Tag("hourglass", "Fazendo agora", s == null ? "0" : PtBr.Int(s.Active), UiTokens.Info, "Personagens com a missão aceita agora");
 
         if (_board != null)
         {

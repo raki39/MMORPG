@@ -24,17 +24,23 @@ Referência para qualquer tela nova. Estilo de dossiê de jogo de gestão: escur
 
 ## Página
 
-1. **Cabeçalho:**
-   - à esquerda, retrato ou emblema (`Art`), que ocupa a altura toda;
+1. **Cabeçalho** (padrão D-068, o mesmo visual e organização em todas as páginas; cada uma mostra o que é dela):
+   - à esquerda, retrato ou emblema (`Art`, 92 px; 76 px nas listas e em Configurações);
    - a trilha discreta;
-   - nome com 28 px seminegrito (24 px na ficha da pessoa) e subtítulo com 13 px;
-   - a faixa de dados (`Fact`): ícone ou marcador, valor de 14 px, rótulo de 11 px e filetes entre células. Fica **numa linha só** (D-068): ao lado do título quando cabe, senão numa linha própria logo abaixo. Valor longo termina em reticências e mostra o texto inteiro no tooltip;
-   - **na ficha da pessoa** (D-068):
-     - à esquerda, o nome e o texto em duas colunas alinhadas (classe e papel | nível; status | zona; pessoa | horas jogadas), com largura fixa;
-     - ao lado, as **etiquetas** (perfil, preferências, personalidade, talento, experiência): sem fundo, todas da mesma largura, filetes entre elas, rótulo curto em cima e ícone e valor embaixo;
-     - o medidor de ritmo à direita;
-   - um destaque à direita (`Highlight`), por exemplo o meio-medidor;
-   - abas de texto com 14 px, alinhadas ao nome; a ativa é dourada e sublinhada;
+   - o **título** com 24 px seminegrito (`TitleText`);
+   - embaixo, o **bloco de identificação** em duas colunas alinhadas (`InfoGrid` com `Info`: ícone e texto de 13 px). O segundo texto de cada linha começa no mesmo lugar. O bloco tem **largura fixa por tipo de página**, para as etiquetas começarem no mesmo ponto em qualquer ficha; texto longo termina em reticências, com tooltip. Nas listas e em Configurações, o bloco é só a descrição;
+   - ao lado, as **etiquetas** (`Tag`): sem fundo, todas da mesma largura na página (`TagWidth`), filetes entre elas, rótulo curto de 12 px em cima, ícone e valor de 13 px embaixo, explicação no tooltip. Ficam numa linha só, ao lado do bloco quando cabem e numa linha própria abaixo quando não (1366);
+   - um **destaque** à direita (`Highlight`) quando faz sentido: o ritmo de jogo na ficha da pessoa, a lotação na zona;
+   - o que vai em cada página:
+
+     | Página | Bloco de identificação | Etiquetas | Destaque |
+     |---|---|---|---|
+     | Pessoa | classe e papel \| nível; status \| zona; pessoa \| horas jogadas | perfil, preferências, personalidade, talento, experiência | ritmo de jogo |
+     | Zona | função e bioma \| níveis; jogadores agora \| áreas; saídas \| capacidade | combate, morte, controle, perigo | lotação |
+     | Área | tipo \| faixa; zona \| jogadores agora; a descrição | combate, morte, tarefas, tamanho (e "leva a") | — |
+     | Missão | categoria \| repetição; quadro \| zona | nível, etapas, XP, concluíram, fazendo agora | — |
+     | Listas e Configurações | a descrição | os números da lista ou do computador | — |
+   - abas de texto com 14 px, alinhadas ao título; a ativa é dourada e sublinhada;
    - ações à direita das abas. Se abas e ações não cabem numa linha (1366×768), as ações com ícone mostram só o ícone, com o rótulo no tooltip, e as abas continuam numa linha só.
 2. **Corpo:** linhas de cards numa **grade de 12 colunas** (`Grid` / `SpanRow`).
    - Cada card ocupa N colunas, com vão de 12 px.

@@ -115,18 +115,19 @@ public partial class SettingsPage : ModalFrame
     {
         _viewport = viewport;
         _changed = changed;
-        var col = new VBoxContainer();
-        col.AddThemeConstantOverride("separation", 2);
-        Art.AddChild(new EmblemBox("settings", UiTokens.Accent) { CustomMinimumSize = new Vector2(72, 72) });
-        col.AddChild(ThemeFactory.Text("Configurações", 28, UiTokens.TextPrimary, UiFonts.SemiBold));
-        col.AddChild(ThemeFactory.Text("Preferências deste computador · salvas automaticamente", UiTokens.FontBody, UiTokens.TextSecondary));
-        Header.AddChild(col);
+        // Cabecalho (D-068): emblema; titulo e a descricao; ao lado, o computador em etiquetas.
+        Art.AddChild(new EmblemBox("settings", UiTokens.Accent) { CustomMinimumSize = new Vector2(76, 76) });
+        Header.AddChild(TitleText("Configurações"));
+        Header.AddChild(Info("", "Preferências deste computador · salvas automaticamente", UiTokens.TextSecondary, UiTokens.TextSecondary, "", null, 380));
+        Header.CustomMinimumSize = new Vector2(380, 0);
         Breadcrumb = "Configurações";
         var screen = DisplayServer.ScreenGetSize(DisplayServer.WindowGetCurrentScreen());
-        Fact("Tela", $"{screen.X}×{screen.Y}", null, "Resolução do monitor atual");
-        Fact("Janela", $"{DisplayServer.WindowGetSize().X}×{DisplayServer.WindowGetSize().Y}");
-        Fact("Atualização", $"{DisplayServer.ScreenGetRefreshRate(DisplayServer.WindowGetCurrentScreen()):0} Hz", null, "Taxa de atualização do monitor");
-        Fact("Renderizador", RenderingServer.GetVideoAdapterName());
+        TagWidth = 230;
+        Tag("maximize", "Tela", $"{screen.X}×{screen.Y}", UiTokens.TextSecondary, "Resolução do monitor atual");
+        Tag("panel-right-open", "Janela", $"{DisplayServer.WindowGetSize().X}×{DisplayServer.WindowGetSize().Y}", UiTokens.TextSecondary, "Tamanho da janela do jogo");
+        Tag("gauge", "Atualização", $"{DisplayServer.ScreenGetRefreshRate(DisplayServer.WindowGetCurrentScreen()):0} Hz", UiTokens.TextSecondary, "Taxa de atualização do monitor");
+        string gpu = RenderingServer.GetVideoAdapterName();
+        Tag("server", "Renderizador", gpu, UiTokens.TextSecondary, $"Renderizador\n~{gpu}");
         AddTab("Vídeo e gráficos", BuildVideo);
         AddTab("Jogo", BuildGame);
         AddTab("Atalhos", BuildKeys);

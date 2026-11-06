@@ -72,29 +72,30 @@ public partial class AreaModal : ModalFrame
 
     private void BuildHeader()
     {
-        var row = new HBoxContainer();
-        row.AddThemeConstantOverride("separation", 20);
-        Art.AddChild(new KindEmblem(_area.Kind) { CustomMinimumSize = new Vector2(84, 84), SizeFlagsVertical = SizeFlags.ShrinkBegin });
-        var col = new VBoxContainer { Alignment = BoxContainer.AlignmentMode.Center, SizeFlagsHorizontal = SizeFlags.ExpandFill };
-        col.AddThemeConstantOverride("separation", 2);
-        col.AddChild(ThemeFactory.Text(_area.Name, 28, UiTokens.TextPrimary, UiFonts.SemiBold));
-        string sub = $"{AreaPalette.Name(_area.Kind)} · {_zone.Name} · {PtBr.Pvp(_zone.Pvp)}" + (_zone.DeathRule != DeathRules.None ? $" · {PtBr.Death(_zone.DeathRule)}" : "")
-            + (AreaKinds.IsPortal(_area.Kind) && _area.LeadsTo.Length > 0 ? $" · leva a {_area.LeadsTo}" : "");
-        col.AddChild(ThemeFactory.Text(sub, UiTokens.FontBody, UiTokens.TextSecondary));
-        var desc = ThemeFactory.Text(_area.Description, UiTokens.FontSmall, UiTokens.TextDisabled);
-        desc.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        desc.CustomMinimumSize = new Vector2(420, 0);
-        col.AddChild(desc);
-        row.AddChild(col);
-        Header.AddChild(row);
-
+        // Cabecalho (D-068): emblema; titulo, o texto que identifica em duas colunas alinhadas e a descricao do
+        // lugar; ao lado, as regras e o tamanho em etiquetas.
+        Art.AddChild(new KindEmblem(_area.Kind) { CustomMinimumSize = new Vector2(92, 92), SizeFlagsVertical = SizeFlags.ShrinkBegin });
+        Header.AddChild(TitleText(_area.Name));
+        Header.CustomMinimumSize = new Vector2(390, 0);   // largura fixa: as etiquetas comecam no mesmo lugar em toda area
         int people = _map.PeopleInArea(_zone.Id, _area.Id).Count;
-        Fact("Zona", _zone.Name, UiTokens.TextPrimary, $"{_zone.Name}\n~Clique em \"Ficha da zona\" para ver a zona inteira.");
-        Fact("Tipo", AreaPalette.Name(_area.Kind), Accent);
-        if (_area.LevelMin > 0) Fact("Faixa", $"{_area.LevelMin}–{_area.LevelMax}", UiTokens.Info, "Faixa de nível recomendada\n~Orientação: o XP vem do nível do desafio de cada tarefa.");
-        Fact("Jogadores agora", people.ToString(), people > 0 ? UiTokens.Info : UiTokens.TextSecondary);
-        Fact("Tarefas", _area.Activities.Count.ToString(), UiTokens.AccentSoft);
-        Fact("Tamanho", $"{_area.Radius * 20} m", UiTokens.TextSecondary, "Diâmetro da área\n~Configurável no conteúdo (editor de áreas futuro).");
+        Header.AddChild(InfoGrid(
+            Info("layers", AreaPalette.Name(_area.Kind), Accent, UiTokens.TextLabel, "", UiFonts.Medium, 176),
+            Info("trending-up", _area.LevelMin > 0 ? $"Faixa {_area.LevelMin}–{_area.LevelMax}" : "Todos os níveis", UiTokens.AccentSoft, UiTokens.AccentSoft,
+                "Faixa de nível recomendada\n~Orientação: o XP vem do nível do desafio de cada tarefa.", UiFonts.SemiBold, 150),
+            Info("map-pin", _zone.Name, UiTokens.TextSecondary, UiTokens.TextLabel, $"{_zone.Name}\n~Clique em \"Ficha da zona\" para ver a zona inteira.", null, 176),
+            Info("users", $"{people} jogadores agora", people > 0 ? UiTokens.Info : UiTokens.TextSecondary, UiTokens.TextLabel, "", null, 150)));
+        if (_area.Description.Length > 0)
+            Header.AddChild(Info("", _area.Description, UiTokens.TextSecondary, UiTokens.TextSecondary, _area.Description, null, 390));
+
+        TagWidth = 170;
+        bool pvp = _zone.Pvp == PvpRules.Open;
+        Tag("swords", "Combate", PtBr.Pvp(_zone.Pvp), pvp ? UiTokens.Danger : UiTokens.Success, $"Regra da zona {_zone.Name}.");
+        Tag("skull", "Morte", PtBr.Death(_zone.DeathRule), _zone.DeathRule == DeathRules.FullLoot ? UiTokens.Danger : _zone.DeathRule == DeathRules.Partial ? UiTokens.Warning : UiTokens.TextSecondary,
+            "Regra de morte da zona\n~O que se perde ao morrer aqui.");
+        Tag("list", "Tarefas", _area.Activities.Count.ToString(), UiTokens.AccentSoft, "Tarefas oferecidas neste lugar.");
+        Tag("ruler", "Tamanho", $"{_area.Radius * 20} m", UiTokens.TextSecondary, "Diâmetro da área\n~Configurável no conteúdo (editor de áreas futuro).");
+        if (AreaKinds.IsPortal(_area.Kind) && _area.LeadsTo.Length > 0)
+            Tag("door-open", "Leva a", _area.LeadsTo, Accent, "Destino da passagem.");
         Actions.AddChild(Action("Aproximar no mapa", "Centraliza a área", () => { _ctx.FocusArea(_zone.Id, _area.Id); Close(); }, primary: true));
         Actions.AddChild(Action("Ficha da zona", $"Abre {_zone.Name}", () => { _ctx.OpenZone(_zone.Id); }));
         if (AreaKinds.IsPortal(_area.Kind))

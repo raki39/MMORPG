@@ -16,12 +16,11 @@ public abstract partial class ListPage : ModalFrame
     protected ListPage(ClientContext ctx, string title, string subtitle, string icon = "list") : base(UiTokens.Accent)
     {
         Ctx = ctx;
-        Art.AddChild(new EmblemBox(icon, UiTokens.Accent) { CustomMinimumSize = new Vector2(72, 72) });
-        var col = new VBoxContainer();
-        col.AddThemeConstantOverride("separation", 2);
-        col.AddChild(ThemeFactory.Text(title, 28, UiTokens.TextPrimary, UiFonts.SemiBold));
-        col.AddChild(ThemeFactory.Text(subtitle, UiTokens.FontBody, UiTokens.TextSecondary));
-        Header.AddChild(col);
+        // Cabecalho (D-068): emblema; titulo e a descricao; ao lado, os numeros da lista em etiquetas.
+        Art.AddChild(new EmblemBox(icon, UiTokens.Accent) { CustomMinimumSize = new Vector2(76, 76) });
+        Header.AddChild(TitleText(title));
+        Header.AddChild(Info("", subtitle, UiTokens.TextSecondary, UiTokens.TextSecondary, "", null, 380));
+        Header.CustomMinimumSize = new Vector2(380, 0);
         Breadcrumb = title;
     }
 
@@ -95,14 +94,15 @@ public partial class PlayersPage : ListPage
     {
         var snap = ctx.Snapshot();
         var chars = snap.ByPerson.Where(v => v != null).Select(v => v!).ToList();
-        Fact("Cadastrados", PtBr.Int(snap.Registered), UiTokens.Success, "Contas criadas no MMORPG");
-        Fact("Conectados", PtBr.Int(snap.Online), UiTokens.Info, "Sessões abertas agora");
-        Fact("Sem conta", PtBr.Int(snap.PersonsTotal - snap.Registered), UiTokens.Warning, "Interessados que ainda não criaram conta");
-        Fact("Inativos", PtBr.Int(snap.Inactive), UiTokens.Warning, "Inativos\n~Mais de 14 dias sem jogar. Voltam com chance menor, conforme a intenção de continuar; inativos por muito tempo desistem.");
-        Fact("Desistiram", PtBr.Int(snap.Quit), UiTokens.Danger, "Desistentes\n~Deixaram o jogo pelo que mais incomodava (veja a ficha). Podem voltar pela saudade; atualizações e convites chegam no M6 e no M7.");
-        Fact("Nível médio", chars.Count == 0 ? "—" : PtBr.Decimal(chars.Average(c => c.Level), 1));
-        Fact("Nível máximo", chars.Count == 0 ? "—" : chars.Max(c => c.Level).ToString());
-        Fact("Favoritos", ctx.Favorites.Count.ToString(), UiTokens.Accent);
+        TagWidth = 120;
+        Tag("users", "Cadastrados", PtBr.Int(snap.Registered), UiTokens.Success, "Contas criadas no MMORPG");
+        Tag("activity", "Conectados", PtBr.Int(snap.Online), UiTokens.Info, "Sessões abertas agora");
+        Tag("user-x", "Sem conta", PtBr.Int(snap.PersonsTotal - snap.Registered), UiTokens.Warning, "Interessados que ainda não criaram conta");
+        Tag("moon", "Inativos", PtBr.Int(snap.Inactive), UiTokens.Warning, "Inativos\n~Mais de 14 dias sem jogar. Voltam com chance menor, conforme a intenção de continuar; inativos por muito tempo desistem.");
+        Tag("circle-x", "Desistiram", PtBr.Int(snap.Quit), UiTokens.Danger, "Desistentes\n~Deixaram o jogo pelo que mais incomodava (veja a ficha). Podem voltar pela saudade; atualizações e convites chegam no M6 e no M7.");
+        Tag("chart-no-axes-column", "Nível médio", chars.Count == 0 ? "—" : PtBr.Decimal(chars.Average(c => c.Level), 1), UiTokens.AccentSoft, "Nível médio dos personagens");
+        Tag("award", "Nível máximo", chars.Count == 0 ? "—" : chars.Max(c => c.Level).ToString(), UiTokens.Accent, "Maior nível no servidor");
+        Tag("star", "Favoritos", ctx.Favorites.Count.ToString(), UiTokens.Accent, "Jogadores que você acompanha (nesta sessão)");
 
         string Cls(string id) => ctx.Content.Classes.TryGetValue(id, out var c) ? c.Name : id;
         string Prof(int id) => ctx.Content.Profiles.TryGetValue(ctx.Persons[id - 1].ProfileId, out var p) ? p.Name : "";
@@ -197,11 +197,12 @@ public partial class ZonesPage : ListPage
     {
         _map = map;
         var zones = ctx.Content.Regions.Values.ToList();
-        Fact("Zonas", zones.Count.ToString());
-        Fact("Cidades", zones.Count(z => z.IsCity).ToString(), UiTokens.Accent);
-        Fact("Com PvP", zones.Count(z => z.Pvp == PvpRules.Open).ToString(), UiTokens.Danger);
-        Fact("Áreas", zones.Sum(z => z.Areas.Count).ToString());
-        Fact("Ocupadas agora", zones.Count(z => map.PeopleInZone(z.Id) > 0).ToString(), UiTokens.Info);
+        TagWidth = 150;
+        Tag("map", "Zonas", zones.Count.ToString(), UiTokens.TextSecondary, "Zonas do mundo");
+        Tag("landmark", "Cidades", zones.Count(z => z.IsCity).ToString(), UiTokens.Accent, "Cidades (comércio, treino, missões)");
+        Tag("swords", "Com PvP", zones.Count(z => z.Pvp == PvpRules.Open).ToString(), UiTokens.Danger, "Zonas com combate entre jogadores");
+        Tag("layers", "Áreas", zones.Sum(z => z.Areas.Count).ToString(), UiTokens.TextSecondary, "Áreas em todas as zonas");
+        Tag("users", "Ocupadas agora", zones.Count(z => map.PeopleInZone(z.Id) > 0).ToString(), UiTokens.Info, "Zonas com alguém agora");
 
         _table = new DataTable<RegionDefinition>(new[]
         {
@@ -242,11 +243,12 @@ public partial class QuestsPage : ListPage
         var stats = ctx.Snapshot().QuestStats;
         var quests = ctx.Content.Quests.Values.ToList();
         QuestStatsView? S(QuestDefinition q) => stats.TryGetValue(q.Id, out var s) ? s : null;
-        Fact("Missões", quests.Count.ToString());
-        Fact("Quadros", ctx.Content.QuestBoards.Count.ToString());
-        Fact("Entregas", PtBr.Int(stats.Values.Sum(s => s.Completed)), UiTokens.Success, "Entregas desde o lançamento");
-        Fact("Em andamento", PtBr.Int(stats.Values.Sum(s => s.Active)), UiTokens.Info);
-        Fact("XP concedido", PtBr.Int(stats.Values.Sum(s => s.XpGranted)), UiTokens.Accent);
+        TagWidth = 150;
+        Tag("scroll-text", "Missões", quests.Count.ToString(), UiTokens.TextSecondary, "Missões no catálogo");
+        Tag("list", "Quadros", ctx.Content.QuestBoards.Count.ToString(), UiTokens.TextSecondary, "Quadros de missões");
+        Tag("circle-check", "Entregas", PtBr.Int(stats.Values.Sum(s => s.Completed)), UiTokens.Success, "Entregas desde o lançamento");
+        Tag("hourglass", "Em andamento", PtBr.Int(stats.Values.Sum(s => s.Active)), UiTokens.Info, "Missões aceitas agora");
+        Tag("sparkles", "XP concedido", PtBr.Int(stats.Values.Sum(s => s.XpGranted)), UiTokens.Accent, "XP entregue pelas missões desde o lançamento");
 
         string Board(QuestDefinition q) => ctx.Content.QuestBoards.TryGetValue(q.BoardId, out var b) ? b.Name : q.BoardId;
         string Zone(QuestDefinition q) => ctx.Content.QuestBoards.TryGetValue(q.BoardId, out var b) ? ctx.ZoneName(b.RegionId) : "";

@@ -62,7 +62,7 @@ public partial class PlayerModal : ModalFrame
 
         var nameRow = new HBoxContainer();
         nameRow.AddThemeConstantOverride("separation", 10);
-        nameRow.AddChild(ThemeFactory.Text(v?.Name ?? _person.Name, 24, UiTokens.TextPrimary, UiFonts.SemiBold));
+        nameRow.AddChild(TitleText(v?.Name ?? _person.Name));
         if (_ctx.Favorites.Contains(_person.Id)) nameRow.AddChild(new Icon("star", 18, UiTokens.Accent));
         var (prev, next) = Neighbors();
         var arrows = new HBoxContainer { SizeFlagsVertical = SizeFlags.ShrinkCenter };
@@ -73,7 +73,8 @@ public partial class PlayerModal : ModalFrame
         Header.AddChild(nameRow);
         // Cabecalho (D-068): a esquerda, o texto que identifica, em duas colunas alinhadas (classe | nivel;
         // status | zona; pessoa | horas jogadas), com largura fixa; ao lado, as etiquetas das caracteristicas.
-        Header.CustomMinimumSize = new Vector2(392, 0);
+        Header.CustomMinimumSize = new Vector2(376, 0);
+        TagWidth = 189;
         if (v != null)
         {
             var prog = _ctx.Content.Progression;
@@ -93,13 +94,13 @@ public partial class PlayerModal : ModalFrame
             var grid = new GridContainer { Columns = 2 };
             grid.AddThemeConstantOverride("h_separation", 22);
             grid.AddThemeConstantOverride("v_separation", 1);
-            grid.AddChild(Seg(icon, $"{cls?.Name} · {RolePt(cls?.Role)}", RoleColor(cls?.Role), UiTokens.TextLabel, "", UiFonts.Medium, 150));
-            grid.AddChild(Seg("award", $"Nível {v.Level}", UiTokens.Accent, UiTokens.Accent, levelTip, UiFonts.SemiBold, 190));
-            grid.AddChild(Seg("activity", stText, stColor, online ? UiTokens.TextPrimary : UiTokens.TextLabel, stTip, UiFonts.Medium, 150));
-            grid.AddChild(Seg("map-pin", _ctx.ZoneName(v.RegionId), UiTokens.TextSecondary, UiTokens.TextLabel,
-                $"{(online ? "Zona atual" : "Última zona")}: {_ctx.ZoneName(v.RegionId)}\n~Conhece {v.KnownRegions} de {_ctx.Content.Regions.Count} zonas. Só zonas conhecidas entram nas decisões; viajar e explorar revelam mais.", null, 190));
-            grid.AddChild(Seg("user", _person.Name, UiTokens.TextSecondary, UiTokens.TextSecondary, $"{_person.Name}\n~Pessoa por trás do personagem.", null, 150));
-            grid.AddChild(Seg("hourglass", $"{PtBr.Decimal(hours)} h jogadas", UiTokens.TextSecondary, UiTokens.TextSecondary, "Horas jogadas\n~Tempo conectado desde o cadastro.", null, 190));
+            grid.AddChild(Info(icon, $"{cls?.Name} · {RolePt(cls?.Role)}", RoleColor(cls?.Role), UiTokens.TextLabel, "", UiFonts.Medium, 140));
+            grid.AddChild(Info("award", $"Nível {v.Level}", UiTokens.Accent, UiTokens.Accent, levelTip, UiFonts.SemiBold, 172));
+            grid.AddChild(Info("activity", stText, stColor, online ? UiTokens.TextPrimary : UiTokens.TextLabel, stTip, UiFonts.Medium, 140));
+            grid.AddChild(Info("map-pin", _ctx.ZoneName(v.RegionId), UiTokens.TextSecondary, UiTokens.TextLabel,
+                $"{(online ? "Zona atual" : "Última zona")}: {_ctx.ZoneName(v.RegionId)}\n~Conhece {v.KnownRegions} de {_ctx.Content.Regions.Count} zonas. Só zonas conhecidas entram nas decisões; viajar e explorar revelam mais.", null, 172));
+            grid.AddChild(Info("user", _person.Name, UiTokens.TextSecondary, UiTokens.TextSecondary, $"{_person.Name}\n~Pessoa por trás do personagem.", null, 140));
+            grid.AddChild(Info("hourglass", $"{PtBr.Decimal(hours)} h jogadas", UiTokens.TextSecondary, UiTokens.TextSecondary, "Horas jogadas\n~Tempo conectado desde o cadastro.", null, 172));
             Header.AddChild(grid);
 
             // Caracteristicas da pessoa: o grupo principal de etiquetas.
@@ -119,7 +120,7 @@ public partial class PlayerModal : ModalFrame
             var e = Engagement();
             var gauge = new SemiGauge
             {
-                CustomMinimumSize = new Vector2(144, 72), Value = Mathf.Clamp(e.Pct / 1.2f, 0, 1), Center = $"{e.Pct * 100:0}%",
+                CustomMinimumSize = new Vector2(140, 70), Value = Mathf.Clamp(e.Pct / 1.2f, 0, 1), Center = $"{e.Pct * 100:0}%",
                 Caption = $"Ritmo de jogo · {e.Days} dia{(e.Days == 1 ? "" : "s")}", Verdict = EngagementVerdict(e.Pct), Color = RatingColor(EngagementScore(e.Pct)),
                 TooltipText = $"Ritmo de jogo\nJogou|{e.Played} min\nPrevisto pela rotina|{e.Expected} min\nDias com sessão|{e.DaysPlayed} de {e.Days}\n~Minutos jogados ÷ minutos previstos pela rotina (sessão típica × dias por semana) nos últimos {e.Days} dias, contando hoje até agora. O engajamento (vontade de jogar) fica no card Humor.",
             };
@@ -127,8 +128,8 @@ public partial class PlayerModal : ModalFrame
         }
         else
         {
-            Header.AddChild(Seg("user", _person.Name, UiTokens.TextSecondary, UiTokens.TextSecondary, "Pessoa"));
-            Header.AddChild(Seg("activity", "Interessado (sem conta)", UiTokens.Warning, UiTokens.TextLabel, "Ainda não criou conta no MMORPG."));
+            Header.AddChild(Info("user", _person.Name, UiTokens.TextSecondary, UiTokens.TextSecondary, "Pessoa"));
+            Header.AddChild(Info("activity", "Interessado (sem conta)", UiTokens.Warning, UiTokens.TextLabel, "Ainda não criou conta no MMORPG."));
         }
 
         bool on = v != null && v.Status != CharacterStatus.Offline;
@@ -143,30 +144,6 @@ public partial class PlayerModal : ModalFrame
             Actions.AddChild(Action("Ver área", $"{area.Name}\n~Abre a página da área onde está.", () => _ctx.OpenArea(z, a), icon: "map"));
         }
         else if (v != null) Actions.AddChild(Action("Ver zona", "Ver zona\n~Abre a página da zona atual.", () => _ctx.OpenZone(v.RegionId), icon: "map"));
-    }
-
-    /// <summary>
-    /// Trecho do texto do cabecalho: icone e texto, com explicacao no tooltip. maxWidth (px) limita o texto
-    /// (reticencias), para o bloco ter a mesma largura para qualquer pessoa.
-    /// </summary>
-    private static Control Seg(string icon, string text, Color iconColor, Color textColor, string tip = "", Font? font = null, int maxWidth = 0)
-    {
-        var p = new TipPanel { TooltipText = tip, MouseFilter = tip.Length > 0 ? MouseFilterEnum.Stop : MouseFilterEnum.Ignore };
-        p.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
-        var r = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
-        r.AddThemeConstantOverride("separation", 7);
-        if (icon.Length > 0) r.AddChild(new Icon(icon, 14, iconColor) { SizeFlagsVertical = SizeFlags.ShrinkCenter });
-        var f = font ?? UiFonts.Regular;
-        var l = ThemeFactory.Text(text, UiTokens.FontBody, textColor, f);
-        if (maxWidth > 0)
-        {
-            float natural = f.GetStringSize(text, HorizontalAlignment.Left, -1, UiTokens.FontBody).X + 2;
-            l.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
-            l.CustomMinimumSize = new Vector2(Mathf.Min(natural, maxWidth), 0);
-        }
-        r.AddChild(l);
-        p.AddChild(r);
-        return p;
     }
 
     /// <summary>Botao so com icone (setas, acoes compactas).</summary>

@@ -20,13 +20,9 @@ public partial class ModalFrame : Control
     private readonly HFlowContainer _tabBar;
     private readonly ScrollContainer _scroll;
     /// <summary>Faixa de dados numa linha so (D-068): ao lado do titulo se couber, senao numa linha abaixo.</summary>
-    private readonly HBoxContainer _facts;
-    private readonly PanelContainer _factsPanel;
-    private readonly ClipRow _factsClip;
+    /// <summary>Etiquetas do cabecalho (D-068): ao lado do titulo se couberem, senao numa linha propria abaixo.</summary>
     private readonly HBoxContainer _tags;
     private readonly ClipRow _tagsClip;
-    /// <summary>Coluna ao lado do titulo: a barra de dados e, embaixo, as etiquetas (D-068).</summary>
-    private readonly VBoxContainer _factsCol;
     private readonly HBoxContainer _top;
     private readonly VBoxContainer _headCol;
     private readonly Label _crumb;
@@ -92,30 +88,18 @@ public partial class ModalFrame : Control
         Header = new VBoxContainer { SizeFlagsVertical = SizeFlags.ShrinkCenter, CustomMinimumSize = new Vector2(220, 0) };
         Header.AddThemeConstantOverride("separation", 2);
         top.AddChild(Header);
-        // Faixa de dados (D-068): uma barra unica, como painel de status, logo depois do titulo.
-        _facts = new HBoxContainer { SizeFlagsVertical = SizeFlags.ShrinkCenter };
-        _facts.AddThemeConstantOverride("separation", 0);
-        _factsPanel = new PanelContainer { Visible = false };
-        _factsPanel.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
-        _factsPanel.AddChild(_facts);
-        _factsClip = new ClipRow { SizeFlagsHorizontal = SizeFlags.ExpandFill };
-        _factsClip.AddChild(_factsPanel);
-        // Etiquetas (caracteristicas) logo abaixo da barra, alinhadas a ela.
+        // Etiquetas (D-068) logo depois do bloco do titulo; ficam com quase toda a sobra da linha (o destaque so
+        // encosta a direita).
         _tags = new HBoxContainer();
         _tags.AddThemeConstantOverride("separation", 0);
-        _tagsClip = new ClipRow { SizeFlagsHorizontal = SizeFlags.ExpandFill, Visible = false };
+        _tagsClip = new ClipRow { SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsVertical = SizeFlags.ShrinkCenter, SizeFlagsStretchRatio = 1000, Visible = false };
         _tagsClip.AddChild(_tags);
-        // A coluna fica com quase toda a sobra da linha (o destaque so encosta a direita).
-        _factsCol = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsVertical = SizeFlags.ShrinkCenter, SizeFlagsStretchRatio = 1000 };
-        _factsCol.AddThemeConstantOverride("separation", 6);
-        _factsCol.AddChild(_factsClip);
-        _factsCol.AddChild(_tagsClip);
-        top.AddChild(_factsCol);
+        top.AddChild(_tagsClip);
         // O destaque encosta a direita, com a faixa de dados ao lado do titulo ou numa linha abaixo.
         Highlight = new HBoxContainer { SizeFlagsVertical = SizeFlags.ShrinkCenter, SizeFlagsHorizontal = SizeFlags.ExpandFill, Alignment = BoxContainer.AlignmentMode.End };
         top.AddChild(Highlight);
-        // Sem largura ao lado do titulo, a faixa desce para uma linha propria (sempre uma linha so).
-        top.Resized += () => CallDeferred(nameof(PlaceFacts));
+        // Sem largura ao lado do titulo, as etiquetas descem para uma linha propria (sempre uma linha so).
+        top.Resized += () => CallDeferred(nameof(PlaceTags));
 
 
         var tabsRow = new HBoxContainer();
@@ -220,41 +204,44 @@ public partial class ModalFrame : Control
     private Dictionary<string, int> _cardScroll = new();
     private void RestoreCardScroll() { ApplyCardScroll(_scroll, _cardScroll); _cardScroll = new(); }
 
-    /// <summary>Largura maxima do valor de um dado; acima disso, reticencias e o texto inteiro no tooltip.</summary>
-    private const int FactValueMax = 230;
+    /// <summary>Titulo do cabecalho (D-068): 24 px seminegrito, igual em todas as paginas.</summary>
+    public static Label TitleText(string title) => ThemeFactory.Text(title, 24, UiTokens.TextPrimary, UiFonts.SemiBold);
 
     /// <summary>
-    /// Dado-chave do cabecalho: valor em cima, rotulo embaixo, separado por filete. A faixa fica numa linha so
-    /// (D-068); valor longo termina em reticencias, com o texto inteiro no tooltip.
+    /// Bloco de identificacao do cabecalho (D-068): linhas em duas colunas alinhadas (o segundo texto de cada
+    /// linha comeca no mesmo lugar). Celulas em ordem: linha 1 esquerda, linha 1 direita, linha 2...
     /// </summary>
-    public void Fact(string label, string value, Color? color = null, string tooltip = "", string icon = "")
+    public static GridContainer InfoGrid(params Control[] cells)
     {
-        _factsPanel.Visible = true;
-        if (_facts.GetChildCount() > 0)
-            _facts.AddChild(new ColorRect { Color = UiTokens.Divider, CustomMinimumSize = new Vector2(1, 30), SizeFlagsVertical = SizeFlags.ShrinkCenter });
-        const int size = 14;
-        var font = UiFonts.Numbers;
-        float natural = font.GetStringSize(value, HorizontalAlignment.Left, -1, size).X + 2;
-        bool trimmed = natural > FactValueMax;
-        if (trimmed) tooltip = tooltip.Length > 0 ? $"{value}\n~{tooltip.Replace("\n", " · ")}" : value;
-        var cell = new TipPanel { TooltipText = tooltip, MouseFilter = tooltip.Length > 0 ? MouseFilterEnum.Stop : MouseFilterEnum.Ignore };
-        cell.AddThemeStyleboxOverride("panel", new StyleBoxEmpty { ContentMarginLeft = 16, ContentMarginRight = 16 });
-        var c = new VBoxContainer();
-        c.AddThemeConstantOverride("separation", 1);
-        var v = new HBoxContainer();
-        v.AddThemeConstantOverride("separation", 7);
-        if (icon.Length > 0) v.AddChild(new Icon(icon, 15, color ?? UiTokens.TextSecondary));
-        else if (color is { } dot && dot != UiTokens.TextPrimary && dot != UiTokens.TextSecondary)
-            v.AddChild(new ColorRect { Color = dot, CustomMinimumSize = new Vector2(7, 7), SizeFlagsVertical = SizeFlags.ShrinkCenter });
-        var text = ThemeFactory.Text(value, size, UiTokens.TextPrimary, font);
-        text.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
-        text.CustomMinimumSize = new Vector2(Mathf.Min(natural, FactValueMax), 0);
-        v.AddChild(text);
-        c.AddChild(v);
-        c.AddChild(ThemeFactory.Text(label, UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Medium));
-        cell.AddChild(c);
-        _facts.AddChild(cell);
-        CallDeferred(nameof(PlaceFacts));
+        var g = new GridContainer { Columns = 2 };
+        g.AddThemeConstantOverride("h_separation", 22);
+        g.AddThemeConstantOverride("v_separation", 1);
+        foreach (var c in cells) g.AddChild(c);
+        return g;
+    }
+
+    /// <summary>
+    /// Trecho do bloco de identificacao: icone e texto, com explicacao no tooltip. maxWidth (px) limita o texto
+    /// (reticencias), para o bloco ter a mesma largura em qualquer ficha.
+    /// </summary>
+    public static Control Info(string icon, string text, Color iconColor, Color textColor, string tip = "", Font? font = null, int maxWidth = 0)
+    {
+        var p = new TipPanel { TooltipText = tip, MouseFilter = tip.Length > 0 ? MouseFilterEnum.Stop : MouseFilterEnum.Ignore };
+        p.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
+        var r = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
+        r.AddThemeConstantOverride("separation", 7);
+        if (icon.Length > 0) r.AddChild(new Icon(icon, 14, iconColor) { SizeFlagsVertical = SizeFlags.ShrinkCenter });
+        var f = font ?? UiFonts.Regular;
+        var l = ThemeFactory.Text(text, UiTokens.FontBody, textColor, f);
+        if (maxWidth > 0)
+        {
+            float natural = f.GetStringSize(text, HorizontalAlignment.Left, -1, UiTokens.FontBody).X + 2;
+            l.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+            l.CustomMinimumSize = new Vector2(Mathf.Min(natural, maxWidth), 0);
+        }
+        r.AddChild(l);
+        p.AddChild(r);
+        return p;
     }
 
     /// <summary>Largura de cada etiqueta (igual para todas e para qualquer pessoa).</summary>
@@ -267,16 +254,16 @@ public partial class ModalFrame : Control
     public void Tag(string icon, string caption, string value, Color iconColor, string tooltip)
     {
         if (_tags.GetChildCount() > 0)
-            _tags.AddChild(new ColorRect { Color = UiTokens.Divider, CustomMinimumSize = new Vector2(1, 34), SizeFlagsVertical = SizeFlags.ShrinkCenter });
+            _tags.AddChild(new ColorRect { Color = UiTokens.Divider, CustomMinimumSize = new Vector2(1, 36), SizeFlagsVertical = SizeFlags.ShrinkCenter });
         var p = new TipPanel { TooltipText = tooltip, MouseFilter = MouseFilterEnum.Stop, CustomMinimumSize = new Vector2(TagWidth, 0) };
         p.AddThemeStyleboxOverride("panel", new StyleBoxEmpty { ContentMarginLeft = 12, ContentMarginRight = 8 });
         var col = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
         col.AddThemeConstantOverride("separation", 2);
-        col.AddChild(ThemeFactory.Text(caption, UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Medium));
+        col.AddChild(ThemeFactory.Text(caption, UiTokens.FontSmall, UiTokens.TextSecondary, UiFonts.Medium));
         var r = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
         r.AddThemeConstantOverride("separation", 7);
-        r.AddChild(new Icon(icon, 14, iconColor) { SizeFlagsVertical = SizeFlags.ShrinkCenter });
-        var v = ThemeFactory.Text(value, UiTokens.FontSmall, UiTokens.TextPrimary, UiFonts.SemiBold);
+        r.AddChild(new Icon(icon, 15, iconColor) { SizeFlagsVertical = SizeFlags.ShrinkCenter });
+        var v = ThemeFactory.Text(value, UiTokens.FontBody, UiTokens.TextPrimary, UiFonts.SemiBold);
         v.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
         v.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         r.AddChild(v);
@@ -284,21 +271,21 @@ public partial class ModalFrame : Control
         p.AddChild(col);
         _tags.AddChild(p);
         _tagsClip.Visible = true;
-        CallDeferred(nameof(PlaceFacts));
+        CallDeferred(nameof(PlaceTags));
     }
 
-    /// <summary>A faixa de dados fica ao lado do titulo se couber; senao, numa linha propria logo abaixo.</summary>
-    private void PlaceFacts()
+    /// <summary>As etiquetas ficam ao lado do bloco do titulo se couberem; senao, numa linha propria logo abaixo.</summary>
+    private void PlaceTags()
     {
-        if (!IsInstanceValid(_factsCol)) return;
-        float need = Mathf.Max(_factsPanel.GetCombinedMinimumSize().X, _tagsClip.Visible ? _tags.GetCombinedMinimumSize().X : 0);
+        if (!IsInstanceValid(_tagsClip) || !_tagsClip.Visible) return;
+        float need = _tags.GetCombinedMinimumSize().X;
         float side = _top.Size.X - Header.GetCombinedMinimumSize().X - Highlight.GetCombinedMinimumSize().X - 28 * 2 - 8;
         bool below = need > side;
-        bool isBelow = _factsCol.GetParent() == _headCol;
+        bool isBelow = _tagsClip.GetParent() == _headCol;
         if (below == isBelow) return;
-        _factsCol.GetParent().RemoveChild(_factsCol);
-        if (below) { _headCol.AddChild(_factsCol); _headCol.MoveChild(_factsCol, _top.GetIndex() + 1); }
-        else { _top.AddChild(_factsCol); _top.MoveChild(_factsCol, Header.GetIndex() + 1); }
+        _tagsClip.GetParent().RemoveChild(_tagsClip);
+        if (below) { _headCol.AddChild(_tagsClip); _headCol.MoveChild(_tagsClip, _top.GetIndex() + 1); }
+        else { _top.AddChild(_tagsClip); _top.MoveChild(_tagsClip, Header.GetIndex() + 1); }
     }
 
     public override void _Ready()

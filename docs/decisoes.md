@@ -2634,4 +2634,13 @@ Itens como instâncias, inventário, equipamento funcional, carteira e aplicaç�
 - **Ações:** ficaram na linha das abas (em 1366 viram ícones).
 - **Nenhuma informação saiu.**
 
+**Padrão em todos os cabeçalhos (pedido do criador antes da etapa 3):**
+- **Estrutura comum:** emblema; título de 24 px; bloco de identificação em duas colunas alinhadas, com largura fixa por tipo de página; etiquetas sem fundo, da mesma largura, com filetes, rótulo curto em cima e ícone e valor embaixo; destaque à direita quando faz sentido. Não é cópia: cada página mostra o que é dela (tabela em `ui-kit.md`).
+- **Zona:** ganhou o medidor de lotação agora. As saídas e a capacidade passaram para o texto.
+- **Área:** a descrição do lugar fica abaixo do bloco.
+- **Missão:** a repetição aparece curta ("Renova todo dia"), com a frase inteira no tooltip.
+- **Listas e Configurações:** a descrição e os números em etiquetas.
+- **Fontes das etiquetas um pouco maiores:** rótulo de 11 para 12 px, valor de 12 para 13 px. Na ficha da pessoa, as etiquetas passaram a 189 px e o bloco a 376 px, para tudo caber na mesma linha.
+- **A faixa de dados antiga (`Fact`) saiu**, porque todas as páginas usam o padrão novo. Nenhuma informação saiu.
+
 **Próximo:** etapa 3, as abas da ficha.
