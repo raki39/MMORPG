@@ -463,26 +463,92 @@ public static class ClassRoles
     public static readonly string[] All = { Tank, Damage, Support };
 }
 
+/// <summary>
+/// Classe do personagem (Etapa 1): identidade, papel, recurso, estatisticas base e crescimento por
+/// nivel. Estatisticas do PERSONAGEM, separadas dos atributos da pessoa (capacidades, personalidade).
+/// As habilidades sao associadas pela lista da classe (ids do conteudo), sem regra por nome no codigo.
+/// </summary>
 public sealed class ClassDefinition : IContentDefinition
 {
     public string Id { get; set; } = "";
     public int Version { get; set; }
     public string Name { get; set; } = "";
+    public string Description { get; set; } = "";
+    /// <summary>Icone da interface (nome Lucide); o cliente usa um generico pelo papel se nao conhecer.</summary>
+    public string Icon { get; set; } = "";
     public string Role { get; set; } = "";
-    /// <summary>Nome do recurso de habilidades (ex.: mana, furia).</summary>
-    public string ResourceName { get; set; } = "";
+    /// <summary>Recurso das habilidades: tipo (regra no combate) e nome exibido.</summary>
+    public ClassResourceDefinition Resource { get; set; } = new();
     public CombatStats BaseStats { get; set; } = new();
     public CombatStats PerLevel { get; set; } = new();
     public List<string> AbilityIds { get; set; } = new();
 }
 
+/// <summary>Tipos de recurso de classe. A regra de cada um (regenerar, gerar em combate) entra no combate.</summary>
+public static class ResourceTypes
+{
+    /// <summary>Mana: comeca cheia e regenera.</summary>
+    public const string Mana = "mana";
+    /// <summary>Furia: comeca vazia e e gerada em combate (causar e receber dano).</summary>
+    public const string Rage = "rage";
+    /// <summary>Energia: reserva pequena que regenera rapido.</summary>
+    public const string Energy = "energy";
+    public static readonly string[] All = { Mana, Rage, Energy };
+    /// <summary>Fora de combate o recurso fica cheio (mana, energia) ou vazio (furia).</summary>
+    public static bool StartsFull(string type) => type != Rage;
+}
+
+public sealed class ClassResourceDefinition
+{
+    public string Type { get; set; } = ResourceTypes.Mana;
+    public string Name { get; set; } = "";
+}
+
+/// <summary>
+/// Estatisticas de combate do personagem (inteiros com unidade): vida e recurso em pontos; ataques e
+/// defesas em pontos; chance de critico em milesimos (50 = 5%); multiplicador de critico em
+/// milesimos do dano normal (1500 = 150%); velocidade de movimento em unidades de mapa por minuto.
+/// </summary>
 public sealed class CombatStats
 {
     public int Health { get; set; }
     public int Resource { get; set; }
-    public int Armor { get; set; }
-    public int Power { get; set; }
-    public int Intelligence { get; set; }
+    public int PhysicalAttack { get; set; }
+    public int MagicAttack { get; set; }
+    public int PhysicalDefense { get; set; }
+    public int MagicDefense { get; set; }
+    public int CritChancePermille { get; set; }
+    public int CritMultiplierPermille { get; set; }
+    public int MoveSpeed { get; set; }
+
+    /// <summary>Chaves estaveis (conteudo e interface), na ordem de exibicao.</summary>
+    public static readonly string[] Keys =
+        { "health", "resource", "physicalAttack", "magicAttack", "physicalDefense", "magicDefense", "critChancePermille", "critMultiplierPermille", "moveSpeed" };
+
+    public int Get(string key) => key switch
+    {
+        "health" => Health, "resource" => Resource, "physicalAttack" => PhysicalAttack, "magicAttack" => MagicAttack,
+        "physicalDefense" => PhysicalDefense, "magicDefense" => MagicDefense, "critChancePermille" => CritChancePermille,
+        "critMultiplierPermille" => CritMultiplierPermille, "moveSpeed" => MoveSpeed,
+        _ => throw new ArgumentException($"Estatística desconhecida: {key}"),
+    };
+
+    public void Set(string key, int value)
+    {
+        switch (key)
+        {
+            case "health": Health = value; break;
+            case "resource": Resource = value; break;
+            case "physicalAttack": PhysicalAttack = value; break;
+            case "magicAttack": MagicAttack = value; break;
+            case "physicalDefense": PhysicalDefense = value; break;
+            case "magicDefense": MagicDefense = value; break;
+            case "critChancePermille": CritChancePermille = value; break;
+            case "critMultiplierPermille": CritMultiplierPermille = value; break;
+            case "moveSpeed": MoveSpeed = value; break;
+            default: throw new ArgumentException($"Estatística desconhecida: {key}");
+        }
+    }
 }
 
 public sealed class AbilityDefinition : IContentDefinition
@@ -490,6 +556,7 @@ public sealed class AbilityDefinition : IContentDefinition
     public string Id { get; set; } = "";
     public int Version { get; set; }
     public string Name { get; set; } = "";
+    /// <summary>Classe de origem (informativo): a associacao vale pela lista abilityIds da classe.</summary>
     public string ClassId { get; set; } = "";
     public int ResourceCost { get; set; }
     public int RangeMeters { get; set; }
@@ -527,8 +594,13 @@ public sealed class EffectDefinition
     public string Type { get; set; } = "";
     public int Value { get; set; }
     public string Element { get; set; } = "";
-    /// <summary>Escala pelo atributo (Power ou Intelligence) em permille.</summary>
+    /// <summary>Escala pela estatistica do personagem (physicalAttack ou magicAttack), em permille.</summary>
     public string ScaleAttribute { get; set; } = "";
+    /// <summary>
+    /// Pode ser critico quando o combate existir (Etapa 1 so declara): dano e cura diretos. Periodicos,
+    /// escudos, buffs, controle e ameaca nao.
+    /// </summary>
+    public bool CanCrit { get; set; }
     public int ScalePermille { get; set; }
     public int ValuePerPulse { get; set; }
     public int IntervalMs { get; set; }

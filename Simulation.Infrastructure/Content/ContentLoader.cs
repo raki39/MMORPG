@@ -39,6 +39,7 @@ public static class ContentLoader
         ContentValidator.ProgressionFile,
         ContentValidator.QuestsFile,
         ContentValidator.TraitsFile,
+        ContentValidator.CombatFile,
     };
 
     public static readonly JsonSerializerOptions JsonOptions = new()
@@ -88,6 +89,7 @@ public static class ContentLoader
         set.Progression = Parse<ProgressionFile>(texts, ContentValidator.ProgressionFile, issues)?.Progression ?? new ProgressionDefinition();
         var quests = Parse<QuestsFile>(texts, ContentValidator.QuestsFile, issues);
         if (quests != null) set.Quests = new QuestCatalog { Settings = quests.Settings, Boards = quests.Boards, Quests = quests.Quests };
+        set.Combat = Parse<CombatFile>(texts, ContentValidator.CombatFile, issues)?.Combat ?? new CombatRulesDefinition();
         var traits = Parse<TraitsFile>(texts, ContentValidator.TraitsFile, issues);
         if (traits != null) set.Quirks = new QuirkCatalogDefinition { Generation = traits.Generation, Effects = traits.Effects, Acquisition = traits.Acquisition, Traits = traits.Traits };
 
@@ -171,6 +173,9 @@ public sealed class QuestsFile : VersionedFile
 }
 
 public sealed class ProgressionFile : VersionedFile { public ProgressionDefinition Progression { get; set; } = new(); }
+
+/// <summary>combat.json (Etapa 1): regras gerais de combate e indice de poder.</summary>
+public sealed class CombatFile : VersionedFile { public CombatRulesDefinition Combat { get; set; } = new(); }
 
 /// <summary>traits.json (P4b): traits da pessoa (no codigo, Quirk).</summary>
 public sealed class TraitsFile : VersionedFile

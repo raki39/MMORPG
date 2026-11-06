@@ -11,7 +11,7 @@
       "maxStack": 1,
       "baseValueCopper": 120,
       "stats": {
-        "power": 4
+        "physicalAttack": 4
       },
       "classIds": [
         "guerreiro"
@@ -27,7 +27,7 @@
       "maxStack": 1,
       "baseValueCopper": 1500,
       "stats": {
-        "power": 12
+        "physicalAttack": 12
       },
       "classIds": [
         "guerreiro"
@@ -43,7 +43,7 @@
       "maxStack": 1,
       "baseValueCopper": 120,
       "stats": {
-        "intelligence": 4
+        "magicAttack": 4
       },
       "classIds": [
         "mago"
@@ -59,7 +59,7 @@
       "maxStack": 1,
       "baseValueCopper": 4200,
       "stats": {
-        "intelligence": 18,
+        "magicAttack": 18,
         "resource": 40
       },
       "classIds": [
@@ -76,8 +76,8 @@
       "maxStack": 1,
       "baseValueCopper": 120,
       "stats": {
-        "intelligence": 3,
-        "power": 2
+        "magicAttack": 3,
+        "physicalAttack": 2
       },
       "classIds": [
         "sacerdote"
@@ -93,7 +93,7 @@
       "maxStack": 1,
       "baseValueCopper": 4200,
       "stats": {
-        "intelligence": 15,
+        "magicAttack": 15,
         "resource": 60
       },
       "classIds": [
@@ -110,7 +110,7 @@
       "maxStack": 1,
       "baseValueCopper": 150,
       "stats": {
-        "armor": 8
+        "physicalDefense": 8
       }
     },
     {
@@ -123,7 +123,7 @@
       "maxStack": 1,
       "baseValueCopper": 1800,
       "stats": {
-        "armor": 22,
+        "physicalDefense": 22,
         "health": 30
       },
       "classIds": [
@@ -140,7 +140,7 @@
       "maxStack": 1,
       "baseValueCopper": 140,
       "stats": {
-        "armor": 3,
+        "physicalDefense": 3,
         "resource": 20
       },
       "classIds": [
@@ -158,8 +158,8 @@
       "maxStack": 1,
       "baseValueCopper": 3900,
       "stats": {
-        "armor": 10,
-        "intelligence": 8,
+        "physicalDefense": 10,
+        "magicAttack": 8,
         "resource": 50
       },
       "classIds": [
@@ -177,10 +177,10 @@
       "maxStack": 1,
       "baseValueCopper": 12000,
       "stats": {
-        "armor": 18,
+        "physicalDefense": 18,
         "health": 60,
-        "power": 6,
-        "intelligence": 6
+        "physicalAttack": 6,
+        "magicAttack": 6
       }
     },
     {

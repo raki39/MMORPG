@@ -40,14 +40,10 @@ public partial class PlayerModal : ModalFrame
     private string ProfileName => _ctx.Content.Profiles.TryGetValue(_person.ProfileId, out var p) ? p.Name : _person.ProfileId;
     private static double Hours(long ticks) => ticks / (double)Simulation.Core.Time.SimTime.TicksPerHour;
 
-    /// <summary>Icone da classe (Lucide), pelo id e, na falta, pelo papel.</summary>
-    public static string ClassIcon(string? classId, string? role) => classId switch
-    {
-        "guerreiro" => "swords",
-        "mago" => "wand-sparkles",
-        "sacerdote" => "cross",
-        _ => role == ClassRoles.Tank ? "shield" : role == ClassRoles.Support ? "heart-pulse" : "sword",
-    };
+    /// <summary>Icone da classe (Lucide): o do conteudo e, se faltar ou for desconhecido, um generico pelo papel.</summary>
+    public static string ClassIcon(ClassDefinition? cls) =>
+        cls != null && cls.Icon.Length > 0 && Icons.Has(cls.Icon) ? cls.Icon
+        : cls?.Role == ClassRoles.Tank ? "shield" : cls?.Role == ClassRoles.Support ? "heart-pulse" : "sword";
 
     // ---------------- Cabecalho ----------------
 
@@ -56,7 +52,7 @@ public partial class PlayerModal : ModalFrame
         var v = View;
         var color = UiTokens.ProfileColor(_person.ProfileId);
         ClassDefinition? cls = v != null && _ctx.Content.Classes.TryGetValue(v.ClassId, out var c) ? c : null;
-        string icon = ClassIcon(v?.ClassId, cls?.Role);
+        string icon = ClassIcon(cls);
         Art.AddChild(new PortraitBadge(_person.AppearanceSeed, color, v?.Name ?? _person.Name)
         {
             CustomMinimumSize = new Vector2(104, 104), SizeFlagsVertical = SizeFlags.ShrinkBegin, ClassIcon = v != null ? icon : "",

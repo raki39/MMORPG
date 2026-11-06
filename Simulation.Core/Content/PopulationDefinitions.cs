@@ -646,8 +646,6 @@ public sealed class BehaviorSettingsDefinition
     public int SessionDurationJitterPermille { get; set; } = 200;
     /// <summary>Tolerancia para terminar a atividade antes de sair (plano 4.3).</summary>
     public int LogoutToleranceMinutes { get; set; } = 15;
-    /// <summary>Velocidade a pe em unidades de mapa por minuto (1 unidade = 10 m; 15 = 9 km/h). Vai para a classe na Etapa 1.</summary>
-    public int WalkSpeed { get; set; } = 15;
     /// <summary>Peso do gosto pelo tipo de atividade.</summary>
     public int WeightAffinity { get; set; } = 450;
     /// <summary>

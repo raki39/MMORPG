@@ -2068,3 +2068,44 @@ Traits passam a ser adquiridas e perdidas por evidência de comportamento repeti
 **Decisão do criador (encerramento da P4):** P4 aprovada e encerrada, com os parâmetros atuais e as limitações documentadas. Os 21 dias jogados para perder uma trait inicial ficam adotados como valor candidato.
 
 **Próximo:** com a P4 encerrada, a próxima etapa do roteiro é a Etapa 1 (personagem).
+
+## D-061 — Personagem: estatísticas, crítico, recurso, velocidade e índice de poder (E1a)
+**Data:** 06/11/2026 · **Estado:** aceita (valores candidatos)
+
+**Escopo da Etapa 1, reduzido pelo criador:**
+- um personagem por pessoa;
+- E1a: modelo e estatísticas;
+- E1b: página Classes com editor;
+- E1c: aba Personagem.
+
+Itens como instâncias, inventário, equipamento funcional, carteira e aplicação das recompensas ficam para depois do combate inicial. As recompensas continuam previstas e não são concedidas em silêncio. Detalhes em `personagem.md`.
+
+**Feito na E1a:**
+- **Classe:**
+  - descrição e ícone;
+  - recurso com tipo (`mana`, `rage`, `energy`) e nome;
+  - estatísticas base e por nível com as chaves novas: Vida, Recurso, Ataque físico e mágico, Defesa física e mágica, Chance de crítico, Multiplicador de dano crítico e Velocidade de movimento.
+- **Renomeações (D-040):** `power` → `physicalAttack`, `intelligence` → `magicAttack`, `armor` → `physicalDefense`; a Defesa mágica é nova.
+- **Cálculo:** base + por nível × (nível − 1), com o nível limitado ao máximo e o crítico limitado por `combat.json`.
+- **Vida e recurso atuais no personagem:** fora de combate, a vida fica cheia e o recurso fica cheio, ou vazio no caso da fúria. Isso vale na criação e a cada nível.
+- **Velocidade de movimento:** saiu de `population.json` e foi para o personagem.
+  - O deslocamento e a estimativa de viagem nas decisões usam a velocidade do personagem.
+  - Os presets mantêm 15 em todas as classes.
+- **Habilidades:**
+  - associadas só pela lista da classe; o `classId` da habilidade ficou informativo, então uma classe nova pode usar habilidades de outra;
+  - `canCrit` declara o crítico, e o validador o aceita só em dano e cura diretos.
+- **Ícone da classe:** vem do conteúdo; se faltar, a interface usa um genérico pelo papel. Saiu o último `switch` por nome de classe.
+- **Índice de poder candidato:** `Poder = 100 × √(Ofensiva × Sobrevivência)`. Ataque principal + 25% do secundário, com o fator médio do crítico; vida efetiva pela defesa média. O nominal fica separado da condição.
+- **Arquivo novo** `combat.json`: limites do crítico, escala da defesa e parâmetros do índice.
+
+**Desvios e motivos:**
+- **Arquivo `combat.json` próprio,** em vez de pôr as regras em `classes.json`: os limites e o índice valem para todas as classes e, depois, para criaturas e equipamento.
+- **Crescimento por nível pode passar dos limites:** o valor efetivo é cortado no cálculo, e só a base é recusada pelo validador. Assim uma classe que cresce em crítico não fica inválida ao mudar o nível máximo.
+- **Tempo de caminhada no mapa:** sem personagem, usa a velocidade da classe mais lenta.
+
+**Medição** (5 seeds × 1.000 × 90 dias):
+- `validation.csv` e `people.csv` iguais aos da P4d;
+- os presets preservam a progressão e o deslocamento;
+- versão do hash 28.
+
+**Próximo:** E1b (página Classes e editor), depois da avaliação do criador.

@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "combat": {
+    "defenseScale": 100,
+    "critChanceMaxPermille": 750,
+    "critMultiplierMinPermille": 1000,
+    "critMultiplierMaxPermille": 5000,
+    "powerIndex": {
+      "secondaryAttackPermille": 250,
+      "physicalDefenseSharePermille": 500,
+      "referenceAttack": 22,
+      "referenceSurvivability": 200,
+      "scale": 100
+    }
+  }
+}

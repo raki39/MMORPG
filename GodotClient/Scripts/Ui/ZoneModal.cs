@@ -199,7 +199,7 @@ public partial class ZoneModal : ModalFrame
             var L = _ctx.Layout;
             int dist = L.LegLength(L.Hub(_zone.Id), L.Gate(_zone.Id, c.To)) + L.Gate(_zone.Id, c.To).DistanceTo(L.Gate(c.To, _zone.Id))
                        + L.LegLength(L.Gate(c.To, _zone.Id), L.Hub(c.To));
-            int walk = _ctx.Content.Behavior.WalkSpeed;
+            int walk = Simulation.Core.Combat.CharacterStats.ReferenceMoveSpeed(_ctx.Content);   // a classe mais lenta (D-061)
             int minutes = (dist + walk - 1) / walk;
             string target = c.To;
             var b = HoverRow(() => _ctx.OpenZone(target), $"Saída para {other.Name}\nCaminhada até o centro de lá|~{minutes} min\nDistância|{dist * 10} m pela estrada\nJogadores lá|{_map.PeopleInZone(c.To)}\nCombate|{PtBr.Pvp(other.Pvp)}\n~Clique para abrir a zona.");

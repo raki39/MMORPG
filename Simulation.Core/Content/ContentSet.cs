@@ -20,6 +20,8 @@ public sealed class ContentSet
     public List<OccupationDefinition> Occupations { get; set; } = new();
     /// <summary>Traits da pessoa (traits.json, P4b).</summary>
     public QuirkCatalogDefinition Quirks { get; set; } = new();
+    /// <summary>Regras gerais de combate e indice de poder (combat.json, Etapa 1).</summary>
+    public CombatRulesDefinition Combat { get; set; } = new();
 
     /// <summary>Hash do conteudo de origem (calculado por quem carregou os arquivos).</summary>
     public string SourceHash { get; set; } = "";
@@ -116,6 +118,8 @@ public sealed class ContentDatabase
         foreach (var t in s.Types) if (t.Id == personalityId) return t;
         return null;
     }
+    /// <summary>Regras gerais de combate e indice de poder (Etapa 1).</summary>
+    public CombatRulesDefinition Combat => Set.Combat;
     /// <summary>Traits (P4b): regras do sorteio e catalogo.</summary>
     public QuirkCatalogDefinition QuirkCatalog => Set.Quirks;
     public IReadOnlyDictionary<string, QuirkDefinition> Quirks { get; }

@@ -178,7 +178,7 @@ public class BehaviorTests
         var routes = new RouteFinder(TestSupport.Preset, layout);
         var start = layout.Center("vila_aurora");
         var target = layout.Spot("floresta_sussurrante", "cacar_lobos");
-        var plan = routes.Plan(start, "vila_aurora", "floresta_sussurrante", target);
+        var plan = routes.Plan(start, "vila_aurora", "floresta_sussurrante", target, 15);
         Assert.True(plan.Reachable);
         // Encruzilhada da vila -> saida, cruza para a floresta, estrada ate a encruzilhada, trilha ate o ponto (comprimento pelas estradas, D-030).
         Assert.Equal(4, plan.Waypoints.Count);
@@ -190,7 +190,7 @@ public class BehaviorTests
         var at = start;
         foreach (var wp in plan.Waypoints) { sum += layout.LegLength(at, wp.Pos); Assert.True(layout.LegLength(at, wp.Pos) >= at.DistanceTo(wp.Pos) - 1); at = wp.Pos; }
         Assert.Equal(sum, plan.Distance);
-        Assert.Equal((sum + TestSupport.Preset.Behavior.WalkSpeed - 1) / TestSupport.Preset.Behavior.WalkSpeed, plan.Minutes);
+        Assert.Equal((sum + 15 - 1) / 15, plan.Minutes);
         // Pontos de atividade ficam dentro da zona.
         foreach (var r in TestSupport.Preset.Regions.Values)
             foreach (var a in r.AllActivities())

@@ -137,7 +137,7 @@
   },
   "behavior": {
     "registrationDayWeights": [30, 22, 16, 12, 9, 6, 5],
-    "sessionStartJitterMinutes": 75, "sessionDurationJitterPermille": 200, "logoutToleranceMinutes": 15, "walkSpeed": 15, "weightAffinity": 450, "specialtyAffinityPermille": 50, "specialtyAffinityCap": 50,
+    "sessionStartJitterMinutes": 75, "sessionDurationJitterPermille": 200, "logoutToleranceMinutes": 15, "weightAffinity": 450, "specialtyAffinityPermille": 50, "specialtyAffinityCap": 50,
     "weightReward": 300, "weightSocial": 150, "weightRisk": 350, "weightTravel": 250, "weightCrowding": 200,
     "timeBudgetPenalty": 400, "questOfferWeight": 210, "questDeliverWeight": 220, "questDeliverPerExtra": 90, "questStepWeight": 250,
     "noise": 50, "activityDurationMin": 800, "activityDurationMax": 1250, "idleRethinkMinutes": 20

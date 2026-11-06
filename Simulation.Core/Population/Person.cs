@@ -688,7 +688,10 @@ public sealed class QuestRecord
     public long LastCompletedDay { get; internal set; } = -1;
 }
 
-/// <summary>Personagem jogavel (plano 4.1). Criado no registro; combate e inventario no M3/M5.</summary>
+/// <summary>
+/// Personagem jogavel (plano 4.1): classe, nivel, XP, estatisticas (calculadas pela classe e o nivel,
+/// Combat.CharacterStats) e vida e recurso atuais. Criado no registro; combate e inventario depois.
+/// </summary>
 public sealed class Character
 {
     /// <summary>Ultimo reves (instante; -1 = nenhum): o Persistente mantem o plano depois dele (P4c).</summary>
@@ -837,6 +840,9 @@ public sealed class Character
     public string ClassId { get; }
     public int Level { get; internal set; } = 1;
     public long Experience { get; internal set; }
+    /// <summary>Vida e recurso atuais (Etapa 1). Fora de combate: vida cheia; recurso cheio ou vazio (furia).</summary>
+    public int CurrentHealth { get; internal set; }
+    public int CurrentResource { get; internal set; }
     /// <summary>Ouro em cobre (inteiro). Ouro do MMORPG, nunca dinheiro da empresa.</summary>
     public long GoldCopper { get; internal set; }
     /// <summary>Regiao onde o personagem esta (ou de onde partiu, se viajando).</summary>

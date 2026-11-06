@@ -270,6 +270,7 @@ public sealed class BehaviorSystem
         string start = _w.Content.World.StartingRegionId;
         var ch = _w.AddCharacter(account.Id, p.Id, nick, classId, start);
         ch.Position = _routes.Layout.Hub(start);
+        Combat.CharacterStats.RestoreOutOfCombat(_w.Content, ch);
         account.ActiveCharacterId = ch.Id;
         p.AccountId = account.Id;
         p.CharacterId = ch.Id;
@@ -1290,7 +1291,8 @@ public sealed class BehaviorSystem
         var wp = ch.Waypoints[0];
         ch.Waypoints.RemoveAt(0);
         long dist = _routes.Layout.LegLength(ch.Position, wp.Pos);   // pela estrada (D-030)
-        long ticks = Math.Max(1, (dist * SimTime.TicksPerMinute + _w.Content.Behavior.WalkSpeed - 1) / _w.Content.Behavior.WalkSpeed);
+        long speed = Combat.CharacterStats.MoveSpeed(_w.Content, ch);   // do personagem (classe e nivel, D-061)
+        long ticks = Math.Max(1, (dist * SimTime.TicksPerMinute + speed - 1) / speed);
         ch.Status = CharacterStatus.Traveling;
         ch.MoveTo = wp.Pos;
         ch.MoveEntersZone = wp.EntersZone;
@@ -1485,6 +1487,8 @@ public sealed class BehaviorSystem
         }
         if (ch.Level > before)
         {
+            // Novo nivel: estatisticas novas e condicao restaurada (vida cheia; recurso pela regra do tipo).
+            Combat.CharacterStats.RestoreOutOfCombat(_w.Content, ch);
             RequestPlanReview(ch, "level_up");
             _goals.OnLevelUp(_w.GetPerson(ch.PersonId), ch);
         }

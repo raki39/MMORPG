@@ -53,6 +53,7 @@ public static class ActivityScoring
         if (person != null && QuirkSystem.Active(content, person, QuirkIds.Indeciso)) noisePermille = noisePermille * fx.Indeciso.NoisePermille / 1000;
         var options = new List<ScoredOption>();
         int remaining = (int)Math.Max(0, (ch.SessionEndTick - now) / Time.SimTime.TicksPerMinute);
+        int moveSpeed = Combat.CharacterStats.MoveSpeed(content, ch);
 
         foreach (var regionId in ch.KnownRegions)
         {
@@ -94,7 +95,7 @@ public static class ActivityScoring
                 }
 
                 // Caminho real: ate o portao, pelas zonas, e ate o ponto da atividade (fora da estrada).
-                var plan = routes.Plan(ch.Position, ch.RegionId, region.Id, routes.Layout.Spot(region.Id, a.Id));
+                var plan = routes.Plan(ch.Position, ch.RegionId, region.Id, routes.Layout.Spot(region.Id, a.Id), moveSpeed);
                 if (!plan.Reachable) continue;
                 int travel = plan.Minutes;
 

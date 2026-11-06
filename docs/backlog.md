@@ -90,12 +90,11 @@ Uma etapa por vez, fechada por inteiro (testes, validação, documentação, exp
      - ~~P4d: aquisição e perda (Persistente e Rancoroso)~~ (D-060, `traits.md` seção 7);
        - depois: Maratonista por maratonas repetidas (outra entrega); Traumatizado, Matador de novatos, Protetor de novatos e Líder nato com combate, PvP e grupos;
    - a reputação do personagem entra com a Etapa 3 e as finanças com o M7.
-2. **Etapa 1 — O personagem** (decisões no D-040):
-   - estatísticas diretas por classe + nível + equipamento: vida, recurso de classe, ataque e defesa físicos e mágicos, velocidade de movimento (fórmulas no conteúdo; nomes sem confundir com os atributos do jogador);
-   - revisão das 3 classes e das 12 magias;
-   - itens como instâncias (dono, origem) e equipamento inicial;
-   - inventário e carteira de ouro com fontes registradas;
-   - aba "Personagem".
+2. **Etapa 1 — O personagem** (D-040; escopo reduzido no D-061, `personagem.md`):
+   - ~~E1a: modelo, estatísticas (com crítico), recurso por tipo, velocidade do personagem e índice de poder candidato~~ (D-061);
+   - E1b: página Classes com criar, editar e duplicar; conteúdo personalizado persistido, presets preservados, ids estáveis; edição aplicada direto aos personagens existentes, com registro;
+   - E1c: aba "Personagem" (classe, nível, XP, vida, recurso, estatísticas e decomposição do cálculo); Inventário e Banco não aparecem como prontos;
+   - depois do combate inicial: itens como instâncias, inventário, equipamento funcional, carteira e aplicação das recompensas; personagens alternativos numa etapa posterior.
 3. **Etapa 2 — Combate PvE (M3):**
    - ideia do criador a detalhar nesta etapa: percepção 360° separada do alcance, área de caça como território com borda e perseguição limitada, caça como atividade com vários encontros e "matar monstros" como ação reutilizável ([ideia-percepcao-caca.md](ideia-percepcao-caca.md));
    - criaturas vivas por área e combate determinístico sem 3D;

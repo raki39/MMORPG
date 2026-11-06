@@ -143,7 +143,7 @@ public class ContentTests
         var dir = TestSupport.NewTempDir();
         TestSupport.CopyDirectory(TestSupport.PresetFolder, dir);
         var path = Path.Combine(dir, "classes.json");
-        File.WriteAllText(path, File.ReadAllText(path).Replace("\"resourceName\": \"Fúria\"", "\"resourceName\": \"Fúria\", \"vidaa\": 10"));
+        File.WriteAllText(path, File.ReadAllText(path).Replace("\"name\": \"Fúria\"", "\"name\": \"Fúria\", \"vidaa\": 10"));
 
         var r = ContentLoader.LoadFolder(dir);
         Assert.False(r.Success);

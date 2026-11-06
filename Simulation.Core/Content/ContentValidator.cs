@@ -52,6 +52,7 @@ public static class ContentValidator
     public const string LocalitiesFile = "localities.json";
     public const string OccupationsFile = "occupations.json";
     public const string TraitsFile = "traits.json";
+    public const string CombatFile = "combat.json";
 
     private static readonly Regex IdPattern = new("^[a-z][a-z0-9_]*$", RegexOptions.CultureInvariant);
 
@@ -88,6 +89,7 @@ public static class ContentValidator
         ValidateProgression(set, v);
         ValidateQuests(set, classIds, itemIds, v);
         ValidateQuirks(set, v);
+        ValidateCombat(set, v);
 
         return v.Issues;
     }
@@ -483,43 +485,60 @@ public static class ContentValidator
 
     private static void ValidateClasses(ContentSet set, HashSet<string> abilityIds, Collector v)
     {
+        var r = set.Combat;
         for (int i = 0; i < set.Classes.Count; i++)
         {
             var c = set.Classes[i];
             string p = $"classes[{i}]";
             v.Require(ClassesFile, p + ".name", c.Name);
-            v.Require(ClassesFile, p + ".resourceName", c.ResourceName);
+            v.Require(ClassesFile, p + ".resource.name", c.Resource.Name);
+            v.OneOf(ClassesFile, p + ".resource.type", c.Resource.Type, ResourceTypes.All);
             v.OneOf(ClassesFile, p + ".role", c.Role, ClassRoles.All);
             if (c.BaseStats.Health <= 0) v.Error(ClassesFile, p + ".baseStats.health", "Vida base deve ser > 0.");
+            if (c.BaseStats.MoveSpeed <= 0) v.Error(ClassesFile, p + ".baseStats.moveSpeed", "A velocidade de movimento precisa ser maior que zero.");
             NonNegativeStats(ClassesFile, p + ".baseStats", c.BaseStats, v);
             NonNegativeStats(ClassesFile, p + ".perLevel", c.PerLevel, v);
+            // Critico: chance em milesimos ate o teto; multiplicador em milesimos do dano normal (1000 = sem bonus).
+            // O crescimento por nivel pode passar dos limites: o valor efetivo e limitado no calculo.
+            if (c.BaseStats.CritChancePermille > r.CritChanceMaxPermille)
+                v.Error(ClassesFile, p + ".baseStats.critChancePermille", $"Use até {r.CritChanceMaxPermille} (teto em combat.json).");
+            if (c.BaseStats.CritMultiplierPermille < r.CritMultiplierMinPermille || c.BaseStats.CritMultiplierPermille > r.CritMultiplierMaxPermille)
+                v.Error(ClassesFile, p + ".baseStats.critMultiplierPermille", $"Use de {r.CritMultiplierMinPermille} a {r.CritMultiplierMaxPermille} (1500 = 150% do dano).");
             if (c.AbilityIds.Count == 0) v.Error(ClassesFile, p + ".abilityIds", "Classe precisa de ao menos uma habilidade utilizável.");
+            if (c.AbilityIds.Distinct(StringComparer.Ordinal).Count() != c.AbilityIds.Count) v.Error(ClassesFile, p + ".abilityIds", "Habilidade repetida.");
+            // A associacao vale pela lista da classe; a classe de origem da habilidade e so informativa.
             for (int k = 0; k < c.AbilityIds.Count; k++)
-            {
-                string id = c.AbilityIds[k];
-                if (!abilityIds.Contains(id))
-                    v.Error(ClassesFile, $"{p}.abilityIds[{k}]", $"Habilidade '{id}' não existe.");
-                else
-                {
-                    var a = set.Abilities.First(x => x.Id == id);
-                    if (a.ClassId != c.Id)
-                        v.Error(ClassesFile, $"{p}.abilityIds[{k}]", $"Habilidade '{id}' pertence a classe '{a.ClassId}'.");
-                }
-            }
+                if (!abilityIds.Contains(c.AbilityIds[k]))
+                    v.Error(ClassesFile, $"{p}.abilityIds[{k}]", $"Habilidade '{c.AbilityIds[k]}' não existe.");
         }
     }
 
     private static void NonNegativeStats(string file, string p, CombatStats s, Collector v)
     {
-        if (s.Health < 0) v.Error(file, p + ".health", "Valor negativo.");
-        if (s.Resource < 0) v.Error(file, p + ".resource", "Valor negativo.");
-        if (s.Armor < 0) v.Error(file, p + ".armor", "Valor negativo.");
-        if (s.Power < 0) v.Error(file, p + ".power", "Valor negativo.");
-        if (s.Intelligence < 0) v.Error(file, p + ".intelligence", "Valor negativo.");
+        foreach (var key in CombatStats.Keys)
+            if (s.Get(key) < 0) v.Error(file, p + "." + key, "Valor negativo.");
     }
 
-    private static readonly string[] ScaleAttributes = { "", "power", "intelligence" };
-    private static readonly string[] BuffAttributes = { "health", "resource", "armor", "power", "intelligence", "speed", "damageTaken", "healingTaken" };
+    /// <summary>combat.json (Etapa 1): limites das estatisticas e indice de poder.</summary>
+    private static void ValidateCombat(ContentSet set, Collector v)
+    {
+        const string f = CombatFile;
+        var r = set.Combat;
+        var pi = r.PowerIndex;
+        foreach (var (name, value, lo, hi) in new (string, int, int, int)[]
+        {
+            ("defenseScale", r.DefenseScale, 1, 100_000), ("critChanceMaxPermille", r.CritChanceMaxPermille, 0, 1000),
+            ("critMultiplierMinPermille", r.CritMultiplierMinPermille, 1000, 10_000), ("critMultiplierMaxPermille", r.CritMultiplierMaxPermille, 1000, 10_000),
+            ("powerIndex.secondaryAttackPermille", pi.SecondaryAttackPermille, 0, 1000), ("powerIndex.physicalDefenseSharePermille", pi.PhysicalDefenseSharePermille, 0, 1000),
+            ("powerIndex.referenceAttack", pi.ReferenceAttack, 1, 1_000_000), ("powerIndex.referenceSurvivability", pi.ReferenceSurvivability, 1, 100_000_000),
+            ("powerIndex.scale", pi.Scale, 1, 100_000),
+        })
+            if (value < lo || value > hi) v.Error(f, "combat." + name, $"Use de {lo} a {hi}.");
+        if (r.CritMultiplierMaxPermille < r.CritMultiplierMinPermille) v.Error(f, "combat.critMultiplierMaxPermille", "O máximo não pode ser menor que o mínimo.");
+    }
+
+    private static readonly string[] ScaleAttributes = { "", "physicalAttack", "magicAttack" };
+    private static readonly string[] BuffAttributes = CombatStats.Keys.Concat(new[] { "damageTaken", "healingTaken" }).ToArray();
 
     private static void ValidateAbilities(ContentSet set, HashSet<string> classIds, Collector v)
     {
@@ -528,7 +547,7 @@ public static class ContentValidator
             var a = set.Abilities[i];
             string p = $"abilities[{i}]";
             v.Require(AbilitiesFile, p + ".name", a.Name);
-            if (!classIds.Contains(a.ClassId)) v.Error(AbilitiesFile, p + ".classId", $"Classe '{a.ClassId}' não existe.");
+            if (a.ClassId.Length > 0 && !classIds.Contains(a.ClassId)) v.Error(AbilitiesFile, p + ".classId", $"Classe '{a.ClassId}' não existe.");
             if (a.ResourceCost < 0) v.Error(AbilitiesFile, p + ".resourceCost", "Custo não pode ser negativo.");
             if (a.RangeMeters < 0 || a.RangeMeters > 100) v.Error(AbilitiesFile, p + ".rangeMeters", "Alcance deve estar entre 0 e 100 m.");
             if (a.CastTimeMs < 0 || a.CastTimeMs > 10_000) v.Error(AbilitiesFile, p + ".castTimeMs", "Tempo de lançamento deve estar entre 0 e 10000 ms.");
@@ -553,6 +572,8 @@ public static class ContentValidator
         if (fx.RadiusMeters < 0 || fx.RadiusMeters > 50) v.Error(f, p + ".radiusMeters", "Raio deve estar entre 0 e 50 m.");
         if (fx.MaxTargets < 0) v.Error(f, p + ".maxTargets", "Máximo de alvos não pode ser negativo.");
         if (fx.RadiusMeters > 0 && fx.MaxTargets == 0) v.Error(f, p + ".maxTargets", "Efeito em área precisa de máximo de alvos.");
+        if (fx.CanCrit && fx.Type is not (EffectTypes.Damage or EffectTypes.Heal))
+            v.Error(f, p + ".canCrit", "Só dano e cura diretos podem ser críticos.");
 
         switch (fx.Type)
         {
@@ -1005,7 +1026,6 @@ public static class ContentValidator
             ("sessionStartJitterMinutes", bh.SessionStartJitterMinutes),
             ("sessionDurationJitterPermille", bh.SessionDurationJitterPermille),
             ("logoutToleranceMinutes", bh.LogoutToleranceMinutes),
-            ("walkSpeed", bh.WalkSpeed),
             ("weightAffinity", bh.WeightAffinity),
             ("specialtyAffinityPermille", bh.SpecialtyAffinityPermille),
             ("specialtyAffinityCap", bh.SpecialtyAffinityCap),
@@ -1025,7 +1045,6 @@ public static class ContentValidator
             ("idleRethinkMinutes", bh.IdleRethinkMinutes)
         })
             if (value < 0) v.Error(PopulationFile, "behavior." + name, "O valor não pode ser negativo.");
-        if (bh.WalkSpeed <= 0) v.Error(PopulationFile, "behavior.walkSpeed", "A velocidade precisa ser maior que zero.");
         // Reforco da especialidade: pequeno e limitado por definicao (a preferencia e o gosto principal).
         if (bh.SpecialtyAffinityPermille > 200) v.Error(PopulationFile, "behavior.specialtyAffinityPermille", "Use de 0 a 200 (até 20% da especialidade).");
         if (bh.SpecialtyAffinityCap > 200) v.Error(PopulationFile, "behavior.specialtyAffinityCap", "Use de 0 a 200 (na escala de 0 a 1000 da afinidade).");
