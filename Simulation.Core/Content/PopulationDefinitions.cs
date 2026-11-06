@@ -385,6 +385,12 @@ public sealed class GoalSettingsDefinition
     /// (zonas). Sem relogio: nada libera so pelo tempo.
     /// </summary>
     public bool ReadoptBlockEnabled { get; set; }
+    /// <summary>
+    /// Meta de chegar a um nivel abandonada bloqueia qualquer alvo ate a proxima subida de nivel (D-067). Sem
+    /// isso, o bloqueio do D-055 valia so para o mesmo alvo, e a meta voltava logo com outro (o nivel subiu
+    /// durante a meta largada), no mesmo estado.
+    /// </summary>
+    public bool LevelBlockAnyTarget { get; set; }
     /// <summary>Peso maximo de uma meta na nota de uma opcao (com comprometimento 1000).</summary>
     public int Weight { get; set; } = 200;
     /// <summary>Teto da soma das metas numa opcao (permille do peso).</summary>

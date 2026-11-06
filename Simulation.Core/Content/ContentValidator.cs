@@ -1366,6 +1366,16 @@ public static class ContentValidator
             ("unlockLevelsAhead", jr.UnlockLevelsAhead, 0, 50), ("objectiveValue", jr.ObjectiveValue, 0, 3000), ("progressWeight", jr.ProgressWeight, 0, 3000),
         })
             if (value < lo || value > hi) v.Error(f, "settings.journal." + name, $"Use de {lo} a {hi}.");
+        var ac = jr.Acceptance;
+        foreach (var (name, value, lo, hi) in new (string, int, int, int)[]
+        {
+            ("minInterest", ac.MinInterest, 0, 1000), ("rewardReferencePermille", ac.RewardReferencePermille, 1, 3000),
+            ("unlockRelevance", ac.UnlockRelevance, 0, 1000), ("goalRelevance", ac.GoalRelevance, 0, 1000),
+            ("deliverDeadlineMarginMinutes", ac.DeliverDeadlineMarginMinutes, 0, 240), ("deliverDeadlineWeight", ac.DeliverDeadlineWeight, 0, 2000),
+        })
+            if (value < lo || value > hi) v.Error(f, "settings.journal.acceptance." + name, $"Use de {lo} a {hi}.");
+        if ((jr.ConsistentVisits || ac.Enabled) && !jr.Enabled)
+            v.Error(f, "settings.journal", "A visita coerente e o aceite avaliado precisam do diário ligado (journal.enabled).");
         var boardIds = CheckIds(cat.Boards, f, "boards", v);
         ActivityDefinition? Find(string region, string activity) =>
             set.Regions.FirstOrDefault(r => r.Id == region)?.FindActivity(activity);

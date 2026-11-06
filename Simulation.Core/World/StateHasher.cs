@@ -11,7 +11,7 @@ namespace Simulation.Core.World;
 /// </summary>
 public static class StateHasher
 {
-    public const int FormatVersion = 32;
+    public const int FormatVersion = 33;
 
     public static string Compute(WorldState w) => Compute(w, includeContentId: true);
 
@@ -87,7 +87,7 @@ public static class StateHasher
             foreach (var kv in c.QuestHistory)
             {
                 h.Str(kv.Key); h.Int(kv.Value.Completions); h.Long(kv.Value.LastCompletedDay);
-                h.Int(kv.Value.Drops); h.Long(kv.Value.DroppedDay); h.Int(kv.Value.SavedStepIndex); h.Int(kv.Value.SavedStepMinutes);
+                h.Int(kv.Value.Drops); h.Long(kv.Value.DroppedDay); h.Int(kv.Value.SavedStepIndex); h.Int(kv.Value.SavedStepMinutes); h.Bool(kv.Value.IdleExpired);
             }
             h.Long(c.DailyDay);
             foreach (var kv in c.DailyByBoard) { h.Str(kv.Key); h.Int(kv.Value); }

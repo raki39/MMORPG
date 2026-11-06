@@ -2445,3 +2445,94 @@ Itens como instâncias, inventário, equipamento funcional, carteira e aplicaç�
   - "andando ou esperando" piorou: já estava fora, agora com mais idas ao quadro.
 
 **Próximo:** com a revisão dos abandonos fechada, retomar a E1b depois da avaliação do criador.
+
+## D-067 — Visitas ao quadro e aceite das missões
+**Data:** 06/11/2026 · **Estado:** aceita (valores candidatos), aguardando a avaliação do criador
+
+**Pedido do criador** (antes de retomar a E1b):
+- conferir se a pessoa avalia a diária ou a aceita só por estar no quadro;
+- separar o deslocamento para aceitar, entregar e liberar vagas; visitas sem resultado; reaceite da mesma diária depois de expirar;
+- conferir se uma visita aproveita as entregas e os aceites pertinentes; diárias expiradas com e sem progresso;
+- conferir os abandonos repetidos que restam: mudança real pode justificar reconsiderar, o mesmo estado não.
+- Corrigir automatismo e viagem redundante sem perseguir porcentagem e sem mudar outros pesos. Na conferência:
+  - a viabilidade da diária até o reset considera as janelas reais de jogo;
+  - o aproveitamento de viagem entre missões usa o deslocamento adicional real, sem zerar a distância só por ser a mesma zona;
+  - o bloqueio da meta de nível afeta só a readoção.
+
+**Diagnóstico** (registros do D-066, 5 seeds × 1.000 × 90 dias; `baselines/metas-missao/d067_diagnostico.md`):
+- **Aceite automático:** em toda visita, a pessoa enchia as vagas na ordem do quadro (principal, secundária, diária, pela proximidade de nível). Fora a missão da meta e o gosto do Independente, nada pesava Preferências, lugar da etapa ou reset.
+- **Deslocamento ao quadro:** 96,7 mil h (8,3% do tempo jogado):
+  - para aceitar, 35,9 mil h (das quais 4,9 mil h com troca, para liberar vaga);
+  - para entregar, 60,8 mil h;
+  - a visita de entrega já aceitava junto (76,8 mil de 127,9 mil).
+- **Visitas sem resultado: 39,5 mil**, 36,7 mil logo depois de outra igual. Defeito: a decisão de ir ao quadro contava a vaga ou a troca de qualquer oferta, e a ação no quadro guardava a vaga da meta de outro quadro ou tentava a troca só com a primeira oferta. A pessoa voltava a escolher o quadro sem fazer nada.
+- **Diárias:** 169,5 mil aceitas; 62,8 mil entregues; 105,1 mil expiradas:
+  - 76,1 mil sem nenhuma etapa feita;
+  - 4,5 mil com trabalho parcial;
+  - 24,5 mil com a etapa feita e sem entrega.
+- **Mesmo estado, mesmo ciclo:** 63,9 mil reaceites da mesma diária depois de expirar intocada, com cadeias de até 73 seguidas.
+- **Valor da troca:** só o encaixe de nível. A diária no nível (5% do XP do nível) valia mais que uma secundária um pouco acima (28%).
+- **Abandonos repetidos** (254 pares):
+  - praticar atividade e descobrir zona voltavam depois de mudança real (voltou a praticar, 4 vezes ou mais em 207 de 331 casos, mediana de 11 dias; subiu de nível);
+  - defeito em chegar a um nível: 163 readoções sem subir de nível. O bloqueio do D-055 valia só para o mesmo alvo, e o alvo muda quando o nível sobe durante a meta largada.
+
+**Feito** (`quests.json`, `settings.journal`; `population.json`, `goals`):
+1. **Visita coerente** (`consistentVisits`, defeito):
+   - um só plano da visita, usado pela decisão de ir ao quadro e pela ação nele: a missão da meta (com troca, se preciso), as ofertas que a pessoa quer até encher as vagas (guardando uma para a meta de outro quadro) e uma troca de prioridade que não larga o que acabou de aceitar;
+   - na decisão, o plano vale para o instante da chegada (o tempo até o reset corre na viagem).
+2. **Aceite avaliado** (`acceptance`):
+   - **motivação** (permille): o maior motivo entre:
+     - a recompensa no nível: XP da recompensa sobre o XP do nível; uma principal no nível vale 1000;
+     - a relevância: principal com a campanha como objetivo, 1000; liberar uma missão no nível, 800; meta de praticar o tema de uma etapa, 1000;
+     - o gosto pelo tema das etapas (Preferências).
+   - **vezes o deslocamento adicional**, com a mesma escala das metas (−8 por minuto, até −500):
+     - do quadro até a primeira etapa;
+     - ou, se for menor, o desvio real a partir da etapa de outra missão ativa: (de lá até esta etapa) + (desta etapa até o quadro) − (de lá até o quadro). No mesmo ponto, zero; em outro ponto da mesma zona, o desvio pela estrada.
+   - **mínimo de 400**, a escala do gosto que o Independente já exige. A missão da meta é sempre aceita.
+   - **prazo da diária:** ir, fazer e voltar ao quadro precisa caber no tempo de jogo que a pessoa ainda tem antes do reset: o resto da sessão e as janelas livres da rotina (as mesmas que limitam as sessões e as voltas). Não precisa caber numa sessão só.
+   - **mesmo estado:** a diária que expirou sem nenhuma etapa feita não volta até a pessoa fazer a atividade da etapa ou ter meta de praticar o tema.
+   - **valor da missão na troca:** o rendimento passa a ser o da recompensa no nível, e o gosto conta junto com a história.
+   - **registro:** `quest_accepted` traz o motivo e se aproveitou a viagem de outra missão; `quest_expired` diz quando nenhuma etapa foi feita. A ficha da pessoa mostra os dois.
+3. **Prazo da diária pronta** (`deliverDeadlineMarginMinutes`: 30): ir entregar pesa +220 quando o reset ou o fim previsto da sessão estão a até a viagem mais 30 minutos.
+4. **Meta de nível** (`levelBlockAnyTarget`, defeito): largada, bloqueia qualquer alvo até subir de nível. Afeta só a readoção: atividades, XP e subida de nível seguem iguais (teste).
+- **Hash:** versão 33.
+
+**Medição nas mesmas pessoas** (`baselines/metas-missao/d067_variantes.md`). Com tudo desligado, o resultado é idêntico ao D-066.
+
+| | Base (D-066) | Defeitos | + aceite avaliado | + prazo da pronta (preset) |
+|---|---|---|---|---|
+| visitas ao quadro | 300.580 | 270.268 | 154.582 | 166.200 |
+| visitas sem resultado | 39.458 | 0 | 94 | 97 |
+| viagem ao quadro (h) | 96.719 | 96.917 | 60.207 | 63.910 |
+| — para aceitar (com troca) / entregar | 35.905 (4.917) / 60.756 | 35.964 (3.880) / 60.890 | 16.619 (1.190) / 43.527 | 16.130 (1.201) / 47.452 |
+| visitas só para aceitar diárias (viagem) | 81.895 (24.242 h) | 93.292 (24.592 h) | 20.746 (6.182 h) | 21.726 (6.033 h) |
+| diárias aceitas / entregues | 169.529 / 62.762 | 169.587 / 62.675 | 58.409 / 27.305 | 60.182 / 35.480 |
+| expiradas: sem etapa / etapa feita / parcial | 76.148 / 24.457 / 4.454 | 76.064 / 24.740 / 4.459 | 14.012 / 14.913 / 1.656 | 14.469 / 7.988 / 1.725 |
+| reaceite depois de expirar intocada | 63.930 | 63.873 | 3.306 | 3.415 |
+| principais / secundárias concluídas | 41.150 / 55.802 | 41.147 / 56.140 | 41.246 / 47.619 | 40.941 / 48.058 |
+| largadas por troca | 28.017 | 24.746 | 4.384 | 4.487 |
+| meta de nível readotada sem subir de nível | 163 | 0 | 0 | 0 |
+| mesmo alvo abandonado 3+ vezes (pares) | 254 | 212 | 231 | 238 |
+| nível em 90 dias | 25,2 | 25,2 | 25,0 | 24,8 |
+| satisfação / frustração | 600 / 1,2 | 600 / 1,2 | 587 / 1,5 | 588 / 1,4 |
+| andando ou esperando | 24,8% | 24,9% | 20,1% | 20,7% |
+| missões concluídas por personagem | 31,9 | 32,0 | 23,2 | 24,9 |
+
+- **Motivos dos aceites** (preset): gosto 49%, recompensa 36%, meta 6%, meta de praticar 5%, campanha 2%, liberar missão 2%. Em 25% dos aceites a pessoa aproveitou a viagem de outra missão (pelo desvio real).
+- **Restam 97 visitas sem resultado:** a situação mudou durante a viagem.
+- **Secundárias:**
+  - as de coleta (12% do XP do nível) caem de 21,3 mil para 14,5 mil concluídas: quem não gosta de coletar deixa de aceitá-las;
+  - as de caça quase não mudam (34,5 mil para 33,6 mil).
+- **Satisfação** de 600 para 588: menos missões concluídas (cada conclusão soma pontos de conquista na nota da sessão) e nível 0,4 menor. Não foi ajustado.
+- **Diárias prontas que vencem:** de 24,5 mil para 8,0 mil com o prazo. Na maioria das que restam, a sessão terminou até 40 minutos depois da etapa, sem outra sessão antes do reset.
+- **Validação:**
+  - regras do cenário: 8 de 9, iguais;
+  - provisórias: 7 de 12, mas não as mesmas. "Missões concluídas por personagem" volta para dentro (31,9 para 24,9); "tempo na cidade" passa a instável (23,9, com seeds dos dois lados do limite);
+  - "andando ou esperando" melhora (24,8 para 20,7), ainda acima de 20.
+
+**Abandonos repetidos que restam** (238 pares, preset): todos têm mudança registrada entre os ciclos. A pessoa voltou a praticar (248 transições), subiu de nível (170 de nível, 148 de zona) ou a missão avançou (2). Nenhum voltou no mesmo estado.
+- **Para o criador avaliar:** 52 dos 53 pares de zona são o Covil do Rei Goblin, zona baixa que se descobre explorando ao lado dela. A subida de nível libera a meta (D-066), mas não ajuda a cumpri-la. Proposta: a subida de nível só libera zonas acima do nível anterior. Não aplicada.
+
+**Encontrado na conferência:** o teste do sono deslocado (R6) depende da seed. Falha em 1 de 24 seeds com ou sem o D-067 ("acorda mais tarde") e passa na seed do teste. Fica no backlog.
+
+**Próximo:** avaliação do criador; depois, a E1b.

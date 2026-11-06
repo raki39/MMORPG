@@ -54,7 +54,7 @@ public sealed class BehaviorSystem
         _exp = new ExperienceSystem(world);
         _w = world;
         _routes = new RouteFinder(world.Content, new ZoneLayout(world.Content));
-        _quests = new QuestSystem(world, GainExperience);
+        _quests = new QuestSystem(world, GainExperience, _routes);
         _traits = new TraitDynamics(world);
         _goals = new GoalSystem(world, _quests, _traits, _routes);
         _quests.Progressed = (ch, questId) => _goals.OnQuestProgress(ch, questId);

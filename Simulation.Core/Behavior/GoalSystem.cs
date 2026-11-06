@@ -142,7 +142,11 @@ public sealed class GoalSystem
             int k = 1 + (pr.Pve + t.Competitiveness) / 700;
             int target = Math.Min(C.Progression.LevelCap, ch.Level + k);
             string motive = pr.Pve >= t.Competitiveness ? "pref_pve" : "competitiveness";
-            if (!IsBlocked(ch, GoalTypes.ReachLevel, "", target))
+            // D-067: a meta de nivel largada bloqueia qualquer alvo ate a proxima subida (o alvo muda se o nivel subiu durante ela).
+            bool blocked = S.LevelBlockAnyTarget
+                ? ch.BlockedLevelGoals.Any(k => k.StartsWith(GoalTypes.ReachLevel + "||", StringComparison.Ordinal))
+                : IsBlocked(ch, GoalTypes.ReachLevel, "", target);
+            if (!blocked)
                 list.Add(new(GoalTypes.ReachLevel, "", target, ch.Level, 150 + pr.Pve * 3 / 10 + t.Competitiveness * 2 / 10 + (1000 - t.Patience) / 10, motive));
         }
 

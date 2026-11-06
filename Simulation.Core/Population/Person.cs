@@ -809,6 +809,8 @@ public sealed class QuestRecord
     /// <summary>Progresso guardado ao largar, se o conteudo manda guardar (-1 = nenhum).</summary>
     public int SavedStepIndex { get; internal set; } = -1;
     public int SavedStepMinutes { get; internal set; }
+    /// <summary>Diaria que expirou sem nenhuma etapa feita (D-067): nao e aceita de novo ate a pessoa fazer a atividade da etapa.</summary>
+    public bool IdleExpired { get; internal set; }
 }
 
 /// <summary>

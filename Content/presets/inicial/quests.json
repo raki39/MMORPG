@@ -12,7 +12,18 @@
       "unlockValue": 300,
       "unlockLevelsAhead": 4,
       "objectiveValue": 400,
-      "progressWeight": 1000
+      "progressWeight": 1000,
+      "consistentVisits": true,
+      "acceptance": {
+        "enabled": true,
+        "minInterest": 400,
+        "rewardReferencePermille": 450,
+        "unlockRelevance": 800,
+        "goalRelevance": 1000,
+        "idleExpiryBlock": true,
+        "deliverDeadlineMarginMinutes": 30,
+        "deliverDeadlineWeight": 220
+      }
     }
   },
   "boards": [

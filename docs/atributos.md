@@ -172,7 +172,7 @@ São as metas de sessão ou secundárias (chegar a um nível, descobrir uma zona
 - **Persistência e abandono:**
   - depois de 3 a 12 horas de jogo sem progresso, conforme a paciência;
   - ou, ao conectar, com 4% de chance, se a paciência for < 300;
-  - a meta largada não volta com o mesmo alvo até haver avanço ou mudança relevante (D-066): a missão avançar, um objetivo ligado ser adotado, voltar a praticar a atividade, subir de nível (zonas); as de nível, até subir de nível (D-055);
+  - a meta largada não volta com o mesmo alvo até haver avanço ou mudança relevante (D-066): a missão avançar, um objetivo ligado ser adotado, voltar a praticar a atividade, subir de nível (zonas); as de nível, até subir de nível, com qualquer alvo (D-055, D-067), sem mexer nas atividades nem no XP;
   - meta de missão impedida (a missão não cabe, nem por troca) não corre o prazo; se durar, termina como "impedida", sem revés (D-066).
 - **Escolha da missão da meta** (D-066): a de etapa mais atraente, pelo rendimento da etapa real no nível ou pela relevância (campanha, liberar uma missão no nível), vezes o deslocamento; abaixo do mínimo, não vira meta.
 - **O que conta como progresso numa meta de missão** (D-065): aceitar a missão, minutos parciais da etapa, concluir uma etapa e a entrega. Uma missão pronta só para entregar não recebe progresso até a entrega.

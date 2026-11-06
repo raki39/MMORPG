@@ -47,6 +47,44 @@ public sealed class QuestJournalDefinition
     public int ObjectiveValue { get; set; } = 400;
     /// <summary>Peso do progresso ja feito (permille do valor por missao inteira feita).</summary>
     public int ProgressWeight { get; set; } = 1000;
+    /// <summary>
+    /// Visita coerente (D-067): a escolha de ir ao quadro e o que a pessoa faz nele saem do mesmo plano
+    /// (aceites e trocas). Sem isso, o quadro podia virar opcao por uma troca ou vaga que a acao no quadro
+    /// nao usava (vaga reservada, troca so com a primeira oferta), e a pessoa voltava a ele sem resultado.
+    /// </summary>
+    public bool ConsistentVisits { get; set; }
+    /// <summary>Aceite avaliado (D-067): so aceita a oferta com uma motivacao plausivel.</summary>
+    public QuestAcceptanceDefinition Acceptance { get; set; } = new();
+}
+
+/// <summary>
+/// Aceite avaliado (D-067). Desligado, a pessoa aceita tudo o que cabe nas vagas, na ordem do quadro.
+/// Ligado: a missao da meta continua aceita sempre; as demais ofertas so se a motivacao (o maior motivo:
+/// recompensa no nivel, relevancia ou gosto pelo tema das etapas, vezes o deslocamento adicional ate a
+/// primeira etapa) chega ao minimo; a diaria, so se da para fazer e entregar no tempo de jogo que a pessoa
+/// ainda tem antes do reset (resto da sessao e janelas livres da rotina); a diaria que expirou sem nenhuma
+/// etapa feita nao volta ate a pessoa fazer a atividade da etapa. Aceitar por oportunidade vale: perto da
+/// etapa de outra missao ativa, conta so o desvio real.
+/// </summary>
+public sealed class QuestAcceptanceDefinition
+{
+    public bool Enabled { get; set; }
+    /// <summary>Motivacao minima para aceitar (permille), na escala do gosto (a mesma do Independente, 400).</summary>
+    public int MinInterest { get; set; } = 400;
+    /// <summary>XP da recompensa que vale 1000 na motivacao (permille do XP do nivel): a de uma missao principal no nivel.</summary>
+    public int RewardReferencePermille { get; set; } = 450;
+    /// <summary>Relevancia de liberar uma missao no nivel (pre-requisito dela).</summary>
+    public int UnlockRelevance { get; set; } = 800;
+    /// <summary>Relevancia de servir a uma meta de praticar o tema de uma etapa.</summary>
+    public int GoalRelevance { get; set; } = 1000;
+    /// <summary>Diaria que expirou sem nenhuma etapa feita nao e aceita de novo ate a pessoa fazer a atividade da etapa.</summary>
+    public bool IdleExpiryBlock { get; set; } = true;
+    /// <summary>
+    /// Prazo da diaria pronta: ir entregar ganha o peso abaixo quando o reset ou o fim previsto da sessao
+    /// estao a ate a viagem mais estes minutos (0 = desligado).
+    /// </summary>
+    public int DeliverDeadlineMarginMinutes { get; set; }
+    public int DeliverDeadlineWeight { get; set; } = 220;
 }
 
 /// <summary>

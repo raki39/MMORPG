@@ -97,7 +97,10 @@ Uma etapa por vez, fechada por inteiro (testes, validação, documentação, exp
    - depois: condições alcançáveis e perdidas quando PvP, economia, guildas e fabricação existirem; atualizações de conteúdo (M7) como acontecimentos de renovação.
    - ~~diagnóstico dos abandonos das metas de missão e do objetivo da campanha~~ (D-065: quatro defeitos corrigidos);
    - ~~diário de missões, escolha e readoção das metas, desistência de objetivos só por motivo específico~~ (D-066);
-   - acompanhar: "missões por personagem" acima do teto provisório (33 × 30) e mais tempo andando com o diário; recalibrar com o balanceamento das missões.
+   - ~~visitas ao quadro e aceite das missões: plano único da visita, aceite com motivação, prazo pelas janelas de jogo, sem reaceite no mesmo estado, meta de nível bloqueada para qualquer alvo~~ (D-067);
+   - para o criador: a subida de nível libera a meta de descobrir uma zona abaixo do nível (Covil do Rei Goblin, 52 pares de abandono repetido); proposta: liberar só zonas acima do nível anterior;
+   - acompanhar: "andando ou esperando" (20,7 × teto provisório 20) e "tempo na cidade" instável (23,9); recalibrar com o balanceamento das missões;
+   - teste do sono deslocado (R6): falha em 1 de 24 seeds, com e sem o D-067 ("acorda mais tarde"); investigar.
 2. **Etapa 1 — O personagem** (D-040; escopo reduzido no D-061, `personagem.md`; retoma na E1b com os objetivos fechados):
    - ~~E1a: modelo, estatísticas (com crítico), recurso por tipo, velocidade do personagem e índice de poder candidato~~ (D-061);
    - E1b: página Classes com criar, editar e duplicar; conteúdo personalizado persistido, presets preservados, ids estáveis; edição aplicada direto aos personagens existentes, com registro;

@@ -1447,6 +1447,7 @@ public partial class PlayerModal : ModalFrame
         "noise" => "Variação do momento",
         "quest_offer" => "Missão para aceitar",
         "quest_deliver" => "Missão para entregar",
+        "daily_deadline" => "Diária pronta vence logo",
         "quest_step" => "Avança uma missão",
         "goal" => "Meta pessoal",
         "familiarity" => "Zona familiar",
@@ -1479,6 +1480,7 @@ public partial class PlayerModal : ModalFrame
         "plan_continuity" => "Seguiu o plano da sessão: outra opção era melhor por pouco.",
         "quest_offer" => "O quadro tem missão que a pessoa pode aceitar.",
         "quest_deliver" => "Há missões prontas para entregar no quadro (mais prontas, mais vontade de voltar).",
+        "daily_deadline" => "Uma diária pronta vence no reset do servidor e a sessão ou o reset está perto: entregar antes pesa mais.",
         "quest_step" => "Fazer isto avança a etapa atual de uma missão em andamento.",
         "goal" => "Ajuda uma meta de curto prazo; o peso cresce com o comprometimento (paciência e lealdade).",
         "familiarity" => "Zona onde já passou bastante tempo; quem gosta de variedade (exploração) sente menos essa atração.",
@@ -1600,6 +1602,30 @@ public partial class PlayerModal : ModalFrame
         _ => "estava gostando",
     };
 
+    /// <summary>Motivo do aceite (D-067), quando registrado: meta, recompensa, campanha, liberar missão, meta de praticar, gosto; e oportunidade.</summary>
+    private static string AcceptMotivePt(SimEvent e)
+    {
+        string? why = null;
+        foreach (var c in e.Causes)
+        {
+            why = c.Factor switch
+            {
+                "goal" => "pela meta",
+                "reward" => "pela recompensa",
+                "campaign" => "pela campanha",
+                "unlocks" => "porque libera outra missão",
+                "practice_goal" => "pela meta de praticar",
+                "taste" => "porque gosta do que ela pede",
+                _ => null,
+            };
+            if (why != null) break;
+        }
+        if (why == null) return "";
+        bool onTheWay = e.Causes.Any(c => c.Factor == "on_the_way");
+        bool swap = e.Causes.Any(c => c.Factor == "priority_swap");
+        return $" ({why}{(onTheWay ? ", aproveitando a viagem de outra missão" : "")}{(swap ? ", no lugar de uma mais fraca" : "")})";
+    }
+
     private (string, Color) Describe(SimEvent e)
     {
         switch (e.Type)
@@ -1623,7 +1649,7 @@ public partial class PlayerModal : ModalFrame
                 var p = (e.Detail ?? "/").Split('/');
                 string why = e.Causes.Count > 0 ? " — " + string.Join(", ", e.Causes.Take(2).Select(c => FactorPt(c.Factor).ToLowerInvariant())) : "";
                 return ($"{_ctx.ActivityName(p[0], p[1])} · {_ctx.PlaceName(p[0], p[1])}{why}", UiTokens.Info);
-            case "quest_accepted": return ($"Aceitou a missão {QuestName(e.Detail)}", UiTokens.Accent);
+            case "quest_accepted": return ($"Aceitou a missão {QuestName(e.Detail)}{AcceptMotivePt(e)}", UiTokens.Accent);
             case "quest_step_completed": return ($"Cumpriu uma etapa de {QuestName((e.Detail ?? "").Split('#')[0])}", UiTokens.Info);
             case "quest_completed": return ($"Entregou a missão {QuestName(e.Detail)}", UiTokens.Success);
             case "goal_set": return ($"Nova meta: {GoalDetail(e.Detail)}", UiTokens.Accent);
@@ -1670,7 +1696,10 @@ public partial class PlayerModal : ModalFrame
                 string by = e.Causes.Count > 0 && e.Causes[0].Factor.StartsWith("replaced:") ? QuestName(e.Causes[0].Factor["replaced:".Length..]) : "";
                 return (by.Length > 0 ? $"Largou a missão {QuestName(e.Detail)} para pegar {by}" : $"Largou a missão {QuestName(e.Detail)}", UiTokens.TextSecondary);
             }
-            case "quest_expired": return ($"A diária {QuestName(e.Detail)} expirou no reset do servidor", UiTokens.TextSecondary);
+            case "quest_expired":
+                return (e.Causes.Any(c => c.Factor == "no_step_done")
+                    ? $"A diária {QuestName(e.Detail)} expirou no reset do servidor sem ser feita"
+                    : $"A diária {QuestName(e.Detail)} expirou no reset do servidor", UiTokens.TextSecondary);
             case "session_plan":
             case "plan_changed":
             {

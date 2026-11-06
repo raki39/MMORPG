@@ -17,6 +17,9 @@ namespace Simulation.Tests;
 public class QuestJournalTests
 {
     private static ContentDatabase C => TestSupport.Preset;
+    /// <summary>O valor e a troca do D-066 (encaixe de nivel, sem recompensa nem gosto): o aceite avaliado (D-067) desligado.</summary>
+    private static readonly Lazy<ContentDatabase> D066Lazy = new(() => With(s => s.Quests.Settings.Journal.Acceptance.Enabled = false));
+    private static ContentDatabase D066 => D066Lazy.Value;
 
     private static ContentDatabase With(Action<ContentSet> change)
     {
@@ -69,7 +72,7 @@ public class QuestJournalTests
     [Fact]
     public void Valor_ConsideraProgressoHistoriaLiberacaoEObjetivo()
     {
-        var (_, w, p, ch) = World(C);
+        var (_, w, p, ch) = World(D066);
         ch.Level = 20;
         var q = C.Quests["vila_secundaria_ervas"];
         var fresh = new ActiveQuest(q.Id, 0, 0);
@@ -86,7 +89,7 @@ public class QuestJournalTests
     [Fact]
     public void Troca_DePrioridade_LargaAMaisFraca_ComMotivo_SemFrustracao()
     {
-        var (_, w, p, ch) = World(C);
+        var (_, w, p, ch) = World(D066);
         ch.Level = 20;
         foreach (var z in C.Regions.Keys) ch.Known.Add(z);
         // Vagas cheias com secundarias antigas, sem progresso.

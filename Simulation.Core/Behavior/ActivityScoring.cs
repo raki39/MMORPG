@@ -71,18 +71,27 @@ public static class ActivityScoring
                 // Quests (D-031): o quadro so e opcao com quest para aceitar ou entregar; ponto de
                 // missao so com etapa de visita pendente; atividade que avanca etapa ganha peso.
                 (string Key, int Value)? questTerm = null;
+                QuestBoardDefinition? boardHere = null;
+                TravelPlan? boardTrip = null;
                 if (quests != null)
                 {
                     var board = quests.BoardAt(region.Id, a.Id);
                     if (board != null)
                     {
+                        boardHere = board;
                         int ready = quests.ReadyCount(ch, board);
                         // Independente (P4a): so contam as ofertas que ele aceitaria (sem ida ao quadro a toa).
                         bool ownPath = personality?.Rule == PersonalityRuleIds.OwnPath;
-                        // Diario (D-066): tambem e opcao quando uma troca de prioridade vale a pena.
-                        bool offer = content.QuestSettings.Journal.Enabled && person != null
-                            ? quests.Offers(ch, board).Any(q => (!ownPath || quests.FitsTaste(pr, q)) && quests.CanTake(person, ch, q))
-                            : quests.CanAccept(ch) && quests.Offers(ch, board).Any(q => !ownPath || quests.FitsTaste(pr, q));
+                        // Diario (D-066): tambem e opcao quando uma troca de prioridade vale a pena. Visita coerente
+                        // (D-067): so se o plano da visita faz algo (o mesmo plano que a acao no quadro segue).
+                        // O plano vale para quando a pessoa chegar ao quadro (o tempo ate o reset corre na viagem).
+                        if (ready == 0 && quests.UsesPlan && person != null)
+                            boardTrip = routes.Plan(ch.Position, ch.RegionId, region.Id, routes.Layout.Spot(region.Id, a.Id), moveSpeed);
+                        bool offer = ready == 0 && (content.QuestSettings.Journal.Enabled && person != null
+                            ? quests.UsesPlan
+                                ? boardTrip!.Reachable && quests.PlanBoard(person, ch, board, now + boardTrip.Minutes * Time.SimTime.TicksPerMinute).Count > 0
+                                : quests.Offers(ch, board).Any(q => (!ownPath || quests.FitsTaste(pr, q)) && quests.CanTake(person, ch, q))
+                            : quests.CanAccept(ch) && quests.Offers(ch, board).Any(q => !ownPath || quests.FitsTaste(pr, q)));
                         if (ready == 0 && !offer) continue;
                         questTerm = ready > 0
                             ? ("quest_deliver", content.Behavior.QuestDeliverWeight + (ready - 1) * content.Behavior.QuestDeliverPerExtra)
@@ -98,7 +107,7 @@ public static class ActivityScoring
                 }
 
                 // Caminho real: ate o portao, pelas zonas, e ate o ponto da atividade (fora da estrada).
-                var plan = routes.Plan(ch.Position, ch.RegionId, region.Id, routes.Layout.Spot(region.Id, a.Id), moveSpeed);
+                var plan = boardTrip ?? routes.Plan(ch.Position, ch.RegionId, region.Id, routes.Layout.Spot(region.Id, a.Id), moveSpeed);
                 if (!plan.Reachable) continue;
                 int travel = plan.Minutes;
 
@@ -184,6 +193,15 @@ public static class ActivityScoring
                     f.Add(new DecisionFactor("boredom", -bored));
 
                 if (questTerm is { } qt) f.Add(new DecisionFactor(qt.Key, qt.Value));
+                // Prazo da diaria pronta (D-067): ela vence no reset; com o reset ou o fim previsto da sessao perto, entregar pesa mais.
+                if (questTerm is { Key: "quest_deliver" } && boardHere != null && quests != null
+                    && content.QuestSettings.Journal.Acceptance is { Enabled: true, DeliverDeadlineMarginMinutes: > 0 } acc
+                    && quests.HasReadyDaily(ch, boardHere))
+                {
+                    long deadline = Math.Min(quests.NextResetTick(), ch.SessionEndTick);
+                    if ((deadline - now) / Time.SimTime.TicksPerMinute <= travel + acc.DeliverDeadlineMarginMinutes)
+                        f.Add(new DecisionFactor("daily_deadline", acc.DeliverDeadlineWeight));
+                }
 
                 // Familiaridade (D-036a): zona onde ja passou tempo atrai; quem prefere variedade
                 // sente menos essa atracao (D-039a).
