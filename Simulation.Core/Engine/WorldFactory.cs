@@ -33,7 +33,10 @@ public static class WorldFactory
         var calendar = BuildCalendar(content.World, content.ServerLocality);
         var locals = new SortedDictionary<string, CampaignCalendar>(StringComparer.Ordinal);
         foreach (var l in content.LocalitiesOrdered) locals[l.Id] = BuildCalendar(content.World, l);
-        var world = new WorldState(content, config.Seed, calendar) { NeutralMood = config.NeutralMood, LocalityCalendars = locals };
+        var world = new WorldState(content, config.Seed, calendar)
+        {
+            NeutralMood = config.NeutralMood, LocalityCalendars = locals, Controlled = config.ControlledCells is { Count: > 0 },
+        };
         var engine = new SimulationEngine(world);
 
         for (int id = 1; id <= config.PopulationSize; id++)

@@ -1,0 +1,37 @@
+conhecer_o_mundo       por pref_exploration  : terço baixo 11.6%  alto 32.3%
+pvp_competitivo        por pref_pvp          : terço baixo  9.3%  alto 31.4%
+entrar_guilda          por pref_social       : terço baixo 14.1%  alto 37.0%
+melhor_fabricante      por pref_crafting     : terço baixo  7.5%  alto 30.6%
+grande_fortuna         por pref_trade        : terço baixo 14.6%  alto 28.5%
+mais_forte             por t_competitiveness : terço baixo 12.0%  alto 29.5%
+grande_comerciante     por t_competitiveness : terço baixo  9.1%  alto 18.9%
+grandes_desafios_pve   por pref_pve          : terço baixo 12.0%  alto 27.4%
+
+casual    n=1763 dificuldade média dos gerais   626; gerais de fim de jogo (>=850) 39.9%; com geral que pode avançar agora 35.3%
+regular   n=2635 dificuldade média dos gerais   675; gerais de fim de jogo (>=850) 47.6%; com geral que pode avançar agora 31.2%
+hardcore  n= 505 dificuldade média dos gerais   766; gerais de fim de jogo (>=850) 61.8%; com geral que pode avançar agora 23.4%
+devoto    n=  97 dificuldade média dos gerais   750; gerais de fim de jogo (>=850) 54.9%; com geral que pode avançar agora 19.6%
+
+com algum objetivo que pode avançar agora: 60.0%; com geral que pode avançar agora: 31.6%
+entrar e fundar guilda juntos: 5.2%
+registrados 5000
+gerais por pessoa {1: '74.6%', 2: '25.4%'}
+secundarios por pessoa {0: '19.6%', 1: '35.5%', 2: '29.3%', 3: '15.6%'}
+objetivo: geral / secundario / qualquer (% das pessoas)
+  nivel_maximo             9.7%  18.9%  28.6%
+  equipamento_raro         9.5%  18.2%  27.7%
+  entrar_guilda           14.4%  11.6%  26.0%
+  campanha_principal      10.5%  14.5%  25.0%
+  conhecer_o_mundo        12.7%   9.9%  22.6%
+  grande_fortuna          10.3%  11.2%  21.6%
+  mais_forte               9.8%  11.2%  21.0%
+  pvp_competitivo         11.6%   9.1%  20.7%
+  grandes_desafios_pve     8.8%  11.5%  20.3%
+  fundar_guilda           10.0%   9.5%  19.5%
+  melhor_fabricante       11.4%   8.1%  19.4%
+  grande_comerciante       6.7%   7.2%  14.0%
+geral por perfil (% das pessoas do perfil)
+  casual    n=1763 entrar_guilda 18%, conhecer_o_mundo 14%, campanha_principal 13%, equipamento_raro 12%
+  devoto    n=  97 grande_fortuna 21%, mais_forte 18%, pvp_competitivo 15%, fundar_guilda 12%
+  hardcore  n= 505 mais_forte 17%, pvp_competitivo 15%, grandes_desafios_pve 15%, melhor_fabricante 13%
+  regular   n=2635 entrar_guilda 14%, conhecer_o_mundo 12%, pvp_competitivo 12%, melhor_fabricante 11%

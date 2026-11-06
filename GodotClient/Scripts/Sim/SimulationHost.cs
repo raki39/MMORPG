@@ -72,11 +72,18 @@ public sealed class CharacterView
     }
 }
 
+/// <summary>Objetivo pessoal (O1) com a avaliacao do momento (copia imutavel para a ficha).</summary>
+public sealed record ObjectiveView(string Id, string Param, string Tier, int Importance, int Commitment, string State, string Origin, long Day,
+    IReadOnlyList<(string Key, int Value)> Motives, ObjectiveAssessment Assessment);
+
 /// <summary>Detalhe da pessoa com a ficha aberta (copiado so para ela, a cada publicacao).</summary>
 public sealed record CharacterDetailView(int PersonId, long PlayedTicks, IReadOnlyDictionary<string, long> ActivityTicks, IReadOnlyList<long> LevelTicks)
 {
     /// <summary>Acontecimentos marcantes (D-038), mais fortes primeiro.</summary>
     public IReadOnlyList<MemoryView> Memories { get; init; } = Array.Empty<MemoryView>();
+    /// <summary>Objetivos pessoais (O1), gerais primeiro, com a viabilidade calculada agora.</summary>
+    public IReadOnlyList<ObjectiveView> Objectives { get; init; } = Array.Empty<ObjectiveView>();
+    public IReadOnlyList<ObjectiveChange> ObjectiveHistory { get; init; } = Array.Empty<ObjectiveChange>();
     /// <summary>O que tem agradado (+) ou incomodado (-), acumulado e esmaecendo.</summary>
     public IReadOnlyDictionary<string, int> Drivers { get; init; } = new Dictionary<string, int>();
     /// <summary>Lugares que mais marcaram: melhores e piores impressoes ("zona/atividade").</summary>
@@ -461,6 +468,9 @@ public sealed class SimulationHost : IDisposable
                 SleepDeficitMinutes = pw.SleepDeficitMinutes,
                 LastSleepCutMinutes = pw.LastSleepCutMinutes,
                 SleepCutTotalMinutes = pw.SleepCutTotalMinutes,
+                Objectives = pw.Objectives.Select(o => new ObjectiveView(o.Id, o.Param, o.Tier, o.Importance, o.Commitment, o.State, o.Origin, o.Day,
+                    o.Motives.ToArray(), ObjectiveSystem.Assess(w.Content, c, o))).ToArray(),
+                ObjectiveHistory = pw.ObjectiveHistory.ToArray(),
             };
         }
         return new SimSnapshot

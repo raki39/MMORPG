@@ -1,0 +1,150 @@
+namespace Simulation.Core.Content;
+
+/// <summary>
+/// Objetivos pessoais (objectives.json, O1): ambicoes que atravessam varias sessoes, diferentes das
+/// metas (GoalSystem). Catalogo e regras do sorteio. Geral e secundario sao a importancia para a
+/// pessoa, nao categorias do catalogo.
+/// </summary>
+public sealed class ObjectiveCatalogDefinition
+{
+    public ObjectiveGenerationDefinition Generation { get; set; } = new();
+    public List<ObjectiveDefinition> Objectives { get; set; } = new();
+}
+
+/// <summary>Sorteio dos objetivos iniciais (no registro). Valores candidatos.</summary>
+public sealed class ObjectiveGenerationDefinition
+{
+    public bool Enabled { get; set; } = true;
+    /// <summary>Pesos da quantidade de objetivos gerais (indice = quantidade, 0 a 2).</summary>
+    public List<int> GeneralCountWeights { get; set; } = new() { 0, 750, 250 };
+    /// <summary>Pesos da quantidade de objetivos secundarios (indice = quantidade, 0 a 3).</summary>
+    public List<int> SecondaryCountWeights { get; set; } = new() { 200, 350, 300, 150 };
+    /// <summary>Limites do multiplicador de coerencia (produto das afinidades e da ambicao).</summary>
+    public int MinMultiplierPermille { get; set; } = 200;
+    public int MaxMultiplierPermille { get; set; } = 4000;
+    /// <summary>
+    /// Ambicao pela dedicacao (importancia do jogo): aproxima quem se dedica muito dos objetivos
+    /// dificeis e quem se dedica pouco dos mais simples. Termo = 1 + forca x (ambicao) x (dificuldade),
+    /// as duas centradas em 500 e escaladas a -1..1. Tendencia, nao regra.
+    /// </summary>
+    public int DifficultyStrengthPermille { get; set; } = 600;
+    /// <summary>Importancia = 500 + (ajuste - 1000) x inclinacao / 1000 +- ruido, de 50 a 1000.</summary>
+    public int ImportanceSlopePermille { get; set; } = 250;
+    public int ImportanceNoise { get; set; } = 100;
+    /// <summary>Comprometimento: base + importancia do jogo, paciencia e lealdade (permille de cada).</summary>
+    public int CommitmentBase { get; set; } = 300;
+    public int CommitmentGameImportancePermille { get; set; } = 400;
+    public int CommitmentPatiencePermille { get; set; } = 150;
+    public int CommitmentLoyaltyPermille { get; set; } = 150;
+    /// <summary>Raridades que contam como "equipamento raro".</summary>
+    public List<string> RareItemRarities { get; set; } = new() { "rare", "epic" };
+}
+
+/// <summary>Um objetivo do catalogo. O criterio e de um tipo conhecido do Core (ObjectiveCriteria).</summary>
+public sealed class ObjectiveDefinition : IContentDefinition
+{
+    public string Id { get; set; } = "";
+    public int Version { get; set; } = 1;
+    public string Name { get; set; } = "";
+    public string Description { get; set; } = "";
+    /// <summary>Icone (Lucide) da ficha.</summary>
+    public string Icon { get; set; } = "";
+    /// <summary>Tipo de criterio verificavel (define os sistemas necessarios e o progresso).</summary>
+    public string Criterion { get; set; } = "";
+    /// <summary>Dificuldade (0 a 1000): quanto e uma ambicao de fim de jogo.</summary>
+    public int Difficulty { get; set; } = 500;
+    /// <summary>Horizonte: short, medium ou long (caracteristica, separada da importancia).</summary>
+    public string Horizon { get; set; } = ObjectiveHorizons.Medium;
+    /// <summary>Peso base no sorteio.</summary>
+    public int Weight { get; set; } = 1000;
+    /// <summary>
+    /// Coerencia com a pessoa (mesmas chaves das traits e mais "quirk.x", ter a trait): aumentam ou
+    /// reduzem a chance e a importancia.
+    /// </summary>
+    public List<QuirkAffinityDefinition> Affinities { get; set; } = new();
+}
+
+public static class ObjectiveHorizons
+{
+    public const string Short = "short";
+    public const string Medium = "medium";
+    public const string Long = "long";
+    public static readonly string[] All = { Short, Medium, Long };
+}
+
+/// <summary>Importancia do objetivo para a pessoa.</summary>
+public static class ObjectiveTiers
+{
+    public const string General = "general";
+    public const string Secondary = "secondary";
+}
+
+/// <summary>
+/// Sistemas de que um criterio depende. Implemented lista os que existem hoje: um objetivo que
+/// depende de outro sistema nao recebe progresso (sem progresso ficticio).
+/// </summary>
+public static class ObjectiveSystems
+{
+    public const string Progression = "progression";
+    public const string Quests = "quests";
+    public const string Exploration = "exploration";
+    public const string Combat = "combat";
+    public const string Groups = "groups";
+    public const string Pvp = "pvp";
+    public const string Ranking = "ranking";
+    public const string Items = "items";
+    public const string Economy = "economy";
+    public const string Guilds = "guilds";
+    public const string Crafting = "crafting";
+    public static readonly string[] Implemented = { Progression, Quests, Exploration };
+    public static bool Exists(string system) => Array.IndexOf(Implemented, system) >= 0;
+}
+
+/// <summary>
+/// Tipos de criterio verificavel. Cada um declara os sistemas de que depende; o progresso e a
+/// preparacao sao calculados pelo Core (ObjectiveSystem.Assess) so com o que existe.
+/// </summary>
+public static class ObjectiveCriteria
+{
+    /// <summary>Chegar ao nivel maximo.</summary>
+    public const string MaxLevel = "max_level";
+    /// <summary>Concluir todas as missoes principais.</summary>
+    public const string MainCampaign = "main_campaign";
+    /// <summary>Conhecer todas as zonas do mundo.</summary>
+    public const string AllZones = "all_zones";
+    /// <summary>Estar entre os personagens mais fortes (classificacao real de forca, nao o indice de poder).</summary>
+    public const string StrengthRanking = "strength_ranking";
+    /// <summary>Vencer os chefes do mundo.</summary>
+    public const string DefeatBosses = "defeat_bosses";
+    /// <summary>Posicao relevante no PvP real.</summary>
+    public const string PvpRanking = "pvp_ranking";
+    /// <summary>Riqueza possuida (saldo; patrimonio quando a economia existir), nao o ouro recebido.</summary>
+    public const string Wealth = "wealth";
+    public const string FoundGuild = "found_guild";
+    public const string JoinGuild = "join_guild";
+    /// <summary>Estar entre os melhores fabricantes de uma especialidade (parametro: categoria de item).</summary>
+    public const string CraftingRank = "crafting_rank";
+    /// <summary>Estar entre os maiores comerciantes (prestigio no mercado).</summary>
+    public const string TradeRank = "trade_rank";
+    /// <summary>Conquistar um equipamento raro (parametro: item).</summary>
+    public const string RareItem = "rare_item";
+
+    public static readonly string[] All =
+        { MaxLevel, MainCampaign, AllZones, StrengthRanking, DefeatBosses, PvpRanking, Wealth, FoundGuild, JoinGuild, CraftingRank, TradeRank, RareItem };
+
+    public static IReadOnlyList<string> RequiredSystems(string criterion) => criterion switch
+    {
+        MaxLevel => new[] { ObjectiveSystems.Progression },
+        MainCampaign => new[] { ObjectiveSystems.Quests },
+        AllZones => new[] { ObjectiveSystems.Exploration },
+        StrengthRanking => new[] { ObjectiveSystems.Combat, ObjectiveSystems.Ranking },
+        DefeatBosses => new[] { ObjectiveSystems.Groups, ObjectiveSystems.Combat },
+        PvpRanking => new[] { ObjectiveSystems.Pvp, ObjectiveSystems.Ranking },
+        Wealth => new[] { ObjectiveSystems.Economy },
+        FoundGuild or JoinGuild => new[] { ObjectiveSystems.Guilds },
+        CraftingRank => new[] { ObjectiveSystems.Crafting, ObjectiveSystems.Ranking },
+        TradeRank => new[] { ObjectiveSystems.Economy, ObjectiveSystems.Ranking },
+        RareItem => new[] { ObjectiveSystems.Items },
+        _ => Array.Empty<string>(),
+    };
+}

@@ -27,6 +27,8 @@ public partial class PlayerModal : ModalFrame
         BuildHeader();
         Breadcrumb = $"Jogadores › {View?.Name ?? _person.Name}";
         AddTab("Visão geral", BuildProfile, live: true);
+        _objectivesTab = TabCount;
+        AddTab("Objetivos", BuildObjectives, live: true);
         AddTab("Estatísticas", BuildStats, live: true);
         AddTab("Missões", BuildQuests, live: true);
         AddTab("Histórico", BuildHistory, live: true);
@@ -271,7 +273,7 @@ public partial class PlayerModal : ModalFrame
             (Card("Uso do tempo", TimeUseBody(detail), info: "Divisão do tempo conectado\n~Por tipo de atividade desde o cadastro; o resto é deslocamento."), 3));
         var row3 = Grid(12,
             (Card("Zonas frequentadas", ZonesBody(), info: "Onde escolhe jogar\n~Escolhas de atividade por zona registradas desde que o jogo foi aberto. Clique para abrir a zona."), 3),
-            (Card("Progresso e metas", GoalsBody(v, st), info: "Nível, personalidade e metas de curto prazo\n~Metas de curto prazo (chegar a um nível, descobrir uma zona, concluir uma missão, praticar uma atividade) influenciam as escolhas sem obrigar. Ambições de longo prazo (ex.: liderar guilda) virão em etapas."), 3),
+            (Card("Progresso e metas", GoalsBody(v, st, detail), info: "Nível, objetivo principal e metas de curto prazo\n~Metas de curto prazo (chegar a um nível, descobrir uma zona, concluir uma missão, praticar uma atividade) influenciam as escolhas sem obrigar. As ambições de longo prazo ficam na aba Objetivos."), 3),
             (Card("Atividades recentes", RecentBody(), info: "Últimos acontecimentos\n~Clique numa linha para abrir a área, a zona ou a missão. Histórico completo na aba Histórico."), 6));
         var row4 = Grid(12,
             (Card("Humor", MoodBody(v, detail), info: "Como a pessoa está se sentindo no jogo (D-038)\n~Cada sessão vira uma nota: gosto pelas atividades, encaixe de nível, lotação, companhia, tédio, risco, progresso contra a expectativa, novidade e conquistas. A satisfação é a média dessas notas; o engajamento muda quanto ela joga; a intenção de continuar decide se fica."), 6),
@@ -499,7 +501,7 @@ public partial class PlayerModal : ModalFrame
 
     // ----- Progresso e metas de curto prazo -----
 
-    private Control GoalsBody(CharacterView v, ServerStats st)
+    private Control GoalsBody(CharacterView v, ServerStats st, CharacterDetailView? detail)
     {
         var prog = _ctx.Content.Progression;
         long need = ProgressionRules.XpToNextLevel(prog, v.Level);
@@ -529,6 +531,12 @@ public partial class PlayerModal : ModalFrame
         col.AddChild(p);
         col.AddChild(Wrap($"Perfil {ProfileName}: {ProfileHint(_person.ProfileId)} Preferências: {PreferenceInfo.Summary(_person.Preferences)}.", UiTokens.FontSmall, UiTokens.TextSecondary));
 
+        // Objetivo principal (O1): uma linha com acesso a aba Objetivos.
+        if (ObjectiveSummary(detail) is { } objective)
+        {
+            col.AddChild(Section("Objetivo principal"));
+            col.AddChild(objective);
+        }
         col.AddChild(Section("Metas", ThemeFactory.Text($"{v.GoalsCompleted} concluídas · {v.GoalsAbandoned} abandonadas", UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Numbers)));
         if (v.Goals.Count == 0)
             col.AddChild(Wrap("Sem meta agora. Nem todo jogador tem uma o tempo todo; ao conectar, pode adotar uma conforme as preferências, a competitividade e a personalidade.", UiTokens.FontSmall, UiTokens.TextSecondary));
@@ -1617,6 +1625,12 @@ public partial class PlayerModal : ModalFrame
             case "quest_step_completed": return ($"Cumpriu uma etapa de {QuestName((e.Detail ?? "").Split('#')[0])}", UiTokens.Info);
             case "quest_completed": return ($"Entregou a missão {QuestName(e.Detail)}", UiTokens.Success);
             case "goal_set": return ($"Nova meta: {GoalDetail(e.Detail)}", UiTokens.Accent);
+            case "objective_set":
+            {
+                var op = (e.Detail ?? "||").Split('|');
+                string tier = op.Length > 2 && op[2] == Simulation.Core.Content.ObjectiveTiers.General ? "geral" : "secundário";
+                return ($"Objetivo inicial ({tier}): {ObjectiveInfo.Title(_ctx.Content, op[0], op.Length > 1 ? op[1] : "")}", UiTokens.Accent);
+            }
             case "goal_completed": return ($"Concluiu a meta: {GoalDetail(e.Detail)}", UiTokens.Success);
             case "goal_abandoned": return ($"Desistiu da meta: {GoalDetail(e.Detail)}{(e.Causes.Count > 0 && e.Causes[0].Factor == "impatience" ? " (impaciência)" : " (sem progresso)")}", UiTokens.TextSecondary);
             case "session_plan":

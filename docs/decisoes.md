@@ -2116,3 +2116,66 @@ Itens como instâncias, inventário, equipamento funcional, carteira e aplicaç�
 - A estimativa pela vida atual é provisória e não será o único critério das decisões.
 
 **Próximo:** a Etapa 1 pausa antes da E1b, para a camada de objetivos pessoais.
+
+## D-062 — Objetivos pessoais: catálogo, sorteio inicial e viabilidade (O1)
+**Data:** 06/11/2026 · **Estado:** aceita (valores candidatos)
+
+**Pedido do criador:**
+- pausar a Etapa 1 antes da E1b para completar os objetivos pessoais, a camada do que cada pessoa quer conquistar naquele MMORPG ao longo de várias sessões;
+- os objetivos são diferentes das metas, e as metas continuam;
+- entregas: O1 (catálogo, dados, sorteio, viabilidade e aba Objetivos, sem influência), O2 (ligação com metas e satisfação) e O3 (evolução). Detalhes em `objetivos.md`.
+
+**Decisões do criador:**
+- **Catálogo:** aprovado com ajustes:
+  - "Conhecer todo o mundo" pesa pela preferência Exploração, sem ser exclusivo;
+  - comerciante é prestígio, separado de riqueza;
+  - a fortuna é riqueza possuída, não a soma do ouro recebido;
+  - entrar e criar guilda podem coexistir;
+  - patrulha e emboscada não são evidência de combate.
+- **Quantidades:** 1 ou 2 gerais (a maioria com 1) e de 0 a 3 secundários, configuráveis. Geral e secundário são a importância para a pessoa, não categorias do catálogo.
+- **Preparação:** só por requisito concreto e conhecido, mostrada separada da etapa final indisponível. Sem requisito inventado e sem direcionar toda ambição para XP.
+- **Perfil:** quem se dedica mais tende a ambições de fim de jogo. Um casual pode querer só entrar numa guilda e conquistar um equipamento raro, mas também pode ter grandes ambições.
+- **O2 e O3:**
+  - a influência passa só pelas metas;
+  - uma meta pode servir a vários objetivos sem multiplicar o bônus;
+  - conquistas e reveses de meta e de objetivo não duplicam a recompensa emocional;
+  - nenhum termo novo na nota da sessão. Fica registrado que progresso por XP não substitui avanço em riqueza, fabricação, guilda e outros temas;
+  - substituição voluntária não gera frustração automática, diferente de abandono por experiência negativa.
+
+**Feito na O1:**
+- **Catálogo** em `objectives.json`, com 12 objetivos: os 11 aprovados e "Conquistar um equipamento raro", a partir da sugestão do criador para casuais. Cada um tem:
+  - um critério de tipo conhecido pelo Core;
+  - dificuldade (0 a 1000);
+  - horizonte;
+  - peso;
+  - afinidades (as chaves das traits e `quirk.x`).
+- **Sorteio no registro,** com a classe já escolhida, porque o equipamento raro depende dela:
+  - usa um fluxo próprio, sem mudar nenhum outro sorteio;
+  - o ajuste é o produto das afinidades e de um termo de ambição: dedicação (importância do jogo) × dificuldade, com força 0,6;
+  - a importância vem do ajuste com ruído, e os mais importantes são os gerais;
+  - os três motivos que mais pesaram ficam registrados, no histórico e no evento `objective_set`.
+- **Viabilidade calculada,** em três estados:
+  - pode avançar agora;
+  - exige preparação;
+  - depende de sistema futuro (lista dos sistemas que faltam).
+
+  Também calcula o progresso só quando é mensurável (nível, missões principais, zonas) e a preparação pelo nível do próximo chefe, da primeira atividade PvP, do item ou o nível máximo.
+- **Estado na pessoa** (`Person.Objectives` e o histórico), no `StateHasher` (versão 29).
+- **Interface:**
+  - aba Objetivos: gerais, secundários, metas atuais e histórico;
+  - na Visão geral, uma linha "Objetivo principal" com acesso à aba.
+- **Cenário controlado:** sem objetivos.
+
+**Desvios e motivos:**
+- **"Comerciante reconhecido" virou "Ser um dos maiores comerciantes":** o criador achou o nome estranho. Agora é prestígio pelo volume e pela reputação no mercado, ponderado pela Competitividade (busca de reconhecimento).
+- **Objetivos na pessoa, não no personagem:** sobrevivem a personagens alternativos no futuro.
+- **"Conhecer todo o mundo"** mede só as zonas conhecidas. A conclusão dos marcos de exploração não é registrada por atividade hoje.
+- **Sorteio no registro, não na criação da pessoa:** o equipamento raro precisa da classe, e quem nunca se registra não tem ambições no jogo.
+
+**Medição** (5 seeds × 1.000 × 90 dias):
+- `validation.csv` e `people.csv` iguais aos da E1a, fora a coluna nova;
+- a coerência com as preferências e a competitividade é de 1,9 a 4,1 vezes do terço de baixo ao de cima;
+- a dificuldade média dos gerais é 626 no casual e 766 no hardcore;
+- só 31,6% têm um geral que pode avançar agora, porque o resto depende de sistemas futuros, sem progresso fictício.
+
+**Próximo:** O2 (ligação com as metas e satisfação), depois da avaliação do criador.

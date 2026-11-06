@@ -122,6 +122,8 @@ public sealed class WorldState
 
     public ContentDatabase Content { get; }
     public ulong Seed { get; }
+    /// <summary>Cenario controlado (R4): pessoas iguais por celula, sem traits nem objetivos sorteados.</summary>
+    public bool Controlled { get; init; }
     /// <summary>Cenario controlado: humor sem efeito na rotina e na permanencia (D-039a).</summary>
     public bool NeutralMood { get; init; }
     /// <summary>Calendario de cada localidade (feriados da residencia), P1.</summary>

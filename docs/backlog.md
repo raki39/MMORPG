@@ -90,7 +90,11 @@ Uma etapa por vez, fechada por inteiro (testes, validação, documentação, exp
      - ~~P4d: aquisição e perda (Persistente e Rancoroso)~~ (D-060, `traits.md` seção 7);
        - depois: Maratonista por maratonas repetidas (outra entrega); Traumatizado, Matador de novatos, Protetor de novatos e Líder nato com combate, PvP e grupos;
    - a reputação do personagem entra com a Etapa 3 e as finanças com o M7.
-2. **Etapa 1 — O personagem** (D-040; escopo reduzido no D-061, `personagem.md`):
+1b. **Objetivos pessoais** (pedido do criador antes da E1b; `objetivos.md`):
+   - ~~O1: catálogo, sorteio inicial, viabilidade e aba Objetivos, sem influência~~ (D-062);
+   - O2: ligação com as metas (vínculo e motivo, adoção favorecida, preparação por requisito concreto), satisfação na conclusão e no abandono, sem duplicar;
+   - O3: evolução (surgimento por acontecimentos, prioridade, conclusão, abandono e substituição com motivo).
+2. **Etapa 1 — O personagem** (D-040; escopo reduzido no D-061, `personagem.md`; pausada antes da E1b até fechar os objetivos):
    - ~~E1a: modelo, estatísticas (com crítico), recurso por tipo, velocidade do personagem e índice de poder candidato~~ (D-061);
    - E1b: página Classes com criar, editar e duplicar; conteúdo personalizado persistido, presets preservados, ids estáveis; edição aplicada direto aos personagens existentes, com registro;
    - E1c: aba "Personagem" (classe, nível, XP, vida, recurso, estatísticas e decomposição do cálculo); Inventário e Banco não aparecem como prontos;
@@ -161,7 +165,7 @@ Continuidade, humor e retenção (D-026; fechamento do M2):
 - [ ] Revisão do criador das metas de retenção e progressão (hipóteses em targets.json)
 - [ ] Outros motivos de retorno: atualizações (M7), convites de amigos (M6), campanhas de marketing e streamers (M7)
 - [ ] Conhecimento "sabe que existe" × "conhece" e exploração do interior das zonas (com o editor de mapa)
-- [ ] Ambições de longo prazo em etapas (ficar muito forte, liderar guilda)
+- [x] Ambições de longo prazo: objetivos pessoais (O1, D-062, `objetivos.md`); O2 ligação com metas e satisfação; O3 evolução
 - [ ] Teste de salvar e carregar metas, planos, humor e memória (quando o save existir)
 
 ## Cliente (mapa e fichas)
@@ -195,7 +199,7 @@ Continuidade, humor e retenção (D-026; fechamento do M2):
 - [x] Metas de curto prazo na simulação e no card "Progresso e metas" (D-036, D-036a)
 - [x] Atributos do jogador vivos (sobem e caem devagar), talento e potencial; dica do que cada um faz (D-036, docs/atributos.md)
 - [x] Revisão D-036a: talento × experiência, potencial absoluto, gosto × execução, relações claras (zona familiar, desafio, estimativa de viagem), parâmetros em `population.json`, evolução medida no relatório
-- [ ] Ambições de longo prazo em etapas (ficar muito forte, liderar guilda), separadas das metas de curto prazo
+- [x] Ambições de longo prazo separadas das metas de curto prazo: objetivos pessoais (D-062)
 - [ ] Coordenação evoluindo em atividades cooperativas (grupos e raides, M6); experiências ruins persistentes (mortes, perdas) mudando gostos e aversão a risco (M3)
 - [ ] Classes e itens iniciais (próximo passo combinado com o criador)
 - [ ] Aba "Personagem" na página do jogador: classe, nível, itens, status e combate do personagem (separado dos atributos do jogador)

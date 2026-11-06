@@ -53,6 +53,7 @@ public static class ContentValidator
     public const string OccupationsFile = "occupations.json";
     public const string TraitsFile = "traits.json";
     public const string CombatFile = "combat.json";
+    public const string ObjectivesFile = "objectives.json";
 
     private static readonly Regex IdPattern = new("^[a-z][a-z0-9_]*$", RegexOptions.CultureInvariant);
 
@@ -90,6 +91,7 @@ public static class ContentValidator
         ValidateQuests(set, classIds, itemIds, v);
         ValidateQuirks(set, v);
         ValidateCombat(set, v);
+        ValidateObjectives(set, v);
 
         return v.Issues;
     }
@@ -517,6 +519,70 @@ public static class ContentValidator
     {
         foreach (var key in CombatStats.Keys)
             if (s.Get(key) < 0) v.Error(file, p + "." + key, "Valor negativo.");
+    }
+
+    /// <summary>objectives.json (O1): regras do sorteio e catalogo dos objetivos pessoais.</summary>
+    private static void ValidateObjectives(ContentSet set, Collector v)
+    {
+        const string f = ObjectivesFile;
+        var g = set.Objectives.Generation;
+        if (g.GeneralCountWeights.Count is < 1 or > 3) v.Error(f, "generation.generalCountWeights", "Informe de 1 a 3 pesos (quantidades 0 a 2).");
+        else if (g.GeneralCountWeights.Any(w => w < 0) || g.GeneralCountWeights.Sum() <= 0) v.Error(f, "generation.generalCountWeights", "Pesos não negativos e soma positiva.");
+        if (g.SecondaryCountWeights.Count is < 1 or > 4) v.Error(f, "generation.secondaryCountWeights", "Informe de 1 a 4 pesos (quantidades 0 a 3).");
+        else if (g.SecondaryCountWeights.Any(w => w < 0) || g.SecondaryCountWeights.Sum() <= 0) v.Error(f, "generation.secondaryCountWeights", "Pesos não negativos e soma positiva.");
+        foreach (var (name, value, lo, hi) in new (string, int, int, int)[]
+        {
+            ("minMultiplierPermille", g.MinMultiplierPermille, 1, 1000), ("maxMultiplierPermille", g.MaxMultiplierPermille, 1000, 10_000),
+            ("difficultyStrengthPermille", g.DifficultyStrengthPermille, 0, 1000), ("importanceSlopePermille", g.ImportanceSlopePermille, 0, 1000),
+            ("importanceNoise", g.ImportanceNoise, 0, 500), ("commitmentBase", g.CommitmentBase, 0, 1000),
+            ("commitmentGameImportancePermille", g.CommitmentGameImportancePermille, 0, 1000), ("commitmentPatiencePermille", g.CommitmentPatiencePermille, 0, 1000),
+            ("commitmentLoyaltyPermille", g.CommitmentLoyaltyPermille, 0, 1000),
+        })
+            if (value < lo || value > hi) v.Error(f, "generation." + name, $"Use de {lo} a {hi}.");
+        foreach (var r in g.RareItemRarities)
+            if (!Rarities.All.Contains(r, StringComparer.Ordinal)) v.Error(f, "generation.rareItemRarities", $"Raridade '{r}' desconhecida.");
+
+        var ids = CheckIds(set.Objectives.Objectives, f, "objectives", v);
+        var personalities = new HashSet<string>(set.Population.Personality.Types.Select(t => t.Id), StringComparer.Ordinal) { "equilibrado" };
+        var profiles = new HashSet<string>(set.Population.Profiles.Select(p => p.Id), StringComparer.Ordinal);
+        var prefs = new HashSet<string>(Population.PersonPreferences.Keys, StringComparer.Ordinal);
+        var attrs = new HashSet<string>(Population.QuirkSystem.AffinityAttributes, StringComparer.Ordinal);
+        var quirks = new HashSet<string>(set.Quirks.Traits.Select(q => q.Id), StringComparer.Ordinal);
+        for (int i = 0; i < set.Objectives.Objectives.Count; i++)
+        {
+            var o = set.Objectives.Objectives[i];
+            string p = $"objectives[{i}]";
+            v.Require(f, p + ".name", o.Name);
+            v.Require(f, p + ".description", o.Description);
+            v.OneOf(f, p + ".criterion", o.Criterion, ObjectiveCriteria.All);
+            v.OneOf(f, p + ".horizon", o.Horizon, ObjectiveHorizons.All);
+            if (o.Difficulty is < 0 or > 1000) v.Error(f, p + ".difficulty", "Use de 0 a 1000.");
+            if (o.Weight < 0) v.Error(f, p + ".weight", "Peso não pode ser negativo.");
+            for (int k = 0; k < o.Affinities.Count; k++)
+            {
+                var a = o.Affinities[k];
+                string ap = $"{p}.affinities[{k}]";
+                int dot = a.Key.IndexOf('.');
+                string kind = dot > 0 ? a.Key[..dot] : "", key = dot > 0 ? a.Key[(dot + 1)..] : "";
+                bool numeric = kind is "traits" or "preferences";
+                bool known = kind switch
+                {
+                    "traits" => attrs.Contains(key),
+                    "preferences" => prefs.Contains(key),
+                    "profile" => profiles.Contains(key),
+                    "personality" => personalities.Contains(key),
+                    "quirk" => quirks.Contains(key),
+                    _ => false,
+                };
+                if (!known) v.Error(f, ap + ".key", $"Chave '{a.Key}' desconhecida. Use traits.<atributo de personalidade ou conduta>, preferences.<preferência>, profile.<perfil>, personality.<personalidade> ou quirk.<trait>.");
+                if (numeric)
+                {
+                    v.OneOf(f, ap + ".direction", a.Direction, new[] { "high", "low" });
+                    if (a.StrengthPermille is < 0 or > 1000) v.Error(f, ap + ".strengthPermille", "Use de 0 a 1000 (o sentido vem de direction).");
+                }
+                else if (a.StrengthPermille is < -1000 or > 3000) v.Error(f, ap + ".strengthPermille", "Use de -1000 a 3000.");
+            }
+        }
     }
 
     /// <summary>combat.json (Etapa 1): limites das estatisticas e indice de poder.</summary>

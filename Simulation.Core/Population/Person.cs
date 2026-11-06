@@ -328,6 +328,15 @@ public sealed class Person
     /// <summary>Historico de aquisicoes e perdas (preservado ao perder e readquirir).</summary>
     internal List<QuirkChange> QuirkHistoryList { get; } = new();
     public IReadOnlyList<QuirkChange> QuirkHistory => QuirkHistoryList;
+    /// <summary>
+    /// Objetivos pessoais (O1): ambicoes da pessoa naquele MMORPG, separadas das metas do personagem.
+    /// Ficam na pessoa (sobrevivem a personagens futuros). Gerais primeiro, por importancia.
+    /// </summary>
+    internal List<PersonObjective> ObjectiveList { get; } = new();
+    public IReadOnlyList<PersonObjective> Objectives => ObjectiveList;
+    /// <summary>Historico dos objetivos: definicao, conclusao, mudanca de prioridade, abandono (motivo registrado).</summary>
+    internal List<ObjectiveChange> ObjectiveHistoryList { get; } = new();
+    public IReadOnlyList<ObjectiveChange> ObjectiveHistory => ObjectiveHistoryList;
     /// <summary>Renda do trabalho e apoio familiar (centavos/mes; sem efeito ate o M7).</summary>
     public long IncomeCentsPerMonth { get; internal set; }
     public long SupportCentsPerMonth { get; internal set; }
@@ -634,6 +643,55 @@ public sealed class QuirkEvidence
     /// <summary>Dia jogado da ultima mudanca desta trait (-1 = nunca).</summary>
     public int LastChangePlayDay { get; internal set; } = -1;
 }
+
+/// <summary>
+/// Objetivo pessoal de uma pessoa (O1). Geral ou secundario pela importancia para ela; o horizonte e
+/// a viabilidade sao caracteristicas separadas (o horizonte vem do catalogo; a viabilidade e
+/// calculada por ObjectiveSystem.Assess, sem guardar progresso ficticio).
+/// </summary>
+public sealed class PersonObjective
+{
+    public PersonObjective(string id, string param, string tier, int importance, int commitment, string origin, long day, IReadOnlyList<(string Key, int Value)> motives)
+    {
+        Id = id;
+        Param = param;
+        Tier = tier;
+        Importance = importance;
+        Commitment = commitment;
+        Origin = origin;
+        Day = day;
+        Motives = motives;
+    }
+
+    public string Id { get; }
+    /// <summary>Parametro do objetivo ("" = nenhum): item do equipamento raro, especialidade de fabricacao.</summary>
+    public string Param { get; }
+    /// <summary>general ou secondary (importancia para a pessoa).</summary>
+    public string Tier { get; internal set; }
+    /// <summary>Importancia para a pessoa (permille).</summary>
+    public int Importance { get; internal set; }
+    /// <summary>Comprometimento (permille): dedicacao, paciencia e lealdade. Uso na O2.</summary>
+    public int Commitment { get; internal set; }
+    public string State { get; internal set; } = ObjectiveStates.Active;
+    /// <summary>initial (a pessoa ja tinha ao entrar) ou o acontecimento que o originou (O3).</summary>
+    public string Origin { get; }
+    /// <summary>Dia (indice do calendario) em que passou a valer.</summary>
+    public long Day { get; }
+    /// <summary>O que mais pesou na escolha (afinidade ou ambicao) e quanto (termo - 1000).</summary>
+    public IReadOnlyList<(string Key, int Value)> Motives { get; }
+}
+
+public static class ObjectiveStates
+{
+    public const string Active = "active";
+    /// <summary>Deixado de lado (prioridade menor, substituicao voluntaria): O3.</summary>
+    public const string Paused = "paused";
+    public const string Completed = "completed";
+    public const string Abandoned = "abandoned";
+}
+
+/// <summary>Mudanca de objetivo: dia, objetivo, parametro, mudanca ("set" na O1), importancia e motivo.</summary>
+public sealed record ObjectiveChange(long Day, string Id, string Param, string Change, string Tier, string Reason);
 
 /// <summary>Aquisicao ou perda de trait: dia local, dia jogado, trait, "acquired"/"lost", origem anterior e evidencia.</summary>
 public sealed record QuirkChange(long Day, int PlayDay, string Id, string Change, string PreviousSource, int For, int Against, string Reason);

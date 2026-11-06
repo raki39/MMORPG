@@ -357,7 +357,7 @@ public static class ScenarioRunner
         + string.Join(",", PersonPreferences.Keys.Select(k => "pref_" + k)) + ","
         + string.Join(",", PeopleActivityTypes.Select(k => "min_" + k)) + ","
         + "target_level,h_to_target," + string.Join(",", PeopleActivityTypes.Select(k => "pre_min_" + k)) + ","
-        + "unlock_set,unlock_done,discover_set,discover_done,discover_set_non_exploration,personality,personality_initial,personality_changes,min_idle,min_played,traits,quirk_stats,rage_quits,goals_completed,goals_abandoned,frustration,satisfaction,engagement,novelty,game_knowledge,mechanical_skill,known_regions,hints,times_returned,memories,play_days,quirk_history,quirk_evidence\n";
+        + "unlock_set,unlock_done,discover_set,discover_done,discover_set_non_exploration,personality,personality_initial,personality_changes,min_idle,min_played,traits,quirk_stats,rage_quits,goals_completed,goals_abandoned,frustration,satisfaction,engagement,novelty,game_knowledge,mechanical_skill,known_regions,hints,times_returned,memories,play_days,quirk_history,quirk_evidence,objectives\n";
 
     /// <summary>
     /// Uma linha por pessoa da campanha (people.csv): atributos de dedicacao, horas estimadas na
@@ -405,7 +405,9 @@ public static class ScenarioRunner
             // Traits (P4d): dias jogados, historico (trait:mudanca@dia jogado:origem anterior) e evidencia.
             .Append(p.PlayDayCount.ToString(inv))
             .Append(string.Join("|", p.QuirkHistory.Select(h => $"{h.Id}:{h.Change}@{h.PlayDay}:{h.PreviousSource}")))
-            .Append(string.Join("|", p.QuirkEvidenceByTrait.Select(kv => $"{kv.Key}:op{kv.Value.Opportunities}:a{kv.Value.ForCount}:c{kv.Value.AgainstCount}:ef{kv.Value.EffectOnlyCount}:f{kv.Value.For}:x{kv.Value.Against}")))));
+            .Append(string.Join("|", p.QuirkEvidenceByTrait.Select(kv => $"{kv.Key}:op{kv.Value.Opportunities}:a{kv.Value.ForCount}:c{kv.Value.AgainstCount}:ef{kv.Value.EffectOnlyCount}:f{kv.Value.For}:x{kv.Value.Against}")))
+            // Objetivos pessoais (O1): id:parametro:importancia (g = geral, s = secundario).
+            .Append(string.Join("|", p.Objectives.Select(o => $"{o.Id}:{o.Param}:{(o.Tier == ObjectiveTiers.General ? "g" : "s")}{o.Importance}")))));
             sb.Append('\n');
         }
         return sb.ToString();

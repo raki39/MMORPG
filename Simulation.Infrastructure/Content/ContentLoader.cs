@@ -40,6 +40,7 @@ public static class ContentLoader
         ContentValidator.QuestsFile,
         ContentValidator.TraitsFile,
         ContentValidator.CombatFile,
+        ContentValidator.ObjectivesFile,
     };
 
     public static readonly JsonSerializerOptions JsonOptions = new()
@@ -90,6 +91,8 @@ public static class ContentLoader
         var quests = Parse<QuestsFile>(texts, ContentValidator.QuestsFile, issues);
         if (quests != null) set.Quests = new QuestCatalog { Settings = quests.Settings, Boards = quests.Boards, Quests = quests.Quests };
         set.Combat = Parse<CombatFile>(texts, ContentValidator.CombatFile, issues)?.Combat ?? new CombatRulesDefinition();
+        if (Parse<ObjectivesFile>(texts, ContentValidator.ObjectivesFile, issues) is { } objectives)
+            set.Objectives = new ObjectiveCatalogDefinition { Generation = objectives.Generation, Objectives = objectives.Objectives };
         var traits = Parse<TraitsFile>(texts, ContentValidator.TraitsFile, issues);
         if (traits != null) set.Quirks = new QuirkCatalogDefinition { Generation = traits.Generation, Effects = traits.Effects, Acquisition = traits.Acquisition, Traits = traits.Traits };
 
@@ -173,6 +176,13 @@ public sealed class QuestsFile : VersionedFile
 }
 
 public sealed class ProgressionFile : VersionedFile { public ProgressionDefinition Progression { get; set; } = new(); }
+
+/// <summary>objectives.json (O1): objetivos pessoais.</summary>
+public sealed class ObjectivesFile : VersionedFile
+{
+    public ObjectiveGenerationDefinition Generation { get; set; } = new();
+    public List<ObjectiveDefinition> Objectives { get; set; } = new();
+}
 
 /// <summary>combat.json (Etapa 1): regras gerais de combate e indice de poder.</summary>
 public sealed class CombatFile : VersionedFile { public CombatRulesDefinition Combat { get; set; } = new(); }

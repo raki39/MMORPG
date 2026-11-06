@@ -22,6 +22,8 @@ public sealed class ContentSet
     public QuirkCatalogDefinition Quirks { get; set; } = new();
     /// <summary>Regras gerais de combate e indice de poder (combat.json, Etapa 1).</summary>
     public CombatRulesDefinition Combat { get; set; } = new();
+    /// <summary>Objetivos pessoais (objectives.json, O1).</summary>
+    public ObjectiveCatalogDefinition Objectives { get; set; } = new();
 
     /// <summary>Hash do conteudo de origem (calculado por quem carregou os arquivos).</summary>
     public string SourceHash { get; set; } = "";
@@ -48,6 +50,8 @@ public sealed class ContentDatabase
         QuestBoards = Index(set.Quests.Boards);
         Quirks = Index(set.Quirks.Traits);
         QuirksOrdered = Quirks.Values.ToList();
+        Objectives = Index(set.Objectives.Objectives);
+        ObjectivesOrdered = Objectives.Values.ToList();
         var byActivity = new SortedDictionary<string, QuestBoardDefinition>(StringComparer.Ordinal);
         foreach (var b in set.Quests.Boards) byActivity.TryAdd(b.RegionId + "/" + b.ActivityId, b);
         BoardByActivity = byActivity;
@@ -120,6 +124,11 @@ public sealed class ContentDatabase
     }
     /// <summary>Regras gerais de combate e indice de poder (Etapa 1).</summary>
     public CombatRulesDefinition Combat => Set.Combat;
+    /// <summary>Objetivos pessoais (O1): regras do sorteio e catalogo.</summary>
+    public ObjectiveCatalogDefinition ObjectiveCatalog => Set.Objectives;
+    public IReadOnlyDictionary<string, ObjectiveDefinition> Objectives { get; }
+    /// <summary>Objetivos em ordem ordinal de ID (ordem estavel para o sorteio).</summary>
+    public IReadOnlyList<ObjectiveDefinition> ObjectivesOrdered { get; }
     /// <summary>Traits (P4b): regras do sorteio e catalogo.</summary>
     public QuirkCatalogDefinition QuirkCatalog => Set.Quirks;
     public IReadOnlyDictionary<string, QuirkDefinition> Quirks { get; }

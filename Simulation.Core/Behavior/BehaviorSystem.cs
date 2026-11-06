@@ -271,6 +271,19 @@ public sealed class BehaviorSystem
         var ch = _w.AddCharacter(account.Id, p.Id, nick, classId, start);
         ch.Position = _routes.Layout.Hub(start);
         Combat.CharacterStats.RestoreOutOfCombat(_w.Content, ch);
+        // Objetivos pessoais (O1): a pessoa entra no jogo com suas ambicoes (fluxo proprio; o equipamento
+        // raro depende da classe). Sem efeito no comportamento ate a O2. No cenario controlado, nenhum.
+        if (!_w.Controlled)
+        {
+            long day = LocalDay(p, Now);
+            foreach (var o in ObjectiveSystem.Draw(_w.Content, p, classId, _w.Seed, day))
+            {
+                p.ObjectiveList.Add(o);
+                p.ObjectiveHistoryList.Add(new ObjectiveChange(day, o.Id, o.Param, "set", o.Tier, ObjectiveSystem.InitialOrigin));
+                _w.Emit("objective_set", EventImportance.Low, new[] { new EntityRef("person", p.Id) },
+                    o.Motives.Select(m => new EventCause(m.Key, m.Value)).ToArray(), $"{o.Id}|{o.Param}|{o.Tier}");
+            }
+        }
         account.ActiveCharacterId = ch.Id;
         p.AccountId = account.Id;
         p.CharacterId = ch.Id;

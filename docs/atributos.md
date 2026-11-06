@@ -151,7 +151,7 @@ Como ler a tabela anterior (seed 1):
 
 ## Metas de curto prazo
 
-São as metas de sessão ou secundárias (chegar a um nível, descobrir uma zona, concluir uma missão, praticar uma atividade). **Ambições de longo prazo** (ficar muito forte, liderar uma guilda) virão em etapas, sem misturar com as metas de curto prazo.
+São as metas de sessão ou secundárias (chegar a um nível, descobrir uma zona, concluir uma missão, praticar uma atividade). **Ambições de longo prazo** são os objetivos pessoais (`objetivos.md`, D-062), separados das metas de curto prazo.
 
 - **Adoção:** ao conectar, se houver vaga.
   - Até 2 metas para todos, chance fixa de 45%.

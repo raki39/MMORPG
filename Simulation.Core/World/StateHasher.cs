@@ -11,7 +11,7 @@ namespace Simulation.Core.World;
 /// </summary>
 public static class StateHasher
 {
-    public const int FormatVersion = 28;
+    public const int FormatVersion = 29;
 
     public static string Compute(WorldState w) => Compute(w, includeContentId: true);
 
@@ -199,6 +199,16 @@ public static class StateHasher
         }
         h.Int(p.QuirkHistory.Count);
         foreach (var qc in p.QuirkHistory) { h.Long(qc.Day); h.Int(qc.PlayDay); h.Str(qc.Id); h.Str(qc.Change); h.Str(qc.PreviousSource); h.Int(qc.For); h.Int(qc.Against); h.Str(qc.Reason); }
+        // Objetivos pessoais (O1).
+        h.Int(p.Objectives.Count);
+        foreach (var o in p.Objectives)
+        {
+            h.Str(o.Id); h.Str(o.Param); h.Str(o.Tier); h.Int(o.Importance); h.Int(o.Commitment); h.Str(o.State); h.Str(o.Origin); h.Long(o.Day);
+            h.Int(o.Motives.Count);
+            foreach (var (k, v) in o.Motives) { h.Str(k); h.Int(v); }
+        }
+        h.Int(p.ObjectiveHistory.Count);
+        foreach (var oc in p.ObjectiveHistory) { h.Long(oc.Day); h.Str(oc.Id); h.Str(oc.Param); h.Str(oc.Change); h.Str(oc.Tier); h.Str(oc.Reason); }
         h.Int(t.LeisureBudgetCentsPerMonth); h.Int(t.WillingnessToPay); h.Int(t.PaidAdvantageSensitivity);
         h.Int(t.PreferredStartHour); h.Int(t.SessionMinutes); h.Int(t.GameImportance); h.Int(t.Habit); h.Int(t.ExtendTendency); h.Int(t.SelfControl); h.Int(t.Talent); h.Int(t.Variety); h.Int(t.Chronotype);
         h.Int(p.FreeEveShiftMinutes); h.Long(p.SleepUntilTick); h.Long(p.SleepShiftedDay);
