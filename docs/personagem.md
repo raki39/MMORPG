@@ -130,10 +130,14 @@ Poder         = 100 × √(Ofensiva × Sobrevivência)
 - **Estimativa no momento** (para a ameaça, depois do combate): poder × √(vida atual ÷ vida máxima). Com metade da vida, fica em cerca de 71% do poder.
 - O recurso não entra na estimativa, porque a fúria começa vazia por regra, não por fraqueza.
 
-**Limites conhecidos do candidato:**
-- **Cura e proteção de aliados não contam.** O Sacerdote aparece abaixo do que vale num grupo.
-- **As habilidades não entram:** nem a escala de cada uma (Bola de Fogo escala 120% do ataque mágico), nem o custo e a recarga.
+**Limites conhecidos do candidato** (aprovado assim pelo criador, sem ser balanceamento definitivo):
+- **Não representa** as habilidades, a cura, a proteção de aliados, o alcance nem o desempenho real em combate.
+  - O Sacerdote aparece abaixo do que vale num grupo.
+  - A escala de cada habilidade (Bola de Fogo escala 120% do ataque mágico), o custo e a recarga ficam de fora.
 - **A defesa é uma média:** contra um adversário só de dano físico, a defesa física vale mais do que a fórmula mostra.
+- **A estimativa pela vida atual é provisória.** Ela não deve virar o único critério das decisões futuras, como ameaça, fuga ou escolha de alvo.
+- **"Ser forte" não é o índice:** os objetivos pessoais não reduzem força ao índice de poder.
+- Pesos, valores de crítico e limites são candidatos configuráveis.
 
 ## 4. Próximas partes
 

@@ -2108,4 +2108,11 @@ Itens como instâncias, inventário, equipamento funcional, carteira e aplicaç�
 - os presets preservam a progressão e o deslocamento;
 - versão do hash 28.
 
-**Próximo:** E1b (página Classes e editor), depois da avaliação do criador.
+**Avaliação do criador (06/11/2026):**
+- A E1a está aprovada como base do personagem.
+- Pesos do índice, crítico e limites ficam como candidatos configuráveis; não são balanceamento definitivo.
+- Mana e Energia começam cheias e a Fúria vazia.
+- Ficam documentadas as limitações: o índice não representa habilidades, cura, proteção, alcance nem desempenho real em combate.
+- A estimativa pela vida atual é provisória e não será o único critério das decisões.
+
+**Próximo:** a Etapa 1 pausa antes da E1b, para a camada de objetivos pessoais.
