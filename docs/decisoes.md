@@ -1912,6 +1912,42 @@ O criador pediu que cada jogador tenha **uma** personalidade principal, com efei
 
 **Depois:**
 - As regras da Etapa 3 (Pacífico só se defende ou foge; Agressivo inicia e revida) e dos grupos (M6).
-- Possível calibração do Inquieto: contar a repetição em minutos, não em ciclos.
 
-**Próximo:** R6 (variedade de horários, aprovada pelo criador a partir do diagnóstico da rotina) e depois a P4b (traits).
+**Ajuste pedido pelo criador ao aprovar (feito):** a repetição do Inquieto passou a ser medida em minutos seguidos na mesma atividade, dentro da sessão (`restlessMinutes` = 50, candidato), e não mais em ciclos de decisão, cuja duração varia por atividade. Medido só esse efeito (P2): o Inquieto anda 28,1% do tempo (era 31,9%) e volta a ficar mais na cidade e na coleta; o geral de "andando ou esperando" foi de 20,3% para 20,2%.
+
+**Próximo:** P4b (estrutura das traits, antes da R6, a pedido do criador), depois a R6 (variedade de horários) e os efeitos das traits.
+
+## D-057 — Traits: estrutura, sorteio e ficha (P4b)
+**Data:** 05/11/2026 · **Estado:** aceita (efeitos desligados até a P4c)
+
+O criador pediu o card de traits na visão geral, no lugar do Inventário, com ícones padronizados. Como as traits ainda não existiam na simulação, escolheu fazer a P4b estrutural antes da R6. Detalhes em `traits.md`.
+
+**O que entrou:**
+- **Conteúdo:** `traits.json` (arquivo novo, validado) com 30 traits:
+  - 15 com efeitos da própria pessoa;
+  - 10 que dependem de sistemas futuros, sorteadas desde já como predisposição;
+  - 3 só no catálogo, até o desenho do sistema;
+  - 2 só adquiridas.
+  - Sai a trait Metódico, que virou personalidade.
+- **Sorteio na criação:**
+  - quantidade pela tabela aprovada (0 → 8% … 6 → 1%);
+  - 40% de chance de negativa por vaga;
+  - coerência pelo produto das afinidades (personalidade, atributos de personalidade, Conduta, autocontrole, preferências e perfil), limitado entre 0,25 e 3;
+  - exclusões com outras traits e com a personalidade principal;
+  - vaga vazia quando não há candidata.
+  - Fluxo de RNG próprio, por último. Marcância desligada. Talento e inteligência não entram.
+- **Estado:** lista de traits na pessoa (id, origem, dia), no hash. Colunas `traits` no `people.csv` e no `population.csv`.
+- **Ficha:**
+  - card "Personalidade e traços" no lugar do Inventário, que foi para a aba Inventário;
+  - emblemas padronizados, com um ícone Lucide diferente para cada personalidade e cada trait;
+  - os destaques do card de atributos deixam de repetir nomes de personalidade.
+
+**Nome no código:** `Quirk`. "Trait" já nomeia os atributos numéricos (`PersonTraits`, `TraitRange`, `TraitDraw`), e o mesmo nome para as duas coisas confundiria. O arquivo do conteúdo e a interface usam "traits" e "traços".
+
+**Medição** (5 seeds × 1.000 × 90 dias, com e sem traits):
+- **Simulação idêntica:** `validation.csv` igual, e nenhuma coluna comum do `people.csv` mudou.
+- **Quantidade:** dentro de 1 ponto da tabela em todas as faixas. Negativas: 39,5%.
+- **Coerência:** Pavio curto em 16,6% dos Agressivos e 4,7% dos Pacíficos; Maratonista em 17,5% dos Devotos e 4,3% dos Casuais.
+- **Exclusões:** nenhuma violada.
+
+**Próximo:** R6 (variedade de horários); depois a P4c (efeitos) e a P4d (aquisição e perda).

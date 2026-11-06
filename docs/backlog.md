@@ -67,14 +67,25 @@ Uma etapa por vez, fechada por inteiro (testes, validação, documentação, exp
      - depois: novas fontes de informação para a descoberta (conversas, outros jogadores, guildas), `requiredQuestIds` quando houver desbloqueio por missão, equipamento e venda de excedentes com inventário e economia (M5);
    - P4: personalidade principal e traits (`personalidade.md`; proposta de traits em `plano-pessoa.md`, seção 4):
      - ~~P4a: personalidade principal no Core (régua do preset, mudança rara com margem e confirmação, regras próprias)~~ (D-056);
-       - depois: regras da Etapa 3 e dos grupos (M6); possível calibração do Inquieto (repetição contada em minutos);
+       - depois: regras da Etapa 3 e dos grupos (M6);
+       - ~~repetição do Inquieto contada em minutos de jogo, com limite configurável, em vez de ciclos~~ (feita; P2 em `baselines/personalidade/`);
      - **R6, variedade de horários** (aprovada pelo criador; logo depois da P4a). O diagnóstico mostrou ninguém jogando entre 1 h e 8 h da hora local, porque o sono e o horário preferido saem de faixas estreitas. A correção:
        - cronotipo com os dois extremos (matinais e notívagos) e concentração no meio. Ele influencia só em parte o sono e o horário preferido, com variação individual: ser notívago não obriga a preferir jogar de madrugada;
        - dormir e acordar mais tarde na véspera de folga: deslocamento individual e configurável, nem todo mundo tem, e respeita compromissos e necessidade de sono;
        - turno noturno: jogar depois do turno é uma possibilidade, não uma janela obrigatória (cansaço, vontade e disponibilidade decidem). Na folga, a rotina continua a dos dias de trabalho em vez de voltar de uma vez ao sono das 23h45;
        - texto da tela: mostra o próximo login realmente agendado; qualquer informação de pico vem dos dados da campanha;
        - medição: sono, início das sessões e presença por hora local, por ocupação, incluindo as passagens entre trabalho e folga. Horas por semana e pico online servem só de controle. Sem número mínimo de jogadores na madrugada;
-     - P4b: estrutura das traits (geração, compatibilidades, ficha). **Interface:** o card de Traits entra no lugar de "Inventário" na visão geral da ficha; o inventário vai depois para uma aba própria, "Personagem", com as informações do personagem;
+       - cuidados pedidos pelo criador:
+         - horário que atravessa a meia-noite é uma faixa contínua: 03h vem depois das 23h, não antes;
+         - o cronotipo é tendência individual; as obrigações continuam limitando o que é possível. A faixa candidata (21h a 03h) não pode virar limite universal que impeça rotinas válidas mais tardias;
+         - jogar depois do turno noturno não cria tempo livre nem aplica de novo a chance diária de jogar como uma segunda oportunidade independente;
+         - continuidade do sono nas folgas, considerando também o próximo turno;
+         - deslocar o sono é diferente de cortar sono: dormir das 03h às 11h não gera déficit para quem precisa de 8 h; ficar até as 03h e acordar às 07h reduz o sono, com as consequências que já existem;
+         - combinações possíveis, nunca obrigatórias por ocupação: quem estuda à tarde ou à noite pode jogar de madrugada e acordar tarde, se os compromissos permitirem; quem trabalha até a noite pode dormir depois do expediente e jogar de manhã; quem não trabalha nem estuda pode ter horário convencional ou bem tardio, inclusive dormindo parte do dia; quem folga no dia seguinte pode estender a noite, conforme vontade, cronotipo e necessidade de sono;
+         - tudo sai da combinação de características individuais, agenda e decisões, com continuidade entre os dias. Sem horários fixos por ocupação e sem obrigar ninguém a virar a noite;
+         - sem próximo login agendado, a tela informa isso, sem inventar previsão;
+         - parâmetros de cronotipo e horários são candidatos; nenhum outro peso muda para compensar os resultados;
+     - ~~P4b: estrutura das traits (geração, compatibilidades, ficha; feita antes da R6 a pedido do criador, com os efeitos desligados)~~ (D-057, `traits.md`). **Interface:** o card de Traits entra no lugar de "Inventário" na visão geral da ficha; o inventário vai depois para uma aba própria, "Personagem", com as informações do personagem;
      - P4c: efeitos das traits ativas (inclui Maratonista e Procrastinador; no Procrastinador, se o atraso inviabilizar a sessão mínima, não começa naquela oportunidade e reconsidera numa próxima janela válida);
      - P4d: aquisição e perda;
    - a reputação do personagem entra com a Etapa 3 e as finanças com o M7.

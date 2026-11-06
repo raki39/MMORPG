@@ -191,7 +191,7 @@ public static class ActivityScoring
                 {
                     bool needed = questTerm != null || (goals != null && goals.Bonus(ch, region, a, yieldsXp, fit, delivers) > 0);
                     var ctx = new PersonalityContext(a.Type, region.Pvp == PvpRules.Open, needed, count, crowd, crowdingContribution,
-                        questTerm is { Key: "quest_step" }, region.Id + "/" + a.Id == ch.LastActivityKey, ch.RepeatCount, firstDecision, remaining,
+                        questTerm is { Key: "quest_step" }, region.Id + "/" + a.Id == ch.LastActivityKey, ch.RepeatMinutes, firstDecision, remaining,
                         challenge, ch.Level, fearlessRelief);
                     if (PersonalityRule(personality, content.Personality.Rules, ctx) is not 0 and var pv)
                         f.Add(new DecisionFactor("personality", pv));
@@ -230,7 +230,7 @@ public static class ActivityScoring
 
     /// <summary>Situacao de uma opcao que as regras de personalidade leem.</summary>
     public readonly record struct PersonalityContext(string Type, bool OpenPvpZone, bool Needed, int Count, int CrowdPermille,
-        int CrowdingContribution, bool QuestStep, bool SameAsLast, int RepeatCount, bool FirstDecision, int RemainingMinutes,
+        int CrowdingContribution, bool QuestStep, bool SameAsLast, int RepeatMinutes, bool FirstDecision, int RemainingMinutes,
         int Challenge, int Level, int FearlessRelief);
 
     /// <summary>
@@ -257,8 +257,8 @@ public static class ActivityScoring
             PersonalityRuleIds.AvoidCrowds => x.CrowdPermille >= r.CrowdLimitPermille ? -r.NeverPenalty : 0,
             // Paciente: fecha as etapas de missao antes de outras coisas (o plano fica no Decide).
             PersonalityRuleIds.FinishPlan => x.QuestStep ? r.QuestStepBonus : 0,
-            // Inquieto: depois de repetir a mesma atividade, procura outra.
-            PersonalityRuleIds.Restless => x.SameAsLast && x.RepeatCount + 1 >= r.RestlessRepeats ? -r.RestlessPenalty : 0,
+            // Inquieto: depois de um tempo seguido na mesma atividade (minutos, na sessao), procura outra.
+            PersonalityRuleIds.Restless => x.SameAsLast && x.RepeatMinutes >= r.RestlessMinutes ? -r.RestlessPenalty : 0,
             // Cauteloso: nunca entra em conteudo acima do nivel + margem.
             PersonalityRuleIds.NoOverlevel => x.Challenge > 0 && x.Challenge > x.Level + r.MaxLevelsAbove ? -r.NeverPenalty : 0,
             // Destemido: a primeira faixa de risco acima do nivel nao pesa.

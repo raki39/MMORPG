@@ -51,6 +51,7 @@ public static class ContentValidator
     public const string QuestsFile = "quests.json";
     public const string LocalitiesFile = "localities.json";
     public const string OccupationsFile = "occupations.json";
+    public const string TraitsFile = "traits.json";
 
     private static readonly Regex IdPattern = new("^[a-z][a-z0-9_]*$", RegexOptions.CultureInvariant);
 
@@ -86,6 +87,7 @@ public static class ContentValidator
         ValidatePopulation(set, v);
         ValidateProgression(set, v);
         ValidateQuests(set, classIds, itemIds, v);
+        ValidateQuirks(set, v);
 
         return v.Issues;
     }
@@ -872,7 +874,7 @@ public static class ContentValidator
             if (pr.CrowdLimitPermille is < 1 or > 1000) v.Error(PopulationFile, "personality.rules.crowdLimitPermille", "Use de 1 a 1000.");
             if (pr.SocialMinPeople < 1) v.Error(PopulationFile, "personality.rules.socialMinPeople", "Use 1 ou mais.");
             if (pr.SocialEndMinutes is < 0 or > 240) v.Error(PopulationFile, "personality.rules.socialEndMinutes", "Use de 0 a 240.");
-            if (pr.RestlessRepeats < 1) v.Error(PopulationFile, "personality.rules.restlessRepeats", "Use 1 ou mais.");
+            if (pr.RestlessMinutes is < 5 or > 600) v.Error(PopulationFile, "personality.rules.restlessMinutes", "Use de 5 a 600 minutos.");
             if (pr.OwnPathMinPreference is < 0 or > 1000) v.Error(PopulationFile, "personality.rules.ownPathMinPreference", "Use de 0 a 1000.");
             if (pr.MaxLevelsAbove is < 0 or > 30) v.Error(PopulationFile, "personality.rules.maxLevelsAbove", "Use de 0 a 30.");
             if (pr.FearlessBandLevels is < 0 or > 5) v.Error(PopulationFile, "personality.rules.fearlessBandLevels", "Use de 0 a 5.");
@@ -1301,6 +1303,67 @@ public static class ContentValidator
         if (a.Type != ActivityTypes.Hunt && a.Type != ActivityTypes.Boss) return 0;
         var levels = a.CreatureIds.Select(id => set.Creatures.FirstOrDefault(c => c.Id == id)).Where(c => c != null).Select(c => c!.Level).ToList();
         return levels.Count == 0 ? 0 : levels.Sum() / levels.Count;
+    }
+
+    /// <summary>traits.json (P4b): sorteio, catalogo, afinidades e exclusoes.</summary>
+    private static void ValidateQuirks(ContentSet set, Collector v)
+    {
+        const string f = TraitsFile;
+        var g = set.Quirks.Generation;
+        if (g.CountWeights.Count is < 1 or > 9) v.Error(f, "generation.countWeights", "Informe de 1 a 9 pesos (quantidades 0 a 8).");
+        else if (g.CountWeights.Any(w => w < 0) || g.CountWeights.Sum() <= 0) v.Error(f, "generation.countWeights", "Pesos não negativos e soma positiva.");
+        if (g.NegativeChancePermille is < 0 or > 1000) v.Error(f, "generation.negativeChancePermille", "Use de 0 a 1000.");
+        if (g.MinMultiplierPermille is < 1 or > 1000) v.Error(f, "generation.minMultiplierPermille", "Use de 1 a 1000.");
+        if (g.MaxMultiplierPermille is < 1000 or > 10000) v.Error(f, "generation.maxMultiplierPermille", "Use de 1000 a 10000.");
+        if (g.MaxTotal is < 0 or > 12) v.Error(f, "generation.maxTotal", "Use de 0 a 12.");
+        else if (g.CountWeights.Count - 1 > g.MaxTotal) v.Error(f, "generation.countWeights", "A maior quantidade passa do total máximo de traits.");
+
+        var ids = CheckIds(set.Quirks.Traits, f, "traits", v);
+        var personalities = new HashSet<string>(set.Population.Personality.Types.Select(t => t.Id), StringComparer.Ordinal) { "equilibrado" };
+        var profiles = new HashSet<string>(set.Population.Profiles.Select(p => p.Id), StringComparer.Ordinal);
+        var prefs = new HashSet<string>(Population.PersonPreferences.Keys, StringComparer.Ordinal);
+        var attrs = new HashSet<string>(Population.QuirkSystem.AffinityAttributes, StringComparer.Ordinal);
+        for (int i = 0; i < set.Quirks.Traits.Count; i++)
+        {
+            var q = set.Quirks.Traits[i];
+            string p = $"traits[{i}]";
+            v.Require(f, p + ".name", q.Name);
+            v.Require(f, p + ".effect", q.Effect);
+            v.OneOf(f, p + ".polarity", q.Polarity, new[] { QuirkPolarities.Positive, QuirkPolarities.Negative });
+            v.OneOf(f, p + ".acquisition", q.Acquisition, QuirkAcquisitions.All);
+            if (!QuirkSystems.All.Contains(q.System, StringComparer.Ordinal))
+                v.Error(f, p + ".system", $"Sistema '{q.System}' desconhecido. Use vazio (efeitos da pessoa), M3, M5, M6, etapa3 ou fabricacao.");
+            if (q.Drawn && q.Acquisition == QuirkAcquisitions.Acquired)
+                v.Error(f, p + ".drawn", "Trait só adquirida não entra no sorteio da criação.");
+            if (q.Weight < 0) v.Error(f, p + ".weight", "Peso não pode ser negativo.");
+            for (int k = 0; k < q.Affinities.Count; k++)
+            {
+                var a = q.Affinities[k];
+                string ap = $"{p}.affinities[{k}]";
+                int dot = a.Key.IndexOf('.');
+                string kind = dot > 0 ? a.Key[..dot] : "", key = dot > 0 ? a.Key[(dot + 1)..] : "";
+                bool numeric = kind is "traits" or "preferences";
+                bool known = kind switch
+                {
+                    "traits" => attrs.Contains(key),
+                    "preferences" => prefs.Contains(key),
+                    "profile" => profiles.Contains(key),
+                    "personality" => personalities.Contains(key),
+                    _ => false,
+                };
+                if (!known) v.Error(f, ap + ".key", $"Chave '{a.Key}' desconhecida. Use traits.<atributo de personalidade ou conduta>, preferences.<preferência>, profile.<perfil> ou personality.<personalidade>.");
+                if (numeric)
+                {
+                    v.OneOf(f, ap + ".direction", a.Direction, new[] { "high", "low" });
+                    if (a.StrengthPermille is < 0 or > 1000) v.Error(f, ap + ".strengthPermille", "Use de 0 a 1000 (o sentido vem de direction).");
+                }
+                else if (a.StrengthPermille is < -1000 or > 3000) v.Error(f, ap + ".strengthPermille", "Use de -1000 a 3000.");
+            }
+            foreach (var x in q.Excludes)
+                if (!ids.Contains(x) || x == q.Id) v.Error(f, p + ".excludes", $"Trait '{x}' não existe ou é a própria.");
+            foreach (var x in q.ExcludesPersonalities)
+                if (!personalities.Contains(x)) v.Error(f, p + ".excludesPersonalities", $"Personalidade '{x}' não existe.");
+        }
     }
 
     private static void ValidateProgression(ContentSet set, Collector v)

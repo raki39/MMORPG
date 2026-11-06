@@ -136,6 +136,8 @@ Cada pessoa guarda a **agenda do dia** como estado: janelas livres, sessões pla
 
 ## 4. Traits (características particulares da pessoa)
 
+> **Atualizado na P4b (D-057):** o catálogo revisado (30 traits), o sorteio aprovado e a ficha estão em `traits.md`. Esta seção fica como a proposta original.
+
 ### 4.1 Modelo (conteúdo `traits.json`)
 
 Cada trait declara:

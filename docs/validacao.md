@@ -321,6 +321,11 @@ Medição com as mesmas pessoas, sem e com as regras (`baselines/personalidade/`
   - **Por quê:** é o efeito próprio dessas personalidades (trocar de lugar, ir às etapas de missão, começar a sessão em outro lugar), não ciclo vazio.
   - **Decisão do criador:** não enfraquecer personalidades só para a meta provisória passar.
 - **Outras:** combate 33,0% → 33,7%; XP de missões 16,8% → 17,5%; horas até o nível 20 77,0 → 78,0 (já fora).
+- **Inquieto em minutos (P2):** andando ou esperando 20,3% → 20,2% (ainda fora); o Inquieto anda 28,1% (era 31,9%).
+
+## D-057: traits (05/11/2026)
+
+Com e sem traits, as mesmas pessoas (`baselines/traits/`). Os efeitos ficam desligados até a P4c, então a simulação precisa ser idêntica, e é: `validation.csv` igual e nenhuma coluna comum do `people.csv` diferente. A distribuição das traits está em `traits.md`, seção 5.
 
 ## Próximos passos
 

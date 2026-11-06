@@ -18,6 +18,8 @@ public sealed class ContentSet
     public List<LocalityDefinition> Localities { get; set; } = new();
     /// <summary>Ocupacoes: obrigacoes, deslocamento, renda (P2).</summary>
     public List<OccupationDefinition> Occupations { get; set; } = new();
+    /// <summary>Traits da pessoa (traits.json, P4b).</summary>
+    public QuirkCatalogDefinition Quirks { get; set; } = new();
 
     /// <summary>Hash do conteudo de origem (calculado por quem carregou os arquivos).</summary>
     public string SourceHash { get; set; } = "";
@@ -42,6 +44,8 @@ public sealed class ContentDatabase
         Occupations = Index(set.Occupations);
         Quests = Index(set.Quests.Quests);
         QuestBoards = Index(set.Quests.Boards);
+        Quirks = Index(set.Quirks.Traits);
+        QuirksOrdered = Quirks.Values.ToList();
         var byActivity = new SortedDictionary<string, QuestBoardDefinition>(StringComparer.Ordinal);
         foreach (var b in set.Quests.Boards) byActivity.TryAdd(b.RegionId + "/" + b.ActivityId, b);
         BoardByActivity = byActivity;
@@ -112,6 +116,11 @@ public sealed class ContentDatabase
         foreach (var t in s.Types) if (t.Id == personalityId) return t;
         return null;
     }
+    /// <summary>Traits (P4b): regras do sorteio e catalogo.</summary>
+    public QuirkCatalogDefinition QuirkCatalog => Set.Quirks;
+    public IReadOnlyDictionary<string, QuirkDefinition> Quirks { get; }
+    /// <summary>Traits em ordem ordinal de ID (ordem estavel para o sorteio).</summary>
+    public IReadOnlyList<QuirkDefinition> QuirksOrdered { get; }
     /// <summary>Prioridade de progressao inicial (D-055).</summary>
     public EarlyProgressionDefinition EarlyProgression => Set.Population.EarlyProgression;
     /// <summary>Ligacoes parciais entre atributos.</summary>

@@ -65,7 +65,7 @@ As regras são **categóricas**: "nunca", "sempre", "começa por". Elas aparecem
 | Sociável | +120 onde há 3 ou mais pessoas, na primeira decisão da sessão e nos últimos 45 min | nota |
 | Reservado | nunca entra em atividade com lotação a partir de 80% da capacidade | nota |
 | Paciente | acontecimentos não derrubam o plano da sessão; +100 para etapa de missão em andamento | plano e nota |
-| Inquieto | −250 para repetir a mesma atividade depois de 2 vezes seguidas | nota |
+| Inquieto | −250 para continuar na mesma atividade depois de 50 min seguidos nela, na sessão (`restlessMinutes`) | nota |
 | Leal | não abandona meta por impaciência | metas |
 | Independente | só aceita missões com etapa de um tema que ele prefere (a partir de 400) | quadro de missões |
 | Cauteloso | nunca entra em conteúdo com desafio acima do nível + 1 | nota |
@@ -110,4 +110,7 @@ Validação padrão (5 seeds × 1.000 pessoas × 90 dias). **P0** = personalidad
   - Agressivo, Pacífico e Metódico passam a andar menos.
   - Não é ciclo vazio: no Inquieto, a distribuição inteira se desloca, e nível e horas não mudam.
   - **Decisão do criador:** não enfraquecer as personalidades para a meta passar. A divergência fica registrada em `validacao.md`.
+- **Inquieto em minutos** (pedido do criador ao aprovar a P4a): a repetição passou de ciclos de decisão para minutos seguidos na mesma atividade, dentro da sessão (candidato: 50 min, dois ciclos típicos de caça). Antes, o comércio (ciclos de 15 min) disparava a troca em 30 min e a caça só em 50 a 60 min.
+  - Medição (P2 contra P1, mesmas pessoas): o Inquieto anda 28,1% do tempo (era 31,9%; sem regras, 21,1%), fica mais na cidade (17,5% → 19,7%) e coleta mais (9,7% → 11,5%). Nível e horas iguais.
+  - Geral: "andando ou esperando" 20,3% → 20,2%, ainda acima do limite provisório. Nenhum outro valor mudou.
 - **Correção durante a medição:** o Independente ia ao quadro de missões sem aceitar nada (30% do tempo em missões). Agora o quadro só conta como opção quando tem uma missão que ele aceitaria, e a meta "concluir missão" segue o mesmo filtro. Depois da correção: 2,2%.

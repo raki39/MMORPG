@@ -662,6 +662,7 @@ public sealed class BehaviorSystem
 
         ch.Status = CharacterStatus.Idle;
         ch.SessionStartTick = Now;
+        ch.RepeatMinutes = 0;   // a repeticao do Inquieto conta dentro da sessao
         ch.SessionEndTick = end;
         ch.LogoutPending = false;
         ch.SessionKind = kind;
@@ -1045,7 +1046,7 @@ public sealed class BehaviorSystem
             best.Factors, continued ? top.Key : options.FirstOrDefault(o => o != best)?.Key ?? "")
         { ContinuedPlan = continued, PlanGap = continued ? gap : 0 };
         if (best.Key == ch.LastActivityKey) ch.RepeatCount++;
-        else { ch.RepeatCount = 0; ch.LastActivityKey = best.Key; }
+        else { ch.RepeatCount = 0; ch.RepeatMinutes = 0; ch.LastActivityKey = best.Key; }
         _w.Today.ActivitiesChosen++;
 
         var causes = best.Factors.Where(f => f.Key != "noise" && f.Contribution != 0)
@@ -1164,6 +1165,7 @@ public sealed class BehaviorSystem
             var a = region.FindActivity(ch.ActivityId)!;
             _w.AddOccupancy(region.Id, a.Id, -1);
             int minutes = (int)((ev.Tick - ch.ActivityStartTick) / SimTime.TicksPerMinute);
+            if (region.Id + "/" + a.Id == ch.LastActivityKey) ch.RepeatMinutes += minutes;   // tempo seguido (Inquieto)
             int levelBefore = ch.Level;
             AwardExperience(ch, a, region, minutes);
             _quests.OnActivityDone(ch, region, a, minutes);

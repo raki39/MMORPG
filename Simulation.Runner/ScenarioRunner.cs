@@ -357,7 +357,7 @@ public static class ScenarioRunner
         + string.Join(",", PersonPreferences.Keys.Select(k => "pref_" + k)) + ","
         + string.Join(",", PeopleActivityTypes.Select(k => "min_" + k)) + ","
         + "target_level,h_to_target," + string.Join(",", PeopleActivityTypes.Select(k => "pre_min_" + k)) + ","
-        + "unlock_set,unlock_done,discover_set,discover_done,discover_set_non_exploration,personality,personality_initial,personality_changes,min_idle,min_played\n";
+        + "unlock_set,unlock_done,discover_set,discover_done,discover_set_non_exploration,personality,personality_initial,personality_changes,min_idle,min_played,traits\n";
 
     /// <summary>
     /// Uma linha por pessoa da campanha (people.csv): atributos de dedicacao, horas estimadas na
@@ -392,7 +392,8 @@ public static class ScenarioRunner
             .Append(p.PersonalityHistory.Count.ToString(inv))
             // Deslocamento = conectado - atividades - espera (idle), como na meta "andando ou esperando".
             .Append(ch == null ? "0" : (ch.ActivityTicksByType.GetValueOrDefault("idle") / SimTime.TicksPerMinute).ToString(inv))
-            .Append(ch == null ? "0" : (ch.PlayedTicks / SimTime.TicksPerMinute).ToString(inv))));
+            .Append(ch == null ? "0" : (ch.PlayedTicks / SimTime.TicksPerMinute).ToString(inv))
+            .Append(string.Join("|", p.Quirks.Select(q => q.Id)))));
             sb.Append('\n');
         }
         return sb.ToString();

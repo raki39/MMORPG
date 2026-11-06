@@ -161,9 +161,9 @@ public class PersonalityTests
     }
 
     private static ActivityScoring.PersonalityContext Ctx(string type = ActivityTypes.Hunt, bool pvpZone = false, bool needed = false, int count = 0,
-        int crowd = 0, int crowding = 0, bool step = false, bool same = false, int repeats = 0, bool first = false, int remaining = 200,
+        int crowd = 0, int crowding = 0, bool step = false, bool same = false, int repeatMinutes = 0, bool first = false, int remaining = 200,
         int challenge = 5, int level = 5, int fearless = 0) =>
-        new(type, pvpZone, needed, count, crowd, crowding, step, same, repeats, first, remaining, challenge, level, fearless);
+        new(type, pvpZone, needed, count, crowd, crowding, step, same, repeatMinutes, first, remaining, challenge, level, fearless);
 
     private static PersonalityTypeDefinition T(string id) => S.Types.Single(x => x.Id == id);
 
@@ -182,8 +182,10 @@ public class PersonalityTests
         Assert.Equal(0, Rule("sociavel", Ctx(count: r.SocialMinPeople)));                    // meio da sessao
         Assert.Equal(-r.NeverPenalty, Rule("reservado", Ctx(crowd: r.CrowdLimitPermille)));
         Assert.Equal(r.QuestStepBonus, Rule("paciente", Ctx(step: true)));
-        Assert.Equal(-r.RestlessPenalty, Rule("inquieto", Ctx(same: true, repeats: r.RestlessRepeats - 1)));
-        Assert.Equal(0, Rule("inquieto", Ctx(same: true, repeats: r.RestlessRepeats - 2)));
+        // Inquieto: minutos seguidos na mesma atividade (nao ciclos); outra atividade nao e penalizada.
+        Assert.Equal(-r.RestlessPenalty, Rule("inquieto", Ctx(same: true, repeatMinutes: r.RestlessMinutes)));
+        Assert.Equal(0, Rule("inquieto", Ctx(same: true, repeatMinutes: r.RestlessMinutes - 1)));
+        Assert.Equal(0, Rule("inquieto", Ctx(same: false, repeatMinutes: r.RestlessMinutes * 3)));
         Assert.Equal(-r.NeverPenalty, Rule("cauteloso", Ctx(challenge: 5 + r.MaxLevelsAbove + 1)));
         Assert.Equal(0, Rule("cauteloso", Ctx(challenge: 5 + r.MaxLevelsAbove)));
         Assert.Equal(37, Rule("destemido", Ctx(fearless: 37)));
@@ -216,6 +218,33 @@ public class PersonalityTests
         var cautious = Eval(T("cauteloso"));
         Assert.Equal(none.Select(o => o.Key).OrderBy(k => k, StringComparer.Ordinal), cautious.Select(o => o.Key).OrderBy(k => k, StringComparer.Ordinal));
         Assert.Contains(cautious, o => o.Factors.Any(f => f.Key == "personality" && f.Contribution == -S.Rules.NeverPenalty));
+    }
+
+    /// <summary>
+    /// Inquieto: a repeticao e tempo simulado seguido na mesma atividade, dentro da sessao. Nunca
+    /// passa do tempo da sessao e zera ao trocar de atividade e ao comecar outra sessao.
+    /// </summary>
+    [Fact]
+    [Trait("Classe", "Invariante")]
+    public void Inquieto_RepeticaoEmMinutosDentroDaSessao()
+    {
+        var e = TestSupport.NewEngine(11, 60);
+        e.Submit(new Simulation.Core.Commands.SetServerOpenCommand(true), Simulation.Core.Time.SimTime.Hours(8));
+        var w = e.World;
+        int checkedOnline = 0, positive = 0;
+        for (int h = 9; h <= 72; h++)
+        {
+            e.AdvanceTo(Simulation.Core.Time.SimTime.Hours(h));
+            foreach (var ch in w.Characters)
+            {
+                if (ch.Status == CharacterStatus.Offline) continue;
+                checkedOnline++;
+                long sessionMinutes = (w.Clock.Tick - ch.SessionStartTick) / Simulation.Core.Time.SimTime.TicksPerMinute;
+                Assert.InRange(ch.RepeatMinutes, 0, sessionMinutes);
+                if (ch.RepeatMinutes > 0) positive++;
+            }
+        }
+        Assert.True(checkedOnline > 50 && positive > 0, $"online {checkedOnline}, com repeticao {positive}");
     }
 
     [Fact]

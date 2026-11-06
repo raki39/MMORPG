@@ -121,6 +121,9 @@ public static class PopulationGenerator
         person.PersonalityId = PersonalitySystem.Classify(content, t);
         AssignLocality(person, content, rng, mean);   // depois dos tracos: nao altera populacoes ja geradas
         AssignRoutine(person, content, rng, cell?.Occupation, mean);    // depois da localidade (P2)
+        // Traits (P4b): fluxo proprio, por ultimo (usam perfil, personalidade, atributos, conduta,
+        // autocontrole e preferencias). No cenario controlado ficam vazias: pessoas iguais por celula.
+        if (cell == null) person.QuirkList.AddRange(QuirkSystem.Draw(content, person, campaignSeed));
         return person;
     }
 

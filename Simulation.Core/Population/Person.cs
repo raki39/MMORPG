@@ -295,6 +295,10 @@ public sealed class Person
     public int SleepNeedMinutes { get; internal set; } = 480;
     /// <summary>Hora preferida de dormir (minutos desde a meia-noite anterior; acima de 1440 = madrugada).</summary>
     public int BedtimeMinute { get; internal set; } = 1425;
+
+    /// <summary>Traits (P4b): de 0 a 6 na criacao, em ordem de sorteio. Efeitos na P4c; aquisicao e perda na P4d.</summary>
+    internal List<QuirkState> QuirkList { get; } = new();
+    public IReadOnlyList<QuirkState> Quirks => QuirkList;
     /// <summary>Renda do trabalho e apoio familiar (centavos/mes; sem efeito ate o M7).</summary>
     public long IncomeCentsPerMonth { get; internal set; }
     public long SupportCentsPerMonth { get; internal set; }
@@ -709,6 +713,8 @@ public sealed class Character
     public int DecisionCount { get; internal set; }
     public string LastActivityKey { get; internal set; } = "";
     public int RepeatCount { get; internal set; }
+    /// <summary>Minutos seguidos fazendo a atividade de LastActivityKey nesta sessao (Inquieto, P4a).</summary>
+    public int RepeatMinutes { get; internal set; }
     public DecisionRecord? LastDecision { get; internal set; }
 
     // ---- Estatisticas de uso (validacao e fichas) ----

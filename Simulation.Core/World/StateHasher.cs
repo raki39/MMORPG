@@ -11,7 +11,7 @@ namespace Simulation.Core.World;
 /// </summary>
 public static class StateHasher
 {
-    public const int FormatVersion = 23;
+    public const int FormatVersion = 24;
 
     public static string Compute(WorldState w) => Compute(w, includeContentId: true);
 
@@ -65,7 +65,7 @@ public static class StateHasher
             foreach (var r in c.ContentHints) h.Str(r);
             h.Int(c.BlockedGoals.Count);
             foreach (var r in c.BlockedGoals) h.Str(r);
-            h.Int(c.DecisionCount); h.Str(c.LastActivityKey); h.Int(c.RepeatCount);
+            h.Int(c.DecisionCount); h.Str(c.LastActivityKey); h.Int(c.RepeatCount); h.Int(c.RepeatMinutes);
             if (c.LastDecision != null)
             {
                 h.Long(c.LastDecision.Tick); h.Str(c.LastDecision.RegionId); h.Str(c.LastDecision.ActivityId);
@@ -178,6 +178,9 @@ public static class StateHasher
         h.Str(p.PersonalityId); h.Str(p.PersonalityPending); h.Long(p.PersonalityPendingSince);
         h.Int(p.PersonalityHistory.Count);
         foreach (var pc in p.PersonalityHistory) { h.Long(pc.Day); h.Str(pc.From); h.Str(pc.To); h.Str(pc.Attribute); h.Int(pc.Value); h.Int(pc.PositionPermille); }
+        // Traits (P4b).
+        h.Int(p.Quirks.Count);
+        foreach (var q in p.Quirks) { h.Str(q.Id); h.Str(q.Source); h.Long(q.Day); }
         h.Int(t.LeisureBudgetCentsPerMonth); h.Int(t.WillingnessToPay); h.Int(t.PaidAdvantageSensitivity);
         h.Int(t.PreferredStartHour); h.Int(t.SessionMinutes); h.Int(t.GameImportance); h.Int(t.Habit); h.Int(t.ExtendTendency); h.Int(t.SelfControl); h.Int(t.Talent); h.Int(t.Variety);
         // Atributos vivos (D-036): base de nascenca e pratica acumulada.

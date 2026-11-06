@@ -1,0 +1,276 @@
+{
+  "schemaVersion": 1,
+  "generation": {
+    "enabled": true,
+    "countWeights": [80, 250, 500, 100, 40, 20, 10],
+    "negativeChancePermille": 400,
+    "minMultiplierPermille": 250,
+    "maxMultiplierPermille": 3000,
+    "maxTotal": 8
+  },
+  "traits": [
+    {
+      "id": "persistente", "name": "Persistente", "polarity": "positive",
+      "effect": "Depois de um revés, mantém o plano com margem maior e demora mais a abandonar metas.",
+      "tradeoff": "Insiste além do que compensa.",
+      "affinities": [
+        { "key": "traits.patience", "direction": "high", "strengthPermille": 600 },
+        { "key": "traits.loyalty", "direction": "high", "strengthPermille": 400 }
+      ],
+      "excludes": ["impulsivo"],
+      "excludesPersonalities": ["inquieto", "leal"]
+    },
+    {
+      "id": "impulsivo", "name": "Impulsivo", "polarity": "negative",
+      "effect": "Troca de plano com margem menor, revisa o plano com mais acontecimentos e decide com mais ruído.",
+      "tradeoff": "Aproveita na hora o que aparece, como uma missão oferecida.",
+      "affinities": [
+        { "key": "traits.patience", "direction": "low", "strengthPermille": 600 },
+        { "key": "traits.variety", "direction": "high", "strengthPermille": 400 },
+        { "key": "traits.selfControl", "direction": "low", "strengthPermille": 400 }
+      ],
+      "excludes": ["persistente", "mercador_cauteloso"],
+      "excludesPersonalities": ["paciente"]
+    },
+    {
+      "id": "colecionador", "name": "Colecionador", "polarity": "positive",
+      "effect": "Dá valor extra a atividades e lugares que nunca fez (itens não possuídos com a economia).",
+      "tradeoff": "Troca rendimento por novidade.",
+      "affinities": [
+        { "key": "traits.variety", "direction": "high", "strengthPermille": 500 },
+        { "key": "preferences.exploration", "direction": "high", "strengthPermille": 500 }
+      ],
+      "excludes": ["otimizador"],
+      "excludesPersonalities": ["metodico"]
+    },
+    {
+      "id": "otimizador", "name": "Otimizador", "polarity": "positive",
+      "effect": "O rendimento pesa mais e o gosto menos na escolha da atividade.",
+      "tradeoff": "A diversão conta menos na nota da sessão e o tédio chega mais rápido.",
+      "affinities": [
+        { "key": "traits.competitiveness", "direction": "high", "strengthPermille": 700 }
+      ],
+      "excludes": ["colecionador"]
+    },
+    {
+      "id": "resiliente", "name": "Resiliente", "polarity": "positive",
+      "effect": "A frustração passa mais rápido.",
+      "tradeoff": "As conquistas também marcam menos.",
+      "affinities": [
+        { "key": "traits.patience", "direction": "high", "strengthPermille": 500 }
+      ],
+      "excludes": ["pavio_curto"]
+    },
+    {
+      "id": "pavio_curto", "name": "Pavio curto", "polarity": "negative",
+      "effect": "A frustração sobe mais rápido, com mais chance de largar a sessão com raiva.",
+      "tradeoff": "Depois de largar com raiva, volta mais cedo.",
+      "affinities": [
+        { "key": "traits.aggressiveness", "direction": "high", "strengthPermille": 600 },
+        { "key": "traits.patience", "direction": "low", "strengthPermille": 500 },
+        { "key": "personality.agressivo", "strengthPermille": 1000 }
+      ],
+      "excludes": ["resiliente"]
+    },
+    {
+      "id": "saudosista", "name": "Saudosista", "polarity": "positive",
+      "effect": "As boas lembranças duram mais e a chance de voltar depois de sair é maior.",
+      "tradeoff": "Novidade fraca frustra mais.",
+      "affinities": [
+        { "key": "traits.loyalty", "direction": "high", "strengthPermille": 600 }
+      ]
+    },
+    {
+      "id": "rancoroso", "name": "Rancoroso", "polarity": "negative",
+      "effect": "Lugares que deram errado ficam marcados por mais tempo.",
+      "tradeoff": "Repete menos o que deu errado.",
+      "affinities": [
+        { "key": "traits.loyalty", "direction": "low", "strengthPermille": 500 },
+        { "key": "traits.patience", "direction": "low", "strengthPermille": 300 }
+      ]
+    },
+    {
+      "id": "estudioso", "name": "Estudioso", "polarity": "positive",
+      "effect": "Missões e descobertas rendem mais Conhecimento.",
+      "tradeoff": "Demora mais nas etapas de visita.",
+      "affinities": [
+        { "key": "traits.patience", "direction": "high", "strengthPermille": 400 },
+        { "key": "preferences.exploration", "direction": "high", "strengthPermille": 300 }
+      ]
+    },
+    {
+      "id": "esquecido", "name": "Esquecido", "polarity": "negative",
+      "effect": "As capacidades começam a cair mais cedo sem jogar.",
+      "tradeoff": "Reaprende rápido o que já sabia.",
+      "excludes": ["memoria_firme"]
+    },
+    {
+      "id": "memoria_firme", "name": "Memória firme", "polarity": "positive",
+      "effect": "As capacidades caem pela metade sem jogar.",
+      "tradeoff": "Custa a dar segunda chance a um lugar.",
+      "excludes": ["esquecido"]
+    },
+    {
+      "id": "observador", "name": "Observador", "polarity": "positive",
+      "effect": "Ao explorar, recebe pistas do conteúdo das zonas vizinhas.",
+      "tradeoff": "Explora mais devagar.",
+      "affinities": [
+        { "key": "preferences.exploration", "direction": "high", "strengthPermille": 600 }
+      ]
+    },
+    {
+      "id": "indeciso", "name": "Indeciso", "polarity": "negative",
+      "effect": "Em empate apertado entre opções, perde minutos decidindo.",
+      "tradeoff": "Decide com menos ruído.",
+      "affinities": [
+        { "key": "traits.variety", "direction": "high", "strengthPermille": 300 }
+      ]
+    },
+    {
+      "id": "maratonista", "name": "Maratonista", "polarity": "negative",
+      "effect": "Com a sessão boa, a saciedade cresce mais devagar: não sente o tempo passar.",
+      "tradeoff": "Depois de uma sessão com mais do dobro da normal, o dia seguinte começa com menos disposição.",
+      "affinities": [
+        { "key": "profile.hardcore", "strengthPermille": 800 },
+        { "key": "profile.devoto", "strengthPermille": 1500 },
+        { "key": "profile.casual", "strengthPermille": -500 },
+        { "key": "traits.extendTendency", "direction": "high", "strengthPermille": 400 }
+      ]
+    },
+    {
+      "id": "procrastinador", "name": "Procrastinador", "polarity": "negative",
+      "effect": "Adia o começo da sessão dentro da janela livre. Se não sobrar a sessão mínima, não começa e reconsidera numa próxima janela válida.",
+      "tradeoff": "Perde tempo de jogo.",
+      "affinities": [
+        { "key": "traits.selfControl", "direction": "low", "strengthPermille": 600 }
+      ]
+    },
+    {
+      "id": "protetor_novatos", "name": "Protetor de novatos", "polarity": "positive", "system": "etapa3",
+      "effect": "Prioriza ajudar iniciantes e enfrentar quem os ataca.",
+      "tradeoff": "Sacrifica progresso e assume riscos.",
+      "affinities": [
+        { "key": "traits.loyalty", "direction": "high", "strengthPermille": 400 },
+        { "key": "traits.aggressiveness", "direction": "low", "strengthPermille": 300 }
+      ],
+      "excludes": ["matador_novatos"]
+    },
+    {
+      "id": "competidor_honrado", "name": "Competidor honrado", "polarity": "positive", "system": "etapa3",
+      "effect": "Prefere confrontos equilibrados e evita atacar quem não pode se defender.",
+      "tradeoff": "Deixa passar vitórias fáceis.",
+      "affinities": [
+        { "key": "traits.competitiveness", "direction": "high", "strengthPermille": 500 },
+        { "key": "traits.opportunism", "direction": "low", "strengthPermille": 500 }
+      ],
+      "excludes": ["matador_novatos", "provocador"]
+    },
+    {
+      "id": "provocador", "name": "Provocador", "polarity": "negative", "system": "etapa3",
+      "effect": "Provoca outros jogadores e puxa confrontos.",
+      "tradeoff": "Atrai revide e piora a reputação.",
+      "affinities": [
+        { "key": "traits.aggressiveness", "direction": "high", "strengthPermille": 600 },
+        { "key": "personality.agressivo", "strengthPermille": 1000 }
+      ],
+      "excludes": ["competidor_honrado"],
+      "excludesPersonalities": ["pacifico"]
+    },
+    {
+      "id": "lider_nato", "name": "Líder nato", "polarity": "positive", "system": "M6",
+      "effect": "Tem mais iniciativa para formar grupos e organizar objetivos.",
+      "tradeoff": "Não garante obediência nem sucesso.",
+      "affinities": [
+        { "key": "traits.sociability", "direction": "high", "strengthPermille": 600 },
+        { "key": "traits.competitiveness", "direction": "high", "strengthPermille": 300 }
+      ],
+      "excludes": ["lobo_solitario"],
+      "excludesPersonalities": ["reservado"]
+    },
+    {
+      "id": "companheiro_fiel", "name": "Companheiro fiel", "polarity": "positive", "system": "M6",
+      "effect": "Prioriza compromissos com conhecidos.",
+      "tradeoff": "Escolhe atividades menos eficientes para acompanhar os amigos.",
+      "affinities": [
+        { "key": "traits.loyalty", "direction": "high", "strengthPermille": 600 },
+        { "key": "preferences.social", "direction": "high", "strengthPermille": 400 }
+      ],
+      "excludes": ["lobo_solitario"]
+    },
+    {
+      "id": "lobo_solitario", "name": "Lobo solitário", "polarity": "negative", "system": "M6",
+      "effect": "Prefere jogar sozinho e recusa grupos.",
+      "tradeoff": "Perde conteúdo de grupo e ajuda.",
+      "affinities": [
+        { "key": "traits.sociability", "direction": "low", "strengthPermille": 700 },
+        { "key": "personality.reservado", "strengthPermille": 800 }
+      ],
+      "excludes": ["lider_nato", "companheiro_fiel"],
+      "excludesPersonalities": ["sociavel"]
+    },
+    {
+      "id": "mercador_cauteloso", "name": "Mercador cauteloso", "polarity": "positive", "system": "M5",
+      "effect": "Mantém reservas e avalia o risco antes de negociar.",
+      "tradeoff": "Perde oportunidades lucrativas.",
+      "affinities": [
+        { "key": "traits.riskAversion", "direction": "high", "strengthPermille": 600 },
+        { "key": "preferences.trade", "direction": "high", "strengthPermille": 400 }
+      ],
+      "excludes": ["impulsivo", "gastador_compulsivo"]
+    },
+    {
+      "id": "cacador_barganhas", "name": "Caçador de barganhas", "polarity": "positive", "system": "M5",
+      "effect": "Presta mais atenção a diferenças de preço.",
+      "tradeoff": "Gasta tempo procurando negócio.",
+      "affinities": [
+        { "key": "preferences.trade", "direction": "high", "strengthPermille": 600 }
+      ],
+      "excludes": ["gastador_compulsivo"]
+    },
+    {
+      "id": "gastador_compulsivo", "name": "Gastador compulsivo", "polarity": "negative", "system": "M5",
+      "effect": "Gasta ouro por impulso.",
+      "tradeoff": "Aproveita na hora o que compra.",
+      "affinities": [
+        { "key": "traits.selfControl", "direction": "low", "strengthPermille": 600 }
+      ],
+      "excludes": ["mercador_cauteloso", "cacador_barganhas", "acumulador"]
+    },
+    {
+      "id": "acumulador", "name": "Acumulador", "polarity": "negative", "system": "M5",
+      "effect": "Guarda consumíveis e não os usa.",
+      "tradeoff": "Tem reserva para emergências.",
+      "affinities": [
+        { "key": "traits.riskAversion", "direction": "high", "strengthPermille": 400 }
+      ],
+      "excludes": ["gastador_compulsivo"]
+    },
+    {
+      "id": "frio_sob_pressao", "name": "Frio sob pressão", "polarity": "positive", "system": "M3", "drawn": false,
+      "effect": "Execução estável em combate difícil.",
+      "tradeoff": "A definir com o desenho do combate."
+    },
+    {
+      "id": "nervoso_pvp", "name": "Nervoso em PvP", "polarity": "negative", "system": "etapa3", "drawn": false,
+      "effect": "A execução cai em confrontos contra outros jogadores.",
+      "tradeoff": "A definir com o desenho do PvP."
+    },
+    {
+      "id": "artesao_meticuloso", "name": "Artesão meticuloso", "polarity": "positive", "system": "fabricacao", "drawn": false,
+      "effect": "Fabrica com mais qualidade.",
+      "tradeoff": "Fabrica mais devagar."
+    },
+    {
+      "id": "traumatizado", "name": "Traumatizado", "polarity": "negative", "system": "M3", "acquisition": "acquired", "drawn": false,
+      "effect": "Depois de várias mortes para um tipo de inimigo, evita esse tipo por um tempo.",
+      "tradeoff": "Passa a preferir conteúdo mais seguro."
+    },
+    {
+      "id": "matador_novatos", "name": "Matador de novatos", "polarity": "negative", "system": "etapa3", "acquisition": "acquired", "drawn": false,
+      "effect": "Alvos bem mais fracos ficam atraentes, pesados pelo risco de reação e de punição.",
+      "tradeoff": "Mais exposição a punições e conflitos, sem dano extra.",
+      "excludes": ["protetor_novatos", "competidor_honrado"],
+      "excludesPersonalities": ["pacifico"]
+    }
+  ]
+}

@@ -13,7 +13,7 @@ Jogo de gestão single-player e offline: o jogador cria e administra um MMORPG e
 - `Simulation.Runner`: CLI headless que compõe Core e Infrastructure.
 - `Simulation.Tests`: xUnit.
 - `GodotClient/`: projeto Godot 4.7.2 .NET; visualização, interface e comandos para o Core via `ProjectReference`. Nada de um nó por jogador no mapa; desenho em lote.
-- `Content/presets/<mundo>/`: `world`, `localities` (fuso, idiomas, feriados), `occupations` (obrigações, renda), `regions` (com `activities`), `classes`, `abilities`, `items`, `creatures`, `population`, `progression`, `quests` (`.json`; o jogador, como desenvolvedor do MMORPG, editará esse conteúdo no jogo) + `scenario.json` e `targets.json` (só do runner: cenário e metas de validação).
+- `Content/presets/<mundo>/`: `world`, `localities` (fuso, idiomas, feriados), `occupations` (obrigações, renda), `regions` (com `activities`), `classes`, `abilities`, `items`, `creatures`, `population`, `progression`, `quests`, `traits` (`.json`; o jogador, como desenvolvedor do MMORPG, editará esse conteúdo no jogo) + `scenario.json` e `targets.json` (só do runner: cenário e metas de validação).
 - JSON é o formato de troca; o save SQLite guarda o conteúdo da campanha; a execução usa memória (D-008).
 
 ## Regras
@@ -53,7 +53,7 @@ tools/perf.ps1 -Quick   # por etapa: abre o jogo uma vez (~15 s); a completa (se
 - M0 e teste de viabilidade concluídos. M1 quase concluído (falta a revisão em 1366×768).
 - M2 fechado (D-039): plano da sessão, humor, memória, abandono e retorno (`docs/comportamento.md`); atributos do jogador em `docs/atributos.md`.
 - Roteiro por etapas (backlog):
-  0. Pessoa (`docs/plano-pessoa.md`): P0 a P3 feitas (D-041 a D-044: parâmetros, localidade e fuso, obrigações e tempo livre, sono e jogo no trabalho remoto); revisão da rotina R1 a R5 encerrada (D-047 a D-052; vontade de jogar da v3 e perfil Devoto em `docs/rotina.md`); sorteio de dedicação (D-053, `docs/dedicacao.md`); Perfil = dedicação, Preferências e atributos separados (D-054, `docs/perfil-preferencias.md`); progressão inicial e metas de desbloqueio (D-055, `docs/progressao-inicial.md`); P4a personalidade principal (D-056, `docs/personalidade.md`) → R6 variedade de horários (cronotipo, véspera de folga, turno noturno; backlog) → P4b a P4d traits (sistema separado de Perfil, Preferências, Especialidades e personalidade). Reputação com a Etapa 3; finanças no M7.
+  0. Pessoa (`docs/plano-pessoa.md`): P0 a P3 feitas (D-041 a D-044: parâmetros, localidade e fuso, obrigações e tempo livre, sono e jogo no trabalho remoto); revisão da rotina R1 a R5 encerrada (D-047 a D-052; vontade de jogar da v3 e perfil Devoto em `docs/rotina.md`); sorteio de dedicação (D-053, `docs/dedicacao.md`); Perfil = dedicação, Preferências e atributos separados (D-054, `docs/perfil-preferencias.md`); progressão inicial e metas de desbloqueio (D-055, `docs/progressao-inicial.md`); P4a personalidade principal (D-056, `docs/personalidade.md`); P4b traits: catálogo, sorteio e ficha, efeitos desligados (D-057, `docs/traits.md`) → R6 variedade de horários (cronotipo, véspera de folga, turno noturno; cuidados no backlog) → P4c efeitos das traits → P4d aquisição e perda. Reputação com a Etapa 3; finanças no M7.
   1. Etapa 1 — personagem (classes, atributos do personagem, itens iniciais, inventário e ouro).
   2. Etapa 2 — combate PvE (M3; recalibrar a curva a/b).
   3. Etapa 3 — PvP e chefe.

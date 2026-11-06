@@ -32,7 +32,7 @@ public partial class PlayerModal : ModalFrame
         AddTab("Histórico", BuildHistory, live: true);
         AddTab("Rotina", BuildRoutine, live: true);
         AddTab("Combate", () => FutureTab("Combate", "M3", "Abates, mortes, saque, rivais e desempenho em PvE e PvP aparecem aqui quando o combate existir na simulação. Nada é inventado antes disso."));
-        AddTab("Inventário", () => FutureTab("Inventário", "M5", "Itens, equipamento e carga do personagem aparecem aqui quando existirem inventário e itens na simulação. As recompensas de missões já registram os itens previstos."));
+        AddTab("Inventário", BuildInventory);
         AddTab("Banco", () => FutureTab("Banco", "M5", "Ouro guardado, depósitos e movimentações aparecem aqui com a economia. Hoje o ouro de missões está definido, mas ainda não é aplicado."));
     }
 
@@ -259,14 +259,15 @@ public partial class PlayerModal : ModalFrame
     {
         var v = View;
         if (v == null)
-            return Column(12, Grid(12, (Card("Atributos", AttributeGrid(), info: AttrInfo), 8),
-                (Card("Situação", Wrap("Ainda não criou conta no MMORPG; pode se registrar nos próximos dias do lançamento.")), 4)));
+            return Column(12, Grid(12, (Card("Atributos", AttributeGrid(), info: AttrInfo), 6),
+                (Card("Personalidade e traços", TraitsBody(), info: TraitsInfo), 3),
+                (Card("Situação", Wrap("Ainda não criou conta no MMORPG; pode se registrar nos próximos dias do lançamento.")), 3)));
         var detail = _ctx.Snapshot().Watched is { } d && d.PersonId == _person.Id ? d : null;
         var st = Server(v);
         var row1 = Grid(12,
             (Card("Situação atual", NowBody(v), info: "O que está fazendo e por quê\n~A última decisão mostra os fatores que somaram ou tiraram pontos da opção escolhida."), 3),
             (Card("Atributos do jogador", Column(16, AttributeGrid(), Highlights()), info: AttrInfo), 6),
-            (Card("Inventário · M5", InventoryBody(v), info: "Equipamento e bens\n~Inventário, equipamento, carga e ouro passam a valer com a economia (M5). Os espaços seguem as categorias de item do conteúdo."), 3));
+            (Card("Personalidade e traços", TraitsBody(), info: TraitsInfo), 3));
         var row2 = Grid(12,
             (Card("Missões", QuestSummary(v), info: "Missões do personagem\n~Detalhes na aba Missões."), 3),
             (Card("Evolução", EvolutionBody(v, detail, st), info: "Horas jogadas ao atingir cada nível\n~Curva real deste personagem (tempo conectado acumulado)."), 3),
@@ -490,16 +491,10 @@ public partial class PlayerModal : ModalFrame
     {
         if (id.Length == 0) return ("scale", "—", "Personalidade desligada no preset.");
         if (id == Simulation.Core.Population.PersonalitySystem.Balanced)
-            return ("scale", "Equilibrado", "Nenhum traço de personalidade se destaca nos extremos; sem regra própria.");
+            return ("scale", "Equilibrado", "Nenhum atributo de personalidade se destaca nos extremos; sem regra própria.");
         var t = content.Personality.Types.FirstOrDefault(x => x.Id == id);
         if (t == null) return ("scale", id, "");
-        string icon = id switch
-        {
-            "sociavel" => "users", "reservado" => "user", "agressivo" => "flame", "pacifico" => "heart-handshake",
-            "paciente" => "hourglass", "inquieto" => "zap", "leal" => "shield", "independente" => "compass",
-            "cauteloso" => "shield", "destemido" => "flame", "versatil" => "layers", "metodico" => "hammer", _ => "scale",
-        };
-        return (icon, t.Name, t.Description);
+        return (TraitInfo.PersonalityIcon(id), t.Name, t.Description);
     }
 
     /// <summary>Personalidade atual da pessoa: a do snapshot (pode mudar) ou a de criacao.</summary>
@@ -605,7 +600,111 @@ public partial class PlayerModal : ModalFrame
         return r;
     }
 
+    // ----- Personalidade e tracos (P4a e P4b) -----
+
+    private const string TraitsInfo = "Quem é o jogador\n~Personalidade principal: uma por jogador, com regra própria de comportamento (exceto Equilibrado).\n~Traços: de 0 a 6 por jogador, sorteados ao nascer pela coerência com a pessoa. Verde: positivo; vermelho: negativo. Cada um tem efeito e contrapartida.\n~Perfil (dedicação), Preferências (gosto) e atributos (escala 1 a 20) são camadas separadas.";
+
+    private Control TraitsBody()
+    {
+        var c = _ctx.Content;
+        string pid = CurrentPersonality(_ctx, _person.Id);
+        var (picon, plabel, ptext) = MainPersonality();
+        var col = Column(12);
+
+        // Personalidade principal: emblema redondo dourado, nome, regra e o atributo que a define.
+        col.AddChild(Section("Personalidade"));
+        var head = Row(12);
+        head.AddChild(new TraitBadge(picon, UiTokens.Accent, 40, round: true));
+        var info = Column(3);
+        info.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        info.AddChild(ThemeFactory.Text(plabel, 15, UiTokens.TextPrimary, UiFonts.SemiBold));
+        info.AddChild(Wrap(ptext, UiTokens.FontSmall, UiTokens.TextSecondary));
+        head.AddChild(info);
+        var headTip = new TipPanel { TooltipText = PersonalityTip(pid, plabel, ptext), MouseFilter = MouseFilterEnum.Stop };
+        headTip.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
+        headTip.AddChild(head);
+        col.AddChild(headTip);
+        col.AddChild(Wrap(PersonalityBasis(pid), UiTokens.FontCaption, UiTokens.TextLabel));
+        var history = View?.PersonalityHistory ?? Array.Empty<PersonalityChange>();
+        if (history.Count > 0)
+        {
+            var last = history[^1];
+            col.AddChild(Wrap($"Mudou em {PtBr.ShortDate(_ctx.Calendar.ToDateTime(_ctx.Calendar.StartOfDay(last.Day)))}: era {PersonalityOf(c, last.From).Label}.", UiTokens.FontCaption, UiTokens.TextSecondary));
+        }
+
+        // Tracos: positivos primeiro, na ordem do sorteio.
+        var quirks = _person.Quirks.Select(q => c.Quirks.TryGetValue(q.Id, out var d) ? d : null).Where(d => d != null).Select(d => d!)
+            .OrderBy(d => TraitInfo.IsPositive(d) ? 0 : 1).ToList();
+        int pos = quirks.Count(TraitInfo.IsPositive), neg = quirks.Count - pos;
+        string count = quirks.Count == 0 ? "nenhum" : $"{pos} + · {neg} −";
+        col.AddChild(Section("Traços", ThemeFactory.Text(count, UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Numbers)));
+        if (quirks.Count == 0)
+        {
+            var w = c.QuirkCatalog.Generation.CountWeights;
+            int none = w.Count > 0 ? (int)Math.Round(w[0] * 100.0 / Math.Max(1, w.Sum())) : 0;
+            col.AddChild(Wrap($"Nenhum traço marcante. Cerca de {none}% dos jogadores nascem assim; o comportamento vem da personalidade, das preferências e dos atributos.", UiTokens.FontSmall, UiTokens.TextSecondary));
+        }
+        foreach (var q in quirks) col.AddChild(QuirkRow(q));
+        return col;
+    }
+
+    private Control QuirkRow(QuirkDefinition q)
+    {
+        var color = TraitInfo.PolarityColor(q);
+        var row = Row(10);
+        row.AddChild(new TraitBadge(TraitInfo.QuirkIcon(q), color, 30, pending: true));
+        var text = Column(2);
+        text.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        var name = Row(6);
+        name.AddChild(ThemeFactory.Text(q.Name, UiTokens.FontBody, UiTokens.TextPrimary, UiFonts.Medium));
+        name.AddChild(ThemeFactory.Text(TraitInfo.IsPositive(q) ? "+" : "−", UiTokens.FontBody, color, UiFonts.SemiBold));
+        text.AddChild(name);
+        text.AddChild(Wrap(q.Effect, UiTokens.FontCaption, UiTokens.TextSecondary));
+        text.AddChild(ThemeFactory.Text(TraitInfo.Status(q), UiTokens.FontCaption, UiTokens.TextDisabled));
+        row.AddChild(text);
+        var tip = new TipPanel { TooltipText = TraitInfo.Tooltip(_ctx.Content, q), MouseFilter = MouseFilterEnum.Stop };
+        tip.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
+        tip.AddChild(row);
+        return tip;
+    }
+
+    /// <summary>Qual atributo define a personalidade e onde a pessoa fica na distribuicao do conteudo.</summary>
+    private string PersonalityBasis(string id)
+    {
+        var s = _ctx.Content.Personality;
+        if (id.Length == 0) return "Personalidade desligada no conteúdo.";
+        if (id == PersonalitySystem.Balanced)
+            return $"Nenhum dos seis atributos de personalidade fica nos {(1000 - s.ThresholdPermille) / 20}% de um extremo.";
+        var t = s.Types.FirstOrDefault(x => x.Id == id);
+        if (t == null) return "";
+        int value = _person.Traits.Get(t.Attribute);
+        int position = PersonalitySystem.Position(PopulationGenerator.TraitRangeOf(_ctx.Content.PopulationTraits, t.Attribute), value);
+        bool high = t.Direction == PersonalityDirections.High;
+        int share = Math.Max(1, (int)Math.Ceiling((high ? 1000 - position : position) / 10.0));
+        string where = share == 1 ? $"no 1% {(high ? "mais alto" : "mais baixo")}" : $"entre os {share}% {(high ? "mais altos" : "mais baixos")}";
+        return $"Definida por {AttributeInfo.Name(t.Attribute)} {UiTokens.To20(value)}/20: {where}.";
+    }
+
+    private string PersonalityTip(string id, string label, string text)
+    {
+        var s = _ctx.Content.Personality;
+        var lines = new List<string> { $"{label}|Personalidade|#{UiTokens.Accent.ToHtml(false)}", "^Identidade central: uma por jogador", text };
+        lines.Add("#Como é definida");
+        lines.Add($"Vence o atributo de personalidade mais extremo, se estiver nos {(1000 - s.ThresholdPermille) / 20}% de um dos lados; senão, Equilibrado. A régua é a distribuição do conteúdo, não o servidor.");
+        lines.Add("#Mudança");
+        lines.Add($"Rara: só se os atributos de personalidade mudarem com margem e a mudança se mantiver por {s.ConfirmDays} dias seguidos.");
+        lines.Add("~As regras da personalidade aparecem no detalhe da decisão como o fator Personalidade, separadas dos efeitos graduais dos atributos.");
+        return string.Join("\n", lines);
+    }
+
     // ----- Inventario (M5) -----
+
+    private Control BuildInventory()
+    {
+        var v = View;
+        if (v == null) return FutureTab("Inventário", "M5", "Itens, equipamento e carga do personagem aparecem aqui quando existirem inventário e itens na simulação.");
+        return Column(12, Grid(12, (Card("Inventário · M5", InventoryBody(v), info: "Equipamento e bens\n~Inventário, equipamento, carga e ouro passam a valer com a economia (M5). Os espaços seguem as categorias de item do conteúdo."), 4)));
+    }
 
     private Control InventoryBody(CharacterView v)
     {
@@ -1150,24 +1249,19 @@ public partial class PlayerModal : ModalFrame
         var t = _person.Traits;
         var candidates = new List<(int Score, string Icon, string Title, string Text)>();
         void High(int value, string icon, string title, string text) { int v20 = UiTokens.To20(value); if (v20 >= 14) candidates.Add((v20, icon, title, text)); }
-        void Low(int value, string icon, string title, string text) { int v20 = UiTokens.To20(value); if (v20 <= 6) candidates.Add((27 - v20, icon, title, text)); }
         var pr = _person.Preferences;
         High(pr.Pve, "sword", "Caçador", "Prefere caçar criaturas; áreas de caça pesam mais nas escolhas.");
         High(pr.Pvp, "swords", "Gosta de PvP", "Procura combate contra jogadores (o PvP chega na Etapa 3).");
-        High(pr.Trade, "coins", "Mercador", "Gosta de comprar e vender.");
+        High(pr.Trade, "coins", "Comerciante", "Gosta de comprar e vender.");
         High(pr.Gathering, "pickaxe", "Coletor", "Gosta de coletar materiais.");
-        High(pr.Crafting, "hammer", "Artesão", "Gosta de fabricar (ainda sem efeito: a fabricação não existe).");
+        High(pr.Crafting, "hammer", "Fabricante", "Gosta de fabricar (ainda sem efeito: a fabricação não existe).");
         High(pr.Exploration, "compass", "Explorador", "Tende a descobrir zonas novas cedo.");
-        High(pr.Social, "users", "Sociável", "Gosta de atividades sociais e de jogar onde há gente.");
+        High(pr.Social, "beer", "Social", "Gosta de atividades sociais e de jogar onde há gente.");
         High(t.Competitiveness, "trophy", "Competitivo", "Quer superar os outros; por enquanto isso aparece na progressão (desafio acima do nível e metas de nível).");
-        High(t.Patience, "hourglass", "Paciente", "Repete a mesma atividade sem cansar tão cedo.");
-        High(t.RiskAversion, "shield", "Cauteloso", "Evita perigo, PvP e conteúdo acima do nível.");
-        High(t.Loyalty, "heart-handshake", "Leal", "Tende a ficar com grupos e guildas (M6).");
-        Low(t.RiskAversion, "flame", "Destemido", "Aceita risco; encara zonas perigosas.");
-        Low(t.Patience, "zap", "Inquieto", "Cansa de repetir e troca de atividade logo.");
-        Low(t.Sociability, "user", "Reservado", "Prefere lugares vazios e jogar sozinho.");
+        // Personalidade e tracos tem card proprio (P4a/P4b): aqui so gosto e competitividade, sem
+        // repetir nomes de personalidade com outro criterio.
         var top = candidates.OrderByDescending(c => c.Score).Take(3).ToList();
-        if (top.Count == 0) top.Add((0, "scale", "Equilibrado", "Nenhum traço se destaca; escolhe pelo conteúdo e pelo momento."));
+        if (top.Count == 0) top.Add((0, "scale", "Gosto variado", "Nenhuma preferência se destaca; escolhe pelo conteúdo e pelo momento."));
         var row = new HBoxContainer();
         row.AddThemeConstantOverride("separation", 20);
         foreach (var (_, icon, title, text) in top)

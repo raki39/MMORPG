@@ -38,6 +38,7 @@ public static class ContentLoader
         ContentValidator.PopulationFile,
         ContentValidator.ProgressionFile,
         ContentValidator.QuestsFile,
+        ContentValidator.TraitsFile,
     };
 
     public static readonly JsonSerializerOptions JsonOptions = new()
@@ -87,6 +88,8 @@ public static class ContentLoader
         set.Progression = Parse<ProgressionFile>(texts, ContentValidator.ProgressionFile, issues)?.Progression ?? new ProgressionDefinition();
         var quests = Parse<QuestsFile>(texts, ContentValidator.QuestsFile, issues);
         if (quests != null) set.Quests = new QuestCatalog { Settings = quests.Settings, Boards = quests.Boards, Quests = quests.Quests };
+        var traits = Parse<TraitsFile>(texts, ContentValidator.TraitsFile, issues);
+        if (traits != null) set.Quirks = new QuirkCatalogDefinition { Generation = traits.Generation, Traits = traits.Traits };
 
         if (issues.Any(i => i.Severity == IssueSeverity.Error))
             return new ContentLoadResult { Set = set, Issues = issues, ContentHash = hash, Folder = full };
@@ -168,6 +171,13 @@ public sealed class QuestsFile : VersionedFile
 }
 
 public sealed class ProgressionFile : VersionedFile { public ProgressionDefinition Progression { get; set; } = new(); }
+
+/// <summary>traits.json (P4b): traits da pessoa (no codigo, Quirk).</summary>
+public sealed class TraitsFile : VersionedFile
+{
+    public QuirkGenerationDefinition Generation { get; set; } = new();
+    public List<QuirkDefinition> Traits { get; set; } = new();
+}
 
 public sealed class PopulationFile : VersionedFile
 {

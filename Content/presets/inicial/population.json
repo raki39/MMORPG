@@ -23,7 +23,7 @@
   "personality": {
     "enabled": true, "rulesEnabled": true, "thresholdPermille": 700, "changeMarginPermille": 100, "confirmDays": 14,
     "rules": { "neverPenalty": 1000, "pvpZonePenalty": 300, "conflictBonus": 150, "crowdReliefPermille": 500, "socialBonus": 120, "socialMinPeople": 3,
-      "socialEndMinutes": 45, "crowdLimitPermille": 800, "questStepBonus": 100, "restlessRepeats": 2, "restlessPenalty": 250,
+      "socialEndMinutes": 45, "crowdLimitPermille": 800, "questStepBonus": 100, "restlessMinutes": 50, "restlessPenalty": 250,
       "ownPathMinPreference": 400, "maxLevelsAbove": 1, "fearlessBandLevels": 1, "sessionStartBonus": 150 },
     "types": [
       { "id": "sociavel", "name": "Sociável", "attribute": "sociability", "direction": "high", "rule": "social_bookends", "description": "Começa e termina a sessão onde há gente." },

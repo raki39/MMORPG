@@ -215,8 +215,12 @@ public sealed class PersonalityRuleSettingsDefinition
     public int CrowdLimitPermille { get; set; } = 800;
     /// <summary>Paciente: etapa de missao em andamento.</summary>
     public int QuestStepBonus { get; set; } = 100;
-    /// <summary>Inquieto: repeticoes seguidas da mesma atividade a partir das quais procura outra.</summary>
-    public int RestlessRepeats { get; set; } = 2;
+    /// <summary>
+    /// Inquieto: minutos seguidos fazendo a mesma atividade, na sessao, a partir dos quais procura
+    /// outra. Tempo simulado, nao ciclos: os ciclos duram diferente por atividade (comercio 15 min,
+    /// caca 25 a 30 min). Candidato 50 = dois ciclos tipicos de caca.
+    /// </summary>
+    public int RestlessMinutes { get; set; } = 50;
     public int RestlessPenalty { get; set; } = 250;
     /// <summary>Independente: preferencia minima para aceitar missao de um tema.</summary>
     public int OwnPathMinPreference { get; set; } = 400;

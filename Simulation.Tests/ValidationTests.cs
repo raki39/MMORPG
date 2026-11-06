@@ -32,6 +32,8 @@ public class ValidationTests
         casual.GameImportance = new TraitRange { Min = 700, Mode = 800, Max = 900 };
         set.Population.Profiles = new List<PopulationProfileDefinition> { casual };
         set.Occupations = set.Occupations.Where(o => o.Id == "comercial").ToList();
+        // Os perfis do preset sumiram: as afinidades de traits que citam perfis tambem saem (o validador acusaria).
+        foreach (var q in set.Quirks.Traits) q.Affinities.RemoveAll(a => a.Key.StartsWith("profile.", StringComparison.Ordinal));
         var content = ContentDatabase.Create(set);
 
         int inWindow = 0, total = 0;
