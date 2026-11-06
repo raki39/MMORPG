@@ -11,7 +11,7 @@ namespace Simulation.Core.World;
 /// </summary>
 public static class StateHasher
 {
-    public const int FormatVersion = 25;
+    public const int FormatVersion = 26;
 
     public static string Compute(WorldState w) => Compute(w, includeContentId: true);
 
@@ -65,7 +65,7 @@ public static class StateHasher
             foreach (var r in c.ContentHints) h.Str(r);
             h.Int(c.BlockedGoals.Count);
             foreach (var r in c.BlockedGoals) h.Str(r);
-            h.Int(c.DecisionCount); h.Str(c.LastActivityKey); h.Int(c.RepeatCount); h.Int(c.RepeatMinutes);
+            h.Int(c.DecisionCount); h.Str(c.LastActivityKey); h.Int(c.RepeatCount); h.Int(c.RepeatMinutes); h.Long(c.LastSetbackTick); h.Bool(c.Hesitated);
             if (c.LastDecision != null)
             {
                 h.Long(c.LastDecision.Tick); h.Str(c.LastDecision.RegionId); h.Str(c.LastDecision.ActivityId);
@@ -181,6 +181,13 @@ public static class StateHasher
         // Traits (P4b).
         h.Int(p.Quirks.Count);
         foreach (var q in p.Quirks) { h.Str(q.Id); h.Str(q.Source); h.Long(q.Day); }
+        h.Int(p.QuirkStats.Count);
+        foreach (var kv in p.QuirkStats) { h.Str(kv.Key); h.Int(kv.Value); }
+        h.Int(p.QuirkCarryMap.Count);
+        foreach (var kv in p.QuirkCarryMap) { h.Str(kv.Key); h.Int(kv.Value); }
+        h.Int(p.MarathonDays.Count);
+        foreach (var d in p.MarathonDays) h.Long(d);
+        h.Int(p.RageQuits);
         h.Int(t.LeisureBudgetCentsPerMonth); h.Int(t.WillingnessToPay); h.Int(t.PaidAdvantageSensitivity);
         h.Int(t.PreferredStartHour); h.Int(t.SessionMinutes); h.Int(t.GameImportance); h.Int(t.Habit); h.Int(t.ExtendTendency); h.Int(t.SelfControl); h.Int(t.Talent); h.Int(t.Variety); h.Int(t.Chronotype);
         h.Int(p.FreeEveShiftMinutes); h.Long(p.SleepUntilTick); h.Long(p.SleepShiftedDay);

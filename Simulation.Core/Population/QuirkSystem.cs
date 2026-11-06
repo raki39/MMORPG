@@ -3,6 +3,18 @@ using Simulation.Core.Random;
 
 namespace Simulation.Core.Population;
 
+/// <summary>Ids das traits com efeito implementado no Core (P4c): lista fechada de pontos de avaliacao.</summary>
+public static class QuirkIds
+{
+    public const string Persistente = "persistente", Impulsivo = "impulsivo", Colecionador = "colecionador", Otimizador = "otimizador",
+        Resiliente = "resiliente", PavioCurto = "pavio_curto", Saudosista = "saudosista", Rancoroso = "rancoroso", Estudioso = "estudioso",
+        Esquecido = "esquecido", MemoriaFirme = "memoria_firme", Observador = "observador", Indeciso = "indeciso",
+        Maratonista = "maratonista", Procrastinador = "procrastinador";
+
+    /// <summary>Chave do fator ou da causa de uma trait (decisao, eventos e interface).</summary>
+    public static string Factor(string id) => "quirk_" + id;
+}
+
 /// <summary>Trait da pessoa (P4b): id, origem (innate ou acquired) e dia em que entrou (0 = criacao).</summary>
 public sealed record QuirkState(string Id, string Source, long Day);
 
@@ -17,6 +29,31 @@ public sealed record QuirkState(string Id, string Source, long Day);
 public static class QuirkSystem
 {
     public const string StreamName = "population.quirks";
+
+    /// <summary>A pessoa tem a trait e os efeitos estao ligados (P4c).</summary>
+    public static bool Active(ContentDatabase c, Person p, string id)
+    {
+        if (!c.QuirkCatalog.Effects.Enabled) return false;
+        foreach (var q in p.QuirkList) if (q.Id == id) return true;
+        return false;
+    }
+
+    /// <summary>Conta uma atuacao da trait (medicao e ficha).</summary>
+    public static void Count(Person p, string key, int amount = 1)
+    {
+        if (amount == 0) return;
+        p.QuirkStatsMap[key] = p.QuirkStatsMap.GetValueOrDefault(key) + amount;
+    }
+
+    /// <summary>Multiplica com resto guardado (inteiros): devolve as unidades inteiras de value * permille / 1000.</summary>
+    public static int Carry(Person p, string key, int value, int permille)
+    {
+        long milli = (long)value * permille + p.QuirkCarryMap.GetValueOrDefault(key);
+        int units = (int)(milli / 1000);
+        int rest = (int)(milli - units * 1000L);
+        if (rest == 0) p.QuirkCarryMap.Remove(key); else p.QuirkCarryMap[key] = rest;
+        return units;
+    }
 
     /// <summary>Atributos que podem entrar nas afinidades: personalidade, conduta e autocontrole.</summary>
     public static readonly string[] AffinityAttributes =

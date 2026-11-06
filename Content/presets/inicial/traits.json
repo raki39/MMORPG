@@ -8,6 +8,24 @@
     "maxMultiplierPermille": 3000,
     "maxTotal": 8
   },
+  "effects": {
+    "enabled": true,
+    "persistente": { "setbackWindowMinutes": 120, "marginAfterSetbackPermille": 1500, "goalPatiencePermille": 1500 },
+    "impulsivo": { "marginPermille": 600, "noisePermille": 1300, "impulseReviewPermille": 250 },
+    "colecionador": { "newActivityBonus": 150, "newZoneBonus": 75 },
+    "otimizador": { "rewardPermille": 1300, "affinityPermille": 800, "funPermille": 700, "boredomPermille": 1250 },
+    "resiliente": { "frustrationDecayPermille": 1500, "achievementMemoryPermille": 700 },
+    "pavioCurto": { "frustrationGainPermille": 1400, "rageQuitPermille": 1500, "returnPausePermille": 500 },
+    "saudosista": { "positiveMemoryDecayPermille": 600, "quitReturnPermille": 1500, "weakNoveltyPermille": 1300 },
+    "rancoroso": { "negativeImpressionDecayPermille": 500 },
+    "estudioso": { "knowledgePermille": 1500, "visitStepPermille": 1250 },
+    "esquecido": { "decayEarlierDays": 3, "relearnPermille": 700 },
+    "memoriaFirme": { "decayPermille": 500, "secondChancePermille": 750 },
+    "observador": { "hintsPerExplore": 1, "explorePermille": 1200 },
+    "indeciso": { "tieGap": 40, "delayMinutes": 5, "noisePermille": 700 },
+    "maratonista": { "goodScoreAbove": 600, "satietyPermille": 600, "marathonSessionsPermille": 2000, "nextDayDispositionPenaltyPermille": 150 },
+    "procrastinador": { "minDelayMinutes": 15, "maxDelayMinutes": 60 }
+  },
   "traits": [
     {
       "id": "persistente", "name": "Persistente", "polarity": "positive",

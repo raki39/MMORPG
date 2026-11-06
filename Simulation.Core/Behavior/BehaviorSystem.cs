@@ -164,8 +164,14 @@ public sealed class BehaviorSystem
     /// Disposicao do dia (R4): variacao pequena (+-permille) por pessoa e dia local, num fluxo
     /// proprio (o mesmo dia da sempre o mesmo valor, sem mexer nos outros sorteios).
     /// </summary>
-    public int Disposition(Person p, long localDay) =>
-        Rng("routine.disposition", p.Id * 100_000L + localDay).NextCenteredNoise(Math.Max(0, _w.Content.Routine.DispositionSpreadPermille));
+    public int Disposition(Person p, long localDay)
+    {
+        int d = Rng("routine.disposition", p.Id * 100_000L + localDay).NextCenteredNoise(Math.Max(0, _w.Content.Routine.DispositionSpreadPermille));
+        // Maratonista (P4c): depois de uma maratona, o dia seguinte comeca com menos disposicao.
+        if (p.MarathonDaysSet.Contains(localDay - 1) && QuirkSystem.Active(_w.Content, p, QuirkIds.Maratonista))
+            d -= _w.Content.QuirkCatalog.Effects.Maratonista.NextDayDispositionPenaltyPermille;
+        return d;
+    }
 
     /// <summary>Agenda de um dia local (a mais recente primeiro); null se nao houver.</summary>
     private static DayPlanRecord? PlanOf(Person p, long localDay)
@@ -428,12 +434,53 @@ public sealed class BehaviorSystem
             RecordPlan(p, new DayPlanRecord(localDay, day.FreeMinutes, day.Windows.Count, 0, reason, -1, 0, day.FreeDay, sleep, projectedDeficit, workSessions, overlap, CommitId(day), CommitStart(day), CommitEnd(day), day.RecoveryMinutes, prio, disposition, regularity));
             return;
         }
+        // Procrastinador (P4c): adia o comeco dentro da janela; sem a sessao minima depois do atraso,
+        // nao comeca nessa oportunidade e reconsidera na proxima janela valida (de novo com atraso).
+        if (QuirkSystem.Active(_w.Content, p, QuirkIds.Procrastinador))
+        {
+            int delayed = Procrastinate(p, day, start, localDay);
+            if (delayed < 0)
+            {
+                QuirkSystem.Count(p, "procrastinador_dias_sem_comecar");
+                RecordPlan(p, new DayPlanRecord(localDay, day.FreeMinutes, day.Windows.Count, 0, "procrastinated", -1, 0, day.FreeDay, sleep, projectedDeficit, workSessions, overlap, CommitId(day), CommitStart(day), CommitEnd(day), day.RecoveryMinutes, prio, disposition, regularity));
+                return;
+            }
+            start = delayed;
+        }
         // A primeira sessao vai ate a sessao normal (ou o fim da janela); ai a pessoa decide se continua.
         int windowEnd = day.Windows.First(w => w.Start <= start && start < w.End).End;
         int minutes = Math.Min(session, windowEnd - start);
         int startReason = start < target ? StartEarly : StartUsual;
         _w.Scheduler.Schedule(dayStart + start * SimTime.TicksPerMinute, EvSessionStart, p.Id, SessionPayload(minutes, SessionNormal, localDay, startReason));
         RecordPlan(p, new DayPlanRecord(localDay, day.FreeMinutes, day.Windows.Count, 1, "played", start, minutes, day.FreeDay, sleep, projectedDeficit, workSessions, overlap, CommitId(day), CommitStart(day), CommitEnd(day), day.RecoveryMinutes, prio, disposition, regularity));
+    }
+
+    /// <summary>
+    /// Procrastinador (P4c): o comeco atrasa (sorteio proprio por pessoa, dia e tentativa) dentro da
+    /// janela; se nao sobra a sessao minima, tenta a proxima janela do dia. -1 = nenhuma serviu.
+    /// Nunca cria tempo: so usa as janelas livres ja existentes.
+    /// </summary>
+    private int Procrastinate(Person p, DailySchedule.DayLayout day, int start, long localDay)
+    {
+        var e = _w.Content.QuirkCatalog.Effects.Procrastinador;
+        var rs = _w.Content.Routine;
+        int from = start, tries = 0;
+        foreach (var (ws, we) in day.Windows.OrderBy(w => w.Start))
+        {
+            if (we <= from) continue;
+            int t0 = Math.Max(ws, from);
+            int delay = Rng("quirk.procrastinate", p.Id * 100_000L + localDay * 10 + tries++).NextIntInclusive(e.MinDelayMinutes, Math.Max(e.MinDelayMinutes, e.MaxDelayMinutes));
+            int t = t0 + delay;
+            if (we - t >= rs.MinSessionMinutes)
+            {
+                QuirkSystem.Count(p, "procrastinador_minutos", t - start);
+                _w.Emit("session_delayed", EventImportance.Low, new[] { new EntityRef("person", p.Id) },
+                    new[] { new EventCause(QuirkIds.Factor(QuirkIds.Procrastinador), t - start) }, $"{t - start} min");
+                return t;
+            }
+            QuirkSystem.Count(p, "procrastinador_janelas_perdidas");
+        }
+        return -1;
     }
 
     /// <summary>
@@ -614,6 +661,8 @@ public sealed class BehaviorSystem
         if (p.QuitDay < 0 || day - p.QuitDay < rt.QuitReturnMinDays * (1 + p.NostalgiaReturns)) return false;
         int nostalgia = Nostalgia(p);
         int chance = rt.QuitReturnChancePerDay * nostalgia / 1000 * (500 + p.Traits.Loyalty) / 1000 / (1 + p.NostalgiaReturns);
+        bool nostalgic = QuirkSystem.Active(_w.Content, p, QuirkIds.Saudosista);   // Saudosista (P4c): volta mais
+        if (nostalgic) chance = chance * _w.Content.QuirkCatalog.Effects.Saudosista.QuitReturnPermille / 1000;
         if (!rng.ChancePermille(chance)) return false;
         p.State = LifecycleState.Offline;
         p.TimesReturned++;
@@ -623,7 +672,9 @@ public sealed class BehaviorSystem
         _w.Today.Returns++;
         _exp.UpdateEngagement(p, ch);
         _w.Emit("player_returned", EventImportance.Normal, new[] { new EntityRef("person", p.Id), new EntityRef("character", ch.Id) },
-            new[] { new EventCause("nostalgia", nostalgia), new EventCause("days_away", (int)(day - p.QuitDay)) }, $"{day - p.QuitDay} dias");
+            nostalgic ? new[] { new EventCause("nostalgia", nostalgia), new EventCause("days_away", (int)(day - p.QuitDay)), new EventCause(QuirkIds.Factor(QuirkIds.Saudosista), 1000) }
+                : new[] { new EventCause("nostalgia", nostalgia), new EventCause("days_away", (int)(day - p.QuitDay)) }, $"{day - p.QuitDay} dias");
+        if (nostalgic) QuirkSystem.Count(p, "saudosista_voltou");
         return true;
     }
 
@@ -767,6 +818,15 @@ public sealed class BehaviorSystem
         SatietyToNow(p);                 // todo o tempo jogado conta, inclusive o interrompido (v3)
         p.LastLogoutTick = Now;
         if (reason == "session_time" && ch.StopReason.Length > 0) reason = ch.StopReason;
+        if (reason == "frustration") p.RageQuits++;
+        // Maratonista (P4c): sessao com mais do dobro da normal marca o dia (o seguinte comeca com menos disposicao).
+        if (ch.SessionKind == SessionNormal && QuirkSystem.Active(_w.Content, p, QuirkIds.Maratonista)
+            && (Now - ch.SessionStartTick) / SimTime.TicksPerMinute * 1000 >= (long)DailySchedule.SessionMinutes(p, _w.Content.Routine) * _w.Content.QuirkCatalog.Effects.Maratonista.MarathonSessionsPermille)
+        {
+            p.MarathonDaysSet.Add(LocalDay(p, Now));
+            while (p.MarathonDaysSet.Count > 14) p.MarathonDaysSet.Remove(p.MarathonDaysSet.Min);
+            QuirkSystem.Count(p, "maratonista_maratonas");
+        }
         long planDay = ch.SessionPlanDay;
         int endedKind = ch.SessionKind;
         if (planDay >= 0 && PlanOf(p, planDay) is { } plan)
@@ -806,10 +866,11 @@ public sealed class BehaviorSystem
         ch.PlanReviewReason = "";
         p.State = LifecycleState.Offline;
         _w.OnlineCount--;
+        bool rageFuse = reason == "frustration" && QuirkSystem.Active(_w.Content, p, QuirkIds.PavioCurto);
         _w.Emit("session_ended", EventImportance.Low, new[] { new EntityRef("person", p.Id) },
-            new[] { new EventCause(reason, 1000) });
+            rageFuse ? new[] { new EventCause(reason, 1000), new EventCause(QuirkIds.Factor(QuirkIds.PavioCurto), 1000) } : new[] { new EventCause(reason, 1000) });
         // Parou por vontade, pelo fim da janela ou frustrado: se o dia ainda tem tempo, pode voltar depois de uma pausa (v3).
-        if (endedKind == SessionNormal && planDay >= 0 && reason is "satisfied" or "window_end" or "frustration") ScheduleReturn(p, planDay);
+        if (endedKind == SessionNormal && planDay >= 0 && reason is "satisfied" or "window_end" or "frustration") ScheduleReturn(p, planDay, rageFuse);
     }
 
     /// <summary>
@@ -966,6 +1027,14 @@ public sealed class BehaviorSystem
     private void SatietyToNow(Person p)
     {
         long minutes = (Now - p.SatietyTick) / SimTime.TicksPerMinute;
+        // Maratonista (P4c): com a sessao boa, a saciedade cresce mais devagar.
+        if (minutes > 0 && p.IsOnline && QuirkSystem.Active(_w.Content, p, QuirkIds.Maratonista)
+            && SessionScoreSoFar(_w.GetCharacter(p.CharacterId)) >= _w.Content.QuirkCatalog.Effects.Maratonista.GoodScoreAbove)
+        {
+            long slow = QuirkSystem.Carry(p, "maratonista_saciedade", (int)Math.Min(int.MaxValue, minutes), _w.Content.QuirkCatalog.Effects.Maratonista.SatietyPermille);
+            QuirkSystem.Count(p, "maratonista_minutos_sem_saciar", (int)(minutes - slow));
+            minutes = slow;
+        }
         if (minutes > 0)
             p.Satiety = p.IsOnline
                 ? DailySchedule.SatietyAfterPlay(p.Satiety, minutes, DailySchedule.SessionMinutes(p, _w.Content.Routine), _w.Content.Routine)
@@ -977,7 +1046,7 @@ public sealed class BehaviorSystem
     /// Depois de parar (v3): se ainda ha tempo no dia, a pessoa reconsidera voltar depois de uma
     /// pausa, na mesma janela ou na proxima (depois da aula, do compromisso).
     /// </summary>
-    private void ScheduleReturn(Person p, long planDay)
+    private void ScheduleReturn(Person p, long planDay, bool rageFuse = false)
     {
         var rs = _w.Content.Routine;
         var plan = PlanOf(p, planDay);
@@ -987,6 +1056,8 @@ public sealed class BehaviorSystem
         int nowMin = (int)((Now - dayStart + SimTime.TicksPerMinute - 1) / SimTime.TicksPerMinute);   // arredonda para cima: a pausa nunca fica menor
         int pause = Rng("routine.pause", p.Id * 100_000L + planDay * 10 + plan.Sittings)
             .NextIntInclusive(rs.ReturnPauseMinMinutes, Math.Max(rs.ReturnPauseMinMinutes, rs.ReturnPauseMaxMinutes));
+        // Pavio curto (P4c): depois de largar com raiva, volta mais cedo.
+        if (rageFuse) pause = pause * _w.Content.QuirkCatalog.Effects.PavioCurto.ReturnPausePermille / 1000;
         int at = DailySchedule.NextReturnMinute(day, nowMin, pause, rs);
         if (at < 0) return;
         _w.Scheduler.Schedule(dayStart + at * SimTime.TicksPerMinute, EvConsiderReturn, p.Id, planDay);
@@ -1019,6 +1090,25 @@ public sealed class BehaviorSystem
         if (windowEnd < 0) return;
         int minutes = (int)Math.Min(DailySchedule.SessionMinutes(p, rs), (windowEnd - Now) / SimTime.TicksPerMinute);
         if (minutes < rs.MinSessionMinutes) return;
+        // Procrastinador (P4c): a volta tambem atrasa; sem a sessao minima, reconsidera na proxima janela.
+        if (QuirkSystem.Active(_w.Content, p, QuirkIds.Procrastinador))
+        {
+            var e = _w.Content.QuirkCatalog.Effects.Procrastinador;
+            int delay = Rng("quirk.procrastinate", p.Id * 100_000L + planDay * 10 + 5 + plan.Sittings).NextIntInclusive(e.MinDelayMinutes, Math.Max(e.MinDelayMinutes, e.MaxDelayMinutes));
+            long at = Now + delay * SimTime.TicksPerMinute;
+            int left = (int)Math.Min(minutes, (windowEnd - at) / SimTime.TicksPerMinute);
+            if (left < rs.MinSessionMinutes)
+            {
+                QuirkSystem.Count(p, "procrastinador_janelas_perdidas");
+                ScheduleReturn(p, planDay);   // reconsidera numa proxima janela valida
+                return;
+            }
+            QuirkSystem.Count(p, "procrastinador_minutos", delay);
+            _w.Emit("session_delayed", EventImportance.Low, new[] { new EntityRef("person", p.Id) },
+                new[] { new EventCause(QuirkIds.Factor(QuirkIds.Procrastinador), delay) }, $"{delay} min");
+            _w.Scheduler.Schedule(at, EvSessionStart, p.Id, SessionPayload(left, SessionNormal, planDay, StartReturn));
+            return;
+        }
         StartSession(p, minutes, SessionNormal, planDay, StartReturn);
     }
 
@@ -1051,7 +1141,7 @@ public sealed class BehaviorSystem
         var rng = Rng("behavior.decision", ch.Id * 1_000_000L + ch.DecisionCount);
         ch.DecisionCount++;
         var personality = _w.Content.PersonalityRules(p.PersonalityId);
-        var options = ActivityScoring.Evaluate(ch, p.Traits, p.Preferences, _w.Content, _routes, _w.OccupancyOf, Now, rng, _quests, _goals, p.PlaceImpressions, personality);
+        var options = ActivityScoring.Evaluate(ch, p.Traits, p.Preferences, _w.Content, _routes, _w.OccupancyOf, Now, rng, _quests, _goals, p.PlaceImpressions, personality, p);
 
         if (options.Count == 0)
         {
@@ -1067,6 +1157,27 @@ public sealed class BehaviorSystem
             return;
         }
 
+        // Indeciso (P4c): empate apertado entre as duas melhores opcoes: perde alguns minutos decidindo
+        // (espera, sem atividade) e decide de novo depois, sem hesitar outra vez nessa decisao.
+        var fx = _w.Content.QuirkCatalog.Effects;
+        if (!ch.Hesitated && options.Count >= 2 && options[0].Utility - options[1].Utility < fx.Indeciso.TieGap
+            && QuirkSystem.Active(_w.Content, p, QuirkIds.Indeciso) && Now + fx.Indeciso.DelayMinutes * SimTime.TicksPerMinute < ch.SessionEndTick)
+        {
+            ch.Hesitated = true;
+            QuirkSystem.Count(p, "indeciso_hesitou");
+            QuirkSystem.Count(p, "indeciso_minutos", fx.Indeciso.DelayMinutes);
+            _w.Emit("hesitated", EventImportance.Low, new[] { new EntityRef("character", ch.Id) },
+                new[] { new EventCause(QuirkIds.Factor(QuirkIds.Indeciso), options[0].Utility - options[1].Utility) }, $"{options[0].Key}|{options[1].Key}");
+            ch.Status = CharacterStatus.Doing;
+            ch.TargetRegionId = ch.RegionId;
+            ch.ActivityId = "";
+            ch.ActivityStartTick = Now;
+            ch.ActivityEndTick = Now + fx.Indeciso.DelayMinutes * SimTime.TicksPerMinute;
+            _w.Scheduler.Schedule(ch.ActivityEndTick, EvActivityEnd, ch.Id);
+            return;
+        }
+        ch.Hesitated = false;
+
         // Plano da sessao (D-037): continua o foco salvo vantagem clara de outra opcao;
         // acontecimentos relevantes liberam a revisao. Viagem ja feita nao conta (sem custo afundado).
         var top = options[0];
@@ -1077,11 +1188,23 @@ public sealed class BehaviorSystem
         var ss = _w.Content.Session;
         // Paciente (P4a): acontecimentos nao derrubam o plano da sessao; ele termina o que planejou.
         bool review = ch.PlanReviewReason.Length > 0 && personality?.Rule != PersonalityRuleIds.FinishPlan;
+        string marginQuirk = "";
         if (focus != null && focus != top && !review)
         {
-            int margin = Now < ch.Plan!.CommitUntilTick ? ss.CommitMargin : ss.SwitchMargin;
+            int baseMargin = Now < ch.Plan!.CommitUntilTick ? ss.CommitMargin : ss.SwitchMargin;
+            int margin = baseMargin;
+            // Persistente (P4c): depois de um reves, mantem o plano com margem maior.
+            bool persistent = ch.LastSetbackTick >= 0 && Now - ch.LastSetbackTick <= fx.Persistente.SetbackWindowMinutes * SimTime.TicksPerMinute
+                && QuirkSystem.Active(_w.Content, p, QuirkIds.Persistente);
+            if (persistent) margin = margin * fx.Persistente.MarginAfterSetbackPermille / 1000;
+            // Impulsivo (P4c): troca de plano com margem menor.
+            bool impulsive = QuirkSystem.Active(_w.Content, p, QuirkIds.Impulsivo);
+            if (impulsive) margin = margin * fx.Impulsivo.MarginPermille / 1000;
             gap = top.Utility - focus.Utility;
             if (gap < margin) { best = focus; continued = true; }
+            // A trait decidiu quando o resultado seria outro com a margem de base.
+            if (continued && gap >= baseMargin) { marginQuirk = QuirkIds.Factor(QuirkIds.Persistente); QuirkSystem.Count(p, "persistente_manteve_plano"); }
+            else if (!continued && gap < baseMargin) { marginQuirk = QuirkIds.Factor(QuirkIds.Impulsivo); QuirkSystem.Count(p, "impulsivo_trocou_plano"); }
         }
         if (ch.Plan == null) FormPlan(ch, p, best, null);
         else if (best.Key != ch.Plan.FocusKey)
@@ -1101,6 +1224,7 @@ public sealed class BehaviorSystem
             .OrderByDescending(f => Math.Abs(f.Contribution)).ThenBy(f => f.Key, StringComparer.Ordinal).Take(4)
             .Select(f => new EventCause(f.Key, f.Contribution)).ToList();
         if (continued) causes.Insert(0, new EventCause("plan_continuity", gap));
+        if (marginQuirk.Length > 0) causes.Insert(0, new EventCause(marginQuirk, gap));
         _w.Emit("activity_chosen", EventImportance.Low,
             new[] { new EntityRef("character", ch.Id) }, causes.ToArray(), $"{best.Region.Id}/{best.Activity.Id}");
 
@@ -1191,6 +1315,21 @@ public sealed class BehaviorSystem
         var a = _w.Content.Regions[ch.TargetRegionId].FindActivity(ch.ActivityId)!;
         var rng = Rng("behavior.duration", ch.Id * 1_000_000L + ch.DecisionCount);
         int minutes = Math.Max(1, a.TypicalMinutes * rng.NextIntInclusive(_w.Content.Behavior.ActivityDurationMin, _w.Content.Behavior.ActivityDurationMax) / 1000);
+        // Traits (P4c): o Estudioso demora mais nas etapas de visita; o Observador explora mais devagar.
+        var fxd = _w.Content.QuirkCatalog.Effects;
+        var pd = _w.GetPerson(ch.PersonId);
+        if (a.Type == ActivityTypes.Quest && QuirkSystem.Active(_w.Content, pd, QuirkIds.Estudioso))
+        {
+            int longer = Math.Max(minutes, minutes * fxd.Estudioso.VisitStepPermille / 1000);
+            QuirkSystem.Count(pd, "estudioso_minutos_a_mais", longer - minutes);
+            minutes = longer;
+        }
+        else if (a.Type == ActivityTypes.Explore && QuirkSystem.Active(_w.Content, pd, QuirkIds.Observador))
+        {
+            int longer = Math.Max(minutes, minutes * fxd.Observador.ExplorePermille / 1000);
+            QuirkSystem.Count(pd, "observador_minutos_a_mais", longer - minutes);
+            minutes = longer;
+        }
         ch.Status = CharacterStatus.Doing;
         ch.ActivityStartTick = Now;
         ch.ActivityEndTick = Now + minutes * SimTime.TicksPerMinute;
@@ -1223,12 +1362,31 @@ public sealed class BehaviorSystem
             _traits.OnActivity(p, ch, a, minutes, fit, ActivityScoring.RiskOf(region, a, challenge, levelBefore), firstTimeType);
             _goals.OnActivity(p, ch, a, minutes);
             ch.ZoneMinutes[region.Id] = (ch.ZoneMinutes.TryGetValue(region.Id, out int zm) ? zm : 0) + minutes;
-            SessionRules.AccrueBoredom(ch, p.Traits, p.Preferences, a.Type, minutes, _w.Content.Session);
+            SessionRules.AccrueBoredom(ch, p.Traits, p.Preferences, a.Type, minutes, _w.Content.Session,
+                QuirkSystem.Active(_w.Content, p, QuirkIds.Otimizador) ? _w.Content.QuirkCatalog.Effects.Otimizador.BoredomPermille : 1000);
             int valence = _exp.OnActivity(p, ch, region, a, minutes, fit, fit > 0, ActivityScoring.RiskOf(region, a, challenge, levelBefore), firstTimeType);
             // Frustracao alta e mais uma experiencia ruim: pode largar a sessao na hora (D-039).
             var rt = _w.Content.Retention;
+            // Pavio curto (P4c): mais chance de largar a sessao com raiva.
+            bool shortFuse = QuirkSystem.Active(_w.Content, p, QuirkIds.PavioCurto);
+            int rageChance = shortFuse ? rt.RageQuitChance * _w.Content.QuirkCatalog.Effects.PavioCurto.RageQuitPermille / 1000 : rt.RageQuitChance;
             rageQuit = !_w.NeutralMood && valence < 0 && p.Mood.Frustration >= rt.RageQuitFrustration
-                && Rng("behavior.session_flex", ch.Id * 1_000_000L + ch.DecisionCount + 500_000).ChancePermille(rt.RageQuitChance);
+                && Rng("behavior.session_flex", ch.Id * 1_000_000L + ch.DecisionCount + 500_000).ChancePermille(rageChance);
+            if (rageQuit && shortFuse) QuirkSystem.Count(p, "pavio_curto_largou_com_raiva");
+            // Observador (P4c): ao explorar, guarda pistas do conteudo das zonas vizinhas (fonte valida para a descoberta).
+            if (a.Type == ActivityTypes.Explore && QuirkSystem.Active(_w.Content, p, QuirkIds.Observador))
+            {
+                int left = _w.Content.QuirkCatalog.Effects.Observador.HintsPerExplore;
+                foreach (var c in region.Connections.OrderBy(x => x.To, StringComparer.Ordinal))
+                {
+                    if (left <= 0) break;
+                    foreach (var act in _w.Content.Regions[c.To].AllActivities().OrderBy(x => x.Id, StringComparer.Ordinal))
+                    {
+                        if (left <= 0) break;
+                        if (ch.Hints.Add(c.To + "/" + act.Id)) { left--; QuirkSystem.Count(p, "observador_pistas"); }
+                    }
+                }
+            }
             // Explorar revela mais longe: as zonas ligadas as vizinhas.
             if (a.Type == ActivityTypes.Explore)
                 foreach (var c in region.Connections)
@@ -1247,6 +1405,13 @@ public sealed class BehaviorSystem
 
         if (rageQuit) { Logout(ch, "frustration"); return; }
         if (ch.LogoutPending || Now >= ch.SessionEndTick) { Logout(ch, "session_time"); return; }
+        // Impulsivo (P4c): as vezes revisa o plano sem acontecimento nenhum, por impulso.
+        if (QuirkSystem.Active(_w.Content, p, QuirkIds.Impulsivo) && ch.Plan != null && ch.PlanReviewReason.Length == 0
+            && Rng("quirk.impulse", ch.Id * 1_000_000L + ch.DecisionCount).ChancePermille(_w.Content.QuirkCatalog.Effects.Impulsivo.ImpulseReviewPermille))
+        {
+            RequestPlanReview(ch, QuirkIds.Factor(QuirkIds.Impulsivo));
+            QuirkSystem.Count(p, "impulsivo_revisou_plano");
+        }
         Decide(ch, p);
     }
 

@@ -80,6 +80,9 @@ public sealed class TraitDynamics
             int cur = p.Traits.Get(trait), b = p.BaseTraits.Get(trait), cap = Ceiling(p, trait);
             int closeness = cur <= b || cap <= b ? 0 : Math.Min(1000, (cur - b) * 1000 / (cap - b));
             costPerPoint = Math.Max(1, costPerPoint * LearnCostPermille(p, trait) / 1000 * (1000 + closeness * D.NearCeilingSlowdown / 1000) / 1000);
+            // Esquecido (P4c): reaprende rapido o que ja sabia (abaixo do valor de nascenca).
+            if (cur < b && IsSkill(trait) && QuirkSystem.Active(_w.Content, p, QuirkIds.Esquecido))
+                costPerPoint = Math.Max(1, costPerPoint * _w.Content.QuirkCatalog.Effects.Esquecido.RelearnPermille / 1000);
         }
         // Acumulador por direcao, traco e fonte (cada fonte tem o seu custo por ponto).
         string key = (sign > 0 ? "+" : "-") + trait + "/" + cause;
@@ -115,11 +118,20 @@ public sealed class TraitDynamics
 
     internal void OnRegionDiscovered(Person p)
     {
-        Adjust(p, "gameKnowledge", D.KnowledgePerDiscovery, "discovery");
+        Adjust(p, "gameKnowledge", D.KnowledgePerDiscovery + StudyBonus(p, D.KnowledgePerDiscovery), "discovery");
         Practice(p, "exploration", 1, D.ExplorationPerDiscoveries, +1, "discovery");
     }
 
-    internal void OnQuestCompleted(Person p) => Adjust(p, "gameKnowledge", D.KnowledgePerQuest, "quest_completed");
+    internal void OnQuestCompleted(Person p) => Adjust(p, "gameKnowledge", D.KnowledgePerQuest + StudyBonus(p, D.KnowledgePerQuest), "quest_completed");
+
+    /// <summary>Estudioso (P4c): o Conhecimento extra de missoes e descobertas (com resto guardado).</summary>
+    private int StudyBonus(Person p, int baseGain)
+    {
+        if (!QuirkSystem.Active(_w.Content, p, QuirkIds.Estudioso)) return 0;
+        int extra = QuirkSystem.Carry(p, "estudioso_conhecimento", baseGain, _w.Content.QuirkCatalog.Effects.Estudioso.KnowledgePermille - 1000);
+        QuirkSystem.Count(p, "estudioso_conhecimento_a_mais", extra);
+        return extra;
+    }
 
     /// <summary>
     /// Gancho do combate (M3): abater outro jogador e uma experiencia positiva de PvP (reforca o
@@ -136,7 +148,16 @@ public sealed class TraitDynamics
     {
         if (p.CharacterId == 0 || p.LastPlayedDay < 0 || p.IsOnline) return;
         long off = day - p.LastPlayedDay;
-        if (off > D.MechanicalDecayAfterDays) Adjust(p, "mechanicalSkill", -D.MechanicalDecayPerDay, "inactivity_week");
-        if (off > D.KnowledgeDecayAfterDays) Adjust(p, "gameKnowledge", -D.KnowledgeDecayPerDay, "inactivity_long");
+        var fx = _w.Content.QuirkCatalog.Effects;
+        // Esquecido (P4c): comeca a cair mais cedo. Memoria firme: cai mais devagar (com resto guardado).
+        int earlier = QuirkSystem.Active(_w.Content, p, QuirkIds.Esquecido) ? fx.Esquecido.DecayEarlierDays : 0;
+        bool firm = QuirkSystem.Active(_w.Content, p, QuirkIds.MemoriaFirme);
+        int Decay(string key, int perDay) => firm ? QuirkSystem.Carry(p, "memoria_firme_" + key, perDay, fx.MemoriaFirme.DecayPermille) : perDay;
+        if (off > D.MechanicalDecayAfterDays - earlier)
+        {
+            if (earlier > 0 && off <= D.MechanicalDecayAfterDays) QuirkSystem.Count(p, "esquecido_dias_de_queda_antecipada");
+            Adjust(p, "mechanicalSkill", -Decay("mechanicalSkill", D.MechanicalDecayPerDay), "inactivity_week");
+        }
+        if (off > D.KnowledgeDecayAfterDays - earlier) Adjust(p, "gameKnowledge", -Decay("gameKnowledge", D.KnowledgeDecayPerDay), "inactivity_long");
     }
 }

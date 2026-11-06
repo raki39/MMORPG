@@ -250,6 +250,9 @@ public class EarlyProgressionTests
         {
             var accepted = ch.ActiveQuests.Select(q => q.QuestId).Concat(ch.QuestHistory.Keys).ToHashSet(StringComparer.Ordinal);
             var valid = accepted.SelectMany(id => C.Quests[id].Steps).Select(s => s.RegionId + "/" + s.ActivityId).ToHashSet(StringComparer.Ordinal);
+            // Observador (P4c): explorar tambem da pistas validas das zonas vizinhas.
+            if (QuirkSystem.Active(C, e.World.GetPerson(ch.PersonId), QuirkIds.Observador))
+                foreach (var r in C.Regions.Values) foreach (var c in r.Connections) foreach (var a in C.Regions[c.To].AllActivities()) valid.Add(c.To + "/" + a.Id);
             Assert.All(ch.ContentHints, h => Assert.Contains(h, valid));
             if (ch.ContentHints.Count > 0) withHints++;
         }

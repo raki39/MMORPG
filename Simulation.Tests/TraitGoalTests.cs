@@ -35,6 +35,7 @@ public class TraitGoalTests
     public void Inatividade_MaisDeUmaSemana_ReduzMecanica_EDuasSemanas_Conhecimento()
     {
         var (w, p, _) = Someone();
+        p.QuirkList.Clear();   // a regra de base (Esquecido e Memoria firme mudam a queda, P4c)
         var traits = w.Behavior.Traits;
         int mech = p.Traits.MechanicalSkill, know = p.Traits.GameKnowledge;
         var d = w.Content.Dynamics;

@@ -89,7 +89,7 @@ public static class ContentLoader
         var quests = Parse<QuestsFile>(texts, ContentValidator.QuestsFile, issues);
         if (quests != null) set.Quests = new QuestCatalog { Settings = quests.Settings, Boards = quests.Boards, Quests = quests.Quests };
         var traits = Parse<TraitsFile>(texts, ContentValidator.TraitsFile, issues);
-        if (traits != null) set.Quirks = new QuirkCatalogDefinition { Generation = traits.Generation, Traits = traits.Traits };
+        if (traits != null) set.Quirks = new QuirkCatalogDefinition { Generation = traits.Generation, Effects = traits.Effects, Traits = traits.Traits };
 
         if (issues.Any(i => i.Severity == IssueSeverity.Error))
             return new ContentLoadResult { Set = set, Issues = issues, ContentHash = hash, Folder = full };
@@ -176,6 +176,7 @@ public sealed class ProgressionFile : VersionedFile { public ProgressionDefiniti
 public sealed class TraitsFile : VersionedFile
 {
     public QuirkGenerationDefinition Generation { get; set; } = new();
+    public QuirkEffectsDefinition Effects { get; set; } = new();
     public List<QuirkDefinition> Traits { get; set; } = new();
 }
 

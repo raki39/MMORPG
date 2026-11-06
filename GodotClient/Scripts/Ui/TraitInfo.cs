@@ -65,6 +65,19 @@ public static class TraitInfo
     };
 
     public static bool IsPositive(QuirkDefinition q) => q.Polarity == QuirkPolarities.Positive;
+
+    /// <summary>Nome de exibicao de uma trait pelo id (fatores e causas "quirk_*").</summary>
+    public static string NameOf(string id) => id switch
+    {
+        "persistente" => "Persistente", "impulsivo" => "Impulsivo", "colecionador" => "Colecionador", "otimizador" => "Otimizador",
+        "resiliente" => "Resiliente", "pavio_curto" => "Pavio curto", "saudosista" => "Saudosista", "rancoroso" => "Rancoroso",
+        "estudioso" => "Estudioso", "esquecido" => "Esquecido", "memoria_firme" => "Memória firme", "observador" => "Observador",
+        "indeciso" => "Indeciso", "maratonista" => "Maratonista", "procrastinador" => "Procrastinador",
+        _ => id,
+    };
+
+    /// <summary>Efeito da trait ligado agora (P4c): da pessoa, com os efeitos do conteudo ligados.</summary>
+    public static bool EffectActive(ContentDatabase c, QuirkDefinition q) => q.System.Length == 0 && c.QuirkCatalog.Effects.Enabled;
     public static Color PolarityColor(QuirkDefinition q) => IsPositive(q) ? UiTokens.Success : UiTokens.Danger;
     public static string PolarityLabel(QuirkDefinition q) => IsPositive(q) ? "Positiva" : "Negativa";
 
@@ -83,8 +96,8 @@ public static class TraitInfo
     /// Situacao do efeito (P4b: todos desligados). Efeitos da pessoa entram na P4c; os demais com
     /// o sistema de que dependem.
     /// </summary>
-    public static string Status(QuirkDefinition q) => q.System.Length == 0
-        ? "Efeito a partir da P4c"
+    public static string Status(ContentDatabase c, QuirkDefinition q) => q.System.Length == 0
+        ? (c.QuirkCatalog.Effects.Enabled ? "Efeito ativo" : "Efeitos desligados no conteúdo")
         : $"Sem efeito até {SystemShort(q.System)}";
 
     private static string SystemShort(string system) => system switch
@@ -140,7 +153,7 @@ public static class TraitInfo
         if (q.Tradeoff.Length > 0) { lines.Add("#Contrapartida"); lines.Add(q.Tradeoff); }
         lines.Add("#Situação");
         lines.Add(q.System.Length == 0
-            ? "Desligado nesta versão: os efeitos dos traços entram na P4c. O traço já existe e não muda a simulação."
+            ? (c.QuirkCatalog.Effects.Enabled ? "Ativo: age no seu ponto (decisão, humor, memória, sono ou rotina) e aparece como causa nas decisões e nos eventos." : "Os efeitos dos traços estão desligados no conteúdo.")
             : $"Depende de {SystemName(q.System)}. Até lá o traço existe, mas não muda a simulação.");
         if (more.Count > 0) lines.Add("~Mais provável com " + string.Join(", ", more) + ".");
         if (less.Count > 0) lines.Add("~Menos provável com " + string.Join(", ", less) + ".");

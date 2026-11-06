@@ -44,6 +44,10 @@ public sealed class ExperienceSystem
     {
         if (minutes <= 0) return 0;
         var parts = Components(p.Traits, p.Preferences, ch, region, a, fit, yieldsXp, risk, _w.OccupancyOf(region.Id, a.Id), M);
+        // Otimizador (P4c): a diversao conta menos na nota da sessao.
+        if (QuirkSystem.Active(_w.Content, p, QuirkIds.Otimizador))
+            for (int i = 0; i < parts.Length; i++)
+                if (parts[i].Key == Fun) parts[i] = (Fun, parts[i].Value * _w.Content.QuirkCatalog.Effects.Otimizador.FunPermille / 1000);
         int valence = 0;
         foreach (var (key, value) in parts)
         {
@@ -91,6 +95,9 @@ public sealed class ExperienceSystem
     {
         ch.SessionLedger.Points += points;
         AddNovelty(p, novelty);
+        // Resiliente (P4c): as conquistas tambem marcam menos.
+        if (memoryIntensity > 0 && QuirkSystem.Active(_w.Content, p, QuirkIds.Resiliente))
+            memoryIntensity = Math.Max(1, memoryIntensity * _w.Content.QuirkCatalog.Effects.Resiliente.AchievementMemoryPermille / 1000);
         if (memoryIntensity > 0) Remember(p, kind, subject, memoryIntensity, memoryIntensity);
     }
 
@@ -98,6 +105,14 @@ public sealed class ExperienceSystem
     internal void OnSetback(Person p, Character ch, string kind, string subject, int points, int frustration, int memoryIntensity)
     {
         ch.SessionLedger.Points -= points;
+        ch.LastSetbackTick = Now;   // Persistente (P4c) mantem o plano depois disto
+        // Pavio curto (P4c): a frustracao sobe mais rapido.
+        if (QuirkSystem.Active(_w.Content, p, QuirkIds.PavioCurto))
+        {
+            int more = frustration * _w.Content.QuirkCatalog.Effects.PavioCurto.FrustrationGainPermille / 1000;
+            QuirkSystem.Count(p, "pavio_curto_frustracao_a_mais", more - frustration);
+            frustration = more;
+        }
         p.Mood.Frustration = Math.Clamp(p.Mood.Frustration + frustration, 0, 1000);
         if (memoryIntensity > 0) Remember(p, kind, subject, -memoryIntensity, memoryIntensity);
     }
@@ -125,6 +140,9 @@ public sealed class ExperienceSystem
         foreach (var kv in L.Sums) parts[kv.Key] = (int)(kv.Value / Math.Max(1, L.Minutes));
         parts[Progress] = ProgressTerm(p, ch, minutes) * ProgressCare(p.Traits, p.Preferences, m) / 1000;
         parts[Novelty] = NoveltyTerm(mood.Novelty, p.Traits, p.Preferences, m);
+        // Saudosista (P4c): novidade fraca frustra mais.
+        if (parts[Novelty] < 0 && QuirkSystem.Active(_w.Content, p, QuirkIds.Saudosista))
+            parts[Novelty] = parts[Novelty] * _w.Content.QuirkCatalog.Effects.Saudosista.WeakNoveltyPermille / 1000;
         parts[Events] = Math.Clamp(L.Points, -m.EventClamp, m.EventClamp);
         int fatigue = DailySchedule.Fatigue(p, _w.Content.Routine);   // cansaco (P3)
         if (fatigue > 0) parts[Fatigue] = -fatigue * _w.Content.Routine.FatigueMoodWeight / 1000;
@@ -134,7 +152,17 @@ public sealed class ExperienceSystem
 
         int adapt = m.SatisfactionAdapt * Math.Min(minutes, m.FullWeightSessionMinutes) / Math.Max(1, m.FullWeightSessionMinutes);
         mood.Satisfaction = Math.Clamp(mood.Satisfaction + (score - mood.Satisfaction) * adapt / 1000, 0, 1000);
-        if (score < m.BadSessionBelow) mood.Frustration += (m.BadSessionBelow - score) * m.FrustrationFromBadSession / 1000;
+        if (score < m.BadSessionBelow)
+        {
+            int gain = (m.BadSessionBelow - score) * m.FrustrationFromBadSession / 1000;
+            if (QuirkSystem.Active(_w.Content, p, QuirkIds.PavioCurto))   // Pavio curto (P4c)
+            {
+                int more = gain * _w.Content.QuirkCatalog.Effects.PavioCurto.FrustrationGainPermille / 1000;
+                QuirkSystem.Count(p, "pavio_curto_frustracao_a_mais", more - gain);
+                gain = more;
+            }
+            mood.Frustration += gain;
+        }
         else if (score > m.GoodSessionAbove) mood.Frustration -= (score - m.GoodSessionAbove) * m.FrustrationReliefFromGoodSession / 1000;
         mood.Frustration = Math.Clamp(mood.Frustration, 0, 1000);
         foreach (var kv in parts) p.Drivers[kv.Key] = p.Drivers.GetValueOrDefault(kv.Key) + kv.Value * adapt / 1000;
@@ -223,21 +251,33 @@ public sealed class ExperienceSystem
     {
         var m = M;
         var mood = p.Mood;
-        mood.Frustration = Math.Max(0, mood.Frustration - m.FrustrationDecayPerDay);
+        var fx = _w.Content.QuirkCatalog.Effects;
+        int frDecay = m.FrustrationDecayPerDay;
+        if (QuirkSystem.Active(_w.Content, p, QuirkIds.Resiliente))   // Resiliente (P4c): passa mais rapido
+            frDecay = QuirkSystem.Carry(p, "resiliente_frustracao", m.FrustrationDecayPerDay, fx.Resiliente.FrustrationDecayPermille);
+        mood.Frustration = Math.Max(0, mood.Frustration - frDecay);
         foreach (var k in p.Drivers.Keys.ToList())
         {
             int v = p.Drivers[k] * (1000 - m.DriverDecayPerDay) / 1000;
             if (v == 0) p.Drivers.Remove(k); else p.Drivers[k] = v;
         }
+        // Rancoroso e Memoria firme (P4c): o que deu errado num lugar se apaga mais devagar.
+        int negDecay = Mem.ImpressionDecayNegativePerDay;
+        if (QuirkSystem.Active(_w.Content, p, QuirkIds.Rancoroso)) negDecay = negDecay * fx.Rancoroso.NegativeImpressionDecayPermille / 1000;
+        if (QuirkSystem.Active(_w.Content, p, QuirkIds.MemoriaFirme)) negDecay = negDecay * fx.MemoriaFirme.SecondChancePermille / 1000;
         foreach (var k in p.Impressions.Keys.ToList())
         {
             int v = p.Impressions[k];
-            p.Impressions[k] = v * (1000 - (v > 0 ? Mem.ImpressionDecayPositivePerDay : Mem.ImpressionDecayNegativePerDay)) / 1000;
+            p.Impressions[k] = v * (1000 - (v > 0 ? Mem.ImpressionDecayPositivePerDay : negDecay)) / 1000;
         }
+        // Saudosista (P4c): as boas lembrancas duram mais.
+        int posDecay = Mem.PositiveDecayPerDay;
+        if (QuirkSystem.Active(_w.Content, p, QuirkIds.Saudosista))
+            posDecay = QuirkSystem.Carry(p, "saudosista_lembrancas", Mem.PositiveDecayPerDay, fx.Saudosista.PositiveMemoryDecayPermille);
         for (int i = p.MemoryList.Count - 1; i >= 0; i--)
         {
             var mem = p.MemoryList[i];
-            mem.Intensity -= mem.Valence >= 0 ? Mem.PositiveDecayPerDay : Mem.NegativeDecayPerDay;
+            mem.Intensity -= mem.Valence >= 0 ? posDecay : Mem.NegativeDecayPerDay;
             if (mem.Intensity <= 0) p.MemoryList.RemoveAt(i);
         }
         UpdateEngagement(p, ch);

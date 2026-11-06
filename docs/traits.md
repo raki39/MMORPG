@@ -16,8 +16,8 @@ As traits ficam separadas das outras camadas da pessoa:
 | **Traits** | os traços, de 0 a 6, com regras específicas | **Pavio curto** |
 
 **Etapas:**
-- **P4b (esta):** catálogo, sorteio, estado da pessoa e ficha. Os efeitos ficam **desligados**: as traits existem, mas não mudam a simulação.
-- **P4c:** efeitos das traits da pessoa (incluindo Maratonista e Procrastinador).
+- **P4b:** catálogo, sorteio, estado da pessoa e ficha.
+- **P4c:** efeitos das 15 traits da pessoa (seção 6). As traits de sistemas futuros continuam sem efeito até esses sistemas existirem.
 - **P4d:** aquisição e perda.
 
 No código o nome é `Quirk`, para não confundir com os atributos numéricos (`PersonTraits`), que vieram antes. O arquivo de conteúdo é `traits.json`.
@@ -131,3 +131,76 @@ Validação padrão (5 seeds × 1.000 × 90 dias), P3 (traits ligadas) contra P2
   - Otimizador: 10,7% com competitividade alta e 5,4% com baixa.
 - **Exclusões:** nenhuma combinação excluída (Provocador em Pacífico, Lobo solitário em Sociável, Persistente em Leal ou Inquieto: 0%).
 - **Testes** (`QuirkTests`): quantidade e classificação com 10 mil pessoas, exclusões, coerência, fluxo próprio, determinismo, limites do multiplicador e validador.
+
+## 6. Efeitos (P4c)
+
+As magnitudes ficam em `traits.json`, seção `effects`, e são candidatas.
+- **Desligar:** `effects.enabled` = false desliga todos os efeitos; as traits continuam existindo.
+- **Nomes:** "permille" é um multiplicador, em que 1000 é igual a sem efeito.
+- **Causa visível:** cada efeito aparece como fator próprio na decisão ("Traço: Nome") ou como causa no evento.
+- **Contagem:** cada atuação é contada na pessoa (`QuirkStats`), para medição.
+- **Limites preservados:** nenhum efeito cria tempo nem passa por cima de sono, obrigação, deslocamento ou janela.
+  - O Procrastinador só adia dentro das janelas livres.
+  - O Maratonista só muda a saciedade, e a decisão de continuar continua presa à janela e ao corte de sono autorizado.
+
+| Trait | Ponto de avaliação | Efeito (padrão) | Contrapartida (padrão) | Causa visível |
+|---|---|---|---|---|
+| Persistente | plano da sessão; revisão das metas | até 2 h depois de um revés, margem de troca do plano × 1,5; prazo para abandonar meta sem progresso × 1,5 e chance de desistir por impaciência ÷ 1,5 | insiste além do que compensa | `quirk_persistente` no evento da escolha |
+| Impulsivo | plano; ruído; fim de atividade | margem de troca × 0,6; ruído × 1,3; 25% de chance de revisar o plano a cada fim de atividade | — | `quirk_impulsivo` na escolha e no motivo da revisão |
+| Colecionador | nota das opções | +150 para atividade nunca feita; +75 para zona nunca visitada | troca rendimento por novidade | fator `quirk_colecionador` |
+| Otimizador | nota das opções; nota da sessão; tédio | rendimento × 1,3 e gosto × 0,8 na escolha | diversão × 0,7 na nota da sessão; tédio × 1,25 | fatores `quirk_otimizador` e `quirk_otimizador_gosto` |
+| Resiliente | humor (meia-noite); memória | a frustração cai × 1,5 por dia | memórias de conquistas × 0,7 | — (efeito contínuo) |
+| Pavio curto | revés; sessão ruim; sair com raiva; voltar | frustração ganha × 1,4; chance de largar com raiva × 1,5 | pausa antes de voltar, depois de largar com raiva, × 0,5 | `quirk_pavio_curto` no fim da sessão |
+| Saudosista | memória; volta de quem desistiu; nota da sessão | boas lembranças perdem força × 0,6; chance de voltar × 1,5 | novidade fraca pesa × 1,3 na nota | `quirk_saudosista` na volta |
+| Rancoroso | impressão dos lugares | impressão ruim se apaga × 0,5 | — | — (efeito contínuo, pelo fator `memory`) |
+| Estudioso | Conhecimento; duração das visitas | Conhecimento de missões e descobertas × 1,5 | etapas de visita × 1,25 mais longas | — |
+| Esquecido | queda por inatividade; prática | a queda começa 3 dias antes | reaprende o que perdeu com custo × 0,7 | — |
+| Memória firme | queda por inatividade; impressões | a queda das capacidades × 0,5 | impressão ruim se apaga × 0,75 | — |
+| Observador | exploração | ao explorar, 1 pista do conteúdo de uma zona vizinha | exploração × 1,2 mais longa | — |
+| Indeciso | decisão | empate apertado (menos de 40 pontos entre as duas melhores) faz perder 5 min decidindo, uma vez por decisão | ruído × 0,7 | evento `hesitated` com `quirk_indeciso` |
+| Maratonista | saciedade; disposição | com a sessão boa (nota parcial a partir de 600), a saciedade cresce × 0,6 | depois de uma sessão com mais do dobro da normal, o dia seguinte começa com −150 de disposição | — |
+| Procrastinador | início do dia; voltas | o começo atrasa de 15 a 60 min dentro da janela; sem a sessão mínima, tenta a próxima janela | perde tempo de jogo | evento `session_delayed` com `quirk_procrastinador` |
+
+### 6.1 Medição
+
+Validação padrão (5 seeds × 1.000 × 90 dias), **Q0** (efeitos desligados) × **Q1** (ligados), com as mesmas pessoas e as mesmas traits. A tabela compara a média por pessoa de quem tem a trait. Resultados em `baselines/traits-efeitos/`.
+
+| Trait (pessoas) | Atuação por pessoa em 90 dias | Efeito medido (Q0 → Q1) |
+|---|---|---|
+| Persistente (340) | manteve meta vencida 6,2 vezes; manteve o plano 0,4 vez | metas abandonadas 4,6 → 3,4; frustração 8,3 → 5,1; metas concluídas iguais |
+| Impulsivo (324) | revisou o plano 77 vezes; trocou de plano 11,9 vezes | andando 20,1% → 22,8%; satisfação 599 → 608; metas e horas iguais |
+| Colecionador (385) | contínuo, na nota | zonas conhecidas 14,4 → 14,8; nível 24,0 → 24,4; satisfação 598 → 609; **andando 20,8% → 24,6%** |
+| Otimizador (426) | contínuo, na nota | cidade 21,9% → 16,4%; caça e chefe 32,3% → 34,3%; nível 24,1 → 24,9; **satisfação 585 → 569** (a contrapartida) |
+| Resiliente (391) | contínuo | frustração 5,5 → 2,2; memórias 9,3 → 7,3; desistentes 0,8% → 0,5% |
+| Pavio curto (356) | frustração a mais 176 pontos | frustração 6,4 → 14,6; saídas com raiva 0,00 → 0,02; horas iguais |
+| Saudosista (443) | contínuo | memórias 9,4 → 11,7; volta de desistentes quase sem casos |
+| Rancoroso (363) | contínuo | cidade 23,1% → 21,8%; o resto igual |
+| Estudioso (474) | +23 de Conhecimento; +45 min em visitas | Conhecimento 545 → 555; missões 1,9% → 2,0% |
+| Esquecido (320) | 5 dias de queda antecipada | Mecânica 482 → 477 (só em quem ficou dias sem jogar) |
+| Memória firme (403) | contínuo | Mecânica quase igual (poucas pausas longas em 90 dias) |
+| Observador (439) | 18,7 pistas; +271 min explorando | pistas 0,04 → 18,7; zonas conhecidas quase iguais |
+| Indeciso (362) | hesitou 148 vezes (742 min) | espera 0% → 5,0% do tempo conectado; nível 24,2 → 23,8 |
+| Maratonista (327) | 1,9 maratona; 2.046 min sem saciar | horas iguais (21,7 → 21,6); **frustração 3,1 → 5,9**; satisfação 581 → 576 |
+| Procrastinador (357) | 3.228 min de atraso; 2,8 janelas perdidas | **horas por semana 19,6 → 17,9**; nível 24,8 → 24,6 |
+
+**Geral (todos):**
+- **Horas por semana:** 18,4 → 18,3.
+- **Validação:**
+  - regras do cenário: 8 de 9, iguais;
+  - provisórias: 7 → 8 de 12. "Tempo na cidade" voltou para dentro (23,6% → 22,6%). "Andando ou esperando" foi de 20,0% para 20,7%, contando a espera do Indeciso (0,4% do total).
+- **Nenhuma regra da rotina mudou.**
+
+**Interações inesperadas** (registradas, sem recalibrar):
+1. **Colecionador, Impulsivo e Indeciso andam ou esperam mais.**
+   - O Colecionador vai atrás do que nunca fez e anda 3,8 pontos a mais. O Impulsivo troca mais de plano: +2,6.
+   - O Indeciso perde 5% do tempo conectado decidindo. O empate de menos de 40 pontos é comum, porque o ruído da decisão é maior que isso.
+   - Juntos, explicam a subida de "andando ou esperando".
+2. **Maratonista não joga mais horas.** A saciedade cresce mais devagar nas sessões boas, mas a disposição menor no dia seguinte compensa, e as maratonas trazem mais frustração (cansaço e sessões longas pesam na nota).
+3. **Partes quase inertes no mundo atual:**
+   - **Largar com raiva** (Pavio curto) e **volta de desistentes** (Saudosista) quase não acontecem em 90 dias: as desistências ficam em 0,8%.
+   - **Memória firme** e **Esquecido** dependem de pausas longas, também raras.
+   - **Observador:** as pistas são de zonas vizinhas que, em geral, já são conhecidas, então quase não viram descoberta.
+   - Esses efeitos devem pesar mais com combate, mortes e economia.
+4. **Procrastinador perde 1,7 h por semana,** como a contrapartida prevê. As janelas perdidas (2,8 em 90 dias) são raras.
+
+O controle (quem não tem a trait) muda pouco: até 1 ponto em "cidade" e "andando", pelo efeito das outras traits que essas pessoas têm.

@@ -1991,3 +1991,37 @@ O diagnóstico da rotina, pedido pelo criador, mostrou que ninguém jogava entre
 **Decisão do criador:** manter o cronotipo em 70% e o bônus do Agressivo em +150 como candidatos; não recalibrar por correlação nem para recuperar metas antigas.
 
 **Próximo:** P4c (efeitos das traits) e P4d (aquisição e perda).
+
+## D-059 — Efeitos das traits da pessoa (P4c)
+**Data:** 05/11/2026 · **Estado:** aceita (magnitudes candidatas)
+
+As 15 traits da pessoa passaram a agir, cada uma no seu ponto de avaliação. Detalhes e números em `traits.md`, seção 6.
+- **Magnitudes:** configuráveis em `traits.json` (`effects`), validadas e candidatas.
+- **Causa visível:** como fator próprio na decisão ("Traço: Nome") ou como causa no evento, como em `hesitated`, `session_delayed`, o fim da sessão com raiva e a volta do saudosista.
+- **Contagem:** cada atuação é contada na pessoa, para a medição.
+- **Traits de sistemas futuros:** continuam sem efeito.
+
+**Limites preservados:**
+- **Procrastinador:** só adia dentro das janelas livres; sem a sessão mínima, reconsidera na próxima janela.
+- **Maratonista:** só muda a saciedade; a decisão de continuar segue presa à janela e ao corte de sono autorizado.
+- **Indeciso:** espera dentro da sessão.
+- **Testes:** em mundos em que todos têm a trait, toda sessão começa numa janela livre.
+
+**Medição** (5 seeds × 1.000 × 90 dias; efeitos desligados × ligados, mesmas pessoas):
+- **Efeitos fortes:**
+  - Persistente abandona 26% menos metas;
+  - Resiliente tem 60% menos frustração;
+  - Pavio curto tem o dobro de frustração;
+  - Otimizador fica 5,5 pontos menos na cidade e sobe 0,8 nível, com satisfação menor;
+  - Procrastinador joga 1,7 h por semana a menos;
+  - Indeciso passa 5% do tempo decidindo.
+- **Validação:** regras do cenário 8 de 9; provisórias 8 de 12 (antes, 7). "Tempo na cidade" voltou para dentro, e "andando ou esperando" foi a 20,7%.
+
+**Interações registradas** (sem recalibrar):
+- Colecionador, Impulsivo e Indeciso andam ou esperam mais.
+- O Maratonista não joga mais horas: a disposição do dia seguinte compensa, e ele se frustra mais.
+- Largar com raiva, volta de desistentes, queda por inatividade e pistas do Observador quase não atuam no mundo atual, porque faltam desistências, pausas longas e zonas vizinhas desconhecidas.
+
+**Correção durante os testes:** a disposição do Maratonista guardava só o dia da última maratona, e a disposição de um dia passado deixava de ser reproduzível. Agora ficam as maratonas dos últimos 14 dias. O comportamento na simulação é o mesmo, porque o dia é planejado antes de qualquer maratona dele.
+
+**Próximo:** P4d (aquisição e perda), depois da avaliação do criador.

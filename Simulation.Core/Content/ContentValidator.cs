@@ -1329,6 +1329,34 @@ public static class ContentValidator
         if (g.MaxTotal is < 0 or > 12) v.Error(f, "generation.maxTotal", "Use de 0 a 12.");
         else if (g.CountWeights.Count - 1 > g.MaxTotal) v.Error(f, "generation.countWeights", "A maior quantidade passa do total máximo de traits.");
 
+        // Efeitos (P4c): multiplicadores de 0 a 5000 permille, minutos e pontos em faixas plausiveis.
+        var fx = set.Quirks.Effects;
+        foreach (var (name, value, lo, hi) in new (string, int, int, int)[]
+        {
+            ("persistente.setbackWindowMinutes", fx.Persistente.SetbackWindowMinutes, 0, 1440), ("persistente.marginAfterSetbackPermille", fx.Persistente.MarginAfterSetbackPermille, 0, 5000),
+            ("persistente.goalPatiencePermille", fx.Persistente.GoalPatiencePermille, 1, 5000),
+            ("impulsivo.marginPermille", fx.Impulsivo.MarginPermille, 0, 5000), ("impulsivo.noisePermille", fx.Impulsivo.NoisePermille, 0, 5000), ("impulsivo.impulseReviewPermille", fx.Impulsivo.ImpulseReviewPermille, 0, 1000),
+            ("colecionador.newActivityBonus", fx.Colecionador.NewActivityBonus, 0, 1000), ("colecionador.newZoneBonus", fx.Colecionador.NewZoneBonus, 0, 1000),
+            ("otimizador.rewardPermille", fx.Otimizador.RewardPermille, 0, 5000), ("otimizador.affinityPermille", fx.Otimizador.AffinityPermille, 0, 5000),
+            ("otimizador.funPermille", fx.Otimizador.FunPermille, 0, 5000), ("otimizador.boredomPermille", fx.Otimizador.BoredomPermille, 0, 5000),
+            ("resiliente.frustrationDecayPermille", fx.Resiliente.FrustrationDecayPermille, 0, 5000), ("resiliente.achievementMemoryPermille", fx.Resiliente.AchievementMemoryPermille, 0, 5000),
+            ("pavioCurto.frustrationGainPermille", fx.PavioCurto.FrustrationGainPermille, 0, 5000), ("pavioCurto.rageQuitPermille", fx.PavioCurto.RageQuitPermille, 0, 5000),
+            ("pavioCurto.returnPausePermille", fx.PavioCurto.ReturnPausePermille, 0, 5000),
+            ("saudosista.positiveMemoryDecayPermille", fx.Saudosista.PositiveMemoryDecayPermille, 0, 5000), ("saudosista.quitReturnPermille", fx.Saudosista.QuitReturnPermille, 0, 5000),
+            ("saudosista.weakNoveltyPermille", fx.Saudosista.WeakNoveltyPermille, 0, 5000),
+            ("rancoroso.negativeImpressionDecayPermille", fx.Rancoroso.NegativeImpressionDecayPermille, 0, 5000),
+            ("estudioso.knowledgePermille", fx.Estudioso.KnowledgePermille, 1000, 5000), ("estudioso.visitStepPermille", fx.Estudioso.VisitStepPermille, 1000, 5000),
+            ("esquecido.decayEarlierDays", fx.Esquecido.DecayEarlierDays, 0, 30), ("esquecido.relearnPermille", fx.Esquecido.RelearnPermille, 1, 1000),
+            ("memoriaFirme.decayPermille", fx.MemoriaFirme.DecayPermille, 0, 1000), ("memoriaFirme.secondChancePermille", fx.MemoriaFirme.SecondChancePermille, 0, 5000),
+            ("observador.hintsPerExplore", fx.Observador.HintsPerExplore, 0, 10), ("observador.explorePermille", fx.Observador.ExplorePermille, 1000, 5000),
+            ("indeciso.tieGap", fx.Indeciso.TieGap, 0, 1000), ("indeciso.delayMinutes", fx.Indeciso.DelayMinutes, 0, 120), ("indeciso.noisePermille", fx.Indeciso.NoisePermille, 0, 5000),
+            ("maratonista.goodScoreAbove", fx.Maratonista.GoodScoreAbove, 0, 1000), ("maratonista.satietyPermille", fx.Maratonista.SatietyPermille, 0, 1000),
+            ("maratonista.marathonSessionsPermille", fx.Maratonista.MarathonSessionsPermille, 1000, 10000), ("maratonista.nextDayDispositionPenaltyPermille", fx.Maratonista.NextDayDispositionPenaltyPermille, 0, 1000),
+            ("procrastinador.minDelayMinutes", fx.Procrastinador.MinDelayMinutes, 0, 240), ("procrastinador.maxDelayMinutes", fx.Procrastinador.MaxDelayMinutes, 0, 240),
+        })
+            if (value < lo || value > hi) v.Error(f, "effects." + name, $"Use de {lo} a {hi}.");
+        if (fx.Procrastinador.MaxDelayMinutes < fx.Procrastinador.MinDelayMinutes) v.Error(f, "effects.procrastinador.maxDelayMinutes", "O atraso máximo não pode ser menor que o mínimo.");
+
         var ids = CheckIds(set.Quirks.Traits, f, "traits", v);
         var personalities = new HashSet<string>(set.Population.Personality.Types.Select(t => t.Id), StringComparer.Ordinal) { "equilibrado" };
         var profiles = new HashSet<string>(set.Population.Profiles.Select(p => p.Id), StringComparer.Ordinal);

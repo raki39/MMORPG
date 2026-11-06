@@ -9,7 +9,147 @@ namespace Simulation.Core.Content;
 public sealed class QuirkCatalogDefinition
 {
     public QuirkGenerationDefinition Generation { get; set; } = new();
+    /// <summary>Efeitos das traits da pessoa (P4c): magnitudes configuraveis por trait.</summary>
+    public QuirkEffectsDefinition Effects { get; set; } = new();
     public List<QuirkDefinition> Traits { get; set; } = new();
+}
+
+/// <summary>
+/// Efeitos das traits da pessoa (P4c). Cada trait age num ponto de avaliacao conhecido do Core;
+/// permille = multiplicador (1000 = sem efeito). Traits de sistemas futuros nao tem efeito aqui.
+/// Todos os valores sao candidatos para medicao.
+/// </summary>
+public sealed class QuirkEffectsDefinition
+{
+    public bool Enabled { get; set; } = true;
+    public PersistentEffect Persistente { get; set; } = new();
+    public ImpulsiveEffect Impulsivo { get; set; } = new();
+    public CollectorEffect Colecionador { get; set; } = new();
+    public OptimizerEffect Otimizador { get; set; } = new();
+    public ResilientEffect Resiliente { get; set; } = new();
+    public ShortFuseEffect PavioCurto { get; set; } = new();
+    public NostalgicEffect Saudosista { get; set; } = new();
+    public GrudgeEffect Rancoroso { get; set; } = new();
+    public StudiousEffect Estudioso { get; set; } = new();
+    public ForgetfulEffect Esquecido { get; set; } = new();
+    public FirmMemoryEffect MemoriaFirme { get; set; } = new();
+    public ObserverEffect Observador { get; set; } = new();
+    public IndecisiveEffect Indeciso { get; set; } = new();
+    public MarathonEffect Maratonista { get; set; } = new();
+    public ProcrastinatorEffect Procrastinador { get; set; } = new();
+}
+
+/// <summary>Persistente: depois de um reves, margem maior para trocar de plano; demora mais a abandonar metas.</summary>
+public sealed class PersistentEffect
+{
+    public int SetbackWindowMinutes { get; set; } = 120;
+    public int MarginAfterSetbackPermille { get; set; } = 1500;
+    public int GoalPatiencePermille { get; set; } = 1500;
+}
+
+/// <summary>Impulsivo: margem de troca menor, mais ruido e revisao do plano por impulso.</summary>
+public sealed class ImpulsiveEffect
+{
+    public int MarginPermille { get; set; } = 600;
+    public int NoisePermille { get; set; } = 1300;
+    public int ImpulseReviewPermille { get; set; } = 250;
+}
+
+/// <summary>Colecionador: valor extra para atividade nunca feita e para zona nunca visitada.</summary>
+public sealed class CollectorEffect
+{
+    public int NewActivityBonus { get; set; } = 150;
+    public int NewZoneBonus { get; set; } = 75;
+}
+
+/// <summary>Otimizador: rendimento pesa mais e gosto menos; diversao conta menos na nota e o tedio vem mais rapido.</summary>
+public sealed class OptimizerEffect
+{
+    public int RewardPermille { get; set; } = 1300;
+    public int AffinityPermille { get; set; } = 800;
+    public int FunPermille { get; set; } = 700;
+    public int BoredomPermille { get; set; } = 1250;
+}
+
+/// <summary>Resiliente: a frustracao passa mais rapido; as conquistas marcam menos.</summary>
+public sealed class ResilientEffect
+{
+    public int FrustrationDecayPermille { get; set; } = 1500;
+    public int AchievementMemoryPermille { get; set; } = 700;
+}
+
+/// <summary>Pavio curto: a frustracao sobe mais rapido e larga mais a sessao com raiva; depois volta mais cedo.</summary>
+public sealed class ShortFuseEffect
+{
+    public int FrustrationGainPermille { get; set; } = 1400;
+    public int RageQuitPermille { get; set; } = 1500;
+    public int ReturnPausePermille { get; set; } = 500;
+}
+
+/// <summary>Saudosista: boas lembrancas duram mais e volta mais depois de sair; novidade fraca frustra mais.</summary>
+public sealed class NostalgicEffect
+{
+    public int PositiveMemoryDecayPermille { get; set; } = 600;
+    public int QuitReturnPermille { get; set; } = 1500;
+    public int WeakNoveltyPermille { get; set; } = 1300;
+}
+
+/// <summary>Rancoroso: lugares que deram errado ficam marcados por mais tempo.</summary>
+public sealed class GrudgeEffect
+{
+    public int NegativeImpressionDecayPermille { get; set; } = 500;
+}
+
+/// <summary>Estudioso: missoes e descobertas rendem mais Conhecimento; demora mais nas etapas de visita.</summary>
+public sealed class StudiousEffect
+{
+    public int KnowledgePermille { get; set; } = 1500;
+    public int VisitStepPermille { get; set; } = 1250;
+}
+
+/// <summary>Esquecido: as capacidades comecam a cair mais cedo sem jogar; reaprende rapido o que ja sabia.</summary>
+public sealed class ForgetfulEffect
+{
+    public int DecayEarlierDays { get; set; } = 3;
+    public int RelearnPermille { get; set; } = 700;
+}
+
+/// <summary>Memoria firme: as capacidades caem mais devagar sem jogar; custa a dar segunda chance a um lugar.</summary>
+public sealed class FirmMemoryEffect
+{
+    public int DecayPermille { get; set; } = 500;
+    public int SecondChancePermille { get; set; } = 750;
+}
+
+/// <summary>Observador: ao explorar, pistas do conteudo das zonas vizinhas; explora mais devagar.</summary>
+public sealed class ObserverEffect
+{
+    public int HintsPerExplore { get; set; } = 1;
+    public int ExplorePermille { get; set; } = 1200;
+}
+
+/// <summary>Indeciso: em empate apertado perde minutos decidindo; decide com menos ruido.</summary>
+public sealed class IndecisiveEffect
+{
+    public int TieGap { get; set; } = 40;
+    public int DelayMinutes { get; set; } = 5;
+    public int NoisePermille { get; set; } = 700;
+}
+
+/// <summary>Maratonista: com a sessao boa, a saciedade cresce mais devagar; depois de uma maratona, o dia seguinte comeca com menos disposicao.</summary>
+public sealed class MarathonEffect
+{
+    public int GoodScoreAbove { get; set; } = 600;
+    public int SatietyPermille { get; set; } = 600;
+    public int MarathonSessionsPermille { get; set; } = 2000;
+    public int NextDayDispositionPenaltyPermille { get; set; } = 150;
+}
+
+/// <summary>Procrastinador: adia o comeco da sessao dentro da janela; sem a sessao minima, reconsidera na proxima janela.</summary>
+public sealed class ProcrastinatorEffect
+{
+    public int MinDelayMinutes { get; set; } = 15;
+    public int MaxDelayMinutes { get; set; } = 60;
 }
 
 /// <summary>Sorteio na criacao da pessoa (P4b). Todos os valores sao candidatos para medicao.</summary>

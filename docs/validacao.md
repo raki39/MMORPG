@@ -335,6 +335,19 @@ Antes × depois com as mesmas pessoas (`baselines/horarios/`). Nenhuma meta mudo
 - **Provisórias:** 7 de 12. "Tempo na cidade" (23,6%) e "andando ou esperando" (20,0%) ficaram instáveis no limite; os valores praticamente não mudaram.
 - **Madrugada:** a presença por hora local está em `horarios.md`, seção 7. Não há meta de presença mínima na madrugada, por decisão do criador.
 
+## D-059: efeitos das traits (05/11/2026)
+
+Efeitos desligados × ligados, com as mesmas pessoas (`baselines/traits-efeitos/`). Nenhuma meta mudou.
+
+- **Regras do cenário:** 8 de 9, iguais.
+- **Provisórias:** 8 de 12 (antes, 7):
+  - "tempo na cidade" voltou para dentro: 23,6% → 22,6%;
+  - "andando ou esperando" foi de 20,0% para 20,7%, pelo Colecionador, pelo Impulsivo e pela espera do Indeciso. Fica registrado, sem enfraquecer as traits.
+- **Outras:**
+  - XP de missões: 17,4% → 16,6%;
+  - horas até o nível 20: 77,9 → 78,4 (já fora);
+  - horas por semana do hardcore: 37,4 → 37,1.
+
 ## Próximos passos
 
 Roteiro por etapas (backlog):

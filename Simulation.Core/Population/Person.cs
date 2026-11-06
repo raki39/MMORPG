@@ -308,6 +308,16 @@ public sealed class Person
     /// <summary>Traits (P4b): de 0 a 6 na criacao, em ordem de sorteio. Efeitos na P4c; aquisicao e perda na P4d.</summary>
     internal List<QuirkState> QuirkList { get; } = new();
     public IReadOnlyList<QuirkState> Quirks => QuirkList;
+    /// <summary>Atuacoes das traits (P4c), por chave: medicao e ficha.</summary>
+    internal SortedDictionary<string, int> QuirkStatsMap { get; } = new(StringComparer.Ordinal);
+    public IReadOnlyDictionary<string, int> QuirkStats => QuirkStatsMap;
+    /// <summary>Restos das multiplicacoes inteiras das traits (milesimos), por chave.</summary>
+    internal SortedDictionary<string, int> QuirkCarryMap { get; } = new(StringComparer.Ordinal);
+    /// <summary>Maratonista (P4c): dias locais recentes (ate 14) em que a sessao passou do dobro da normal.</summary>
+    internal SortedSet<long> MarathonDaysSet { get; } = new();
+    public IReadOnlyCollection<long> MarathonDays => MarathonDaysSet;
+    /// <summary>Sessoes encerradas com raiva (frustracao), com ou sem trait.</summary>
+    public int RageQuits { get; internal set; }
     /// <summary>Renda do trabalho e apoio familiar (centavos/mes; sem efeito ate o M7).</summary>
     public long IncomeCentsPerMonth { get; internal set; }
     public long SupportCentsPerMonth { get; internal set; }
@@ -644,6 +654,10 @@ public sealed class QuestRecord
 /// <summary>Personagem jogavel (plano 4.1). Criado no registro; combate e inventario no M3/M5.</summary>
 public sealed class Character
 {
+    /// <summary>Ultimo reves (instante; -1 = nenhum): o Persistente mantem o plano depois dele (P4c).</summary>
+    public long LastSetbackTick { get; internal set; } = -1;
+    /// <summary>Indeciso (P4c): ja hesitou nesta decisao (a proxima decide sem atraso).</summary>
+    public bool Hesitated { get; internal set; }
     public Character(int id, int accountId, string name, string classId)
     {
         Id = id;

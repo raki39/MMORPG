@@ -652,7 +652,7 @@ public partial class PlayerModal : ModalFrame
     {
         var color = TraitInfo.PolarityColor(q);
         var row = Row(10);
-        row.AddChild(new TraitBadge(TraitInfo.QuirkIcon(q), color, 30, pending: true));
+        row.AddChild(new TraitBadge(TraitInfo.QuirkIcon(q), color, 30, pending: !TraitInfo.EffectActive(_ctx.Content, q)));
         var text = Column(2);
         text.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         var name = Row(6);
@@ -660,7 +660,8 @@ public partial class PlayerModal : ModalFrame
         name.AddChild(ThemeFactory.Text(TraitInfo.IsPositive(q) ? "+" : "−", UiTokens.FontBody, color, UiFonts.SemiBold));
         text.AddChild(name);
         text.AddChild(Wrap(q.Effect, UiTokens.FontCaption, UiTokens.TextSecondary));
-        text.AddChild(ThemeFactory.Text(TraitInfo.Status(q), UiTokens.FontCaption, UiTokens.TextDisabled));
+        bool active = TraitInfo.EffectActive(_ctx.Content, q);
+        text.AddChild(ThemeFactory.Text(TraitInfo.Status(_ctx.Content, q), UiTokens.FontCaption, active ? color : UiTokens.TextDisabled));
         row.AddChild(text);
         var tip = new TipPanel { TooltipText = TraitInfo.Tooltip(_ctx.Content, q), MouseFilter = MouseFilterEnum.Stop };
         tip.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
@@ -1452,6 +1453,8 @@ public partial class PlayerModal : ModalFrame
         "early_progression" => "Progressão inicial",
         "personality" => "Personalidade",
         "interruption" => "Sessão interrompível",
+        "quirk_otimizador_gosto" => "Traço: Otimizador (gosto pesa menos)",
+        _ when key.StartsWith("quirk_", StringComparison.Ordinal) => "Traço: " + TraitInfo.NameOf(key["quirk_".Length..]),
         _ => key,
     };
 
@@ -1459,6 +1462,7 @@ public partial class PlayerModal : ModalFrame
     {
         "affinity" => "Preferências da pessoa combinadas com o tipo de atividade (no PvP, também personalidade e conduta).",
         "specialty" => "Reforço mínimo da familiaridade com o tipo de atividade (atributo de especialidade): 5% do valor, com teto.",
+        _ when key.StartsWith("quirk_", StringComparison.Ordinal) => "Efeito de um traço da pessoa (P4c): age só no seu ponto, com contrapartida. Detalhes no card Personalidade e traços.",
         "personality" => "Regra da personalidade principal (ex.: Pacífico nunca inicia PvP; Cauteloso não entra em conteúdo acima do nível + 1). Separada do efeito gradual dos atributos; uma opção com \"nunca\" só vence se não houver outra.",
         "early_progression" => "Prioridade para estabelecer o personagem até o nível-alvo do preset (missões disponíveis e atividades com bom rendimento de XP), igual para todos. Diminui perto do alvo e acaba nele; não soma com metas de nível ou de missão (vale o maior) e não vale para o que não cabe na sessão. Não muda o gosto.",
         "level_fit" => "Conteúdo dentro da faixa de nível da zona rende mais.",

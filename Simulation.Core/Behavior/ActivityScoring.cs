@@ -41,9 +41,16 @@ public static class ActivityScoring
 
     public static List<ScoredOption> Evaluate(Character ch, PersonTraits t, PersonPreferences pr, ContentDatabase content, RouteFinder routes,
         Func<string, string, int> occupancy, long now, DeterministicRng rng, QuestSystem? quests = null, GoalSystem? goals = null,
-        IReadOnlyDictionary<string, int>? impressions = null, PersonalityTypeDefinition? personality = null)
+        IReadOnlyDictionary<string, int>? impressions = null, PersonalityTypeDefinition? personality = null, Person? person = null)
     {
         bool firstDecision = ch.LastDecision == null || ch.LastDecision.Tick < ch.SessionStartTick;
+        // Traits da pessoa (P4c): avaliadas uma vez por decisao.
+        var fx = content.QuirkCatalog.Effects;
+        bool collector = person != null && QuirkSystem.Active(content, person, QuirkIds.Colecionador);
+        bool optimizer = person != null && QuirkSystem.Active(content, person, QuirkIds.Otimizador);
+        int noisePermille = 1000;
+        if (person != null && QuirkSystem.Active(content, person, QuirkIds.Impulsivo)) noisePermille = noisePermille * fx.Impulsivo.NoisePermille / 1000;
+        if (person != null && QuirkSystem.Active(content, person, QuirkIds.Indeciso)) noisePermille = noisePermille * fx.Indeciso.NoisePermille / 1000;
         var options = new List<ScoredOption>();
         int remaining = (int)Math.Max(0, (ch.SessionEndTick - now) / Time.SimTime.TicksPerMinute);
 
@@ -94,7 +101,8 @@ public static class ActivityScoring
                 var f = new List<DecisionFactor>();
                 // Gosto (Preferencias) e o reforco minimo da especialidade, como fatores separados.
                 int affinity = Affinity(a.Type, pr, t);
-                f.Add(new DecisionFactor("affinity", affinity * content.Behavior.WeightAffinity / 1000));
+                int affinityTerm = affinity * content.Behavior.WeightAffinity / 1000;
+                f.Add(new DecisionFactor("affinity", affinityTerm));
                 if (SpecialtyBonus(a.Type, t, content.Behavior) is > 0 and var spec)
                     f.Add(new DecisionFactor("specialty", spec * content.Behavior.WeightAffinity / 1000));
                 // Explorar sem nada novo ao alcance perde parte da graca (D-037): o gosto de explorar
@@ -109,6 +117,8 @@ public static class ActivityScoring
                 if (yieldsXp)
                 {
                     f.Add(new DecisionFactor("level_fit", (fit - 500) * content.Behavior.WeightReward / 1000));
+                    // Otimizador (P4c): o rendimento pesa mais (o gosto, menos, logo abaixo).
+                    if (optimizer) f.Add(new DecisionFactor(QuirkIds.Factor(QuirkIds.Otimizador), (fit - 500) * content.Behavior.WeightReward / 1000 * (fx.Otimizador.RewardPermille - 1000) / 1000));
                     // Gosto por desafio acima do nivel (D-036a): competitividade, confianca
                     // (mecanica) e pouca aversao a risco.
                     if (challenge > ch.Level)
@@ -209,7 +219,16 @@ public static class ActivityScoring
                 }
 
                 // Ruido: quem conhece o jogo decide de forma mais consistente (D-036).
-                int amp = content.Behavior.Noise * (1400 - t.GameKnowledge * 8 / 10) / 1000;
+                // Otimizador (P4c): o gosto pesa menos na escolha.
+                if (optimizer && affinityTerm != 0) f.Add(new DecisionFactor(QuirkIds.Factor(QuirkIds.Otimizador) + "_gosto", affinityTerm * (fx.Otimizador.AffinityPermille - 1000) / 1000));
+                // Colecionador (P4c): atividade nunca feita e zona nunca visitada valem mais.
+                if (collector)
+                {
+                    int bonus = (impressions == null || !impressions.ContainsKey(region.Id + "/" + a.Id) ? fx.Colecionador.NewActivityBonus : 0)
+                        + (!ch.ZoneMinutes.ContainsKey(region.Id) ? fx.Colecionador.NewZoneBonus : 0);
+                    if (bonus > 0) f.Add(new DecisionFactor(QuirkIds.Factor(QuirkIds.Colecionador), bonus));
+                }
+                int amp = content.Behavior.Noise * (1400 - t.GameKnowledge * 8 / 10) / 1000 * noisePermille / 1000;   // Impulsivo e Indeciso (P4c)
                 int noise = rng.NextIntInclusive(-amp, amp);
                 f.Add(new DecisionFactor("noise", noise));
 

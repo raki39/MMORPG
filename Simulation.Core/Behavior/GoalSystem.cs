@@ -42,12 +42,18 @@ public sealed class GoalSystem
         var t = p.Traits;
         long played = ch.PlayedTicksAt(Now);
         long staleTicks = (S.StaleBaseHours * 1000L + S.StaleExtraHoursAtMaxPatience * (long)t.Patience) * SimTime.TicksPerHour / 1000;
+        // Persistente (P4c): demora mais a abandonar metas (por falta de progresso e por impaciencia).
+        bool persistent = QuirkSystem.Active(C, p, QuirkIds.Persistente);
+        int patience = persistent ? C.QuirkCatalog.Effects.Persistente.GoalPatiencePermille : 1000;
+        long baseStale = staleTicks;
+        staleTicks = staleTicks * patience / 1000;
         foreach (var g in ch.GoalList.ToList())
         {
             if (played - g.LastProgressPlayedTicks > staleTicks) Abandon(ch, g, "no_progress");
             // Leal (P4a): nao abandona meta por impaciencia.
             else if (C.PersonalityRules(p.PersonalityId)?.Rule != PersonalityRuleIds.SteadfastGoals
-                     && t.Patience < S.ImpatientBelow && rng.ChancePermille(S.ImpatientDropChance)) Abandon(ch, g, "impatience");
+                     && t.Patience < S.ImpatientBelow && rng.ChancePermille(S.ImpatientDropChance * 1000 / patience)) Abandon(ch, g, "impatience");
+            else if (persistent && played - g.LastProgressPlayedTicks > baseStale) QuirkSystem.Count(p, "persistente_manteve_meta");
         }
         // Quantidade de metas e chance de adotar nao dependem da paciencia (ela so pesa na persistencia).
         if (ch.GoalList.Count >= S.MaxActive) return;
