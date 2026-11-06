@@ -563,6 +563,14 @@ public static class ContentValidator
         })
             if (value < lo || value > hi) v.Error(f, "evolution." + name, $"Use de {lo} a {hi}.");
         if (ev.FutureMinFitPermille < ev.MinFitPermille) v.Error(f, "evolution.futureMinFitPermille", "Objetivo de sistema futuro exige interesse igual ou maior que os demais.");
+        foreach (var (name, value, lo, hi) in new (string, int, int, int)[]
+        {
+            ("interestFloorPermille", ev.InterestFloorPermille, 0, 10_000), ("interestDropPermille", ev.InterestDropPermille, 1, 10_000),
+            ("interestConfirmPlayDays", ev.InterestConfirmPlayDays, 1, 365), ("interestRecoverMarginPermille", ev.InterestRecoverMarginPermille, 0, 10_000),
+            ("negativeMinMemories", ev.NegativeMinMemories, 1, 50), ("negativeConfirmPlayDays", ev.NegativeConfirmPlayDays, 1, 365),
+            ("abandonAfterSetAsidePlayDays", ev.AbandonAfterSetAsidePlayDays, 1, 3650),
+        })
+            if (value < lo || value > hi) v.Error(f, "evolution." + name, $"Use de {lo} a {hi}.");
 
         var ids = CheckIds(set.Objectives.Objectives, f, "objectives", v);
         var personalities = new HashSet<string>(set.Population.Personality.Types.Select(t => t.Id), StringComparer.Ordinal) { "equilibrado" };
@@ -583,6 +591,9 @@ public static class ContentValidator
             v.OneOf(f, p + ".nature", o.Nature, ObjectiveNatures.All);
             foreach (var x in o.Opens)
                 if (!set.Objectives.Objectives.Any(y => y.Id == x) || x == o.Id) v.Error(f, p + ".opens", $"Objetivo '{x}' não existe ou é o próprio.");
+            foreach (var t in o.NegativeLink.ActivityTypes)
+                if (!ActivityTypes.All.Contains(t, StringComparer.Ordinal) || t is ActivityTypes.Patrol or ActivityTypes.Ambush or ActivityTypes.Boss)
+                    v.Error(f, p + ".negativeLink.activityTypes", $"'{t}' não serve: tipo desconhecido ou sem combate real ainda.");
             foreach (var t in o.ExperienceTypes)
             {
                 if (!ActivityTypes.All.Contains(t, StringComparer.Ordinal)) v.Error(f, p + ".experienceTypes", $"Tipo de atividade '{t}' desconhecido.");
@@ -958,6 +969,12 @@ public static class ContentValidator
         })
             if (value < 0 || value > 1000) v.Error(PopulationFile, "dynamics." + name, "Use um valor de 0 a 1000.");
         var gs = pop.Goals;
+        foreach (var (name, value, lo, hi) in new (string, int, int, int)[]
+        {
+            ("questUnlockRelevance", gs.QuestUnlockRelevance, 0, 1000), ("questTravelPerMinutePermille", gs.QuestTravelPerMinutePermille, 0, 1000),
+            ("questTravelMaxPenaltyPermille", gs.QuestTravelMaxPenaltyPermille, 0, 1000), ("questMinAttractiveness", gs.QuestMinAttractiveness, 0, 1000),
+        })
+            if (value < lo || value > hi) v.Error(PopulationFile, "goals." + name, $"Use de {lo} a {hi}.");
         if (gs.MaxActive < 0 || gs.MaxActive > 5) v.Error(PopulationFile, "goals.maxActive", "Use de 0 a 5 metas ao mesmo tempo.");
         if (gs.AdoptChance < 0 || gs.AdoptChance > 1000) v.Error(PopulationFile, "goals.adoptChance", "Use um valor de 0 a 1000.");
         if (gs.Weight < 0) v.Error(PopulationFile, "goals.weight", "O peso não pode ser negativo.");
@@ -1340,6 +1357,15 @@ public static class ContentValidator
         int cap = Math.Max(1, set.Progression.LevelCap);
         if (cat.Settings.MaxActivePerCharacter is < 1 or > 10)
             v.Error(f, "settings.maxActivePerCharacter", "Quests ativas por personagem: de 1 a 10.");
+        if (cat.Settings.DailyResetMinute is < 0 or > 1439) v.Error(f, "settings.dailyResetMinute", "Use de 0 a 1439 (minutos depois da meia-noite do servidor).");
+        if (cat.Settings.ReacceptAfterDropDays is < 0 or > 365) v.Error(f, "settings.reacceptAfterDropDays", "Use de 0 a 365.");
+        var jr = cat.Settings.Journal;
+        foreach (var (name, value, lo, hi) in new (string, int, int, int)[]
+        {
+            ("swapMarginPermille", jr.SwapMarginPermille, 0, 3000), ("mainStoryValue", jr.MainStoryValue, 0, 3000), ("unlockValue", jr.UnlockValue, 0, 3000),
+            ("unlockLevelsAhead", jr.UnlockLevelsAhead, 0, 50), ("objectiveValue", jr.ObjectiveValue, 0, 3000), ("progressWeight", jr.ProgressWeight, 0, 3000),
+        })
+            if (value < lo || value > hi) v.Error(f, "settings.journal." + name, $"Use de {lo} a {hi}.");
         var boardIds = CheckIds(cat.Boards, f, "boards", v);
         ActivityDefinition? Find(string region, string activity) =>
             set.Regions.FirstOrDefault(r => r.Id == region)?.FindActivity(activity);

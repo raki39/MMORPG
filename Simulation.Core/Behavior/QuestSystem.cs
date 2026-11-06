@@ -1,6 +1,7 @@
 using Simulation.Core.Content;
 using Simulation.Core.Events;
 using Simulation.Core.Population;
+using Simulation.Core.Time;
 using Simulation.Core.World;
 
 namespace Simulation.Core.Behavior;
@@ -32,7 +33,9 @@ public sealed class QuestSystem
 
     private ContentDatabase C => _w.Content;
     private long Now => _w.Clock.Tick;
-    private long Today => _w.Clock.Calendar.DayIndex(Now);
+    /// <summary>Dia das missoes: conta a partir do reset diario do servidor (com reset 0, o dia do servidor).</summary>
+    private long Today => _w.Clock.Calendar.DayIndex(Math.Max(0, Now - C.QuestSettings.DailyResetMinute * SimTime.TicksPerMinute));
+    private QuestJournalDefinition J => C.QuestSettings.Journal;
 
     /// <summary>Etapa de caca ou coleta: conta tempo, nao abates nem itens (ate o M3/M5).</summary>
     public static bool IsProvisional(ContentDatabase content, QuestStepDefinition s) =>
@@ -58,6 +61,9 @@ public sealed class QuestSystem
         if (ch.Level < q.MinLevel || (q.MaxLevel > 0 && ch.Level > q.MaxLevel)) return false;
         if (q.ClassIds.Count > 0 && !q.ClassIds.Contains(ch.ClassId)) return false;
         if (ch.ActiveQuestList.Any(a => a.QuestId == q.Id)) return false;
+        // Largada ha pouco (D-066): o conteudo pode exigir um intervalo para aceitar de novo.
+        if (C.QuestSettings.ReacceptAfterDropDays > 0 && ch.QuestLog.TryGetValue(q.Id, out var dr) && dr.DroppedDay >= 0
+            && Today - dr.DroppedDay < C.QuestSettings.ReacceptAfterDropDays) return false;
         foreach (var pre in q.PrerequisiteQuestIds)
             if (!ch.QuestLog.TryGetValue(pre, out var pr) || pr.Completions == 0) return false;
         ch.QuestLog.TryGetValue(q.Id, out var rec);
@@ -135,8 +141,109 @@ public sealed class QuestSystem
         // (P4a): so aceita missoes que combinam com o proprio gosto.
         var person = _w.GetPerson(ch.PersonId);
         bool ownPath = C.PersonalityRules(person.PersonalityId)?.Rule == PersonalityRuleIds.OwnPath;
-        while (CanAccept(ch) && Offers(ch, board).FirstOrDefault(q => !ownPath || FitsTaste(person.Preferences, q)) is { } offer)
+        if (!J.Enabled)
+        {
+            while (CanAccept(ch) && Offers(ch, board).FirstOrDefault(q => !ownPath || FitsTaste(person.Preferences, q)) is { } offer)
+                Accept(ch, offer);
+            return;
+        }
+        // Diario (D-066): primeiro a missao da meta, se esta aqui (com troca, se preciso).
+        foreach (var g in ch.Goals.Where(g => g.Type == GoalTypes.CompleteQuest).ToList())
+            if (Offers(ch, board).FirstOrDefault(q => q.Id == g.Target) is { } wanted && Take(person, ch, wanted, "goal")) { }
+        // Demais ofertas: guarda uma vaga para a missao de uma meta que fica em outro quadro.
+        bool reserve = ch.Goals.Any(g => g.Type == GoalTypes.CompleteQuest && ch.ActiveQuestList.All(x => x.QuestId != g.Target)
+            && C.Quests.TryGetValue(g.Target, out var gq) && gq.BoardId != board.Id);
+        int limit = C.QuestSettings.MaxActivePerCharacter - (reserve ? 1 : 0);
+        while (ch.ActiveQuestList.Count < limit && Offers(ch, board).FirstOrDefault(q => !ownPath || FitsTaste(person.Preferences, q)) is { } offer)
             Accept(ch, offer);
+        // Vagas cheias: troca de prioridade (uma por visita), se a oferta vale mais que a missao mais fraca.
+        if (!reserve && !CanAccept(ch) && Offers(ch, board).FirstOrDefault(q => !ownPath || FitsTaste(person.Preferences, q)) is { } best)
+            Take(person, ch, best, "priority");
+    }
+
+    /// <summary>Aceita a oferta, largando a missao mais fraca se preciso (troca de prioridade). Devolve se aceitou.</summary>
+    private bool Take(Person p, Character ch, QuestDefinition offer, string why)
+    {
+        if (CanAccept(ch)) { Accept(ch, offer); return true; }
+        if (SwapTarget(p, ch, offer) is not { } weakest) return false;
+        Drop(ch, weakest, "replaced:" + offer.Id, Value(p, ch, C.Quests[weakest.QuestId], weakest), Value(p, ch, offer, null));
+        Accept(ch, offer);
+        return true;
+    }
+
+    /// <summary>
+    /// Valor de uma missao para a pessoa agora (permille; D-066). Nao e so idade ou nivel: o maior entre o
+    /// rendimento no nivel e a historia (principal), mais o progresso feito, o que ela libera no nivel da
+    /// pessoa e o vinculo com um objetivo ativo (a campanha, para as principais).
+    /// </summary>
+    public int Value(Person p, Character ch, QuestDefinition q, ActiveQuest? aq)
+    {
+        var j = J;
+        int yieldValue = ch.Level >= C.Progression.LevelCap ? 0 : ProgressionRules.Efficiency(C.Progression, ch.Level, q.RecommendedLevel);
+        int story = q.Category == QuestCategories.Main ? j.MainStoryValue : 0;
+        int progress = 0;
+        if (aq != null && q.Steps.Count > 0)
+        {
+            int need = aq.StepIndex < q.Steps.Count ? Math.Max(1, q.Steps[aq.StepIndex].Minutes) : 1;
+            int partial = aq.StepIndex < q.Steps.Count ? Math.Min(1000, aq.StepMinutes * 1000 / need) : 0;
+            progress = Math.Min(1000, (aq.StepIndex * 1000 + partial) / q.Steps.Count);
+        }
+        bool unlocks = C.Quests.Values.Any(x => x.PrerequisiteQuestIds.Contains(q.Id, StringComparer.Ordinal)
+            && x.RecommendedLevel + j.UnlockLevelsAhead >= ch.Level && x.MinLevel <= ch.Level + j.UnlockLevelsAhead);
+        bool objective = q.Category == QuestCategories.Main
+            && p.Objectives.Any(o => o.State == ObjectiveStates.Active && C.Objectives.TryGetValue(o.Id, out var od) && od.Criterion == ObjectiveCriteria.MainCampaign);
+        return Math.Max(yieldValue, story) + progress * j.ProgressWeight / 1000 + (unlocks ? j.UnlockValue : 0) + (objective ? j.ObjectiveValue : 0);
+    }
+
+    /// <summary>
+    /// Missao que a pessoa largaria para aceitar a oferta (troca de prioridade), ou null: a mais fraca entre
+    /// as ativas que nao sao alvo de meta nem estao prontas para entregar, se a oferta valer mais pela margem.
+    /// </summary>
+    public ActiveQuest? SwapTarget(Person p, Character ch, QuestDefinition offer)
+    {
+        if (!J.Enabled || CanAccept(ch)) return null;
+        ActiveQuest? weakest = null;
+        int weakestValue = int.MaxValue;
+        foreach (var aq in ch.ActiveQuestList)
+        {
+            if (!C.Quests.TryGetValue(aq.QuestId, out var q) || aq.StepIndex >= q.Steps.Count) continue;
+            if (ch.Goals.Any(g => g.Type == GoalTypes.CompleteQuest && g.Target == aq.QuestId)) continue;
+            int v = Value(p, ch, q, aq);
+            if (v < weakestValue || (v == weakestValue && weakest != null && string.CompareOrdinal(aq.QuestId, weakest.QuestId) < 0)) { weakest = aq; weakestValue = v; }
+        }
+        if (weakest == null) return null;
+        return Value(p, ch, offer, null) > weakestValue + J.SwapMarginPermille ? weakest : null;
+    }
+
+    /// <summary>A pessoa pode pegar a missao agora: ha vaga ou ha troca de prioridade que valha (D-066).</summary>
+    public bool CanTake(Person p, Character ch, QuestDefinition q) => CanAccept(ch) || SwapTarget(p, ch, q) != null;
+
+    /// <summary>Larga uma missao: registra, guarda ou perde o progresso conforme o conteudo, sem frustracao (troca de prioridade).</summary>
+    internal void Drop(Character ch, ActiveQuest aq, string reason, int oldValue, int newValue)
+    {
+        ch.ActiveQuestList.Remove(aq);
+        if (!ch.QuestLog.TryGetValue(aq.QuestId, out var rec)) ch.QuestLog[aq.QuestId] = rec = new QuestRecord();
+        rec.Drops++;
+        rec.DroppedDay = Today;
+        if (C.QuestSettings.DropKeepsProgress) { rec.SavedStepIndex = aq.StepIndex; rec.SavedStepMinutes = aq.StepMinutes; }
+        _w.StatsOf(aq.QuestId).Active--;
+        _w.Emit("quest_dropped", EventImportance.Low, new[] { new EntityRef("character", ch.Id) },
+            new[] { new EventCause(reason, 1000), new EventCause("value_dropped", oldValue), new EventCause("value_taken", newValue) }, aq.QuestId);
+    }
+
+    /// <summary>Reset diario do servidor (D-066): as diarias aceitas antes dele expiram.</summary>
+    internal void ExpireDailies()
+    {
+        if (!J.Enabled) return;
+        foreach (var ch in _w.Characters)
+            foreach (var aq in ch.ActiveQuestList.ToList())
+            {
+                if (!C.Quests.TryGetValue(aq.QuestId, out var q) || q.Category != QuestCategories.Daily) continue;
+                ch.ActiveQuestList.Remove(aq);
+                _w.StatsOf(q.Id).Active--;
+                _w.Emit("quest_expired", EventImportance.Low, new[] { new EntityRef("character", ch.Id) },
+                    new[] { new EventCause("daily_reset", 1000) }, q.Id);
+            }
     }
 
     /// <summary>
@@ -169,7 +276,16 @@ public sealed class QuestSystem
 
     private void Accept(Character ch, QuestDefinition q)
     {
-        ch.ActiveQuestList.Add(new ActiveQuest(q.Id, Now, ch.PlayedTicksAt(Now)));
+        var aq = new ActiveQuest(q.Id, Now, ch.PlayedTicksAt(Now));
+        // Progresso guardado ao largar (se o conteudo manda guardar, D-066).
+        if (ch.QuestLog.TryGetValue(q.Id, out var saved) && saved.SavedStepIndex >= 0)
+        {
+            aq.StepIndex = Math.Min(saved.SavedStepIndex, q.Steps.Count);
+            aq.StepMinutes = saved.SavedStepMinutes;
+            saved.SavedStepIndex = -1;
+            saved.SavedStepMinutes = 0;
+        }
+        ch.ActiveQuestList.Add(aq);
         // Ler a missao informa o que existe nos lugares das etapas (pista de conteudo, D-055).
         foreach (var step in q.Steps)
             if (step.RegionId.Length > 0 && step.ActivityId.Length > 0 && !ch.Known.Contains(step.RegionId))

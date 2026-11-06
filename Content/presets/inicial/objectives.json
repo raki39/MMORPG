@@ -39,6 +39,15 @@
     "experienceBoostPermille": 400,
     "experienceCap": 4,
     "substituteMarginPermille": 100,
+    "interestEnabled": true,
+    "interestFloorPermille": 800,
+    "interestDropPermille": 300,
+    "interestConfirmPlayDays": 14,
+    "interestRecoverMarginPermille": 150,
+    "negativeEnabled": true,
+    "negativeMinMemories": 3,
+    "negativeConfirmPlayDays": 7,
+    "abandonAfterSetAsidePlayDays": 30,
     "abandonedPoints": 100,
     "abandonedFrustration": 80,
     "abandonedMemoryIntensity": 600
@@ -60,6 +69,7 @@
       "description": "Completar todas as missões principais da história do mundo.",
       "criterion": "main_campaign", "difficulty": 450, "horizon": "medium", "weight": 800,
       "nature": "achievement", "opens": ["conhecer_o_mundo", "grandes_desafios_pve", "nivel_maximo"], "experienceTypes": ["quest"],
+      "negativeLink": { "mainQuestSteps": true },
       "affinities": [
         { "key": "preferences.pve", "direction": "high", "strengthPermille": 400 },
         { "key": "preferences.exploration", "direction": "high", "strengthPermille": 400 },
@@ -72,6 +82,7 @@
       "description": "Descobrir todas as zonas do mundo.",
       "criterion": "all_zones", "difficulty": 500, "horizon": "medium", "weight": 700,
       "nature": "achievement", "opens": ["campanha_principal", "grandes_desafios_pve"], "experienceTypes": ["explore"],
+      "negativeLink": { "activityTypes": ["explore"] },
       "affinities": [
         { "key": "preferences.exploration", "direction": "high", "strengthPermille": 900 },
         { "key": "traits.variety", "direction": "high", "strengthPermille": 300 },

@@ -369,6 +369,22 @@ public sealed class TraitDynamicsDefinition
 /// <summary>Metas de curto prazo do jogador (D-036). Ambicoes de longo prazo ficam para depois.</summary>
 public sealed class GoalSettingsDefinition
 {
+    /// <summary>
+    /// Meta de missao pela atratividade da etapa real (D-066): o maior entre o rendimento no nivel (desafio da
+    /// etapa atual) e a relevancia (campanha, se e objetivo; liberar uma missao no nivel), vezes o
+    /// deslocamento ate a etapa (ou ate o quadro). Abaixo do minimo, nao vira meta. Desligado: a principal ativa.
+    /// </summary>
+    public bool QuestAttractivenessEnabled { get; set; }
+    public int QuestUnlockRelevance { get; set; } = 800;
+    public int QuestTravelPerMinutePermille { get; set; } = 8;
+    public int QuestTravelMaxPenaltyPermille { get; set; } = 500;
+    public int QuestMinAttractiveness { get; set; } = 250;
+    /// <summary>
+    /// Meta largada nao e readotada (mesmo tipo e alvo) ate haver avanco ou mudanca relevante (D-066): a
+    /// missao avancar ou um objetivo ligado a ela ser adotado; voltar a praticar a atividade; subir de nivel
+    /// (zonas). Sem relogio: nada libera so pelo tempo.
+    /// </summary>
+    public bool ReadoptBlockEnabled { get; set; }
     /// <summary>Peso maximo de uma meta na nota de uma opcao (com comprometimento 1000).</summary>
     public int Weight { get; set; } = 200;
     /// <summary>Teto da soma das metas numa opcao (permille do peso).</summary>

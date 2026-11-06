@@ -2366,3 +2366,82 @@ Itens como instâncias, inventário, equipamento funcional, carteira e aplicaç�
   - **experiência negativa marcante ligada ao objetivo:** memórias ruins fortes nos tipos de atividade dele; no futuro, mortes repetidas no chefe, perdas no PvP ou falência.
 
   O motivo fica registrado e a recompensa emocional não soma.
+
+## D-066 — Diário de missões, escolha e readoção das metas, desistência de objetivos
+**Data:** 06/11/2026 · **Estado:** aceita (valores candidatos)
+
+**Decisões do criador** (propostas do D-065, na ordem 1 → 2 → 3):
+1. **Diário de missões:**
+   - as diárias expiram no reset configurável do servidor;
+   - liberar vaga por troca de prioridade é válido, com motivo e sem frustração;
+   - não descartar uma missão só por ser antiga ou abaixo do nível: pesar progresso, recompensas, vínculos com objetivos e o que ela libera;
+   - abandonar segue as regras do conteúdo (reaceitar, manter ou perder o progresso).
+2. **Metas:**
+   - conteúdo muito abaixo do nível perde atratividade pelo rendimento, mas continua relevante para a campanha ou para liberar algo desejado;
+   - considerar a etapa real e o deslocamento;
+   - a readoção fica bloqueada até haver avanço ou mudança relevante, sem ciclo automático;
+   - distinguir impedimento temporário de fracasso.
+3. **Objetivos:**
+   - desistir só por mudança sustentada de interesse ou por experiência negativa com ligação concreta;
+   - pequenas mudanças não contam;
+   - deixar de lado antes de abandonar.
+- **Meta da revisão:** eliminar ciclos e ter motivos coerentes, não zerar abandonos.
+
+**Feito:**
+1. **Diário** (`quests.json`, `settings` e `settings.journal`):
+   - **reset:** `dailyResetMinute`, no relógio do servidor; as diárias aceitas antes dele expiram (`quest_expired`), e o "dia" das missões conta a partir do reset;
+   - **valor da missão para a pessoa:** o maior entre o rendimento no nível e a história (principal, 600), mais o progresso feito (até 1000), o que ela libera no nível da pessoa (300) e o vínculo com a campanha (400);
+   - **troca:** com as vagas cheias, a pessoa larga a mais fraca se a oferta valer mais pela margem (200). Missões alvo de meta e prontas para entregar ficam de fora. O registro é `quest_dropped`, com o motivo e os dois valores, sem frustração;
+   - **regras do conteúdo:** `dropKeepsProgress` (guardar ou perder o progresso; preset: perde) e `reacceptAfterDropDays` (preset: 0);
+   - **vaga reservada** para a missão de uma meta que fica em outro quadro;
+   - **meta impedida:** o prazo sem progresso não corre enquanto a missão da meta não cabe, nem por troca; se o impedimento durar, a meta termina como "impedida", sem revés.
+2. **Metas** (`population.json`, `goals`):
+   - **atratividade da meta de missão:** o maior entre o rendimento da etapa real (desafio da atividade da etapa) e a relevância (campanha ativa: 1000; libera missão no nível: 800), vezes o deslocamento até a etapa ou o quadro (−8 por minuto, até −500). Abaixo de 250, não vira meta;
+   - **readoção bloqueada** ("tipo|alvo") depois de largada por falta de progresso ou impaciência. O que libera:
+     - a missão avançar;
+     - um objetivo de campanha ou de mundo ser adotado;
+     - voltar a praticar a atividade;
+     - subir de nível (zonas).
+
+     Nada libera só pelo tempo.
+3. **Objetivos** (`objectives.json`, `evolution` e `negativeLink` por objetivo):
+   - **interesse:** o ajuste atual abaixo de 800, com queda desde a adoção de pelo menos 300 × (500 + importância)/1000, por 14 dias jogados seguidos;
+   - **experiência negativa:** pelo menos 3 memórias ruins marcantes distintas com ligação concreta, por 7 dias jogados. As ligações são: para a campanha, os lugares das etapas das missões principais; para o mundo, a exploração. Uma experiência ruim de caça não conta para a campanha;
+   - **primeiro deixa de lado** (sem frustração). Se o motivo persistir por 30 dias jogados, abandona; só a experiência negativa tem revés. Se o motivo passar, retoma;
+   - o deixado de lado por esses motivos não volta pela renovação, só pela própria regra.
+- **Hash:** versão 32.
+
+**Defeito encontrado nos testes:** o objetivo deixado de lado por interesse voltava no mesmo dia pela renovação, porque a vaga aberta disparava a busca. Corrigido.
+
+**Medição nas mesmas pessoas** (5 seeds × 1.000 × 90 dias; `baselines/metas-missao/d066_variantes.md`). A base, com tudo desligado, é idêntica ao D-065.
+
+| | Base | +1 diário | +1+2 metas | +1+2+3 objetivos |
+|---|---|---|---|---|
+| metas de missão concluídas | 57,9% | 63,5% | 86,3% | 86,3% |
+| mesmo alvo abandonado 3+ vezes (pares) | 2.309 | 1.826 | 254 | 254 |
+| maior repetição | 26 | 26 | 8 | 8 |
+| metas abandonadas por pessoa | 3,7 | 3,2 | 1,5 | 1,5 |
+| missões principais concluídas | 38.832 | 43.648 | 41.150 | 41.150 |
+| missões secundárias / diárias concluídas | 45.689 / 46.682 | 56.301 / 65.478 | 55.802 / 62.762 | igual |
+| missões largadas / diárias expiradas | 0 / 0 | 27.980 / 110.441 | 28.017 / 105.059 | igual |
+| nível em 90 dias | 24,3 | 25,1 | 25,2 | 25,2 |
+| satisfação / frustração | 591 / 4,3 | 597 / 4,0 | 600 / 1,2 | igual |
+| tempo andando ou esperando | 20,8% | 25,5% | 24,8% | igual |
+
+- **Parte 1:** as vagas deixam de entupir.
+  - Os abandonos por vaga cheia vão de 27 para 5 (os 27 restantes do D-065 vinham de diárias aceitas depois da meta, agora evitadas pela vaga reservada).
+  - Mais missões concluídas.
+  - Das largadas, 84% são secundárias e 9% principais. As principais saem quando a pessoa não tem a campanha como objetivo e a oferta está no nível dela.
+- **Parte 2:**
+  - os ciclos quase somem;
+  - há menos metas de missão (19.317 contra 28.487), porque as pouco atraentes não viram meta;
+  - as que viram meta são concluídas em 86%.
+- **Parte 3:** nenhum efeito no mundo atual.
+  - Em 90 dias, nenhuma pessoa mudou de personalidade e só 7 ganharam ou perderam uma trait, então o interesse quase não muda; também não há experiências ruins marcantes.
+  - Os critérios estão prontos e testados.
+- **Validação:**
+  - regras do cenário: 8 de 9, iguais;
+  - provisórias: de 8 para 7 de 12, porque "missões por personagem" subiu de 26 para 33 (teto provisório 30). É balanceamento provisório e não foi ajustado;
+  - "andando ou esperando" piorou: já estava fora, agora com mais idas ao quadro.
+
+**Próximo:** com a revisão dos abandonos fechada, retomar a E1b depois da avaliação do criador.

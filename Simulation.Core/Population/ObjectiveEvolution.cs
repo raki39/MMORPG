@@ -110,6 +110,10 @@ public static class ObjectiveEvolution
             ObjectiveTriggers.Set(p, ObjectiveTriggers.ConditionLost + ":" + o.Id);
         }
 
+        // 2b. Desistencia so por motivo especifico (D-066): interesse em queda sustentada ou experiencia negativa
+        // com ligacao concreta. Primeiro deixa de lado; sem melhora, abandona; se o motivo passar, retoma.
+        InterestAndExperience(c, p, day, today, events);
+
         // 3. Sem geral ativo: o secundario mais importante vira geral (consequencia, sem intervalo).
         if (!Active(p).Any(o => o.Tier == ObjectiveTiers.General)
             && Active(p).OrderByDescending(o => o.Importance).ThenBy(o => o.Id, StringComparer.Ordinal).FirstOrDefault() is { } top)
@@ -146,6 +150,104 @@ public static class ObjectiveEvolution
             Renew(c, p, ch, day, trigger, rng, events);
         }
         return events;
+    }
+
+    /// <summary>Queda exigida no ajuste para contar como perda de interesse: maior para objetivos mais importantes.</summary>
+    public static int RequiredDrop(ObjectiveEvolutionDefinition ev, PersonObjective o) =>
+        ev.InterestDropPermille * (500 + Math.Clamp(o.Importance, 0, 1000)) / 1000;
+
+    /// <summary>Interesse baixo agora: ajuste abaixo do piso e caiu, desde a adocao, pelo menos a queda exigida.</summary>
+    public static bool LowInterest(ContentDatabase c, Person p, PersonObjective o)
+    {
+        var ev = c.ObjectiveCatalog.Evolution;
+        if (!c.Objectives.TryGetValue(o.Id, out var d)) return false;
+        int fit = ObjectiveSystem.Fit(c, p, d);
+        return fit < ev.InterestFloorPermille && o.FitAtSet - fit >= RequiredDrop(ev, o);
+    }
+
+    /// <summary>Memorias ruins marcantes distintas com ligacao concreta com o objetivo (negativeLink do conteudo).</summary>
+    public static int LinkedNegativeMemories(ContentDatabase c, Person p, PersonObjective o)
+    {
+        if (!c.Objectives.TryGetValue(o.Id, out var d)) return 0;
+        var link = d.NegativeLink;
+        if (link.ActivityTypes.Count == 0 && !link.MainQuestSteps) return 0;
+        var mainSteps = link.MainQuestSteps
+            ? c.Quests.Values.Where(q => q.Category == QuestCategories.Main).SelectMany(q => q.Steps).Select(s => s.RegionId + "/" + s.ActivityId).ToHashSet(StringComparer.Ordinal)
+            : null;
+        var subjects = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var m in p.MemoryList)
+        {
+            if (m.Kind != "awful_activity") continue;
+            int slash = m.Subject.IndexOf('/');
+            if (slash <= 0 || !c.Regions.TryGetValue(m.Subject[..slash], out var z) || z.FindActivity(m.Subject[(slash + 1)..]) is not { } a) continue;
+            if (link.ActivityTypes.Contains(a.Type, StringComparer.Ordinal) || (mainSteps != null && mainSteps.Contains(m.Subject))) subjects.Add(m.Subject);
+        }
+        return subjects.Count;
+    }
+
+    private static void InterestAndExperience(ContentDatabase c, Person p, long day, int today, List<ObjectiveEvent> events)
+    {
+        var ev = c.ObjectiveCatalog.Evolution;
+        if (!ev.InterestEnabled && !ev.NegativeEnabled) return;
+        bool changed = false;
+        foreach (var o in p.ObjectiveList.OrderBy(o => o.Id, StringComparer.Ordinal).ToList())
+        {
+            bool low = ev.InterestEnabled && LowInterest(c, p, o);
+            bool negative = ev.NegativeEnabled && LinkedNegativeMemories(c, p, o) >= ev.NegativeMinMemories;
+            if (o.State == ObjectiveStates.Active)
+            {
+                o.LowInterestDays = low ? o.LowInterestDays + 1 : 0;
+                o.NegativeDays = negative ? o.NegativeDays + 1 : 0;
+                if (changed) continue;
+                string? why = o.NegativeDays >= ev.NegativeConfirmPlayDays ? "negative_experience"
+                    : o.LowInterestDays >= ev.InterestConfirmPlayDays ? "interest_low" : null;
+                if (why == null) continue;
+                // Deixa de lado (sem frustracao); a vaga abre para outro objetivo.
+                o.State = ObjectiveStates.Paused;
+                o.EndedDay = day;
+                o.EndedPlayDay = today;
+                o.EndReason = why;
+                o.SetAsideDays = 0;
+                o.RecoverDays = 0;
+                p.ObjectiveHistoryList.Add(new ObjectiveChange(day, o.Id, o.Param, "paused", o.Tier, why));
+                events.Add(new ObjectiveEvent("objective_paused", o.Id, o.Param, o.Tier, why, o.Importance));
+                ObjectiveTriggers.Set(p, "objective_set_aside:" + o.Id);
+                changed = true;
+            }
+            else if (o.State == ObjectiveStates.Paused && o.EndReason is "interest_low" or "negative_experience")
+            {
+                bool still = o.EndReason == "interest_low" ? low : negative;
+                bool recovered = o.EndReason == "interest_low"
+                    ? c.Objectives.TryGetValue(o.Id, out var d) && ObjectiveSystem.Fit(c, p, d) >= ev.InterestFloorPermille + ev.InterestRecoverMarginPermille
+                    : !negative;
+                o.SetAsideDays = still ? o.SetAsideDays + 1 : 0;
+                o.RecoverDays = recovered ? o.RecoverDays + 1 : 0;
+                if (changed) continue;
+                if (o.SetAsideDays >= ev.AbandonAfterSetAsidePlayDays)
+                {
+                    string why = o.EndReason;
+                    o.State = ObjectiveStates.Abandoned;
+                    o.EndedDay = day;
+                    o.EndedPlayDay = today;
+                    p.ObjectiveHistoryList.Add(new ObjectiveChange(day, o.Id, o.Param, "abandoned", o.Tier, why));
+                    events.Add(new ObjectiveEvent("objective_abandoned", o.Id, o.Param, o.Tier, why, o.Importance));
+                    changed = true;
+                }
+                else if (o.RecoverDays >= (o.EndReason == "interest_low" ? ev.InterestConfirmPlayDays : ev.NegativeConfirmPlayDays)
+                         && Active(p).Count(x => x.Tier == o.Tier) < (o.Tier == ObjectiveTiers.General ? ev.MaxGeneral : ev.MaxSecondary))
+                {
+                    string why = o.EndReason == "interest_low" ? "interest_back" : "experience_faded";
+                    o.State = ObjectiveStates.Active;
+                    o.EndedDay = -1;
+                    o.EndedPlayDay = -1;
+                    o.EndReason = "";
+                    o.LowInterestDays = o.NegativeDays = o.SetAsideDays = o.RecoverDays = 0;
+                    p.ObjectiveHistoryList.Add(new ObjectiveChange(day, o.Id, o.Param, "resumed", o.Tier, why));
+                    events.Add(new ObjectiveEvent("objective_set", o.Id, o.Param, o.Tier, why, o.Importance));
+                    changed = true;
+                }
+            }
+        }
     }
 
     /// <summary>Geral menos importante que um secundario troca de lugar com ele (mudanca de prioridade justificada).</summary>
@@ -188,6 +290,8 @@ public static class ObjectiveEvolution
             {
                 if (existing.State is ObjectiveStates.Active or ObjectiveStates.Held or ObjectiveStates.Completed) continue;
                 if (existing.State == ObjectiveStates.Abandoned && today - existing.EndedPlayDay < ev.AbandonCooldownPlayDays) continue;
+                // Deixado de lado por interesse ou experiencia (D-066): so volta pela propria regra (o motivo passar), nao pela renovacao.
+                if (existing.State == ObjectiveStates.Paused && existing.EndReason is "interest_low" or "negative_experience") continue;
             }
             string param;
             if (existing != null) param = existing.Param;
@@ -290,6 +394,8 @@ public static class ObjectiveEvolution
             e.FailureStreak = 0;
             e.LastProgress = -1;
             e.LastProgressPlayDay = -1;
+            e.FitAtSet = ObjectiveSystem.Fit(c, p, pick.Def);
+            e.LowInterestDays = e.NegativeDays = e.SetAsideDays = e.RecoverDays = 0;
         }
         else
         {
@@ -299,7 +405,7 @@ public static class ObjectiveEvolution
                 .Select(t => (t.Key, t.Term - 1000)).ToList();
             int exp = ExperienceTerm(c, p, pick.Def);
             if (exp != 1000) motives.Add(("experience", exp - 1000));
-            p.ObjectiveList.Add(new PersonObjective(pick.Def.Id, pick.Param, tier, importance, commitment, trigger, day, motives));
+            p.ObjectiveList.Add(new PersonObjective(pick.Def.Id, pick.Param, tier, importance, commitment, trigger, day, motives) { FitAtSet = ObjectiveSystem.Fit(c, p, pick.Def) });
         }
         p.ObjectiveHistoryList.Add(new ObjectiveChange(day, pick.Def.Id, pick.Param, change, tier, reason));
         events.Add(new ObjectiveEvent("objective_set", pick.Def.Id, pick.Param, tier, reason, importance));

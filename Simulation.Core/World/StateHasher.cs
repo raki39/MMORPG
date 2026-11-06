@@ -11,7 +11,7 @@ namespace Simulation.Core.World;
 /// </summary>
 public static class StateHasher
 {
-    public const int FormatVersion = 31;
+    public const int FormatVersion = 32;
 
     public static string Compute(WorldState w) => Compute(w, includeContentId: true);
 
@@ -66,6 +66,8 @@ public static class StateHasher
             foreach (var r in c.ContentHints) h.Str(r);
             h.Int(c.BlockedGoals.Count);
             foreach (var r in c.BlockedGoals) h.Str(r);
+            h.Int(c.BlockedTargets.Count);
+            foreach (var r in c.BlockedTargets) h.Str(r);
             h.Int(c.DecisionCount); h.Str(c.LastActivityKey); h.Int(c.RepeatCount); h.Int(c.RepeatMinutes); h.Long(c.LastSetbackTick); h.Bool(c.Hesitated); h.Str(c.LastHesitationPair);
             if (c.LastDecision != null)
             {
@@ -82,7 +84,11 @@ public static class StateHasher
             h.Int(c.ActiveQuests.Count);
             foreach (var q in c.ActiveQuests) { h.Str(q.QuestId); h.Long(q.AcceptedTick); h.Long(q.AcceptedPlayedTicks); h.Int(q.StepIndex); h.Int(q.StepMinutes); }
             h.Int(c.QuestHistory.Count);
-            foreach (var kv in c.QuestHistory) { h.Str(kv.Key); h.Int(kv.Value.Completions); h.Long(kv.Value.LastCompletedDay); }
+            foreach (var kv in c.QuestHistory)
+            {
+                h.Str(kv.Key); h.Int(kv.Value.Completions); h.Long(kv.Value.LastCompletedDay);
+                h.Int(kv.Value.Drops); h.Long(kv.Value.DroppedDay); h.Int(kv.Value.SavedStepIndex); h.Int(kv.Value.SavedStepMinutes);
+            }
             h.Long(c.DailyDay);
             foreach (var kv in c.DailyByBoard) { h.Str(kv.Key); h.Int(kv.Value); }
             h.Long(c.XpFromQuests); h.Long(c.XpFromActivities);
@@ -94,6 +100,7 @@ public static class StateHasher
                 h.Str(g.MotiveKey); h.Int(g.MotiveValue); h.Long(g.SetTick); h.Int(g.Progress); h.Long(g.LastProgressPlayedTicks); h.Int(g.SetbacksDuring); h.Bool(g.SurvivedByEffect);
                 h.Int(g.Links.Count);
                 foreach (var l in g.Links) { h.Str(l.ObjectiveId); h.Str(l.Kind); h.Str(l.Subject); }
+                h.Long(g.BlockedSincePlayedTicks);
             }
             h.Int(c.GoalsSet); h.Int(c.GoalsCompleted); h.Int(c.GoalsAbandoned);
             h.Int(c.GoalsSetByType.Count);
@@ -211,6 +218,7 @@ public static class StateHasher
             h.Str(o.Id); h.Str(o.Param); h.Str(o.Tier); h.Int(o.Importance); h.Int(o.Commitment); h.Str(o.State); h.Str(o.Origin); h.Long(o.Day);
             h.Long(o.CompletedDay); h.Int(o.LinkedGoalsSet); h.Int(o.LinkedGoalsCompleted); h.Int(o.LinkedGoalsAbandoned);
             h.Long(o.EndedDay); h.Int(o.EndedPlayDay); h.Str(o.EndReason); h.Int(o.LastProgress); h.Int(o.LastProgressPlayDay); h.Int(o.FailureStreak); h.Int(o.TimesHeld); h.Int(o.TimesLost);
+            h.Int(o.FitAtSet); h.Int(o.LowInterestDays); h.Int(o.NegativeDays); h.Int(o.SetAsideDays); h.Int(o.RecoverDays);
             h.Int(o.Motives.Count);
             foreach (var (k, v) in o.Motives) { h.Str(k); h.Int(v); }
         }

@@ -96,7 +96,8 @@ Uma etapa por vez, fechada por inteiro (testes, validação, documentação, exp
    - ~~O3: evolução (conquista × condição, renovação por necessidade e oportunidade, falta registrada, prioridade, substituição e abandono com motivo)~~ (D-064);
    - depois: condições alcançáveis e perdidas quando PvP, economia, guildas e fabricação existirem; atualizações de conteúdo (M7) como acontecimentos de renovação.
    - ~~diagnóstico dos abandonos das metas de missão e do objetivo da campanha~~ (D-065: quatro defeitos corrigidos);
-   - propostas do D-065 aguardando o criador: diário de missões (diárias expiram, largar missão antiga para abrir vaga), meta de missão pelo encaixe de nível e sem readoção até mudança relevante, desistência de objetivo só por mudança de interesse ou experiência negativa específica.
+   - ~~diário de missões, escolha e readoção das metas, desistência de objetivos só por motivo específico~~ (D-066);
+   - acompanhar: "missões por personagem" acima do teto provisório (33 × 30) e mais tempo andando com o diário; recalibrar com o balanceamento das missões.
 2. **Etapa 1 — O personagem** (D-040; escopo reduzido no D-061, `personagem.md`; retoma na E1b com os objetivos fechados):
    - ~~E1a: modelo, estatísticas (com crítico), recurso por tipo, velocidade do personagem e índice de poder candidato~~ (D-061);
    - E1b: página Classes com criar, editar e duplicar; conteúdo personalizado persistido, presets preservados, ids estáveis; edição aplicada direto aos personagens existentes, com registro;

@@ -152,7 +152,7 @@ public static class ObjectiveSystem
                 .OrderByDescending(t => Math.Abs(t.Term - 1000)).ThenBy(t => t.Key, StringComparer.Ordinal).Take(3)
                 .Select(t => (t.Key, t.Term - 1000)).ToList();
             result.Add(new PersonObjective(x.O.Id, x.Param, i < general ? ObjectiveTiers.General : ObjectiveTiers.Secondary,
-                x.Importance, commitment, InitialOrigin, day, motives));
+                x.Importance, commitment, InitialOrigin, day, motives) { FitAtSet = x.Fit });
         }
         return result;
     }

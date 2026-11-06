@@ -16,6 +16,37 @@ public sealed class QuestSettings
 {
     /// <summary>Quests ativas ao mesmo tempo por personagem.</summary>
     public int MaxActivePerCharacter { get; set; } = 3;
+    /// <summary>Reset diario do MMORPG, em minutos depois da meia-noite do servidor (relogio do servidor, nao o local).</summary>
+    public int DailyResetMinute { get; set; }
+    /// <summary>Largar uma missao: guarda o progresso para quando aceitar de novo (true) ou perde (false).</summary>
+    public bool DropKeepsProgress { get; set; }
+    /// <summary>Dias (do servidor) ate poder aceitar de novo uma missao largada (0 = logo).</summary>
+    public int ReacceptAfterDropDays { get; set; }
+    /// <summary>Diario de missoes (D-066): expiracao das diarias, troca por prioridade e vaga reservada.</summary>
+    public QuestJournalDefinition Journal { get; set; } = new();
+}
+
+/// <summary>
+/// Diario de missoes (D-066). Desligado, nada muda. Ligado: as diarias expiram no reset do
+/// servidor; a pessoa larga uma missao para aceitar outra que valoriza mais (troca de prioridade, sem
+/// frustracao), pelo valor da missao para ela, que considera o progresso, o rendimento no nivel, a
+/// historia, o que a missao libera e os vinculos com objetivos; guarda uma vaga para a missao da meta.
+/// </summary>
+public sealed class QuestJournalDefinition
+{
+    public bool Enabled { get; set; }
+    /// <summary>A oferta precisa valer mais que a missao largada por esta margem (permille).</summary>
+    public int SwapMarginPermille { get; set; } = 200;
+    /// <summary>Valor da historia (missao principal), independente do rendimento.</summary>
+    public int MainStoryValue { get; set; } = 600;
+    /// <summary>Valor de liberar uma missao no nivel da pessoa (pre-requisito dela).</summary>
+    public int UnlockValue { get; set; } = 300;
+    /// <summary>Niveis acima do atual que ainda contam como "no nivel" para o que a missao libera.</summary>
+    public int UnlockLevelsAhead { get; set; } = 4;
+    /// <summary>Valor de servir a um objetivo ativo da pessoa (missao principal e a campanha).</summary>
+    public int ObjectiveValue { get; set; } = 400;
+    /// <summary>Peso do progresso ja feito (permille do valor por missao inteira feita).</summary>
+    public int ProgressWeight { get; set; } = 1000;
 }
 
 /// <summary>

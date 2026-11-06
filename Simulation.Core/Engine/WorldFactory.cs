@@ -43,6 +43,12 @@ public static class WorldFactory
             world.AddPerson(PopulationGenerator.Generate(id, content, config.Seed,
                 config.ControlledCells is { Count: > 0 } cells ? cells[(id - 1) % cells.Count] : null));
 
+        // Diario de missoes (D-066): reset diario do servidor, no horario do conteudo.
+        if (content.QuestSettings.Journal.Enabled)
+        {
+            long reset = content.QuestSettings.DailyResetMinute * SimTime.TicksPerMinute;
+            world.Scheduler.Schedule(reset > 0 ? reset : SimTime.TicksPerDay, Behavior.BehaviorSystem.EvDailyReset, 0);
+        }
         // O dia 0 fecha na meia-noite seguinte (tick = 1 dia).
         world.Scheduler.Schedule(SimTime.TicksPerDay, SimulationEngine.DailyRollupEvent, payload: 0);
         // Planejamento de sessoes a partir do dia local 1 (no dia 0 as sessoes vem do registro), na

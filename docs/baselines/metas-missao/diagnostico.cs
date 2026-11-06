@@ -63,7 +63,7 @@ for (int seed = 1; seed <= seeds; seed++)
             string.Join("|", ch.ActiveQuests.Select(x => { var qq = content.Quests[x.QuestId]; return $"{x.QuestId}:{qq.Category}:{qq.RecommendedLevel}:{x.StepIndex}/{qq.Steps.Count}:{x.StepMinutes}:{(w.Clock.Tick - x.AcceptedTick) / SimTime.TicksPerDay}"; }))));
         orig!(ch, g, completed, reason);
     };
-    var keep = new HashSet<string>(StringComparer.Ordinal) { "goal_set", "goal_completed", "goal_abandoned", "quest_accepted", "quest_step_completed", "quest_completed", "level_up", "session_started", "session_ended", "objective_abandoned", "objective_completed", "objective_set", "region_discovered", "activity_chosen", "plan_changed", "session_plan" };
+    var keep = new HashSet<string>(StringComparer.Ordinal) { "goal_set", "goal_completed", "goal_abandoned", "quest_accepted", "quest_step_completed", "quest_completed", "level_up", "session_started", "session_ended", "objective_abandoned", "objective_completed", "objective_set", "objective_paused", "quest_dropped", "quest_expired", "region_discovered", "activity_chosen", "plan_changed", "session_plan" };
     for (int d = 0; d < days; d++)
     {
         e.AdvanceTo(SimTime.Days(d + 1));

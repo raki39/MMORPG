@@ -1655,7 +1655,22 @@ public partial class PlayerModal : ModalFrame
             case "objective_gap":
                 return ("Buscou um objetivo novo e nenhum era relevante", UiTokens.Warning);
             case "goal_completed": return ($"Concluiu a meta: {GoalDetail(e.Detail)}", UiTokens.Success);
-            case "goal_abandoned": return ($"Desistiu da meta: {GoalDetail(e.Detail)}{(e.Causes.Count > 0 && e.Causes[0].Factor == "impatience" ? " (impaciência)" : " (sem progresso)")}", UiTokens.TextSecondary);
+            case "goal_abandoned":
+            {
+                string goalWhy = e.Causes.Count == 0 ? "" : e.Causes[0].Factor switch
+                {
+                    "impatience" => " (impaciência)",
+                    "blocked" => " (impedida: a missão não cabia no diário)",
+                    _ => " (sem progresso)",
+                };
+                return ($"Desistiu da meta: {GoalDetail(e.Detail)}{goalWhy}", UiTokens.TextSecondary);
+            }
+            case "quest_dropped":
+            {
+                string by = e.Causes.Count > 0 && e.Causes[0].Factor.StartsWith("replaced:") ? QuestName(e.Causes[0].Factor["replaced:".Length..]) : "";
+                return (by.Length > 0 ? $"Largou a missão {QuestName(e.Detail)} para pegar {by}" : $"Largou a missão {QuestName(e.Detail)}", UiTokens.TextSecondary);
+            }
+            case "quest_expired": return ($"A diária {QuestName(e.Detail)} expirou no reset do servidor", UiTokens.TextSecondary);
             case "session_plan":
             case "plan_changed":
             {

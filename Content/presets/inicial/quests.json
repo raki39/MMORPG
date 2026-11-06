@@ -1,7 +1,19 @@
 {
   "schemaVersion": 1,
   "settings": {
-    "maxActivePerCharacter": 3
+    "maxActivePerCharacter": 3,
+    "dailyResetMinute": 0,
+    "dropKeepsProgress": false,
+    "reacceptAfterDropDays": 0,
+    "journal": {
+      "enabled": true,
+      "swapMarginPermille": 200,
+      "mainStoryValue": 600,
+      "unlockValue": 300,
+      "unlockLevelsAhead": 4,
+      "objectiveValue": 400,
+      "progressWeight": 1000
+    }
   },
   "boards": [
     {

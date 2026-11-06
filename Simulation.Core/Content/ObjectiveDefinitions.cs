@@ -95,7 +95,27 @@ public sealed class ObjectiveEvolutionDefinition
     public int ExperienceCap { get; set; } = 4;
     /// <summary>Substituicao voluntaria: o novo precisa ser mais importante que o secundario deixado de lado, por esta margem.</summary>
     public int SubstituteMarginPermille { get; set; } = 100;
-    /// <summary>Reves, frustracao e memoria de um abandono de objetivo (para o criterio de desistencia pendente, D-065).</summary>
+    /// <summary>
+    /// Desistencia por mudanca sustentada de interesse (D-066): o ajuste da pessoa ao objetivo (afinidades e
+    /// ambicao, com a ficha atual) fica abaixo do piso e caiu, desde a adocao, pelo menos a queda exigida
+    /// (maior para os objetivos mais importantes), por tantos dias jogados seguidos. Primeiro deixa de lado.
+    /// </summary>
+    public bool InterestEnabled { get; set; }
+    public int InterestFloorPermille { get; set; } = 800;
+    public int InterestDropPermille { get; set; } = 300;
+    public int InterestConfirmPlayDays { get; set; } = 14;
+    /// <summary>Volta do interesse: acima do piso por esta margem, pelos mesmos dias, retoma o deixado de lado.</summary>
+    public int InterestRecoverMarginPermille { get; set; } = 150;
+    /// <summary>
+    /// Desistencia por experiencias negativas com ligacao concreta (D-066): memorias ruins marcantes distintas
+    /// ligadas ao objetivo (negativeLink no conteudo), pelo menos o minimo, por tantos dias jogados. Primeiro deixa de lado.
+    /// </summary>
+    public bool NegativeEnabled { get; set; }
+    public int NegativeMinMemories { get; set; } = 3;
+    public int NegativeConfirmPlayDays { get; set; } = 7;
+    /// <summary>Deixado de lado por interesse ou experiencia, sem melhora por tantos dias jogados: abandona de vez.</summary>
+    public int AbandonAfterSetAsidePlayDays { get; set; } = 30;
+    /// <summary>Reves, frustracao e memoria de um abandono por experiencia negativa (interesse nao tem reves).</summary>
     public int AbandonedPoints { get; set; } = 100;
     public int AbandonedFrustration { get; set; } = 80;
     public int AbandonedMemoryIntensity { get; set; } = 600;
@@ -132,11 +152,24 @@ public sealed class ObjectiveDefinition : IContentDefinition
     public List<string> Opens { get; set; } = new();
     /// <summary>Tipos de atividade cujas experiencias marcantes aproximam (boas) ou afastam (ruins) deste objetivo.</summary>
     public List<string> ExperienceTypes { get; set; } = new();
+    /// <summary>Que experiencias ruins tem ligacao concreta com o objetivo, para desistir dele (D-066).</summary>
+    public ObjectiveNegativeLinkDefinition NegativeLink { get; set; } = new();
     /// <summary>
     /// Coerencia com a pessoa (mesmas chaves das traits e mais "quirk.x", ter a trait): aumentam ou
     /// reduzem a chance e a importancia.
     /// </summary>
     public List<QuirkAffinityDefinition> Affinities { get; set; } = new();
+}
+
+/// <summary>
+/// Ligacao concreta de experiencias ruins com um objetivo: tipos de atividade (ex.: explorar, para
+/// conhecer o mundo) e/ou os lugares das etapas das missoes principais (para a campanha). Vazio: nenhuma
+/// experiencia de hoje leva a desistir dele (mortes no chefe, perdas no PvP e falencia vem com os sistemas).
+/// </summary>
+public sealed class ObjectiveNegativeLinkDefinition
+{
+    public List<string> ActivityTypes { get; set; } = new();
+    public bool MainQuestSteps { get; set; }
 }
 
 public static class ObjectiveHorizons

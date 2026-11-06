@@ -22,6 +22,8 @@ public sealed class BehaviorSystem
     public const string EvSessionEnd = "session_end";
     public const string EvArrive = "travel_arrive";
     public const string EvActivityEnd = "activity_end";
+    /// <summary>Reset diario do servidor (D-066): as diarias expiram.</summary>
+    public const string EvDailyReset = "daily_reset";
     public const string EvDailySessions = "daily_sessions";
     public const string EvWorkInterrupt = "work_interrupt";
     /// <summary>A pessoa acorda (R1): fecha a conta do sono da noite com o inicio e o fim reais.</summary>
@@ -54,7 +56,7 @@ public sealed class BehaviorSystem
         _routes = new RouteFinder(world.Content, new ZoneLayout(world.Content));
         _quests = new QuestSystem(world, GainExperience);
         _traits = new TraitDynamics(world);
-        _goals = new GoalSystem(world, _quests, _traits);
+        _goals = new GoalSystem(world, _quests, _traits, _routes);
         _quests.Progressed = (ch, questId) => _goals.OnQuestProgress(ch, questId);
         _quests.StepCompleted = (ch, questId) =>
         {
@@ -83,7 +85,8 @@ public sealed class BehaviorSystem
             // Meta ligada concluida: se o mesmo acontecimento concluir o objetivo, vale a maior recompensa (O2).
             if (completed && g.Links.Count > 0) _lastLinkedGoal = (ch.Id, Now, md.GoalCompletedPoints, g.Links.Select(l => l.ObjectiveId).ToArray());
             if (completed) _exp.OnAchievement(p, ch, "goal_completed", subject, md.GoalCompletedPoints, 0, _w.Content.Memory.GoalCompletedIntensity);
-            else _exp.OnSetback(p, ch, "goal_abandoned", subject, md.GoalAbandonedPoints, md.GoalAbandonedFrustration, _w.Content.Memory.GoalAbandonedIntensity);
+            // Impedimento (D-066) nao e fracasso nem desinteresse: sem reves.
+            else if (reason != "blocked") _exp.OnSetback(p, ch, "goal_abandoned", subject, md.GoalAbandonedPoints, md.GoalAbandonedFrustration, _w.Content.Memory.GoalAbandonedIntensity);
             // Objetivos (D-065): abandonar metas nao leva a desistir do objetivo. Nao conseguir realizar agora
             // nao e motivo; a desistencia precisa de um motivo especifico (proposta pendente do criador).
         };
@@ -102,6 +105,7 @@ public sealed class BehaviorSystem
         yield return (EvSessionEnd, OnSessionEnd);
         yield return (EvArrive, OnArrive);
         yield return (EvActivityEnd, OnActivityEnd);
+        yield return (EvDailyReset, OnDailyReset);
         yield return (EvDailySessions, OnDailySessions);
         yield return (EvWorkInterrupt, OnWorkInterrupt);
         yield return (EvWake, OnWake);
@@ -391,8 +395,18 @@ public sealed class BehaviorSystem
                 // Objetivos (O3): evolucao em dia jogado (progresso, condicoes, prioridade, renovacao).
                 if (!_w.Controlled)   // cenario controlado: pessoas iguais por celula, sem objetivos
                 foreach (var oe in ObjectiveEvolution.OnDaily(_w.Content, p, ch, localDay, p.LastPlayedLocalDay == localDay - 1, _w.Seed))
+                {
                     _w.Emit(oe.Type, EventImportance.Low, new[] { new EntityRef("person", p.Id) },
                         new[] { new EventCause(oe.Reason, oe.Value) }, $"{oe.ObjectiveId}|{oe.Param}|{oe.Tier}");
+                    // Objetivo adotado ou retomado e mudanca relevante: metas ligadas a ele podem voltar (D-066).
+                    if (oe.Type == "objective_set") _goals.OnObjectiveAdopted(ch, oe.ObjectiveId);
+                    // Desistencia por experiencia negativa: reves e memoria (perda de interesse nao tem reves).
+                    if (oe.Type == "objective_abandoned" && oe.Reason == "negative_experience" && _w.Content.ObjectiveCatalog.Influence.Enabled)
+                    {
+                        var evo = _w.Content.ObjectiveCatalog.Evolution;
+                        _exp.OnSetback(p, ch, "objective_abandoned", oe.ObjectiveId + "|" + oe.Param, evo.AbandonedPoints, evo.AbandonedFrustration, evo.AbandonedMemoryIntensity);
+                    }
+                }
                 _exp.OnDaily(p, ch);       // humor e memoria (D-038)
                 if (!_w.NeutralMood && !p.IsOnline && ReviewRetention(p, ch, day, rng)) continue;   // inativo ou desistiu (D-039)
             }
@@ -1372,6 +1386,13 @@ public sealed class BehaviorSystem
         ch.ActivityStartTick = Now;
         ch.ActivityEndTick = Now + minutes * SimTime.TicksPerMinute;
         _w.Scheduler.Schedule(ch.ActivityEndTick, EvActivityEnd, ch.Id);
+    }
+
+    /// <summary>Reset diario do servidor (D-066): expira as diarias e agenda o proximo.</summary>
+    private void OnDailyReset(ScheduledEvent ev)
+    {
+        _quests.ExpireDailies();
+        _w.Scheduler.Schedule(Now + SimTime.TicksPerDay, EvDailyReset, 0);
     }
 
     private void OnActivityEnd(ScheduledEvent ev)

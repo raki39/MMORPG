@@ -702,6 +702,13 @@ public sealed class PersonObjective
     /// <summary>Vezes em que a condicao foi alcancada e perdida (O3).</summary>
     public int TimesHeld { get; internal set; }
     public int TimesLost { get; internal set; }
+    /// <summary>Ajuste da pessoa ao objetivo na adocao (base da mudanca de interesse, D-066).</summary>
+    public int FitAtSet { get; internal set; }
+    /// <summary>Dias jogados seguidos com interesse baixo, com experiencia negativa ligada, deixado de lado sem melhora e com o motivo passado (D-066).</summary>
+    public int LowInterestDays { get; internal set; }
+    public int NegativeDays { get; internal set; }
+    public int SetAsideDays { get; internal set; }
+    public int RecoverDays { get; internal set; }
     /// <summary>Metas ligadas a ele (O2): adotadas, concluidas e abandonadas.</summary>
     public int LinkedGoalsSet { get; internal set; }
     public int LinkedGoalsCompleted { get; internal set; }
@@ -775,6 +782,8 @@ public sealed class PersonalGoal
     /// </summary>
     internal List<ObjectiveLink> LinkList { get; } = new();
     public IReadOnlyList<ObjectiveLink> Links => LinkList;
+    /// <summary>Tempo conectado em que a meta ficou impedida (D-066; -1 = nao esta impedida).</summary>
+    public long BlockedSincePlayedTicks { get; internal set; } = -1;
 }
 
 /// <summary>Vinculo de uma meta com um objetivo (O2): tipo (advance ou preparation) e de onde vem (zona, missao, requisito).</summary>
@@ -794,6 +803,12 @@ public sealed class QuestRecord
     public int Completions { get; internal set; }
     /// <summary>Dia (indice do calendario) da ultima conclusao.</summary>
     public long LastCompletedDay { get; internal set; } = -1;
+    /// <summary>Vezes que a missao foi largada (D-066) e o dia do servidor da ultima vez (-1 = nunca).</summary>
+    public int Drops { get; internal set; }
+    public long DroppedDay { get; internal set; } = -1;
+    /// <summary>Progresso guardado ao largar, se o conteudo manda guardar (-1 = nenhum).</summary>
+    public int SavedStepIndex { get; internal set; } = -1;
+    public int SavedStepMinutes { get; internal set; }
 }
 
 /// <summary>
@@ -885,6 +900,9 @@ public sealed class Character
     /// </summary>
     internal SortedSet<string> BlockedLevelGoals { get; } = new(StringComparer.Ordinal);
     public IReadOnlyCollection<string> BlockedGoals => BlockedLevelGoals;
+    /// <summary>Metas largadas ("tipo|alvo") que nao voltam ate avanco ou mudanca relevante (D-066).</summary>
+    internal SortedSet<string> BlockedTargetSet { get; } = new(StringComparer.Ordinal);
+    public IReadOnlyCollection<string> BlockedTargets => BlockedTargetSet;
     public int DecisionCount { get; internal set; }
     public string LastActivityKey { get; internal set; } = "";
     public int RepeatCount { get; internal set; }

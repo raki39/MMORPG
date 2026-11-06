@@ -39,7 +39,7 @@ public class QuestGoalTests
         foreach (var z in C.Regions.Keys) ch.Known.Add(z);
         for (ulong s = 1; s <= 20; s++)
             foreach (var x in w.Behavior.Goals.CandidateWeights(p, ch, new DeterministicRng(s)).Where(x => x.Type == GoalTypes.CompleteQuest))
-                Assert.Contains(ch.ActiveQuestList, a => a.QuestId == x.Target);   // nunca uma oferta que nao cabe
+                Assert.True(ch.ActiveQuestList.Any(a => a.QuestId == x.Target) || w.Behavior.Quests.CanTake(p, ch, C.Quests[x.Target]));   // nunca uma oferta que nao cabe (nem por troca, D-066)
         // Com vaga, a oferta principal volta a ser candidata.
         ch.ActiveQuestList.RemoveAt(0);
         ch.ActiveQuestList.RemoveAt(0);

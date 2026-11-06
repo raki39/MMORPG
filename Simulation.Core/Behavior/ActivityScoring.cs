@@ -79,7 +79,10 @@ public static class ActivityScoring
                         int ready = quests.ReadyCount(ch, board);
                         // Independente (P4a): so contam as ofertas que ele aceitaria (sem ida ao quadro a toa).
                         bool ownPath = personality?.Rule == PersonalityRuleIds.OwnPath;
-                        bool offer = quests.CanAccept(ch) && quests.Offers(ch, board).Any(q => !ownPath || quests.FitsTaste(pr, q));
+                        // Diario (D-066): tambem e opcao quando uma troca de prioridade vale a pena.
+                        bool offer = content.QuestSettings.Journal.Enabled && person != null
+                            ? quests.Offers(ch, board).Any(q => (!ownPath || quests.FitsTaste(pr, q)) && quests.CanTake(person, ch, q))
+                            : quests.CanAccept(ch) && quests.Offers(ch, board).Any(q => !ownPath || quests.FitsTaste(pr, q));
                         if (ready == 0 && !offer) continue;
                         questTerm = ready > 0
                             ? ("quest_deliver", content.Behavior.QuestDeliverWeight + (ready - 1) * content.Behavior.QuestDeliverPerExtra)

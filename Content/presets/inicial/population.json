@@ -101,6 +101,8 @@
   },
   "goals": {
     "weight": 200, "maxStackPermille": 1500, "maxActive": 2, "adoptChance": 450,
+    "questAttractivenessEnabled": true, "questUnlockRelevance": 800, "questTravelPerMinutePermille": 8, "questTravelMaxPenaltyPermille": 500, "questMinAttractiveness": 250,
+    "readoptBlockEnabled": true,
     "staleBaseHours": 3, "staleExtraHoursAtMaxPatience": 9, "impatientDropChance": 40, "impatientBelow": 300, "motiveReinforce": 1,
     "unlockEnabled": true, "unlockMinPreference": 450, "unlockBaseWeight": 80, "unlockPerPreference": 600, "unlockMaxLevelsAhead": 6,
     "contentDiscoveryEnabled": true, "contentDiscoveryMinPreference": 450, "contentDiscoveryBaseWeight": 100, "contentDiscoveryPerPreference": 900

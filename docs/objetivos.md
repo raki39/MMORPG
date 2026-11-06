@@ -284,7 +284,11 @@ Configuração em `objectives.json`: seção `evolution` (valores candidatos) e,
   - **Sistemas futuros nunca perdem prioridade por não avançar.**
 - **Abandono (D-065):** abandonar metas **não** leva a desistir do objetivo.
   - A regra de "falhas seguidas" da primeira versão da O3 foi retirada. Ela contrariava o princípio do criador (não conseguir realizar agora, ou estar perto, não é motivo para desistir), e as "falhas" eram quase todas defeitos das metas de missão (diagnóstico em `baselines/metas-missao/`).
-  - A desistência precisa de um motivo específico (mudança de interesse ou de personalidade, experiência negativa marcante ligada ao objetivo). O critério está proposto e aguarda o criador.
+  - A desistência precisa de um motivo específico (D-066):
+    - **interesse em queda sustentada:** o ajuste atual abaixo de 800, com queda desde a adoção de pelo menos 300 × (500 + importância)/1000, por 14 dias jogados;
+    - **experiência negativa com ligação concreta** (`negativeLink`): pelo menos 3 memórias ruins marcantes distintas, por 7 dias jogados. Para a campanha, os lugares das etapas das missões principais; para o mundo, a exploração.
+  - **Primeiro deixa de lado**, sem frustração. Sem melhora por 30 dias jogados, abandona; só a experiência negativa tem revés. Se o motivo passar, retoma.
+  - No mundo atual, isso não acontece: ninguém mudou de personalidade em 90 dias e não há experiências ruins marcantes.
   - A sequência de metas ligadas abandonadas continua registrada como medida, sem efeito.
   - O estado "abandonado" e o intervalo de 60 dias para voltar ficam prontos para esse critério.
 - **Influência desligada:** a evolução continua registrando, sem efeito no humor nem no plano. **Sorteio desligado:** não há objetivos nem evolução.

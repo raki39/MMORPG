@@ -173,7 +173,9 @@ public class QuestTests
         }
         Assert.All(w.Characters, c => Assert.True(c.ActiveQuests.Count <= C.QuestSettings.MaxActivePerCharacter));
         // Principais concluidas no maximo uma vez por personagem.
-        Assert.All(w.Characters, c => Assert.All(c.QuestHistory.Where(kv => C.Quests[kv.Key].Category == QuestCategories.Main), kv => Assert.Equal(1, kv.Value.Completions)));
+        // (D-066: largar uma missao cria registro sem conclusao.)
+        Assert.All(w.Characters, c => Assert.All(c.QuestHistory.Where(kv => C.Quests[kv.Key].Category == QuestCategories.Main),
+            kv => Assert.True(kv.Value.Completions == 1 || (kv.Value.Completions == 0 && kv.Value.Drops > 0))));
         Assert.True(w.Characters.Sum(c => c.XpFromQuests) > 0);
     }
 

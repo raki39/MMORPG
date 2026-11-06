@@ -20,13 +20,18 @@ public sealed class GoalSystem
     private readonly WorldState _w;
     private readonly QuestSystem _quests;
     private readonly TraitDynamics _traits;
+    private readonly RouteFinder _routes;
 
-    public GoalSystem(WorldState world, QuestSystem quests, TraitDynamics traits)
+    public GoalSystem(WorldState world, QuestSystem quests, TraitDynamics traits, RouteFinder routes)
     {
         _w = world;
         _quests = quests;
         _traits = traits;
+        _routes = routes;
     }
+
+    private static string TargetKey(string type, string target) => type + "|" + target;
+    private bool BlockedTarget(Character ch, string type, string target) => S.ReadoptBlockEnabled && ch.BlockedTargetSet.Contains(TargetKey(type, target));
 
     private ContentDatabase C => _w.Content;
     private GoalSettingsDefinition S => _w.Content.GoalSettings;
@@ -52,6 +57,18 @@ public sealed class GoalSystem
         var droppedNow = new HashSet<string>(StringComparer.Ordinal);
         foreach (var g in ch.GoalList.ToList())
         {
+            // Impedimento temporario (D-066): o tempo impedido nao conta como estagnacao.
+            if (Blocked(p, ch, g))
+            {
+                if (g.BlockedSincePlayedTicks < 0) g.BlockedSincePlayedTicks = played;
+                else if (played - g.BlockedSincePlayedTicks > staleTicks) { Abandon(ch, g, "blocked"); droppedNow.Add(g.Type + "|" + g.Target); }
+                continue;
+            }
+            if (g.BlockedSincePlayedTicks >= 0)
+            {
+                g.LastProgressPlayedTicks += played - g.BlockedSincePlayedTicks;
+                g.BlockedSincePlayedTicks = -1;
+            }
             if (played - g.LastProgressPlayedTicks > staleTicks) { Abandon(ch, g, "no_progress"); droppedNow.Add(g.Type + "|" + g.Target); }
             // Leal (P4a): nao abandona meta por impaciencia.
             else if (C.PersonalityRules(p.PersonalityId)?.Rule != PersonalityRuleIds.SteadfastGoals
@@ -136,6 +153,7 @@ public sealed class GoalSystem
             var zones = C.Regions.Values
                 .Where(z => !ch.Known.Contains(z.Id) && (z.IsCity || z.LevelMin <= maxLevel))
                 .Where(z => ch.Known.Any(k => C.Regions[k].Connections.Any(c => c.To == z.Id) || z.Connections.Any(c => c.To == k)))
+                .Where(z => !BlockedTarget(ch, GoalTypes.DiscoverZone, z.Id))
                 .OrderBy(z => z.Id, StringComparer.Ordinal).ToList();
             if (zones.Count > 0)
             {
@@ -145,12 +163,15 @@ public sealed class GoalSystem
         }
 
         // Concluir uma missao principal: pacientes, quem conhece o jogo e gosta de historia (PvE + exploracao).
-        if (!Has(GoalTypes.CompleteQuest) && MainQuestTarget(ch) is { } quest
-            && (C.PersonalityRules(p.PersonalityId)?.Rule != PersonalityRuleIds.OwnPath || _quests.FitsTaste(pr, quest)))
+        // Com a atratividade (D-066): a missao de etapa mais atraente, e o peso vezes a atratividade.
+        var questPick = S.QuestAttractivenessEnabled ? AttractiveQuest(p, ch) : (MainQuestTarget(p, ch) is { } mq ? (mq, 1000) : ((QuestDefinition, int)?)null);
+        if (!Has(GoalTypes.CompleteQuest) && questPick is { } qp && !BlockedTarget(ch, GoalTypes.CompleteQuest, qp.Item1.Id)
+            && (C.PersonalityRules(p.PersonalityId)?.Rule != PersonalityRuleIds.OwnPath || _quests.FitsTaste(pr, qp.Item1)))
         {
-            int w = 120 + (pr.Pve + pr.Exploration) / 5 + t.Patience / 5 + t.GameKnowledge / 10;
+            var quest = qp.Item1;
+            int w = (120 + (pr.Pve + pr.Exploration) / 5 + t.Patience / 5 + t.GameKnowledge / 10) * qp.Item2 / 1000;
             string motive = t.Patience >= t.GameKnowledge ? "patience" : "gameKnowledge";
-            list.Add(new(GoalTypes.CompleteQuest, quest.Id, 1, 0, w, motive));
+            if (w > 0) list.Add(new(GoalTypes.CompleteQuest, quest.Id, 1, 0, w, motive));
         }
 
         // Descoberta orientada pelo conteudo (D-055): zona da fronteira com pista do que a pessoa gosta.
@@ -158,7 +179,7 @@ public sealed class GoalSystem
         {
             int maxLevel = ch.Level + 2 + t.Competitiveness / 250;
             foreach (var (zone, w, motive) in ContentDiscoveryOptions(p, ch, C, S, maxLevel))
-                list.Add(new(GoalTypes.DiscoverZone, zone, 1, 0, w, motive));
+                if (!BlockedTarget(ch, GoalTypes.DiscoverZone, zone)) list.Add(new(GoalTypes.DiscoverZone, zone, 1, 0, w, motive));
         }
 
         // Desbloqueio (D-055): nivel que libera uma atividade conhecida de um tema que a pessoa prefere.
@@ -171,7 +192,8 @@ public sealed class GoalSystem
         {
             var types = ch.Known.SelectMany(k => C.Regions[k].AllActivities())
                 .Where(a => a.MinLevel <= ch.Level && a.MinGroupSize <= 1 && AffinityTraitFor(a.Type) != null)
-                .Select(a => a.Type).Distinct().OrderBy(x => x, StringComparer.Ordinal).ToList();
+                .Select(a => a.Type).Distinct().Where(x => !BlockedTarget(ch, GoalTypes.PracticeActivity, x))
+                .OrderBy(x => x, StringComparer.Ordinal).ToList();
             if (types.Count > 0)
             {
                 string best = types.OrderByDescending(x => ActivityScoring.Affinity(x, pr, t)).ThenBy(x => x, StringComparer.Ordinal).First();
@@ -294,23 +316,91 @@ public sealed class GoalSystem
     /// com vaga para aceitar (D-065): meta para missao que nao pode ser aceita agora e requisito
     /// indisponivel, nao estagnacao.
     /// </summary>
-    private QuestDefinition? MainQuestTarget(Character ch)
+    private QuestDefinition? MainQuestTarget(Person p, Character ch)
     {
+        bool journal = C.QuestSettings.Journal.Enabled;
         bool canAccept = _quests.CanAccept(ch);
         foreach (var cat in new[] { QuestCategories.Main, QuestCategories.Secondary })
         {
             foreach (var aq in ch.ActiveQuestList)
                 if (C.Quests.TryGetValue(aq.QuestId, out var q) && q.Category == cat) return q;
-            if (!canAccept) continue;
+            if (!canAccept && !journal) continue;
             foreach (var b in C.QuestBoards.Values.OrderBy(b => b.Id, StringComparer.Ordinal))
             {
                 if (!ch.Known.Contains(b.RegionId)) continue;
-                var offer = _quests.Offers(ch, b).FirstOrDefault(q => q.Category == cat);
+                // Diario (D-066): oferta que cabe por troca de prioridade tambem serve.
+                var offer = _quests.Offers(ch, b).FirstOrDefault(q => q.Category == cat && (canAccept || _quests.CanTake(p, ch, q)));
                 if (offer != null) return offer;
             }
         }
         return null;
     }
+
+    /// <summary>
+    /// Missao mais atraente para virar meta (D-066), entre as ativas (principais e secundarias) e as ofertas
+    /// que cabem, com a atratividade (permille): o maior entre o rendimento da etapa real no nivel e a
+    /// relevancia (campanha, se e objetivo ativo; liberar uma missao no nivel), vezes o deslocamento ate a
+    /// etapa (ou ate o quadro, se ainda nao aceita ou pronta para entregar). Abaixo do minimo: nenhuma.
+    /// </summary>
+    internal (QuestDefinition, int)? AttractiveQuest(Person p, Character ch)
+    {
+        var options = new List<(QuestDefinition Q, ActiveQuest? A)>();
+        foreach (var aq in ch.ActiveQuestList)
+            if (C.Quests.TryGetValue(aq.QuestId, out var q) && q.Category is QuestCategories.Main or QuestCategories.Secondary) options.Add((q, aq));
+        bool canAccept = _quests.CanAccept(ch);
+        foreach (var b in C.QuestBoards.Values.OrderBy(b => b.Id, StringComparer.Ordinal))
+        {
+            if (!ch.Known.Contains(b.RegionId)) continue;
+            foreach (var q in _quests.Offers(ch, b).Where(q => q.Category is QuestCategories.Main or QuestCategories.Secondary))
+                if (options.All(o => o.Q.Id != q.Id) && (canAccept || _quests.CanTake(p, ch, q))) options.Add((q, null));
+        }
+        bool campaign = p.Objectives.Any(o => o.State == ObjectiveStates.Active && C.Objectives.TryGetValue(o.Id, out var od) && od.Criterion == ObjectiveCriteria.MainCampaign);
+        int speed = Combat.CharacterStats.MoveSpeed(C, ch);
+        (QuestDefinition, int)? best = null;
+        foreach (var (q, aq) in options.OrderBy(o => o.Q.Category == QuestCategories.Main ? 0 : 1).ThenBy(o => o.Q.Id, StringComparer.Ordinal))
+        {
+            if (BlockedTarget(ch, GoalTypes.CompleteQuest, q.Id)) continue;
+            var step = aq == null ? (q.Steps.Count > 0 ? q.Steps[0] : null) : QuestSystem.CurrentStep(C, aq);
+            int challenge = q.RecommendedLevel;
+            if (step != null && C.Regions.TryGetValue(step.RegionId, out var sz) && sz.FindActivity(step.ActivityId) is { } sa && ProgressionRules.ChallengeLevel(C, sa) > 0)
+                challenge = ProgressionRules.ChallengeLevel(C, sa);
+            int yieldValue = ch.Level >= C.Progression.LevelCap ? 0 : ProgressionRules.Efficiency(C.Progression, ch.Level, challenge);
+            bool unlocks = C.Quests.Values.Any(x => x.PrerequisiteQuestIds.Contains(q.Id, StringComparer.Ordinal)
+                && x.RecommendedLevel + C.QuestSettings.Journal.UnlockLevelsAhead >= ch.Level && x.MinLevel <= ch.Level + C.QuestSettings.Journal.UnlockLevelsAhead);
+            int relevance = q.Category == QuestCategories.Main && campaign ? 1000 : unlocks ? S.QuestUnlockRelevance : 0;
+            // Para onde precisa ir agora: o quadro (aceitar ou entregar) ou o lugar da etapa.
+            string zone, act;
+            if (aq == null || step == null) { var bd = C.QuestBoards[q.BoardId]; zone = bd.RegionId; act = bd.ActivityId; }
+            else { zone = step.RegionId; act = step.ActivityId; }
+            if (!C.Regions.ContainsKey(zone)) continue;
+            var plan = _routes.Plan(ch.Position, ch.RegionId, zone, _routes.Layout.Spot(zone, act), speed);
+            if (!plan.Reachable) continue;
+            int travel = 1000 - Math.Min(S.QuestTravelMaxPenaltyPermille, plan.Minutes * S.QuestTravelPerMinutePermille);
+            int attract = Math.Max(yieldValue, relevance) * travel / 1000;
+            if (attract >= S.QuestMinAttractiveness && (best == null || attract > best.Value.Item2)) best = (q, attract);
+        }
+        return best;
+    }
+
+    /// <summary>Mudanca relevante (D-066): um objetivo adotado libera as metas bloqueadas que ele torna relevantes.</summary>
+    internal void OnObjectiveAdopted(Character ch, string objectiveId)
+    {
+        if (!C.Objectives.TryGetValue(objectiveId, out var d)) return;
+        if (d.Criterion == ObjectiveCriteria.MainCampaign)
+            ch.BlockedTargetSet.RemoveWhere(k => k.StartsWith(GoalTypes.CompleteQuest + "|", StringComparison.Ordinal)
+                && C.Quests.TryGetValue(k[(GoalTypes.CompleteQuest.Length + 1)..], out var q) && q.Category == QuestCategories.Main);
+        if (d.Criterion == ObjectiveCriteria.AllZones)
+            ch.BlockedTargetSet.RemoveWhere(k => k.StartsWith(GoalTypes.DiscoverZone + "|", StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// Meta de missao impedida agora (D-066): a missao nao esta ativa e nao cabe (nem por troca). E impedimento
+    /// temporario, nao estagnacao: o prazo sem progresso nao corre; se o impedimento durar, a meta acaba como
+    /// "impedida", sem frustracao.
+    /// </summary>
+    private bool Blocked(Person p, Character ch, PersonalGoal g) =>
+        C.QuestSettings.Journal.Enabled && g.Type == GoalTypes.CompleteQuest && ch.ActiveQuestList.All(a => a.QuestId != g.Target)
+        && C.Quests.TryGetValue(g.Target, out var q) && !_quests.CanTake(p, ch, q);
 
     // ---------------- Influencia na decisao ----------------
 
@@ -367,6 +457,7 @@ public sealed class GoalSystem
 
     internal void OnActivity(Person p, Character ch, ActivityDefinition a, int minutes)
     {
+        if (minutes > 0) ch.BlockedTargetSet.Remove(TargetKey(GoalTypes.PracticeActivity, a.Type));   // voltou a praticar
         foreach (var g in ch.GoalList.ToList())
         {
             if (g.Type != GoalTypes.PracticeActivity || g.Target != a.Type || minutes <= 0) continue;
@@ -389,8 +480,9 @@ public sealed class GoalSystem
 
     internal void OnLevelUp(Person p, Character ch)
     {
-        // Subir de nivel e mudanca relevante: metas de nivel abandonadas podem voltar.
+        // Subir de nivel e mudanca relevante: metas de nivel abandonadas podem voltar; zonas tambem (D-066).
         ch.BlockedLevelGoals.Clear();
+        ch.BlockedTargetSet.RemoveWhere(k => k.StartsWith(GoalTypes.DiscoverZone + "|", StringComparison.Ordinal));
         foreach (var g in ch.GoalList.ToList())
         {
             if (g.Type != GoalTypes.ReachLevel && g.Type != GoalTypes.UnlockLevel) continue;
@@ -413,6 +505,7 @@ public sealed class GoalSystem
     /// <summary>Avanco parcial da etapa ou missao aceita (D-065): progresso, sem contar etapa.</summary>
     internal void OnQuestProgress(Character ch, string questId)
     {
+        ch.BlockedTargetSet.Remove(TargetKey(GoalTypes.CompleteQuest, questId));   // a missao avancou: pode voltar a ser meta
         foreach (var g in ch.GoalList)
             if (g.Type == GoalTypes.CompleteQuest && g.Target == questId)
                 g.LastProgressPlayedTicks = ch.PlayedTicksAt(Now);
@@ -420,6 +513,7 @@ public sealed class GoalSystem
 
     internal void OnQuestStep(Character ch, string questId)
     {
+        ch.BlockedTargetSet.Remove(TargetKey(GoalTypes.CompleteQuest, questId));
         foreach (var g in ch.GoalList)
             if (g.Type == GoalTypes.CompleteQuest && g.Target == questId)
             {
@@ -468,6 +562,8 @@ public sealed class GoalSystem
             QuirkSystem.Observe(C, _w.GetPerson(ch.PersonId), QuirkIds.Persistente, false, true);
         // Meta de nivel abandonada nao volta com o mesmo alvo antes da proxima subida de nivel.
         if (g.Type is GoalTypes.ReachLevel or GoalTypes.UnlockLevel) ch.BlockedLevelGoals.Add(LevelGoalKey(g.Type, g.Target, g.TargetValue));
+        // Demais metas largadas por falta de progresso ou impaciencia: nao voltam ate avanco ou mudanca relevante (D-066).
+        else if (S.ReadoptBlockEnabled && reason is "no_progress" or "impatience") ch.BlockedTargetSet.Add(TargetKey(g.Type, g.Target));
         ch.GoalsAbandoned++;
         if (g.Links.Count > 0)
         {
