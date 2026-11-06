@@ -2590,3 +2590,35 @@ Itens como instâncias, inventário, equipamento funcional, carteira e aplicaç�
 - **Validação:** cenário 8 de 9, provisórias 7 de 12, iguais.
 
 **Próximo:** a pedido do criador, um ponto ligado às interfaces antes da E1b.
+
+## D-068 — Organização da interface: página em telas e cards fixos (etapa 1)
+**Data:** 06/11/2026 · **Estado:** aceita (plano em `plano-interface.md`)
+
+**Pedido do criador:**
+- a tela é o contêiner: gráficos e cards ocupam a tela inteira, sem nada cortado no fim;
+- a rolagem existe, mas organizada por seções;
+- cards do mesmo tamanho para qualquer jogador, com rolagem interna se preciso;
+- cada aba com o seu assunto, sem retirar informação (só redundância);
+- cabeçalho mais organizado;
+- ícones próprios do jogo, desenhados por nós (opção A);
+- Estatísticas continua como o jogador no servidor, e Progressão é uma aba nova.
+
+**Etapa 1 — base do layout (feita):**
+- `ScreenPage`: a página em seções de tela inteira, com linhas por peso e mínimo legível. Em tela baixa, a seção continua na tela seguinte; uma linha de cards empilhados vira uma linha por card.
+- `FillCard`: o card de altura fixa, cujo conteúdo rola dentro dele; a rolagem interna se mantém nas atualizações ao vivo. `Grow` faz um gráfico crescer com o card.
+- A roda do mouse salta de tela em tela. Dentro de um card com conteúdo maior, a roda rola o card primeiro.
+- **Rotina** no sistema novo:
+  - tela 1 (quem é e o padrão): Onde mora, Finanças, Vontade de jogar; Semana típica e Ocupação;
+  - tela 2 (o que aconteceu): Últimos 30 dias, Sono, Como terminaram os dias; Horários de jogo e Sessões dos últimos 14 dias, que vieram da Visão geral e de Estatísticas, o destino aprovado.
+- **Abas de origem, provisórias até a etapa 3:**
+  - a Evolução ocupa as colunas de Horários de jogo na Visão geral;
+  - em Estatísticas, Classificação e XP por fonte sobem para o lado da Comparação, e Níveis no servidor ocupa a linha inteira.
+
+**Conferido em capturas:**
+- 1920×1080: as duas telas ocupam a área visível; os cards têm o mesmo tamanho para três jogadores diferentes (mesmos pesos, independentes do conteúdo).
+- 1366×768: cada linha vira uma tela.
+- Um giro da roda leva à tela seguinte, e três giros, à última, alinhada.
+
+**Pendências vistas em 1366** (conteúdo, nas próximas etapas): dias da Ocupação e valores do Sono cortados com reticências.
+
+**Próximo:** etapa 2, o cabeçalho da ficha.

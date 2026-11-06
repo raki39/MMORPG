@@ -18,7 +18,7 @@ namespace GodotClient;
 ///   --world=PASTA  --seed=N  --population=N  --speed=N  --layer=normal|lotacao|perigo|nivel
 ///   --hour=H | --sim-minutes=N    avanca a simulacao antes de comecar (capturas)
 ///   --open-person=ID | --open-zone=ID | --open-cluster   abre uma ficha ao iniciar (auto, goal, objectives, longplan...)
-///   --tab=N               aba inicial da ficha aberta
+///   --tab=N               aba inicial da ficha aberta  (--scroll=PX ou --section=N: tela da pagina)
 ///   --screenshot=ARQ --frames=N    captura e encerra (--zoom=F, --focus=ZONA, --mouse=XxY)
 ///   --measure-seconds=S   imprime FPS medio e encerra
 /// </summary>
@@ -307,6 +307,8 @@ public partial class Main : Node
         }
         if (_modal != null && _args.TryGetValue("tab", out var tab) && int.TryParse(tab, out int ti)) _modal.SelectTab(ti);
         if (_modal != null && _args.TryGetValue("scroll", out var sc) && int.TryParse(sc, out int sv)) _modal.ScrollTo(sv);
+        if (_modal != null && _args.TryGetValue("section", out var sec) && int.TryParse(sec, out int sn)) _modal.ScrollToSection(sn);
+        if (_modal != null && _args.TryGetValue("wheel", out var wh) && int.TryParse(wh, out int wn)) _modal.WheelForCapture(wn);
     }
 
     private string Arg(string key, string fallback) => _args.TryGetValue(key, out var v) ? v : fallback;

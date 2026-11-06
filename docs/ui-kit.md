@@ -36,7 +36,15 @@ Referência para qualquer tela nova. Estilo de dossiê de jogo de gestão: escur
    - Cada card ocupa N colunas, com vão de 12 px.
    - As divisas caem sempre nas mesmas linhas verticais, de preferência 3, 6 e 9. Linhas diferentes podem ter cards de tamanhos diferentes, mas as bordas coincidem.
    - Os cards de uma linha têm a mesma altura.
-3. **Visão geral:** só cards com dados que já existem.
+3. **Página em telas** (`ScreenPage`, D-068; `plano-interface.md`):
+   - a página se divide em seções, e **cada seção ocupa exatamente a altura visível**; nada fica cortado no fim da tela;
+   - dentro da seção, cada linha recebe a altura por **peso**, com um mínimo legível; os cards preenchem a linha;
+   - **card de altura fixa** (`FillCard`): a altura vem do layout, nunca do conteúdo, então é igual para qualquer jogador. Se o conteúdo passar, rola dentro do card (barra fina), e a rolagem interna se mantém nas atualizações ao vivo;
+   - gráficos marcados com `Grow` crescem com o card;
+   - a **roda do mouse salta de tela em tela** (animação curta). Dentro de um card com conteúdo maior, a roda rola o card primeiro;
+   - **em 1366×768**, as linhas que não cabem numa tela passam para a seguinte, e uma linha de cards empilhados vira uma linha por card;
+   - capturas: `--section=N` abre a tela N; `--wheel=N` gira a roda N vezes.
+4. **Visão geral:** só cards com dados que já existem.
    - O que depende de sistemas futuros fica numa aba própria com o marco ("Combate · M3", "Inventário · M5").
    - Não há card vazio na visão geral.
 

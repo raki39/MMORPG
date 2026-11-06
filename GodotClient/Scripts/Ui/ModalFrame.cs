@@ -110,7 +110,85 @@ public partial class ModalFrame : Control
         body.AddThemeConstantOverride("margin_bottom", 16);
         body.AddChild(_scroll);
         col.AddChild(body);
+        _scroll.GuiInput += OnPageWheel;
     }
+
+    // ---------- Pagina em telas (D-068) ----------
+
+    private Tween? _snap;
+
+    /// <summary>Pagina em telas da aba atual (conteudo raiz), se houver.</summary>
+    private ScreenPage? CurrentPage() =>
+        _scroll.GetChildCount() > 0 && _scroll.GetChild(0) is Control wrap && wrap.GetChildCount() > 0 ? wrap.GetChild(0) as ScreenPage : null;
+
+    /// <summary>Tela mais proxima da rolagem atual.</summary>
+    private static int NearestScreen(ScreenPage page, float scroll)
+    {
+        int best = 0;
+        for (int i = 1; i < page.ScreenTops.Count; i++)
+            if (Mathf.Abs(page.ScreenTops[i] - scroll) < Mathf.Abs(page.ScreenTops[best] - scroll)) best = i;
+        return best;
+    }
+
+    /// <summary>
+    /// Roda do mouse numa pagina em telas: salta para a tela anterior ou seguinte, inteira (um salto por
+    /// gesto). Dentro de um card com conteudo maior, a roda rola o card primeiro (o card consome o evento).
+    /// </summary>
+    private void OnPageWheel(InputEvent e)
+    {
+        if (e is not InputEventMouseButton { Pressed: true } mb || mb.ButtonIndex is not (MouseButton.WheelUp or MouseButton.WheelDown)) return;
+        if (CurrentPage() is not { ScreenTops.Count: > 1 }) return;
+        _scroll.AcceptEvent();
+        Snap(mb.ButtonIndex == MouseButton.WheelDown ? 1 : -1);
+    }
+
+    /// <summary>Salta uma tela (dir +1 ou -1), com animacao curta; ignora enquanto o salto anterior anda.</summary>
+    private void Snap(int dir)
+    {
+        var page = CurrentPage();
+        if (page == null || page.ScreenTops.Count < 2 || (_snap != null && _snap.IsRunning())) return;
+        int cur = NearestScreen(page, _scroll.ScrollVertical);
+        int next = Math.Clamp(cur + dir, 0, page.ScreenTops.Count - 1);
+        if (next == cur && Mathf.Abs(page.ScreenTops[cur] - _scroll.ScrollVertical) < 1) return;
+        _snap = CreateTween();
+        _snap.TweenProperty(_scroll, "scroll_vertical", (int)page.ScreenTops[next], 0.22).SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
+    }
+
+    /// <summary>Capturas (--wheel=N): N giros da roda para baixo, pela mesma regra do mouse.</summary>
+    public async void WheelForCapture(int turns)
+    {
+        for (int i = 0; i < turns; i++)
+        {
+            await ToSignal(GetTree().CreateTimer(0.35), SceneTreeTimer.SignalName.Timeout);
+            Snap(1);
+        }
+    }
+
+    /// <summary>Vai para a tela N da pagina (capturas: --section=N).</summary>
+    public void ScrollToSection(int index)
+    {
+        _pendingSection = index;
+        _pendingScrollFrames = 30;
+        SetProcess(true);
+    }
+
+    private int _pendingSection = -1;
+
+    /// <summary>Rolagem dentro dos cards de altura fixa, guardada pelo titulo entre atualizacoes ao vivo.</summary>
+    private static void CollectCardScroll(Node n, Dictionary<string, int> into)
+    {
+        if (n is ScrollContainer s && s.HasMeta("card")) into[(string)s.GetMeta("card")] = s.ScrollVertical;
+        foreach (var c in n.GetChildren()) CollectCardScroll(c, into);
+    }
+
+    private static void ApplyCardScroll(Node n, Dictionary<string, int> from)
+    {
+        if (n is ScrollContainer s && s.HasMeta("card") && from.TryGetValue((string)s.GetMeta("card"), out int v)) s.ScrollVertical = v;
+        foreach (var c in n.GetChildren()) ApplyCardScroll(c, from);
+    }
+
+    private Dictionary<string, int> _cardScroll = new();
+    private void RestoreCardScroll() { ApplyCardScroll(_scroll, _cardScroll); _cardScroll = new(); }
 
     /// <summary>Dado-chave do cabecalho: valor em cima, rotulo embaixo, separado por filete.</summary>
     public void Fact(string label, string value, Color? color = null, string tooltip = "", string icon = "")
@@ -181,6 +259,8 @@ public partial class ModalFrame : Control
     public void Rebuild(bool resetScroll)
     {
         int scroll = _scroll.ScrollVertical;
+        var cardScroll = new Dictionary<string, int>();
+        if (!resetScroll) CollectCardScroll(_scroll, cardScroll);
         foreach (var c in _scroll.GetChildren()) { _scroll.RemoveChild(c); c.QueueFree(); }
         var content = _tabs[_current].Build();
         content.SizeFlagsHorizontal = SizeFlags.ExpandFill;
@@ -189,7 +269,12 @@ public partial class ModalFrame : Control
         wrap.AddThemeConstantOverride("margin_right", 14);
         wrap.AddChild(content);
         _scroll.AddChild(wrap);
-        if (!resetScroll) CallDeferred(nameof(RestoreScroll), scroll);
+        if (!resetScroll)
+        {
+            CallDeferred(nameof(RestoreScroll), scroll);
+            _cardScroll = cardScroll;
+            if (cardScroll.Count > 0) CallDeferred(nameof(RestoreCardScroll));
+        }
     }
 
     private void RestoreScroll(int value) => _scroll.ScrollVertical = value;
@@ -210,7 +295,9 @@ public partial class ModalFrame : Control
     {
         if (_pendingScrollFrames <= 0) { SetProcess(false); return; }
         _pendingScrollFrames--;
-        _scroll.ScrollVertical = _pendingScroll;
+        if (_pendingSection >= 0 && CurrentPage() is { } page && page.ScreenTops.Count > 0)
+            _scroll.ScrollVertical = (int)page.ScreenTops[Math.Min(_pendingSection, page.ScreenTops.Count - 1)];
+        else _scroll.ScrollVertical = _pendingScroll;
     }
 
     /// <summary>Sai da pagina (o cliente volta ao mapa).</summary>
@@ -252,6 +339,33 @@ public partial class ModalFrame : Control
         col.AddChild(body);
         card.AddChild(col);
         return card;
+    }
+
+    /// <summary>
+    /// Card de altura fixa (D-068), para a pagina em telas: a altura vem da linha, nunca do conteudo. O corpo
+    /// preenche o card (graficos marcados com Grow crescem com ele); se passar da altura, rola dentro do card.
+    /// </summary>
+    public static PanelContainer FillCard(string title, Control body, string info = "", Control? headerRight = null)
+    {
+        var scroll = new ScrollContainer
+        {
+            HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, VerticalScrollMode = ScrollContainer.ScrollMode.Auto,
+            SizeFlagsVertical = SizeFlags.ExpandFill, SizeFlagsHorizontal = SizeFlags.ExpandFill, FollowFocus = false,
+        };
+        scroll.SetMeta("card", title);
+        body.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        body.SizeFlagsVertical = SizeFlags.ExpandFill;
+        scroll.AddChild(body);
+        var card = Card(title, scroll, info: info, headerRight: headerRight);
+        if (card.GetChild(0) is Control col) col.SizeFlagsVertical = SizeFlags.ExpandFill;
+        return card;
+    }
+
+    /// <summary>Marca o elemento (um grafico) para crescer com a altura do card fixo.</summary>
+    public static T Grow<T>(T c) where T : Control
+    {
+        c.SizeFlagsVertical = SizeFlags.ExpandFill;
+        return c;
     }
 
     /// <summary>Subtitulo dentro de um card: texto claro seminegrito e filete embaixo.</summary>

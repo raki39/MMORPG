@@ -268,8 +268,7 @@ public partial class PlayerModal : ModalFrame
             (Card("Personalidade e traços", TraitsBody(), info: TraitsInfo), 3));
         var row2 = Grid(12,
             (Card("Missões", QuestSummary(v), info: "Missões do personagem\n~Detalhes na aba Missões."), 3),
-            (Card("Evolução", EvolutionBody(v, detail, st), info: "Horas jogadas ao atingir cada nível\n~Curva real deste personagem (tempo conectado acumulado)."), 3),
-            (Card("Horários de jogo", HoursBody(), info: "Quando costuma jogar\n~Minutos conectados por hora do dia nas sessões registradas. Dourado: janela da rotina (início preferido + sessão típica). Útil para planejar eventos e manutenção."), 3),
+            (Card("Evolução", EvolutionBody(v, detail, st), info: "Horas jogadas ao atingir cada nível\n~Curva real deste personagem (tempo conectado acumulado)."), 6),
             (Card("Uso do tempo", TimeUseBody(detail), info: "Divisão do tempo conectado\n~Por tipo de atividade desde o cadastro; o resto é deslocamento."), 3));
         var row3 = Grid(12,
             (Card("Zonas frequentadas", ZonesBody(), info: "Onde escolhe jogar\n~Escolhas de atividade por zona registradas desde que o jogo foi aberto. Clique para abrir a zona."), 3),
@@ -468,11 +467,10 @@ public partial class PlayerModal : ModalFrame
         var st = Server(v);
         var row1 = Grid(12,
             (Card("Comparação com o servidor", CompareBody(v, st), info: "Este personagem contra a mediana do servidor\n~A barra mostra a diferença percentual; verde acima, vermelho abaixo."), 6),
-            (Card("Sessões · últimos 14 dias", FormBody(), info: "Minutos conectados por dia\n~Verde: dia no ritmo da rotina (80% da sessão típica ou mais). Vermelho: abaixo. A linha tracejada é a média dos dias jogados."), 6));
-        var row2 = Grid(12,
             (Card("Classificação", RankBody(st), info: "Posição no servidor\n~Ordem por nível e XP. XP por hora considera só quem jogou ao menos 1 hora."), 3),
-            (Card("XP por fonte", XpSourceBody(v), info: "De onde vem a experiência\n~Atividades no mundo contra entregas de missões."), 3),
-            (Card("Níveis no servidor", ServerLevelsBody(v), info: "Distribuição de níveis dos personagens\n~Dourado: o nível deste personagem."), 6));
+            (Card("XP por fonte", XpSourceBody(v), info: "De onde vem a experiência\n~Atividades no mundo contra entregas de missões."), 3));
+        var row2 = Grid(12,
+            (Card("Níveis no servidor", ServerLevelsBody(v), info: "Distribuição de níveis dos personagens\n~Dourado: o nível deste personagem."), 12));
         return Column(12, row1, row2);
     }
 
@@ -784,7 +782,7 @@ public partial class PlayerModal : ModalFrame
             EmptyText = "Sem sessões registradas ainda.",
         };
         int peak = minutes.Max() <= 0 ? -1 : Array.IndexOf(minutes, minutes.Max());
-        return Column(12, chart, Row(0,
+        return Column(12, Grow(chart), Row(0,
             MiniStat(peak < 0 ? "–" : $"{peak:00}h", "Pico"),
             MiniStat($"{startH:00}h", "Costuma começar"),
             MiniStat($"{tr.PreferredStartHour:00}h", "Horário preferido"),
@@ -1020,7 +1018,7 @@ public partial class PlayerModal : ModalFrame
             MiniStat(played.Count == 0 ? "–" : $"{played.Average():0}", "Média (min)"),
             MiniStat($"{played.Count}/{days}", "Dias jogados"),
             MiniStat($"{routine}", "Rotina (min)"));
-        var col = Column(12, chart, stats);
+        var col = Column(12, Grow(chart), stats);
         // Ultimas sessoes (tabela compacta, mais nova primeiro).
         var grid = new GridContainer { Columns = 4 };
         grid.AddThemeConstantOverride("h_separation", 12);

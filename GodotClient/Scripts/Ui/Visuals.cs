@@ -479,6 +479,13 @@ public partial class SpanRow : Container
     }
 
     private IEnumerable<Control> Items => GetChildren().OfType<Control>().Where(c => c.Visible);
+    public List<Control> VisibleItems => Items.ToList();
+
+    /// <summary>
+    /// Alturas dos cards empilhados dadas pela pagina em telas (ScreenPage, D-068): cada card vira uma linha
+    /// propria, com o y relativo a esta linha. Nulo: empilha pela altura minima de cada card.
+    /// </summary>
+    public List<(float Y, float H)>? StackRects { get; set; }
 
     private bool _stacked;
 
@@ -500,6 +507,8 @@ public partial class SpanRow : Container
     }
 
     /// <summary>Os cards cabem lado a lado se cada um recebe ao menos a sua largura minima.</summary>
+    public bool FitsSideBySide(float width) => Fits(width);
+
     private bool Fits(float width)
     {
         float col = (width - Gap * (Columns - 1)) / Columns;
@@ -516,6 +525,12 @@ public partial class SpanRow : Container
         if (what != NotificationSortChildren) return;
         bool stacked = !Fits(Size.X);
         if (stacked != _stacked) { _stacked = stacked; CallDeferred(Control.MethodName.UpdateMinimumSize); }
+        if (_stacked && StackRects is { } rects && rects.Count == Items.Count())
+        {
+            int i = 0;
+            foreach (var c in Items) { FitChildInRect(c, new Rect2(0, rects[i].Y, Size.X, rects[i].H)); i++; }
+            return;
+        }
         if (_stacked)
         {
             float y = 0;
