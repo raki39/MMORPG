@@ -4,7 +4,7 @@ namespace GodotClient.Ui;
 
 /// <summary>
 /// Galeria dos icones do jogo (D-068, etapa 4), so para conferencia (capturas com --page=icons): cada icone na
-/// moldura (64 px), no tamanho de linha (16 px) e com o nome.
+/// moldura (64 px), no tamanho de linha (16 px) e com o nome; na aba Retratos, brasoes de amostra nos tamanhos usados.
 /// </summary>
 public partial class IconGallery : ModalFrame
 {
@@ -15,6 +15,7 @@ public partial class IconGallery : ModalFrame
         Header.AddChild(Info("", "Desenhados no traço do Lucide · moldura na cor do tipo", UiTokens.TextSecondary, UiTokens.TextSecondary));
         Breadcrumb = "Conferência";
         AddTab("Todos", Build);
+        AddTab("Retratos", BuildCrests);
     }
 
     private static Color ColorOf(string name) => name switch
@@ -45,6 +46,31 @@ public partial class IconGallery : ModalFrame
             "g-planicie" => UiTokens.BiomeColor("planicie").Lightened(0.3f),
             _ => UiTokens.AccentSoft,
         };
+    }
+
+    /// <summary>Brasoes de amostra (sementes fixas) nos tamanhos da ficha, do cartao, das listas e das linhas.</summary>
+    private Control BuildCrests()
+    {
+        var page = Column(12);
+        string[] classes = { "g-guerreiro", "g-mago", "g-sacerdote" };
+        string[] profiles = { "casual", "regular", "hardcore" };
+        foreach (var (size, label) in new[] { (76, "Ficha · 76 px"), (52, "Cartão do mapa · 52 px"), (34, "Listas · 34 px"), (24, "Linhas · 24 px") })
+        {
+            var flow = new HFlowContainer();
+            flow.AddThemeConstantOverride("h_separation", size >= 52 ? 14 : 10);
+            flow.AddThemeConstantOverride("v_separation", 10);
+            for (int i = 0; i < 24; i++)
+            {
+                ulong seed = 0x51ED270BUL * (ulong)(i + 1) + 977UL;
+                flow.AddChild(new PortraitBadge(seed, UiTokens.ProfileColor(profiles[i % 3]))
+                {
+                    ClassIcon = classes[(i / 3) % 3],
+                    CustomMinimumSize = new Vector2(size, size),
+                });
+            }
+            page.AddChild(Card(label, flow));
+        }
+        return page;
     }
 
     private Control Build()

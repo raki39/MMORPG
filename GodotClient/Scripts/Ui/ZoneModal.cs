@@ -305,7 +305,7 @@ public partial class ZoneModal : ModalFrame
             r.SetAnchorsPreset(LayoutPreset.FullRect);
             r.OffsetLeft = 6; r.OffsetRight = -6;
             r.AddThemeConstantOverride("separation", 10);
-            r.AddChild(new PortraitBadge(p.AppearanceSeed, UiTokens.ProfileColor(p.ProfileId), v.Name) { CustomMinimumSize = new Vector2(28, 28), SizeFlagsVertical = SizeFlags.ShrinkCenter, MouseFilter = MouseFilterEnum.Ignore });
+            r.AddChild(new PortraitBadge(p.AppearanceSeed, UiTokens.ProfileColor(p.ProfileId), v.Name) { CustomMinimumSize = new Vector2(30, 30), SizeFlagsVertical = SizeFlags.ShrinkCenter, MouseFilter = MouseFilterEnum.Ignore, ClassIcon = PlayerModal.ClassIcon(_ctx.Content.Classes.GetValueOrDefault(v.ClassId)) });
             var info = Column(0);
             info.MouseFilter = MouseFilterEnum.Ignore;
             info.SizeFlagsVertical = SizeFlags.ShrinkCenter;
@@ -569,7 +569,7 @@ public static class PlayerRow
         row.SetAnchorsPreset(Control.LayoutPreset.FullRect);
         row.OffsetLeft = 10; row.OffsetRight = -10;
         row.AddThemeConstantOverride("separation", 10);
-        var portrait = new PortraitBadge(p.AppearanceSeed, UiTokens.ProfileColor(p.ProfileId)) { CustomMinimumSize = new Vector2(34, 34), SizeFlagsVertical = Control.SizeFlags.ShrinkCenter, MouseFilter = Control.MouseFilterEnum.Ignore };
+        var portrait = new PortraitBadge(p.AppearanceSeed, UiTokens.ProfileColor(p.ProfileId)) { CustomMinimumSize = new Vector2(34, 34), SizeFlagsVertical = Control.SizeFlags.ShrinkCenter, MouseFilter = Control.MouseFilterEnum.Ignore, ClassIcon = PlayerModal.ClassIcon(ctx.Content.Classes.GetValueOrDefault(v.ClassId)) };
         row.AddChild(portrait);
         var col = new VBoxContainer { Alignment = BoxContainer.AlignmentMode.Center, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, MouseFilter = Control.MouseFilterEnum.Ignore };
         col.AddThemeConstantOverride("separation", -2);

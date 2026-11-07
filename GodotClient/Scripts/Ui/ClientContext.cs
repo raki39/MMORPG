@@ -28,6 +28,14 @@ public sealed class ClientContext
     public Action<string> OpenZone { get; init; } = _ => { };
     /// <summary>Favoritos desta sessao (persistencia chega com o save).</summary>
     public HashSet<int> Favorites { get; } = new();
+    /// <summary>
+    /// Cartoes fixados no mapa (nesta sessao), na ordem em que foram fixados: "person#id", "zone#id",
+    /// "area#zona#area". Aparecem na aba Fixados do painel lateral.
+    /// </summary>
+    public List<string> Pinned { get; } = new();
+    /// <summary>Mostra o cartao fixado (reabre se estava fechado) e enquadra no mapa.</summary>
+    public Action<string> ShowPinned { get; init; } = _ => { };
+    public Action<string> Unpin { get; init; } = _ => { };
     /// <summary>Rascunhos de configuracao de zona (publicacao via atualizacao no M7).</summary>
     public Dictionary<string, ZoneDraft> Drafts { get; } = new(StringComparer.Ordinal);
 

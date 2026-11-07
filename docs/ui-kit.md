@@ -5,8 +5,12 @@ Referência para qualquer tela nova. Estilo de dossiê de jogo de gestão: escur
 ## Estrutura das telas
 
 - **Mapa:** é a única tela em que o tempo passa.
-  - O clique abre um **cartão-resumo** (`QuickCard`) ao lado do cursor.
+  - O clique abre um **cartão-resumo** (`QuickCard`, 364 px) ao lado do cursor, no padrão das páginas:
+    - cabeçalho com emblema e duas linhas;
+    - etiquetas com rótulo e valor;
+    - seções com título.
   - "Ver informações" abre a página.
+  - O cabeçalho arrasta o cartão. O alfinete fixa: o cartão fica aberto, entra na aba **Fixados** do painel lateral e conta no botão redondo abaixo da bússola.
 - **Páginas** (`ModalFrame`): ocupam tudo abaixo da barra superior.
   - O tempo pausa (opção nas Configurações) e volta na mesma velocidade.
   - Esc ou "Voltar ao mapa" retorna ao mapa.
@@ -201,7 +205,8 @@ Referência para qualquer tela nova. Estilo de dossiê de jogo de gestão: escur
 
 - Linhas clicáveis (`HoverRow`): fundo claro e filete dourado no hover, cursor de mão e seta › quando levam a outra página.
 - Tooltips estruturados (`RichTip`) explicam a conta de cada número.
-- O cartão-resumo se atualiza ao vivo (fora do hover).
+- O cartão-resumo se atualiza ao vivo (fora do hover), inclusive os fixados.
+- **Retrato da pessoa** (`PortraitBadge`): brasão heráldico gerado da semente, na moldura dos emblemas, na cor do perfil, com o ícone da classe no centro. Nunca usar rosto desenhado nem iniciais como retrato.
 
 ## Conferência
 

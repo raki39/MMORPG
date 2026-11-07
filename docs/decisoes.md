@@ -2721,4 +2721,37 @@ Itens como instâncias, inventário, equipamento funcional, carteira e aplicaç�
 - **Revisão nas capturas da galeria** (`--page=icons`): quatro ícones foram redesenhados por não lerem bem a 16 px (mago, ruínas, sombrio, treino), e a passagem também.
 - O gerador do Lucide (`tools/gen_icons.py`) mantém a busca nos ícones do jogo ao regenerar o `Icons.cs`.
 
+**Retratos e cartões do mapa (pedido do criador, antes da etapa 6):**
+- **Retrato = brasão.** O retrato antigo (rosto desenhado) parecia genérico e não combinava com o jogo. Agora cada pessoa tem um escudo heráldico gerado da semente de aparência (`PortraitBadge`):
+  - moldura padrão dos emblemas, na cor do perfil;
+  - um metal (ouro ou prata) e uma cor entre sete, sempre metal com cor, como na heráldica;
+  - uma de oito divisões: pleno, partido, cortado, fendido em banda, em barra, chaveirão, esquartelado e bordadura;
+  - no centro, o ícone da classe, claro com contorno escuro, para ler em qualquer campo (some abaixo de 18 px de escudo).
+  - É determinístico e estático, e aparece na ficha, no cartão, nas listas e no painel. A galeria de conferência (`--page=icons`, aba Retratos) mostra 24 amostras em 76, 52, 34 e 24 px.
+- **Cartões do mapa refeitos no padrão das páginas** (`QuickCard`, 364 px):
+  - cabeçalho com emblema, nome e duas linhas de identificação;
+  - etiquetas com rótulo e valor, separadas por filetes;
+  - seções com título e listas com ícone, como nas páginas.
+- **Jogador:**
+  - o que faz agora, com a barra do trecho;
+  - Nível, Próximo, Sessão até e Satisfação;
+  - seção **Personagem**, com Poder, Vida, recurso da classe, Ataque, Defesa e Crítico (`CharacterStats` e `PowerIndex` da E1a), e o espaço anotado para o equipamento e o combate (M3 e M5);
+  - seção **Sessão**, com o plano, o porquê e a missão em andamento.
+- **Zona:** Jogadores, Lotação, Perigo e Níveis; as áreas mais cheias e as regras.
+- **Área:** Jogadores, Tarefas, Missões e Tamanho; as tarefas e o quadro de missões, por categoria.
+- **Arrastar e fixar:**
+  - o cabeçalho arrasta o cartão, que fica dentro da área do mapa;
+  - o alfinete fixa: o cartão fica aberto, outros cliques abrem cartões novos ao lado e Esc não o fecha;
+  - o X de um fixado só o esconde, e ele continua listado;
+  - os fixados somem nas páginas e voltam no mapa, e são da sessão (o save chega depois).
+- **Lista dos fixados**, como sugeriu o criador: aba **Fixados** no painel lateral, com o brasão ou emblema, o nome e o estado ao vivo.
+  - O clique na linha mostra o cartão; os botões enquadram no mapa ou soltam.
+  - Um **botão redondo** logo abaixo da bússola, com a contagem, abre essa aba. Só aparece com algum fixado.
+- **Conferido em captura:**
+  - os três cartões em 1920;
+  - o de jogador em 1366;
+  - os três fixados com a aba aberta;
+  - um arrasto simulado do cabeçalho (`--drag=dx,dy,pin,zone:id`), seguido de fixar e abrir outro cartão;
+  - relatório de rolagem vazio.
+
 **Próximo:** etapa 6, a conferência final (todas as telas em 1920×1080 e 1366×768, três jogadores, desempenho).

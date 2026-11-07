@@ -92,6 +92,8 @@ public partial class Main : Node
     private ModalFrame? _modal;
     private ClusterPopover? _popover;
     private QuickCard? _quick;
+    /// <summary>Cartoes fixados no mapa, pela chave (a ordem fica em _ctx.Pinned).</summary>
+    private readonly Dictionary<string, QuickCard> _pinnedCards = new(StringComparer.Ordinal);
     private ColorRect _terrain = null!;
     private Control? _layerPanel, _mapControls;
     private Control _speedSeg = null!;
@@ -168,6 +170,8 @@ public partial class Main : Node
             OpenQuest = OpenQuest,
             WatchPerson = id => _host?.WatchPerson(id),
             FocusArea = (z, a) => { _map.SelectArea(z + "#" + a); _map.FocusArea(z, a); },
+            ShowPinned = key => ShowPinnedCard(key),
+            Unpin = key => UnpinCard(key),
         };
 
         _map.Setup(content, _host.Layout, _host.Persons, terrain);
@@ -296,6 +300,10 @@ public partial class Main : Node
             && float.TryParse(wpp[1], NumberStyles.Float, CultureInfo.InvariantCulture, out var wy))
             GetTree().CreateTimer(0.6).Timeout += () => Input.WarpMouse(new Vector2(wx, wy));
         if (_args.TryGetValue("peek-zone", out var pz) && _ctx.Content.Regions.ContainsKey(pz)) PeekZone(pz, center);
+        if (_args.TryGetValue("peek-area", out var pa) && pa.Split('#') is { Length: 2 } pap) PeekArea(pap[0], pap[1]);
+        if (_args.TryGetValue("pin", out var pinArg))
+            foreach (var key in pinArg.Split(',', StringSplitOptions.RemoveEmptyEntries))
+                ShowPinnedCard(key == "auto" ? "person#" + (_host.Snapshot.ByPerson.Select((v, i) => (v, i)).FirstOrDefault(x => x.v is { Status: Simulation.Core.Population.CharacterStatus.Doing }).i) : key);
         if (_args.ContainsKey("open-cluster"))
         {
             var snap = _host.Snapshot;
@@ -316,10 +324,46 @@ public partial class Main : Node
             _pagerSteps = pagerArg.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(x => x == "p" ? "Anteriores" : "Seguintes").ToList();
             _pagerStart = _frames + 40;   // conta a partir de quando a ficha abriu
         }
+        if (_args.TryGetValue("drag", out var dragArg))
+        {
+            _dragSteps = dragArg.Split(',', StringSplitOptions.RemoveEmptyEntries);
+            _dragStart = _frames + 12;
+        }
     }
 
     private List<string> _pagerSteps = new();
     private int _pagerStart;
+    /// <summary>Capturas (--drag=dx,dy[,pin][,zone:id]): arrasta o cartao pelo cabecalho com eventos de mouse.</summary>
+    private string[] _dragSteps = Array.Empty<string>();
+    private int _dragStart = -1;
+    private Vector2 _dragFrom;
+
+    private void RunDragAutomation()
+    {
+        int f = _frames - _dragStart;
+        if (_dragStart < 0 || f < 0 || f > 40 || _dragSteps.Length < 2) return;
+        var card = _quick != null && IsInstanceValid(_quick) ? _quick : _pinnedCards.Values.LastOrDefault();
+        if (card == null) return;
+        var by = new Vector2(float.Parse(_dragSteps[0], CultureInfo.InvariantCulture), float.Parse(_dragSteps[1], CultureInfo.InvariantCulture));
+        if (f == 0)
+        {
+            _dragFrom = card.GlobalPosition + new Vector2(120, 24);
+            Input.ParseInputEvent(new InputEventMouseButton { ButtonIndex = MouseButton.Left, Pressed = true, Position = _dragFrom, GlobalPosition = _dragFrom });
+        }
+        else if (f <= 10)
+        {
+            var at = _dragFrom + by * (f / 10f);
+            Input.ParseInputEvent(new InputEventMouseMotion { Position = at, GlobalPosition = at, Relative = by / 10f, ButtonMask = MouseButtonMask.Left });
+        }
+        else if (f == 11)
+        {
+            var at = _dragFrom + by;
+            Input.ParseInputEvent(new InputEventMouseButton { ButtonIndex = MouseButton.Left, Pressed = false, Position = at, GlobalPosition = at });
+        }
+        else if (f == 14 && _dragSteps.Contains("pin")) card.TogglePin();
+        else if (f == 18 && _dragSteps.FirstOrDefault(x => x.StartsWith("zone:", StringComparison.Ordinal)) is { } z)
+            PeekZone(z[5..], GetViewport().GetVisibleRect().Size / 2f);
+    }
 
     /// <summary>Aperta o primeiro botao visivel e ativo com esse tooltip (capturas).</summary>
     private static bool PressFirst(Node n, string tip)
@@ -405,6 +449,9 @@ public partial class Main : Node
         if (_layerPanel != null) _layerPanel.Visible = visible;
         if (_mapControls != null) _mapControls.Visible = visible;
         if (_emptyBanner != null && !visible) _emptyBanner.Visible = false;
+        foreach (var c in _pinnedCards.Values)
+            if (IsInstanceValid(c)) c.Visible = visible && !c.UserHidden;
+        if (_pinnedButton != null) _pinnedButton.Visible = visible && _ctx.Pinned.Count > 0;
         _speedSeg.Visible = visible;
         _speedLabel.Visible = visible;
         _returnButton.Visible = !visible;
@@ -426,10 +473,102 @@ public partial class Main : Node
 
     private void ShowQuick(QuickCard card)
     {
+        // Ja fixado: mostra o cartao fixado (reabre se estava fechado) em vez de abrir outro.
+        if (_pinnedCards.TryGetValue(card.CardKey, out var pinned) && IsInstanceValid(pinned))
+        {
+            card.QueueFree();
+            CloseOverlays();
+            pinned.UserHidden = false;
+            pinned.Visible = OnMap;
+            pinned.MoveToFront();
+            pinned.Refresh();
+            return;
+        }
         CloseOverlays();
         _quick = card;
         card.Dismissed += () => { _map.SelectPerson(0); _map.SelectRegion(null); _map.SelectArea(null); };
+        card.PinToggled += OnPinToggled;
         _ui.AddChild(card);
+    }
+
+    // ---------- Cartoes fixados (D-068) ----------
+
+    private void OnPinToggled(QuickCard card)
+    {
+        if (card.Pinned)
+        {
+            if (!_ctx.Pinned.Contains(card.CardKey)) _ctx.Pinned.Add(card.CardKey);
+            _pinnedCards[card.CardKey] = card;
+            if (_quick == card) _quick = null;
+        }
+        else
+        {
+            _ctx.Pinned.Remove(card.CardKey);
+            _pinnedCards.Remove(card.CardKey);
+            if (_quick != null && IsInstanceValid(_quick) && _quick != card) _quick.QueueFree();
+            _quick = card;
+        }
+        SyncPinned();
+    }
+
+    /// <summary>Cartao de uma chave fixada ("person#id", "zone#id", "area#zona#area").</summary>
+    private QuickCard? CardFor(string key, Vector2 at)
+    {
+        var p = key.Split('#');
+        switch (p[0])
+        {
+            case "person" when p.Length == 2 && int.TryParse(p[1], out int id) && id >= 1 && id <= _ctx.Persons.Count:
+                return QuickCard.Person(_ctx, id, at, QuickBounds(), () => OpenPerson(id));
+            case "zone" when p.Length == 2 && _ctx.Content.Regions.ContainsKey(p[1]):
+                return QuickCard.Zone(_ctx, _map, p[1], at, QuickBounds(), () => OpenZone(p[1]));
+            case "area" when p.Length == 3 && _ctx.Content.Regions.TryGetValue(p[1], out var z) && z.Areas.Any(a => a.Id == p[2]):
+                return QuickCard.Area(_ctx, _map, p[1], p[2], at, QuickBounds(), () => OpenArea(p[1], p[2]));
+        }
+        return null;
+    }
+
+    /// <summary>Mostra um cartao fixado (cria se ainda nao existe, reabre se foi fechado pelo X).</summary>
+    private void ShowPinnedCard(string key)
+    {
+        if (!OnMap) ShowMap();
+        if (_pinnedCards.TryGetValue(key, out var c) && IsInstanceValid(c))
+        {
+            c.UserHidden = false;
+            c.Visible = true;
+            c.MoveToFront();
+            c.Refresh();
+            return;
+        }
+        var b = QuickBounds();
+        // Sem cartao aberto (capturas): lado a lado a partir da esquerda do mapa.
+        int slot = _pinnedCards.Count % 4;
+        var card = CardFor(key, b.Position + new Vector2(slot * (QuickCard.Width + 16) - 22, 60));
+        if (card == null) { _ctx.Pinned.Remove(key); SyncPinned(); return; }
+        card.SetPinned(true);
+        card.PinToggled += OnPinToggled;
+        if (!_ctx.Pinned.Contains(key)) _ctx.Pinned.Add(key);
+        _pinnedCards[key] = card;
+        _ui.AddChild(card);
+        SyncPinned();
+    }
+
+    private void UnpinCard(string key)
+    {
+        _ctx.Pinned.Remove(key);
+        if (_pinnedCards.Remove(key, out var c) && IsInstanceValid(c)) c.QueueFree();
+        SyncPinned();
+    }
+
+    /// <summary>Botao redondo dos fixados (contagem) e a aba Fixados do painel lateral.</summary>
+    private void SyncPinned()
+    {
+        int n = _ctx.Pinned.Count;
+        if (_pinnedButton != null)
+        {
+            _pinnedButton.Visible = OnMap && n > 0;
+            if (_pinnedCount != null) _pinnedCount.Text = n.ToString();
+        }
+        _side?.Refresh();
     }
 
     private void PeekPerson(int personId) => PeekPerson(personId, null);
@@ -605,6 +744,8 @@ public partial class Main : Node
             }
             else if (!(reading && _side != null && _side.Visible && _side.GetGlobalRect().HasPoint(mouse))) _side?.Refresh();
             if (_quick != null && IsInstanceValid(_quick) && !_quick.GetGlobalRect().HasPoint(GetViewport().GetMousePosition())) _quick.Refresh();
+            foreach (var c in _pinnedCards.Values)
+                if (IsInstanceValid(c) && c.Visible && !c.GetGlobalRect().HasPoint(GetViewport().GetMousePosition())) c.Refresh();
         }
         HandleAutomation(delta);
     }
@@ -628,6 +769,7 @@ public partial class Main : Node
         if (_pagerSteps.Count > 0 && _frames >= _pagerStart && (_frames - _pagerStart) % 15 == 0 && (_frames - _pagerStart) / 15 < _pagerSteps.Count
             && _modal != null && IsInstanceValid(_modal))
             PressFirst(_modal, _pagerSteps[(_frames - _pagerStart) / 15]);
+        RunDragAutomation();
         if (_args.TryGetValue("screenshot", out var path) && _frames == int.Parse(Arg("frames", "45"), CultureInfo.InvariantCulture))
         {
             var img = GetViewport().GetTexture().GetImage();

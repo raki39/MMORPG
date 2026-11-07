@@ -9,7 +9,8 @@ namespace GodotClient.Ui;
 
 /// <summary>
 /// Painel lateral fixo de gestao (D-022): Visao geral (indicadores, grafico 24 h, atividades,
-/// perfis), Zonas (tabela), Jogadores (tabela com busca) e Eventos (feed com filtros).
+/// perfis), Zonas (tabela), Jogadores (tabela com busca), Eventos (feed com filtros) e Fixados (cartoes
+/// fixados no mapa, D-068).
 /// Atualiza ao vivo sem perder rolagem nem ordenacao.
 /// </summary>
 public partial class SidePanel : PanelContainer
@@ -47,7 +48,7 @@ public partial class SidePanel : PanelContainer
         tabRow.AddThemeConstantOverride("separation", 0);
         tabsBg.AddChild(tabRow);
         col.AddChild(tabsBg);
-        foreach (var (name, i) in new[] { ("Visão geral", 0), ("Zonas", 1), ("Jogadores", 2), ("Eventos", 3) })
+        foreach (var (name, i) in new[] { ("Visão geral", 0), ("Zonas", 1), ("Jogadores", 2), ("Eventos", 3), ("Fixados", 4) })
         {
             var b = new Button { Text = name, ToggleMode = true, FocusMode = FocusModeEnum.None, CustomMinimumSize = new Vector2(0, 38), SizeFlagsHorizontal = SizeFlags.ExpandFill };
             b.AddThemeFontOverride("font", UiFonts.Medium);
@@ -122,7 +123,7 @@ public partial class SidePanel : PanelContainer
         bool keepSearchFocus = _searchBox != null && IsInstanceValid(_searchBox) && _searchBox.HasFocus();
         int caret = keepSearchFocus ? _searchBox!.CaretColumn : 0;
         foreach (var c in _scroll.GetChildren()) { _scroll.RemoveChild(c); c.QueueFree(); }
-        Control content = _tab switch { 1 => BuildZones(), 2 => BuildPlayers(), 3 => BuildEvents(), _ => BuildOverview() };
+        Control content = _tab switch { 1 => BuildZones(), 2 => BuildPlayers(), 3 => BuildEvents(), 4 => BuildPinned(), _ => BuildOverview() };
         content.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         var wrap = new MarginContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
         wrap.AddThemeConstantOverride("margin_right", 12);
@@ -218,6 +219,100 @@ public partial class SidePanel : PanelContainer
         return ModalFrame.Column(8, _searchBox,
             ThemeFactory.Text($"{rows.Count} conectados", UiTokens.FontCaption, UiTokens.TextSecondary),
             _playerTable.Build(rows));
+    }
+
+    // ---------------- Fixados ----------------
+
+    /// <summary>
+    /// Cartoes fixados no mapa (D-068): uma linha por cartao, na ordem em que foram fixados. Clique mostra o
+    /// cartao (reabre se foi fechado); os botoes enquadram no mapa ou soltam.
+    /// </summary>
+    private Control BuildPinned()
+    {
+        var col = ModalFrame.Column(2);
+        if (_ctx.Pinned.Count == 0)
+        {
+            col.AddChild(Hint("Nenhum cartão fixado. No mapa, abra o resumo de um jogador, zona ou área e clique no alfinete para mantê-lo aberto e listado aqui."));
+            return col;
+        }
+        col.AddChild(ThemeFactory.Text(_ctx.Pinned.Count == 1 ? "1 cartão fixado" : $"{_ctx.Pinned.Count} cartões fixados", UiTokens.FontCaption, UiTokens.TextSecondary));
+        col.AddChild(new Control { CustomMinimumSize = new Vector2(0, 4) });
+        var snap = _ctx.Snapshot();
+        foreach (var key in _ctx.Pinned.ToArray())
+        {
+            var k = key.Split('#');
+            Control emblem;
+            string name, line;
+            Color lineColor = UiTokens.TextSecondary;
+            Action locate;
+            if (k[0] == "person" && k.Length == 2 && int.TryParse(k[1], out int id) && id >= 1 && id <= _ctx.Persons.Count)
+            {
+                var p = _ctx.Persons[id - 1];
+                var v = id < snap.ByPerson.Length ? snap.ByPerson[id] : null;
+                var cls = v != null && _ctx.Content.Classes.TryGetValue(v.ClassId, out var c) ? c : null;
+                emblem = new PortraitBadge(p.AppearanceSeed, UiTokens.ProfileColor(p.ProfileId), v?.Name ?? p.Name) { ClassIcon = PlayerModal.ClassIcon(cls) };
+                name = v?.Name ?? p.Name;
+                bool online = v != null && v.Status != CharacterStatus.Offline;
+                line = v == null ? "Sem conta" : $"Nv {v.Level} · {StatusText.Of(v, _ctx.Content)}";
+                lineColor = online ? UiTokens.TextLabel : UiTokens.TextDisabled;
+                locate = () => _ctx.FocusPerson(id, true);
+            }
+            else if (k[0] == "zone" && k.Length == 2 && _ctx.Content.Regions.TryGetValue(k[1], out var z))
+            {
+                emblem = new ZoneEmblem(z);
+                name = z.Name;
+                int n = _map.PeopleInZone(z.Id);
+                line = $"Zona · {(n == 1 ? "1 jogador" : $"{n} jogadores")}";
+                locate = () => _ctx.FocusZone(z.Id);
+            }
+            else if (k[0] == "area" && k.Length == 3 && _ctx.Content.Regions.TryGetValue(k[1], out var za) && za.Areas.FirstOrDefault(a => a.Id == k[2]) is { } area)
+            {
+                emblem = new KindEmblem(area.Kind);
+                name = area.Name;
+                line = $"{AreaPalette.Name(area.Kind)} · {za.Name}";
+                locate = () => _ctx.FocusArea(za.Id, area.Id);
+            }
+            else continue;
+
+            string pinned = key;
+            var row = ModalFrame.HoverRow(() => _ctx.ShowPinned(pinned), $"{name}\n~Clique para mostrar o cartão no mapa.");
+            row.CustomMinimumSize = new Vector2(0, 46);
+            var h = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
+            h.SetAnchorsPreset(LayoutPreset.FullRect);
+            h.OffsetLeft = 6; h.OffsetRight = -2;
+            h.AddThemeConstantOverride("separation", 10);
+            emblem.CustomMinimumSize = new Vector2(34, 34);
+            emblem.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+            emblem.MouseFilter = MouseFilterEnum.Ignore;
+            h.AddChild(emblem);
+            var names = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill, Alignment = BoxContainer.AlignmentMode.Center, MouseFilter = MouseFilterEnum.Ignore };
+            names.AddThemeConstantOverride("separation", 0);
+            var nl = ThemeFactory.Text(name, UiTokens.FontBody, UiTokens.TextPrimary, UiFonts.SemiBold);
+            nl.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+            names.AddChild(nl);
+            var ll = ThemeFactory.Text(line, UiTokens.FontCaption, lineColor, UiFonts.Medium);
+            ll.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+            names.AddChild(ll);
+            h.AddChild(names);
+            h.AddChild(RowButton("locate-fixed", "Enquadrar no mapa", locate));
+            h.AddChild(RowButton("x", "Soltar\n~Tira dos fixados e fecha o cartão.", () => _ctx.Unpin(pinned)));
+            row.AddChild(h);
+            col.AddChild(row);
+            col.AddChild(ModalFrame.Divider());
+        }
+        return col;
+    }
+
+    private static Button RowButton(string icon, string tip, Action press)
+    {
+        var b = new TipButton { TooltipText = tip, FocusMode = FocusModeEnum.None, CustomMinimumSize = new Vector2(26, 26), SizeFlagsVertical = SizeFlags.ShrinkCenter, Icon = Icons.Get(icon, 14), IconAlignment = HorizontalAlignment.Center, MouseDefaultCursorShape = CursorShape.PointingHand };
+        b.AddThemeStyleboxOverride("normal", new StyleBoxEmpty());
+        var hover = ThemeFactory.Box(UiTokens.SurfaceHover, 0, radius: 3);
+        b.AddThemeStyleboxOverride("hover", hover);
+        b.AddThemeStyleboxOverride("pressed", hover);
+        foreach (var st in new[] { "icon_normal_color", "icon_hover_color", "icon_pressed_color", "icon_focus_color" }) b.AddThemeColorOverride(st, UiTokens.TextLabel);
+        b.Pressed += press;
+        return b;
     }
 
     // ---------------- Eventos ----------------

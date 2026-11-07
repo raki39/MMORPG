@@ -369,6 +369,7 @@ public partial class Main
         _side.Visible = _sideOpen;
         _ui.AddChild(_side);
         _side.Refresh(true);
+        BuildPinnedButton();
 
         _sideToggle = new TipButton { FocusMode = Control.FocusModeEnum.None, CustomMinimumSize = new Vector2(34, 34), TooltipText = "Recolher ou abrir o painel lateral (P)" };
         _sideToggle.AddThemeStyleboxOverride("normal", new StyleBoxEmpty());
@@ -402,8 +403,51 @@ public partial class Main
     }
 
     /// <summary>Reposiciona os paineis do mapa conforme a largura do painel lateral.</summary>
+    private Button? _pinnedButton;
+    private Label? _pinnedCount;
+
+    /// <summary>Botao redondo dos fixados no alto do mapa: abre a aba Fixados do painel lateral.</summary>
+    private void BuildPinnedButton()
+    {
+        var b = new TipButton
+        {
+            FocusMode = Control.FocusModeEnum.None, CustomMinimumSize = new Vector2(42, 42), Visible = false,
+            TooltipText = "Fixados\n~Cartões fixados no mapa. Clique para ver a lista no painel lateral.", MouseDefaultCursorShape = Control.CursorShape.PointingHand,
+        };
+        b.AddThemeStyleboxOverride("normal", ThemeFactory.Box(new Color(UiTokens.CardTop, 0.97f), 0, border: new Color(UiTokens.Accent, 0.7f), radius: 21));
+        b.AddThemeStyleboxOverride("hover", ThemeFactory.Box(UiTokens.SurfaceHover, 0, border: UiTokens.Accent, radius: 21));
+        b.AddThemeStyleboxOverride("pressed", ThemeFactory.Box(UiTokens.SurfaceHover, 0, border: UiTokens.Accent, radius: 21));
+        var icon = new Icon("pin", 18, UiTokens.Accent);
+        icon.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+        b.AddChild(icon);
+        var badge = new PanelContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
+        badge.AddThemeStyleboxOverride("panel", ThemeFactory.Box(UiTokens.Accent, 0, radius: 8));
+        _pinnedCount = ThemeFactory.Text("0", 10, UiTokens.Background, UiFonts.Numbers);
+        _pinnedCount.HorizontalAlignment = HorizontalAlignment.Center;
+        _pinnedCount.CustomMinimumSize = new Vector2(16, 16);
+        badge.AddChild(_pinnedCount);
+        badge.Position = new Vector2(28, -4);
+        b.AddChild(badge);
+        b.Pressed += () => { if (!_sideOpen) ToggleSidePanel(); _side?.ShowTab(4); };
+        b.SetAnchorsPreset(Control.LayoutPreset.TopRight);
+        _ui.AddChild(b);
+        _pinnedButton = b;
+        PlaceMapHud();
+    }
+
     private void PlaceMapHud()
     {
+        if (_pinnedButton != null)
+        {
+            // Logo abaixo da bussola (centro em MapArea.End.X - 44, topo + 44, raio 26), alinhado ao centro dela.
+            _pinnedButton.OffsetRight = -(SideWidth + UiTokens.S16 + 44 - 21);
+            _pinnedButton.OffsetLeft = _pinnedButton.OffsetRight - 42;
+            _pinnedButton.OffsetTop = UiTokens.TopBarHeight + UiTokens.S8 + 86;
+            _pinnedButton.OffsetBottom = _pinnedButton.OffsetTop + 42;
+        }
+        var bounds = QuickBounds();
+        if (_quick != null && IsInstanceValid(_quick)) _quick.SetBounds(bounds);
+        foreach (var c in _pinnedCards.Values) if (IsInstanceValid(c)) c.SetBounds(bounds);
         if (_mapControls != null) _mapControls.OffsetRight = -(SideWidth + 12);
         if (_layerPanel != null) _layerPanel.Position = new Vector2(NavWidth + UiTokens.S16, UiTokens.TopBarHeight + 12);
         if (_emptyBanner != null)
