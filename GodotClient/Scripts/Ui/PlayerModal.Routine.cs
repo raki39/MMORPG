@@ -440,14 +440,16 @@ public partial class PlayerModal
         var ringTip = new TipPanel { TooltipText = $"Cansaço\nDéficit|{Hours(deficit)}\nCansaço total com|{Hours(rs.FatigueFullDeficitMinutes)} de déficit\n~Reduz a chance de jogar (até −{rs.FatigueChancePenalty / 10}%), a sessão desejada (até −{rs.FatigueDurationPenalty / 10}%) e a nota da sessão. Acima de {rs.TiredReasonFatigue / 10}%, o dia sem jogo fica como \"cansado\".", MouseFilter = MouseFilterEnum.Stop, SizeFlagsVertical = SizeFlags.ShrinkCenter };
         ringTip.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
         ringTip.AddChild(ring);
-        var facts = Column(6,
+        // Ao lado do anel so o deficit; os outros dados ocupam a largura toda (cabem no card estreito de 1366).
+        var side = Column(6,
             KeyValue("Déficit", Hours(deficit), deficit > 0 ? UiTokens.Warning : UiTokens.TextPrimary),
-            KeyValue("Teto do déficit", Hours(max)),
+            KeyValue("Teto", Hours(max)));
+        side.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        var (bedLabel, bedValue) = BedtimeLabel();
+        var top = Column(8, Row(14, ringTip, side),
             KeyValue("Precisa", $"{Hours(_person.SleepNeedMinutes)} por noite"),
-            KeyValue(BedtimeLabel().Label, BedtimeLabel().Value),
-            KeyValue("Perdido p/ o jogo", detail.SleepCutTotalMinutes == 0 ? "nenhum" : Hours(detail.SleepCutTotalMinutes), detail.SleepCutTotalMinutes > 0 ? UiTokens.Warning : UiTokens.TextPrimary));
-        facts.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-        var top = Row(14, ringTip, facts);
+            KeyValue(bedLabel, bedValue),
+            KeyValue("Perdido para o jogo", detail.SleepCutTotalMinutes == 0 ? "nenhum" : Hours(detail.SleepCutTotalMinutes), detail.SleepCutTotalMinutes > 0 ? UiTokens.Warning : UiTokens.TextPrimary));
         var nights = new List<(int, string, string, IReadOnlyList<(string, Color)>)>();
         foreach (var d in detail.DayPlans.Where(p => p.SleepMinutes > 0))
         {
@@ -639,7 +641,8 @@ public partial class PlayerModal
         sb.SetCornerRadiusAll(3);
         tile.AddThemeStyleboxOverride("panel", sb);
         var col = Column(5);
-        var dayLabel = ThemeFactory.Text(DowPt[d.Dow] + (today ? " · hoje" : ""), UiTokens.FontSmall, today ? UiTokens.Accent : d.FreeDay ? UiTokens.Success : UiTokens.TextPrimary, UiFonts.SemiBold);
+        // Hoje: rotulo e borda dourados (como na Semana tipica); "hoje" fica no tooltip, para o rotulo caber no dia estreito.
+        var dayLabel = ThemeFactory.Text(DowPt[d.Dow], UiTokens.FontSmall, today ? UiTokens.Accent : d.FreeDay ? UiTokens.Success : UiTokens.TextPrimary, UiFonts.SemiBold);
         col.AddChild(dayLabel);
         if (d.Blocks.Count == 0)
         {
@@ -654,10 +657,12 @@ public partial class PlayerModal
             var r = new HBoxContainer();
             r.AddThemeConstantOverride("separation", 5);
             r.AddChild(new Icon(BlockIcon(b.Label, b.Remote), 14, b.Remote ? UiTokens.Info : UiTokens.TextSecondary) { SizeFlagsVertical = SizeFlags.ShrinkCenter });
-            var t = ThemeFactory.Text($"{Clock(b.Start)}–{Clock(b.End)}", UiTokens.FontCaption, UiTokens.TextLabel, UiFonts.Numbers);
-            t.ClipText = true;
-            t.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-            r.AddChild(t);
+            // Entrada e saida em duas linhas ao lado do icone: cabe no dia estreito de 1366 sem cortar (o horario
+            // inteiro fica no tooltip).
+            var times = Column(0,
+                ThemeFactory.Text(Clock(b.Start), UiTokens.FontCaption, UiTokens.TextLabel, UiFonts.Numbers),
+                ThemeFactory.Text(Clock(b.End), UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Numbers));
+            r.AddChild(times);
             col.AddChild(r);
         }
         col.AddChild(new Control { SizeFlagsVertical = SizeFlags.ExpandFill });
@@ -666,11 +671,11 @@ public partial class PlayerModal
         col.AddChild(free);
         var main = d.Windows.Count == 0 ? ((int Start, int End)?)null : d.Windows.OrderByDescending(w => w.End - w.Start).First();
         var win = ThemeFactory.Text(main is { } m ? $"{Clock(m.Start)}–{Clock(m.End)}" + (d.Windows.Count > 1 ? $" +{d.Windows.Count - 1}" : "") : "sem janela", UiTokens.FontCaption, main == null ? UiTokens.Danger : UiTokens.TextSecondary, UiFonts.Numbers);
-        win.ClipText = true;
+        win.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         col.AddChild(win);
         tile.AddChild(col);
         var obligations = d.Blocks.Count == 0 ? "sem obrigações" : string.Join("\n", d.Blocks.Select(b => $"{b.Label}{(b.Remote ? " (remoto)" : "")}|{Clock(b.Start)}–{Clock(b.End)}"));
-        tile.TooltipText = $"{DowLong[d.Dow]}{(d.FreeDay ? " · dia livre" : "")}\n{(d.Blocks.Count == 0 ? "Obrigações|nenhuma" : obligations)}"
+        tile.TooltipText = $"{DowLong[d.Dow]}{(d.FreeDay ? " · dia livre" : "")}{(today ? " · hoje" : "")}\n{(d.Blocks.Count == 0 ? "Obrigações|nenhuma" : obligations)}"
             + (d.CommuteMinutes > 0 ? $"\nDeslocamento|{d.CommuteMinutes} min no dia" : "")
             + $"\nAcorda|{Clock(d.Wake)}" + (d.NightShift ? $"\nSai para o turno|{Clock(d.ShiftDeparture)}\nDorme|{Clock(d.Bed)} (depois do turno)" : $"\nDorme|{Clock(d.Bed)}") + $"\nTempo livre|{Hours(d.FreeMinutes)}"
             + (d.Windows.Count > 0 ? $"\n~Janelas livres: {string.Join(", ", d.Windows.Select(w => $"{Clock(w.Start)}–{Clock(w.End)}"))}" : "\n~Sem janela livre que comporte uma sessão.");

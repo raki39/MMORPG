@@ -26,16 +26,19 @@ public partial class PlayerModal : ModalFrame
         Closed += () => ctx.WatchPerson(0);
         BuildHeader();
         Breadcrumb = $"Jogadores › {View?.Name ?? _person.Name}";
-        AddTab("Visão geral", BuildProfile, live: true);
-        _objectivesTab = TabCount;
-        AddTab("Objetivos", BuildObjectives, live: true);
-        AddTab("Estatísticas", BuildStats, live: true);
-        AddTab("Missões", BuildQuests, live: true);
-        AddTab("Histórico", BuildHistory, live: true);
-        AddTab("Rotina", BuildRoutine, live: true);
-        AddTab("Combate", () => FutureTab("Combate", "M3", "Abates, mortes, saque, rivais e desempenho em PvE e PvP aparecem aqui quando o combate existir na simulação. Nada é inventado antes disso."));
-        AddTab("Inventário", BuildInventory);
-        AddTab("Banco", () => FutureTab("Banco", "M5", "Ouro guardado, depósitos e movimentações aparecem aqui com a economia. Hoje o ouro de missões está definido, mas ainda não é aplicado."));
+        // Abas (D-068, etapa 3): cada uma com o seu assunto; a Visao geral so resume.
+        Tab("Visão geral", BuildProfile, live: true);
+        Tab("Atributos", BuildAttributes, live: true);
+        Tab("Objetivos", BuildObjectives, live: true);
+        Tab("Missões", BuildQuests, live: true);
+        Tab("Progressão", BuildProgress, live: true);
+        Tab("Estatísticas", BuildStats, live: true);
+        Tab("Rotina", BuildRoutine, live: true);
+        Tab("Humor e memória", BuildMood, live: true);
+        Tab("Histórico", BuildHistory, live: true);
+        Tab("Combate", () => FutureTab("Combate", "M3", "Abates, mortes, saque, rivais e desempenho em PvE e PvP aparecem aqui quando o combate existir na simulação. Nada é inventado antes disso."));
+        Tab("Inventário", BuildInventory);
+        Tab("Banco", () => FutureTab("Banco", "M5", "Ouro guardado, depósitos e movimentações aparecem aqui com a economia. Hoje o ouro de missões está definido, mas ainda não é aplicado."));
     }
 
     private CharacterView? View => _ctx.Snapshot().ByPerson is { } a && _person.Id < a.Length ? a[_person.Id] : null;
@@ -258,35 +261,6 @@ public partial class PlayerModal : ModalFrame
         return st;
     }
 
-    // ---------------- Visao geral (D-035) ----------------
-
-    private Control BuildProfile()
-    {
-        var v = View;
-        if (v == null)
-            return Column(12, Grid(12, (Card("Atributos", AttributeGrid(), info: AttrInfo), 6),
-                (Card("Personalidade e traços", TraitsBody(), info: TraitsInfo), 3),
-                (Card("Situação", Wrap("Ainda não criou conta no MMORPG; pode se registrar nos próximos dias do lançamento.")), 3)));
-        var detail = _ctx.Snapshot().Watched is { } d && d.PersonId == _person.Id ? d : null;
-        var st = Server(v);
-        var row1 = Grid(12,
-            (Card("Situação atual", NowBody(v), info: "O que está fazendo e por quê\n~A última decisão mostra os fatores que somaram ou tiraram pontos da opção escolhida."), 3),
-            (Card("Atributos do jogador", Column(16, AttributeGrid(), Highlights()), info: AttrInfo), 6),
-            (Card("Personalidade e traços", TraitsBody(), info: TraitsInfo), 3));
-        var row2 = Grid(12,
-            (Card("Missões", QuestSummary(v), info: "Missões do personagem\n~Detalhes na aba Missões."), 3),
-            (Card("Evolução", EvolutionBody(v, detail, st), info: "Horas jogadas ao atingir cada nível\n~Curva real deste personagem (tempo conectado acumulado)."), 6),
-            (Card("Uso do tempo", TimeUseBody(detail), info: "Divisão do tempo conectado\n~Por tipo de atividade desde o cadastro; o resto é deslocamento."), 3));
-        var row3 = Grid(12,
-            (Card("Zonas frequentadas", ZonesBody(), info: "Onde escolhe jogar\n~Escolhas de atividade por zona registradas desde que o jogo foi aberto. Clique para abrir a zona."), 3),
-            (Card("Progresso e metas", GoalsBody(v, st, detail), info: "Nível, objetivo principal e metas de curto prazo\n~Metas de curto prazo (chegar a um nível, descobrir uma zona, concluir uma missão, praticar uma atividade) influenciam as escolhas sem obrigar. As ambições de longo prazo ficam na aba Objetivos."), 3),
-            (Card("Atividades recentes", RecentBody(), info: "Últimos acontecimentos\n~Clique numa linha para abrir a área, a zona ou a missão. Histórico completo na aba Histórico."), 6));
-        var row4 = Grid(12,
-            (Card("Humor", MoodBody(v, detail), info: "Como a pessoa está se sentindo no jogo (D-038)\n~Cada sessão vira uma nota: gosto pelas atividades, encaixe de nível, lotação, companhia, tédio, risco, progresso contra a expectativa, novidade e conquistas. A satisfação é a média dessas notas; o engajamento muda quanto ela joga; a intenção de continuar decide se fica."), 6),
-            (Card("Memórias marcantes", MemoriesBody(detail), info: "O que ficou na memória (D-038)\n~Conquistas duram mais que frustrações. A impressão de cada lugar atrai ou afasta nas próximas escolhas."), 6));
-        return Column(12, row1, row2, row3, row4);
-    }
-
     // ----- Humor e memoria (D-038/D-039) -----
 
     public static string DriverPt(string key) => key switch
@@ -323,9 +297,12 @@ public partial class PlayerModal : ModalFrame
         _ => "",
     };
 
-    private Control MoodBody(CharacterView v, CharacterDetailView? detail)
+    /// <summary>
+    /// Barras do humor (D-038): satisfacao, frustracao, novidade, engajamento e intencao de continuar. all=false
+    /// so as tres do resumo da Visao geral (satisfacao, engajamento, intencao).
+    /// </summary>
+    private static List<Control> MoodBars(MoodView m, bool all)
     {
-        var m = v.Mood;
         Color Scale(int value, bool higherIsBetter) => (higherIsBetter ? value : 1000 - value) switch
         {
             >= 650 => UiTokens.Success,
@@ -341,44 +318,51 @@ public partial class PlayerModal : ModalFrame
             return t;
         }
         string novelty = m.Novelty >= 0 ? $"{m.Novelty / 10}%" : "saturado";
-        var bars = Column(9,
+        var list = new List<Control>
+        {
             Line("Satisfação", m.Satisfaction, 1000, Scale(m.Satisfaction, true), $"{m.Satisfaction / 10}%",
                 $"Satisfação\nAtual|{m.Satisfaction / 10}%\nÚltima sessão|nota {m.LastScore / 10}\nSessões avaliadas|{m.SessionsRated}\n~Média móvel das notas das sessões; sessões curtas pesam menos."),
-            Line("Frustração", m.Frustration, 1000, Scale(m.Frustration, false), $"{m.Frustration / 10}%",
-                "Frustração\n~Sobe com metas abandonadas, falta do que fazer e sessões ruins; passa com o tempo e com sessões boas. Alta, pode fazer largar a sessão no meio."),
-            Line("Novidade", m.Novelty, 1000, m.Novelty >= 300 ? UiTokens.Info : m.Novelty >= 0 ? UiTokens.Warning : UiTokens.Danger, novelty,
-                "Novidade\n~Gasta com as horas de jogo e renovada por zonas, atividades, níveis e missões novas. Abaixo de zero é saturação: sem atualizações (M7), o jogo cansa."),
-            Line("Engajamento", m.Engagement, 1000, Scale(m.Engagement, true), $"{m.Engagement / 10}%",
-                "Engajamento\n~Vontade de jogar: satisfação, calma e novidade. Engajado joga mais dias que a rotina; desanimado, menos."),
-            Line("Intenção de continuar", m.ReturnIntention, 1000, Scale(m.ReturnIntention, true), $"{m.ReturnIntention / 10}%",
-                "Intenção de continuar\n~Satisfação menos frustração; lealdade e o nível já investido seguram. Muito baixa, a pessoa pode desistir."));
-        var col = Column(12, bars);
-        col.AddChild(KeyValue("Progresso esperado", $"{m.Expectation / 10}% da referência · última sessão {m.LastRatio / 10}%", UiTokens.TextSecondary));
-
-        var drivers = detail?.Drivers ?? new Dictionary<string, int>();
-        var good = drivers.Where(kv => kv.Value > 0).OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.Ordinal).Take(3).ToList();
-        var bad = drivers.Where(kv => kv.Value < 0).OrderBy(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.Ordinal).Take(3).ToList();
-        Control List(string title, List<KeyValuePair<string, int>> items, Color color, string icon)
+        };
+        if (all)
         {
-            var c = Column(6, Section(title));
-            if (items.Count == 0) c.AddChild(Wrap("Nada se destaca ainda.", UiTokens.FontSmall, UiTokens.TextSecondary));
-            foreach (var kv in items)
-            {
-                var t = new TipPanel { TooltipText = $"{DriverPt(kv.Key)}\n~{DriverHint(kv.Key)}", MouseFilter = MouseFilterEnum.Stop };
-                t.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
-                var r = new HBoxContainer();
-                r.AddThemeConstantOverride("separation", 8);
-                r.AddChild(new Icon(icon, 14, color));
-                r.AddChild(ThemeFactory.Text(DriverPt(kv.Key), UiTokens.FontSmall, UiTokens.TextLabel, UiFonts.Medium));
-                t.AddChild(r);
-                c.AddChild(t);
-            }
-            c.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-            return c;
+            list.Add(Line("Frustração", m.Frustration, 1000, Scale(m.Frustration, false), $"{m.Frustration / 10}%",
+                "Frustração\n~Sobe com metas abandonadas, falta do que fazer e sessões ruins; passa com o tempo e com sessões boas. Alta, pode fazer largar a sessão no meio."));
+            list.Add(Line("Novidade", m.Novelty, 1000, m.Novelty >= 300 ? UiTokens.Info : m.Novelty >= 0 ? UiTokens.Warning : UiTokens.Danger, novelty,
+                "Novidade\n~Gasta com as horas de jogo e renovada por zonas, atividades, níveis e missões novas. Abaixo de zero é saturação: sem atualizações (M7), o jogo cansa."));
         }
-        var lists = Row(24, List("O que agrada", good, UiTokens.Success, "trending-up"), List("O que incomoda", bad, UiTokens.Danger, "trending-down"));
-        col.AddChild(lists);
+        list.Add(Line("Engajamento", m.Engagement, 1000, Scale(m.Engagement, true), $"{m.Engagement / 10}%",
+            "Engajamento\n~Vontade de jogar: satisfação, calma e novidade. Engajado joga mais dias que a rotina; desanimado, menos."));
+        list.Add(Line("Intenção de continuar", m.ReturnIntention, 1000, Scale(m.ReturnIntention, true), $"{m.ReturnIntention / 10}%",
+            "Intenção de continuar\n~Satisfação menos frustração; lealdade e o nível já investido seguram. Muito baixa, a pessoa pode desistir."));
+        return list;
+    }
+
+    /// <summary>Humor completo (aba Humor e memoria): as cinco barras, a nota da ultima sessao e o progresso esperado.</summary>
+    private Control MoodBody(CharacterView v)
+    {
+        var m = v.Mood;
+        var col = Column(12, Column(9, MoodBars(m, all: true).ToArray()), Divider());
+        col.AddChild(KeyValue("Última sessão", m.SessionsRated == 0 ? "sem nota ainda" : $"nota {m.LastScore / 10}"));
+        col.AddChild(KeyValue("Sessões avaliadas", PtBr.Int(m.SessionsRated)));
+        col.AddChild(KeyValue("Progresso esperado", $"{m.Expectation / 10}% da referência · última sessão {m.LastRatio / 10}%", UiTokens.TextSecondary));
         return col;
+    }
+
+    /// <summary>Linha de um fator do humor: icone de subida ou queda e o nome; explicacao no tooltip.</summary>
+    private static Control DriverLine(string key, int value)
+    {
+        bool good = value > 0;
+        var t = new TipPanel { TooltipText = $"{DriverPt(key)}|{(good ? "agrada" : "incomoda")}\n~{DriverHint(key)}", MouseFilter = MouseFilterEnum.Stop };
+        t.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
+        var r = new HBoxContainer();
+        r.AddThemeConstantOverride("separation", 8);
+        r.AddChild(new Icon(good ? "trending-up" : "trending-down", 14, good ? UiTokens.Success : UiTokens.Danger));
+        var l = ThemeFactory.Text(DriverPt(key), UiTokens.FontSmall, UiTokens.TextLabel, UiFonts.Medium);
+        l.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        l.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+        r.AddChild(l);
+        t.AddChild(r);
+        return t;
     }
 
     private string MemoryText(MemoryView m)
@@ -427,7 +411,7 @@ public partial class PlayerModal : ModalFrame
         var mems = detail?.Memories ?? Array.Empty<MemoryView>();
         if (mems.Count == 0)
             col.AddChild(Wrap(detail == null ? "Carregando…" : "Nada marcante ainda: as primeiras conquistas e frustrações aparecem aqui.", UiTokens.FontSmall, UiTokens.TextSecondary));
-        foreach (var m in mems.Take(6))
+        foreach (var m in mems)
         {
             bool goodMem = m.Valence >= 0;
             var t = new TipPanel
@@ -440,45 +424,41 @@ public partial class PlayerModal : ModalFrame
             t.AddChild(GoalRow(MemoryIcon(m.Kind), MemoryText(m), m.Intensity / 1000f, goodMem ? UiTokens.Success : UiTokens.Danger));
             col.AddChild(t);
         }
-        var imps = detail?.Impressions ?? Array.Empty<(string, int)>();
-        if (imps.Count > 0)
-        {
-            col.AddChild(Section("Lugares que marcaram"));
-            foreach (var (key, value) in imps)
-            {
-                var p = key.Split('/');
-                if (p.Length != 2) continue;
-                string name = $"{_ctx.ActivityName(p[0], p[1])} · {_ctx.PlaceName(p[0], p[1])}";
-                var t = new TipPanel { TooltipText = $"{name}\nImpressão|{(value > 0 ? "+" : "")}{value / 10}%\n~Pesa nas próximas escolhas: boa atrai, ruim afasta.", MouseFilter = MouseFilterEnum.Stop };
-                t.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
-                var r = new HBoxContainer();
-                r.AddThemeConstantOverride("separation", 12);
-                var nl = ThemeFactory.Text(name, UiTokens.FontSmall, UiTokens.TextLabel);
-                nl.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-                nl.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;   // nome longo nao alarga o card
-                r.AddChild(nl);
-                r.AddChild(ThemeFactory.Text($"{(value > 0 ? "+" : "")}{value / 10}%", UiTokens.FontBody, value > 0 ? UiTokens.Success : UiTokens.Danger, UiFonts.Numbers));
-                t.AddChild(r);
-                col.AddChild(t);
-            }
-        }
         return col;
     }
 
-    // ---------------- Estatisticas (D-035) ----------------
-
-    private Control BuildStats()
+    /// <summary>Lugares que marcaram: as impressoes mais fortes, boas e ruins, com o tipo da atividade.</summary>
+    private Control PlacesBody(CharacterDetailView? detail)
     {
-        var v = View;
-        if (v == null) return Wrap("Ainda sem personagem.");
-        var st = Server(v);
-        var row1 = Grid(12,
-            (Card("Comparação com o servidor", CompareBody(v, st), info: "Este personagem contra a mediana do servidor\n~A barra mostra a diferença percentual; verde acima, vermelho abaixo."), 6),
-            (Card("Classificação", RankBody(st), info: "Posição no servidor\n~Ordem por nível e XP. XP por hora considera só quem jogou ao menos 1 hora."), 3),
-            (Card("XP por fonte", XpSourceBody(v), info: "De onde vem a experiência\n~Atividades no mundo contra entregas de missões."), 3));
-        var row2 = Grid(12,
-            (Card("Níveis no servidor", ServerLevelsBody(v), info: "Distribuição de níveis dos personagens\n~Dourado: o nível deste personagem."), 12));
-        return Column(12, row1, row2);
+        var col = Column(10);
+        var imps = detail?.Impressions ?? Array.Empty<(string, int)>();
+        if (imps.Count == 0)
+            col.AddChild(Wrap(detail == null ? "Carregando…" : "Nenhum lugar marcou ainda: impressões fortes, boas ou ruins, aparecem aqui.", UiTokens.FontSmall, UiTokens.TextSecondary));
+        foreach (var (key, value) in imps)
+        {
+            var p = key.Split('/');
+            if (p.Length != 2) continue;
+            string name = $"{_ctx.ActivityName(p[0], p[1])} · {_ctx.PlaceName(p[0], p[1])}";
+            string type = ActivityTypeOf(p[0], p[1]);
+            var t = new TipPanel { TooltipText = $"{name}\nImpressão|{(value > 0 ? "+" : "")}{value / 10}%\n~Pesa nas próximas escolhas: boa atrai, ruim afasta.", MouseFilter = MouseFilterEnum.Stop };
+            t.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
+            var r = new HBoxContainer();
+            r.AddThemeConstantOverride("separation", 10);
+            r.AddChild(new Icon(TypeIcon(type), 16, ActivityPalette.Color(type)) { SizeFlagsVertical = SizeFlags.ShrinkCenter });
+            var info = Column(4);
+            var top = new HBoxContainer();
+            var nl = ThemeFactory.Text(name, UiTokens.FontSmall, UiTokens.TextLabel, UiFonts.Medium);
+            nl.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+            nl.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;   // nome longo nao alarga o card
+            top.AddChild(nl);
+            top.AddChild(ThemeFactory.Text($"{(value > 0 ? "+" : "")}{value / 10}%", UiTokens.FontSmall, value > 0 ? UiTokens.Success : UiTokens.Danger, UiFonts.Numbers));
+            info.AddChild(top);
+            info.AddChild(new DivergingTrack(value / 1000f, value > 0 ? UiTokens.Success : UiTokens.Danger) { CustomMinimumSize = new Vector2(0, 10) });
+            r.AddChild(info);
+            t.AddChild(r);
+            col.AddChild(t);
+        }
+        return col;
     }
 
     // ----- Personalidade principal (cabecalho e progresso) -----
@@ -504,16 +484,17 @@ public partial class PlayerModal : ModalFrame
     public static string CurrentPersonality(ClientContext ctx, int personId) =>
         ctx.Snapshot().ByPerson[personId]?.PersonalityId is { Length: > 0 } id ? id : ctx.Persons[personId - 1].PersonalityAtCreation;
 
-    // ----- Progresso e metas de curto prazo -----
+    // ----- Nivel e metas de curto prazo -----
 
-    private Control GoalsBody(CharacterView v, ServerStats st, CharacterDetailView? detail)
+    /// <summary>Anel do progresso no nivel e os dados ao lado (nivel, XP, taxa da faixa, previsao do proximo).</summary>
+    private Control LevelBlock(CharacterView v, ServerStats st, int ring)
     {
         var prog = _ctx.Content.Progression;
         long need = ProgressionRules.XpToNextLevel(prog, v.Level);
         bool max = v.Level >= prog.LevelCap;
-        var ring = new RingGauge
+        var gauge = new RingGauge
         {
-            CustomMinimumSize = new Vector2(88, 88), SizeFlagsVertical = SizeFlags.ShrinkCenter,
+            CustomMinimumSize = new Vector2(ring, ring), SizeFlagsVertical = SizeFlags.ShrinkCenter,
             Value = max ? 1 : v.Experience / (float)Math.Max(1, need), Color = UiTokens.Success,
             Center = max ? "máx." : $"{v.Experience * 100 / Math.Max(1, need)}%", Caption = max ? "" : $"do Nv {v.Level + 1}",
         };
@@ -525,43 +506,35 @@ public partial class PlayerModal : ModalFrame
             KeyValue("Taxa da faixa", $"×{stage}"),
             KeyValue("Próximo nível", eta));
         data.SizeFlagsVertical = SizeFlags.ShrinkCenter;
-        var col = Column(12, Row(14, ring, data));
+        return Row(14, gauge, data);
+    }
 
-        var (picon, plabel, ptext) = MainPersonality();
-        col.AddChild(Section("Personalidade"));
-        var p = new HBoxContainer();
-        p.AddThemeConstantOverride("separation", 10);
-        p.AddChild(new Icon(picon, 18, UiTokens.AccentSoft));
-        p.AddChild(Column(1, ThemeFactory.Text(plabel, UiTokens.FontBody, UiTokens.TextPrimary, UiFonts.SemiBold), Wrap(ptext, UiTokens.FontSmall, UiTokens.TextSecondary)));
-        col.AddChild(p);
-        col.AddChild(Wrap($"Perfil {ProfileName}: {ProfileHint(_person.ProfileId)} Preferências: {PreferenceInfo.Summary(_person.Preferences)}.", UiTokens.FontSmall, UiTokens.TextSecondary));
-
-        // Objetivo principal (O1): uma linha com acesso a aba Objetivos.
-        if (ObjectiveSummary(detail) is { } objective)
+    /// <summary>
+    /// Meta de curto prazo: linha com progresso; o motivo, o comprometimento, a data e o que ela ajuda ficam no
+    /// tooltip. full=true (aba Objetivos) mostra tambem o motivo e o vinculo embaixo.
+    /// </summary>
+    private Control GoalItem(CharacterView v, GoalView g, bool full)
+    {
+        var (icon, text, progress) = GoalText(v, g);
+        var motive = AttributeInfo.Name(g.MotiveKey);
+        var tip = new TipPanel
         {
-            col.AddChild(Section("Objetivo principal"));
-            col.AddChild(objective);
-        }
-        col.AddChild(Section("Metas", ThemeFactory.Text($"{N(v.GoalsCompleted, "concluída", "concluídas")} · {N(v.GoalsAbandoned, "abandonada", "abandonadas")}", UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Numbers)));
-        if (v.Goals.Count == 0)
-            col.AddChild(Wrap("Sem meta agora. Nem todo jogador tem uma o tempo todo; ao conectar, pode adotar uma conforme as preferências, a competitividade e a personalidade.", UiTokens.FontSmall, UiTokens.TextSecondary));
-        foreach (var g in v.Goals)
+            TooltipText = $"{text}\nMotivo|{motive} {UiTokens.To20(g.MotiveValue)}\nComprometimento|{g.Commitment / 10}%\nDesde|{PtBr.ShortDate(_ctx.Calendar.ToDateTime(g.SetTick))}"
+                + (g.Links.Count > 0 ? $"\nAjuda|{LinksText(g.Links)}" : "\nAjuda|nenhum objetivo (meta independente)")
+                + "\n~Meta de curto prazo: influencia as escolhas sem obrigar; vira um fator a mais na decisão, com o peso do comprometimento (paciência e lealdade; mais alto quando a meta serve a um objetivo). Sem progresso por muitas horas de jogo, é abandonada (os pacientes insistem mais).",
+            MouseFilter = MouseFilterEnum.Stop,
+        };
+        tip.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
+        var col = Column(4, GoalRow(icon, text, progress, UiTokens.Accent));
+        if (full)
         {
-            var (icon, text, progress) = GoalText(v, g);
-            var row = GoalRow(icon, text, progress, UiTokens.Accent);
-            var motive = AttributeInfo.Name(g.MotiveKey);
-            var tip = new TipPanel
-            {
-                TooltipText = $"{text}\nMotivo|{motive} {UiTokens.To20(g.MotiveValue)}\nComprometimento|{g.Commitment / 10}%\nDesde|{PtBr.ShortDate(_ctx.Calendar.ToDateTime(g.SetTick))}"
-                    + (g.Links.Count > 0 ? $"\nAjuda|{LinksText(g.Links)}" : "\nAjuda|nenhum objetivo (meta independente)")
-                    + "\n~Meta de curto prazo: influencia as escolhas sem obrigar; vira um fator a mais na decisão, com o peso do comprometimento (paciência e lealdade; mais alto quando a meta serve a um objetivo). Sem progresso por muitas horas de jogo, é abandonada (os pacientes insistem mais).",
-                MouseFilter = MouseFilterEnum.Stop,
-            };
-            tip.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
-            tip.AddChild(Column(3, row, ThemeFactory.Text($"Motivo: {motive} · comprometimento {g.Commitment / 10}%", UiTokens.FontCaption, UiTokens.TextSecondary)));
-            col.AddChild(tip);
+            col.AddChild(ThemeFactory.Text($"Motivo: {motive} · comprometimento {g.Commitment / 10}%", UiTokens.FontCaption, UiTokens.TextSecondary));
+            col.AddChild(g.Links.Count == 0
+                ? Hint("circle", "Meta independente: não está ligada a nenhum objetivo", UiTokens.TextSecondary)
+                : Hint("link", "Ajuda: " + LinksText(g.Links), UiTokens.AccentSoft));
         }
-        return col;
+        tip.AddChild(col);
+        return tip;
     }
 
     /// <summary>Icone, texto e progresso (0–1) de uma meta de curto prazo.</summary>
@@ -628,7 +601,6 @@ public partial class PlayerModal : ModalFrame
 
         // Tracos atuais (P4d: podem mudar): positivos primeiro, na ordem em que entraram.
         var states = View?.Quirks ?? _person.Quirks;
-        var quirkHistory = View?.QuirkHistory ?? Array.Empty<QuirkChange>();
         var quirks = states.Select(q => c.Quirks.TryGetValue(q.Id, out var d) ? d : null).Where(d => d != null).Select(d => d!)
             .OrderBy(d => TraitInfo.IsPositive(d) ? 0 : 1).ToList();
         int pos = quirks.Count(TraitInfo.IsPositive), neg = quirks.Count - pos;
@@ -648,10 +620,7 @@ public partial class PlayerModal : ModalFrame
             col.AddChild(TraitLine(new TraitBadge(TraitInfo.QuirkIcon(q), color, 30, pending: !TraitInfo.EffectActive(c, q)),
                 q.Name, (TraitInfo.IsPositive(q) ? "+" : "−", color), TraitInfo.Tooltip(c, q, state, Date)));
         }
-        // Traits perdidas (P4d): ficam no historico.
-        var lost = quirkHistory.Where(h => h.Change == "lost" && !states.Any(x => x.Id == h.Id)).Select(h => h.Id).Distinct().ToList();
-        if (lost.Count > 0)
-            col.AddChild(Wrap("Perdeu: " + string.Join(", ", lost.Select(id => c.Quirks.TryGetValue(id, out var d) ? d.Name : id)) + ".", UiTokens.FontCaption, UiTokens.TextSecondary));
+        // Tracos ganhos e perdidos (P4d), com data e motivo: card Mudancas desde o cadastro.
         return col;
     }
 
@@ -860,15 +829,18 @@ public partial class PlayerModal : ModalFrame
     {
         long total = v.XpFromQuests + v.XpFromActivities;
         if (total == 0) return Wrap("Ainda sem XP registrado.");
+        // Rosca e legenda lado a lado, como Uso do tempo.
         var donut = new DonutChart
         {
-            CustomMinimumSize = new Vector2(124, 124), SizeFlagsHorizontal = SizeFlags.ShrinkCenter,
+            CustomMinimumSize = new Vector2(124, 124), SizeFlagsVertical = SizeFlags.ShrinkCenter,
             Slices = new[] { ((float)v.XpFromActivities, UiTokens.Info), ((float)v.XpFromQuests, UiTokens.Accent) },
             Center = PtBr.Int(total), Caption = "XP total",
         };
-        return Column(14, donut,
-            KeyValue("Atividades no mundo", $"{PtBr.Int(v.XpFromActivities)} · {v.XpFromActivities * 100 / total}%", UiTokens.Info),
+        var legend = Column(10,
+            KeyValue("Atividades", $"{PtBr.Int(v.XpFromActivities)} · {v.XpFromActivities * 100 / total}%", UiTokens.Info),
             KeyValue("Missões", $"{PtBr.Int(v.XpFromQuests)} · {v.XpFromQuests * 100 / total}%", UiTokens.AccentSoft));
+        legend.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        return Row(18, donut, legend);
     }
 
     private Control ServerLevelsBody(CharacterView v)
@@ -876,12 +848,12 @@ public partial class PlayerModal : ModalFrame
         var all = _ctx.Snapshot().ByPerson.Where(c => c != null).Select(c => c!.Level).ToList();
         int hi = Math.Max(v.Level, all.Count == 0 ? 1 : all.Max());
         var values = Enumerable.Range(1, hi).Select(l => (float)all.Count(x => x == l)).ToList();
-        return new ColumnChart
+        return Grow(new ColumnChart
         {
-            CustomMinimumSize = new Vector2(0, 200), CountScale = true, ShowAverage = false, Unit = " personagens",
+            CustomMinimumSize = new Vector2(0, 150), CountScale = true, ShowAverage = false, Unit = " personagens",
             Values = values, Labels = Enumerable.Range(1, hi).Select(l => $"Nv {l}").ToList(),
             ColorAt = i => i + 1 == v.Level ? UiTokens.Accent : UiTokens.Info,
-        };
+        });
     }
 
     private const string AttrInfo = "Atributos do jogador (a pessoa, não o personagem), de 1 a 20\n~Mudam devagar com o que a pessoa vive no jogo: a seta mostra a evolução desde o início. Nas capacidades, a parte clara da barra é o potencial, que depende do talento.\n~Passe o mouse em cada um para ver o que influencia e o que o faz mudar.";
@@ -1056,30 +1028,16 @@ public partial class PlayerModal : ModalFrame
 
     // ----- Evolucao -----
 
-    private Control EvolutionBody(CharacterView v, CharacterDetailView? d, ServerStats st)
+    /// <summary>Curva real do personagem: horas jogadas ao atingir cada nivel (cresce com o card).</summary>
+    private Control EvolutionBody(CharacterDetailView? d)
     {
-        var prog = _ctx.Content.Progression;
-        long need = ProgressionRules.XpToNextLevel(prog, v.Level);
-        bool max = v.Level >= prog.LevelCap;
-        Control chart;
-        if (d == null || d.LevelTicks.Count == 0) chart = Wrap(d == null ? "Carregando…" : "Ainda não subiu de nível.");
-        else chart = new LineChart
+        if (d == null || d.LevelTicks.Count == 0) return Wrap(d == null ? "Carregando…" : "Ainda não subiu de nível.");
+        return Grow(new LineChart
         {
-            CustomMinimumSize = new Vector2(0, 170), Unit = " h",
+            CustomMinimumSize = new Vector2(0, 150), Unit = " h", SizeFlagsHorizontal = SizeFlags.ExpandFill,
             XLabels = Enumerable.Range(2, d.LevelTicks.Count).Select(l => $"Nv {l}").ToList(),
             Series = new[] { new ChartSeries { Name = "Horas até o nível", Color = UiTokens.Info, Values = d.LevelTicks.Select(t => (float)Hours(t)).ToList() } },
-        };
-        chart.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-        long played = d?.PlayedTicks ?? v.PlayedTicks;
-        long atLevel = d != null && d.LevelTicks.Count > 0 ? played - d.LevelTicks[^1] : played;
-        var side = Column(10,
-            Column(0, ThemeFactory.Text(st.MyXpH < 0 ? "–" : PtBr.Int((long)st.MyXpH), 20, UiTokens.TextPrimary, UiFonts.Numbers), ThemeFactory.Text("XP por hora", UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Medium)),
-            Column(0, ThemeFactory.Text($"{PtBr.Decimal(Hours(atLevel))} h", 20, UiTokens.TextPrimary, UiFonts.Numbers), ThemeFactory.Text($"no nível {v.Level}", UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Medium)),
-            Column(0, ThemeFactory.Text($"{PtBr.Decimal(Hours(played))} h", 20, UiTokens.TextPrimary, UiFonts.Numbers), ThemeFactory.Text("jogadas no total", UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Medium)));
-        side.CustomMinimumSize = new Vector2(96, 0);
-        side.SizeFlagsHorizontal = SizeFlags.ShrinkEnd;
-        side.SizeFlagsVertical = SizeFlags.ShrinkCenter;
-        return Row(16, chart, new ColorRect { Color = UiTokens.Divider, CustomMinimumSize = new Vector2(1, 0) }, side);
+        });
     }
 
     // ----- Classificacao -----
@@ -1157,7 +1115,7 @@ public partial class PlayerModal : ModalFrame
             MiniStat(PtBr.Int(v.CompletedQuests.Sum(c => c.Times)), "Entregues"),
             MiniStat(xpTotal == 0 ? "–" : $"{v.XpFromQuests * 100 / xpTotal}%", "Do XP"));
         var col = Column(10, nums, Divider());
-        foreach (var p in v.ActiveQuests.Take(4))
+        foreach (var p in v.ActiveQuests)
         {
             if (!_ctx.Content.Quests.TryGetValue(p.QuestId, out var q)) continue;
             bool ready = p.StepIndex >= q.Steps.Count;
@@ -1187,66 +1145,74 @@ public partial class PlayerModal : ModalFrame
 
     private static Control MiniStat(string value, string caption)
     {
-        var c = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        var c = new VBoxContainer();
         c.AddThemeConstantOverride("separation", 0);
         c.AddChild(ThemeFactory.Text(value, 20, UiTokens.TextPrimary, UiFonts.Numbers));
-        c.AddChild(ThemeFactory.Text(caption, UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Medium));
-        return c;
+        // Legenda longa quebra a linha em vez de invadir a vizinha (cards estreitos em 1366).
+        var cap = ThemeFactory.Text(caption, UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Medium);
+        cap.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        c.AddChild(cap);
+        var m = new MarginContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        m.AddThemeConstantOverride("margin_right", 8);
+        m.AddChild(c);
+        return m;
     }
 
     // ----- Atributos e tracos -----
 
     private static Color AttrTier(int v20) => v20 >= 18 ? UiTokens.Exceptional : v20 >= 14 ? UiTokens.Success : v20 >= 9 ? new Color("#8B94A1") : v20 >= 6 ? new Color("#4E5661") : UiTokens.Danger;
 
-    private Control AttributeGrid()
+    /// <summary>Os 19 atributos do jogador, nos quatro grupos da ficha.</summary>
+    private static readonly (string Title, string[] Keys)[] AttrGroups =
+    {
+        ("Especialidade", new[] { "pve", "pvp", "trade", "exploration", "socializing" }),
+        ("Personalidade", new[] { "sociability", "aggressiveness", "patience", "loyalty", "riskAversion", "variety" }),
+        ("Capacidade", new[] { "mechanicalSkill", "gameKnowledge", "coordination" }),
+        ("Conduta", new[] { "competitiveness", "cheatPropensity", "opportunism" }),
+    };
+
+    /// <summary>Um atributo: nome, seta de evolucao desde o inicio, valor 1–20 e barra (com o potencial nas capacidades).</summary>
+    private Control AttributeCell(string key)
     {
         var t = _person.Traits;
         var b0 = _person.BaseTraits;
-        Control Group(string title, string[] keys)
-        {
-            var col = Column(10);
-            col.AddChild(Section(title));
-            foreach (var key in keys)
-            {
-                var info = AttributeInfo.ByKey[key];
-                int value = t.Get(key), baseValue = b0.Get(key);
-                int v20 = UiTokens.To20(value), base20 = UiTokens.To20(baseValue);
-                int cap = Simulation.Core.Behavior.TraitDynamics.CeilingOf(_ctx.Content.Dynamics, b0, t.Talent, key);
-                int cap20 = UiTokens.To20(cap);
-                var valueColor = v20 >= 14 ? AttrTier(v20) : v20 <= 5 ? UiTokens.Danger : UiTokens.TextPrimary;
-                string tip = $"{info.Name}|{v20} / 20|#{valueColor.ToHtml(false)}\n^{AttributeInfo.GroupOf(key)}"
-                    + (info.Skill ? $"\nPotencial|{cap20} / 20 · talento {AttributeInfo.TalentTier(t.Talent).ToLowerInvariant()}" : "")
-                    + $"\n#O que afeta\n{AttributeInfo.Bullets(info.Influences)}\n#Como muda\n{AttributeInfo.Bullets(info.Changes)}";
-                var cell = new HoverTip(tip);
-                var c = Column(5);
-                var r = new HBoxContainer();
-                r.AddThemeConstantOverride("separation", 4);
-                var l = ThemeFactory.Text(info.Name, UiTokens.FontBody, UiTokens.TextLabel, UiFonts.Medium);
-                l.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-                r.AddChild(l);
-                // Seta de evolucao em relacao ao inicio (como nos jogos de gestao esportiva).
-                if (v20 != base20)
-                    r.AddChild(ThemeFactory.Text(v20 > base20 ? "▲" : "▼", 9, v20 > base20 ? UiTokens.Success : UiTokens.Danger, UiFonts.Numbers));
-                r.AddChild(ThemeFactory.Text(v20.ToString(), UiTokens.FontBody, v20 >= 14 ? AttrTier(v20) : v20 <= 5 ? UiTokens.Danger : UiTokens.TextPrimary, UiFonts.Numbers));
-                c.AddChild(r);
-                c.AddChild(new PotentialBar(v20 / 20f, info.Skill ? cap20 / 20f : 0, AttrTier(v20)) { CustomMinimumSize = new Vector2(0, 3) });
-                cell.AddChild(c);
-                col.AddChild(cell);
-            }
-            return col;
-        }
+        var info = AttributeInfo.ByKey[key];
+        int value = t.Get(key), baseValue = b0.Get(key);
+        int v20 = UiTokens.To20(value), base20 = UiTokens.To20(baseValue);
+        int cap = Simulation.Core.Behavior.TraitDynamics.CeilingOf(_ctx.Content.Dynamics, b0, t.Talent, key);
+        int cap20 = UiTokens.To20(cap);
+        var valueColor = v20 >= 14 ? AttrTier(v20) : v20 <= 5 ? UiTokens.Danger : UiTokens.TextPrimary;
+        string tip = $"{info.Name}|{v20} / 20|#{valueColor.ToHtml(false)}\n^{AttributeInfo.GroupOf(key)}"
+            + (v20 != base20 ? $"\nNo cadastro|{base20} / 20" : "")
+            + (info.Skill ? $"\nPotencial|{cap20} / 20 · talento {AttributeInfo.TalentTier(t.Talent).ToLowerInvariant()}" : "")
+            + $"\n#O que afeta\n{AttributeInfo.Bullets(info.Influences)}\n#Como muda\n{AttributeInfo.Bullets(info.Changes)}";
+        var cell = new HoverTip(tip);
+        var c = Column(5);
+        var r = new HBoxContainer();
+        r.AddThemeConstantOverride("separation", 4);
+        var l = ThemeFactory.Text(info.Name, UiTokens.FontBody, UiTokens.TextLabel, UiFonts.Medium);
+        l.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        l.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+        r.AddChild(l);
+        // Seta de evolucao em relacao ao inicio (como nos jogos de gestao esportiva).
+        if (v20 != base20)
+            r.AddChild(ThemeFactory.Text(v20 > base20 ? "▲" : "▼", 9, v20 > base20 ? UiTokens.Success : UiTokens.Danger, UiFonts.Numbers));
+        r.AddChild(ThemeFactory.Text(v20.ToString(), UiTokens.FontBody, valueColor, UiFonts.Numbers));
+        c.AddChild(r);
+        c.AddChild(new PotentialBar(v20 / 20f, info.Skill ? cap20 / 20f : 0, AttrTier(v20)) { CustomMinimumSize = new Vector2(0, 3) });
+        cell.AddChild(c);
+        return cell;
+    }
+
+    private Control AttributeGrid()
+    {
         var row = new HBoxContainer();
         row.AddThemeConstantOverride("separation", 24);
-        foreach (var g in new[]
+        foreach (var (title, keys) in AttrGroups)
         {
-            Group("Especialidade", new[] { "pve", "pvp", "trade", "exploration", "socializing" }),
-            Group("Personalidade", new[] { "sociability", "aggressiveness", "patience", "loyalty", "riskAversion", "variety" }),
-            Group("Capacidade", new[] { "mechanicalSkill", "gameKnowledge", "coordination" }),
-            Group("Conduta", new[] { "competitiveness", "cheatPropensity", "opportunism" }),
-        })
-        {
-            g.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-            row.AddChild(g);
+            var col = Column(10, Section(title));
+            foreach (var key in keys) col.AddChild(AttributeCell(key));
+            row.AddChild(col);
         }
         return row;
     }
@@ -1356,12 +1322,12 @@ public partial class PlayerModal : ModalFrame
 
     // ----- Atividades recentes -----
 
-    private Control RecentBody()
+    private Control RecentBody(Func<SimEvent, bool>? filter = null, int take = 15, string empty = "Nada desde que o jogo foi aberto.")
     {
         var col = Column(2);
-        var events = _ctx.PersonHistory(_person.Id);
-        if (events.Count == 0) { col.AddChild(Wrap("Nada desde que o jogo foi aberto.")); return col; }
-        foreach (var e in events.Take(9)) col.AddChild(RecentRow(e));
+        var events = _ctx.PersonHistory(_person.Id).Where(e => filter == null || filter(e)).Take(take).ToList();
+        if (events.Count == 0) { col.AddChild(Wrap(empty)); return col; }
+        foreach (var e in events) col.AddChild(RecentRow(e));
         return col;
     }
 
@@ -1408,6 +1374,9 @@ public partial class PlayerModal : ModalFrame
             case "quest_accepted": icon = "scroll-text"; { string q = e.Detail ?? ""; go = () => _ctx.OpenQuest(q); } break;
             case "quest_step_completed": icon = "circle-check"; { string q = (e.Detail ?? "").Split('#')[0]; go = () => _ctx.OpenQuest(q); } break;
             case "quest_completed": icon = "medal"; { string q = e.Detail ?? ""; go = () => _ctx.OpenQuest(q); } break;
+            case "quest_expired": icon = "hourglass"; { string q = e.Detail ?? ""; go = () => _ctx.OpenQuest(q); } break;
+            case "quest_dropped": icon = "circle-x"; { string q = e.Detail ?? ""; go = () => _ctx.OpenQuest(q); } break;
+            case "board_visit_empty": icon = "signpost"; break;
         }
         var b = HoverRow(go ?? (() => { }), go != null ? "Clique para abrir" : "");
         if (go == null) b.MouseDefaultCursorShape = CursorShape.Arrow;
@@ -1495,73 +1464,6 @@ public partial class PlayerModal : ModalFrame
         _ => "Pequena aleatoriedade reproduzível.",
     };
 
-    // ---------------- Historico (tabela) ----------------
-
-    // ---------------- Missoes (D-031) ----------------
-
-    private Control BuildQuests()
-    {
-        var v = View;
-        if (v == null) return ThemeFactory.Text("Ainda sem personagem.", UiTokens.FontBody, UiTokens.TextSecondary);
-        long xpTotal = v.XpFromQuests + v.XpFromActivities;
-        var stats = Row(10,
-            Stat(v.ActiveQuests.Count.ToString(), $"ativas (máx. {_ctx.Content.QuestSettings.MaxActivePerCharacter})", UiTokens.Info),
-            Stat(PtBr.Int(v.CompletedQuests.Sum(c => c.Times)), "entregas", UiTokens.Success),
-            Stat(PtBr.Int(v.CompletedQuests.Count(c => _ctx.Content.Quests.TryGetValue(c.QuestId, out var q) && q.Category == QuestCategories.Main)), "principais concluídas", UiTokens.Accent),
-            Stat(xpTotal == 0 ? "–" : $"{v.XpFromQuests * 100 / xpTotal}%", "do XP veio de quests", UiTokens.AccentSoft));
-
-        var active = Column(8);
-        if (v.ActiveQuests.Count == 0)
-            active.AddChild(ThemeFactory.Text("Nenhuma missão em andamento.", UiTokens.FontBody, UiTokens.TextSecondary));
-        foreach (var p in v.ActiveQuests)
-        {
-            if (!_ctx.Content.Quests.TryGetValue(p.QuestId, out var q)) continue;
-            bool ready = p.StepIndex >= q.Steps.Count;
-            string stepText = ready ? "Pronta para entregar no quadro" : q.Steps[p.StepIndex].Text;
-            float max = ready ? 1 : q.Steps[p.StepIndex].Minutes;
-            float val = ready ? 1 : p.StepMinutes;
-            string qid = q.Id;
-            var line = Column(4,
-                Action($"{QuestModal.CategoryName(q.Category)} · {q.Name}", "Abre a ficha da missão", () => { _ctx.OpenQuest(qid); }),
-                Bar($"Etapa {Math.Min(p.StepIndex + 1, q.Steps.Count + 1)}/{q.Steps.Count + 1}", val, max, QuestModal.CategoryColor(q.Category),
-                    ready ? "pronta" : $"{p.StepMinutes}/{q.Steps[p.StepIndex].Minutes} min", 110),
-                ThemeFactory.Text(stepText, UiTokens.FontSmall, UiTokens.TextSecondary));
-            active.AddChild(line);
-        }
-
-        var done = new HFlowContainer();
-        done.AddThemeConstantOverride("h_separation", 6);
-        done.AddThemeConstantOverride("v_separation", 6);
-        foreach (var (id, times, _) in v.CompletedQuests.OrderBy(c => c.QuestId, StringComparer.Ordinal))
-        {
-            if (!_ctx.Content.Quests.TryGetValue(id, out var q)) continue;
-            string qid = id;
-            done.AddChild(Action(times > 1 ? $"{q.Name} ×{times}" : q.Name, QuestModal.CategoryName(q.Category), () => { _ctx.OpenQuest(qid); }));
-        }
-        if (v.CompletedQuests.Count == 0) done.AddChild(ThemeFactory.Text("Nenhuma missão concluída ainda.", UiTokens.FontBody, UiTokens.TextSecondary));
-        return Column(12, stats, Card("Em andamento", active, UiTokens.Info), Card("Concluídas", done, UiTokens.Success));
-    }
-
-    private Control BuildHistory()
-    {
-        var events = _ctx.PersonHistory(_person.Id);
-        var col = Column(0);
-        var head = new HBoxContainer();
-        head.AddChild(ColHead("Quando", 110));
-        head.AddChild(ColHead("Acontecimento", 0));
-        col.AddChild(head);
-        if (events.Count == 0) col.AddChild(Wrap("Nada registrado desde que o jogo foi aberto."));
-        int i = 0;
-        foreach (var e in events.Take(150))
-        {
-            var bg = new PanelContainer();
-            bg.AddThemeStyleboxOverride("panel", new StyleBoxFlat { BgColor = i++ % 2 == 1 ? UiTokens.RowAlt : new Color(0, 0, 0, 0), ContentMarginLeft = 4 });
-            bg.AddChild(EventRow(e, compact: false));
-            col.AddChild(bg);
-        }
-        return col;
-    }
-
     private static Label ColHead(string text, float width)
     {
         var l = ThemeFactory.Text(text, UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Medium);
@@ -1596,8 +1498,18 @@ public partial class PlayerModal : ModalFrame
             Simulation.Core.Population.GoalTypes.ReachLevel => $"chegar ao nível {p[2]}",
             Simulation.Core.Population.GoalTypes.DiscoverZone => $"descobrir {_ctx.ZoneName(p[1])}",
             Simulation.Core.Population.GoalTypes.CompleteQuest => $"concluir {QuestName(p[1])}",
+            Simulation.Core.Population.GoalTypes.UnlockLevel => UnlockGoalText(p[1], p[2]),
             _ => $"praticar {PtBr.ActivityType(p[1]).ToLowerInvariant()} por {p[2]} min",
         };
+    }
+
+    /// <summary>Meta de desbloqueio (D-055): "chegar ao nivel N para Atividade (Zona)"; alvo "zona/atividade".</summary>
+    private string UnlockGoalText(string target, string level)
+    {
+        int slash = target.IndexOf('/');
+        string zone = slash > 0 ? target[..slash] : target, act = slash > 0 ? target[(slash + 1)..] : "";
+        string actName = _ctx.Content.Regions.TryGetValue(zone, out var z) && z.FindActivity(act) is { } a ? a.Name : act;
+        return $"chegar ao nível {level} para {actName} ({_ctx.ZoneName(zone)})";
     }
 
     private string QuestName(string? id) => id != null && _ctx.Content.Quests.TryGetValue(id, out var q) ? q.Name : id ?? "";

@@ -17,7 +17,11 @@ public partial class ModalFrame : Control
     private readonly List<Button> _tabButtons = new();
     private HBoxContainer _tabsRow = null!;
     private bool _compactActions;
-    private readonly HFlowContainer _tabBar;
+    /// <summary>Abas numa linha so (D-068): as que nao cabem vao para o botao "Mais", no fim da linha.</summary>
+    private readonly HBoxContainer _tabBar;
+    private readonly MenuButton _moreTabs;
+    private readonly List<float> _tabWidths = new();
+    private readonly List<int> _overflow = new();
     private readonly ScrollContainer _scroll;
     /// <summary>Faixa de dados numa linha so (D-068): ao lado do titulo se couber, senao numa linha abaixo.</summary>
     /// <summary>Etiquetas do cabecalho (D-068): ao lado do titulo se couberem, senao numa linha propria abaixo.</summary>
@@ -106,12 +110,19 @@ public partial class ModalFrame : Control
         tabsRow.AddThemeConstantOverride("separation", 12);
         headCol.AddChild(tabsRow);
         _tabsRow = tabsRow;
-        // Telas estreitas (1366): se abas e acoes nao cabem numa linha, as acoes com icone viram so icone.
-        tabsRow.Resized += () => CallDeferred(nameof(UpdateCompactActions));
-        _tabBar = new HFlowContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
-        _tabBar.AddThemeConstantOverride("h_separation", 2);
-        _tabBar.AddThemeConstantOverride("v_separation", 0);
-        tabsRow.AddChild(_tabBar);
+        // Telas estreitas (1366): se abas e acoes nao cabem numa linha, as acoes com icone viram so icone; se
+        // ainda faltar espaco, as ultimas abas vao para o botao "Mais" (a linha nunca quebra).
+        tabsRow.Resized += () => CallDeferred(nameof(UpdateTabsLayout));
+        _tabBar = new HBoxContainer();
+        _tabBar.AddThemeConstantOverride("separation", 2);
+        var tabClip = new ClipRow { SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        tabClip.AddChild(_tabBar);
+        tabsRow.AddChild(tabClip);
+        _moreTabs = new MenuButton { Text = "Mais", FocusMode = FocusModeEnum.None, Visible = false, CustomMinimumSize = new Vector2(0, 42), IconAlignment = HorizontalAlignment.Right };
+        StyleTab(_moreTabs, active: false);
+        _moreTabs.Icon = Icons.Get("chevron-down", 14);
+        _moreTabs.GetPopup().IdPressed += id => SelectTab((int)id);
+        _tabBar.AddChild(_moreTabs);
         Actions = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.End, SizeFlagsVertical = SizeFlags.ShrinkCenter };
         Actions.AddThemeConstantOverride("separation", 6);
         tabsRow.AddChild(Actions);
@@ -299,33 +310,112 @@ public partial class ModalFrame : Control
         int index = _tabs.Count;
         _tabs.Add((name, build, live));
         var b = new Button { Text = name, ToggleMode = true, FocusMode = FocusModeEnum.None, CustomMinimumSize = new Vector2(0, 42) };
-        b.AddThemeFontOverride("font", UiFonts.Medium);
-        b.AddThemeFontSizeOverride("font_size", 14);
-        StyleBoxFlat Tab(bool active, bool hover) => new()
-        {
-            BgColor = new Color(0, 0, 0, 0),
-            BorderColor = active ? UiTokens.Accent : hover ? UiTokens.BorderStrong : new Color(0, 0, 0, 0), BorderWidthBottom = 2,
-            ContentMarginLeft = 12, ContentMarginRight = 12, ContentMarginTop = 8, ContentMarginBottom = 10,
-        };
-        b.AddThemeStyleboxOverride("normal", Tab(false, false));
-        b.AddThemeStyleboxOverride("hover", Tab(false, true));
-        b.AddThemeStyleboxOverride("pressed", Tab(true, false));
-        b.AddThemeStyleboxOverride("hover_pressed", Tab(true, true));
-        b.AddThemeColorOverride("font_color", UiTokens.TextLabel);
-        b.AddThemeColorOverride("font_hover_color", UiTokens.TextPrimary);
-        b.AddThemeColorOverride("font_pressed_color", UiTokens.Accent);
-        b.AddThemeColorOverride("font_hover_pressed_color", UiTokens.AccentSoft);
+        StyleTab(b, active: false);
         b.Pressed += () => SelectTab(index);
         _tabButtons.Add(b);
+        _tabWidths.Add(UiFonts.Medium.GetStringSize(name, HorizontalAlignment.Left, -1, 14).X + 24);
         _tabBar.AddChild(b);
+        _tabBar.MoveChild(_moreTabs, _tabBar.GetChildCount() - 1);
         if (_current < 0) SelectTab(0);
+    }
+
+    private static StyleBoxFlat TabStyle(bool active, bool hover) => new()
+    {
+        BgColor = new Color(0, 0, 0, 0),
+        BorderColor = active ? UiTokens.Accent : hover ? UiTokens.BorderStrong : new Color(0, 0, 0, 0), BorderWidthBottom = 2,
+        ContentMarginLeft = 12, ContentMarginRight = 12, ContentMarginTop = 8, ContentMarginBottom = 10,
+    };
+
+    /// <summary>Estilo de aba: sublinhado dourado na ativa. active=true marca o botao "Mais" quando a aba aberta esta nele.</summary>
+    private static void StyleTab(Button b, bool active)
+    {
+        b.AddThemeFontOverride("font", UiFonts.Medium);
+        b.AddThemeFontSizeOverride("font_size", 14);
+        b.AddThemeStyleboxOverride("normal", TabStyle(active, false));
+        b.AddThemeStyleboxOverride("hover", TabStyle(active, true));
+        b.AddThemeStyleboxOverride("pressed", TabStyle(true, false));
+        b.AddThemeStyleboxOverride("hover_pressed", TabStyle(true, true));
+        var text = active ? UiTokens.Accent : UiTokens.TextLabel;
+        b.AddThemeColorOverride("font_color", text);
+        b.AddThemeColorOverride("font_hover_color", active ? UiTokens.AccentSoft : UiTokens.TextPrimary);
+        b.AddThemeColorOverride("font_pressed_color", UiTokens.Accent);
+        b.AddThemeColorOverride("font_hover_pressed_color", UiTokens.AccentSoft);
+        foreach (var state in new[] { "icon_normal_color", "icon_hover_color", "icon_pressed_color", "icon_hover_pressed_color", "icon_focus_color" })
+            b.AddThemeColorOverride(state, text);
     }
 
     public void SelectTab(int index)
     {
         _current = index;
         for (int i = 0; i < _tabButtons.Count; i++) _tabButtons[i].SetPressedNoSignal(i == index);
+        UpdateTabOverflow();
         Rebuild(resetScroll: true);
+    }
+
+    private void UpdateTabsLayout()
+    {
+        UpdateCompactActions();
+        UpdateTabOverflow();
+    }
+
+    /// <summary>Largura das acoes do cabecalho (com rotulo ou so icone).</summary>
+    private float ActionsWidth(bool compact)
+    {
+        float w = 0;
+        int n = 0;
+        foreach (var child in Actions.GetChildren())
+        {
+            if (child is not Button b || !b.Visible) continue;
+            string label = b.HasMeta("label") ? b.GetMeta("label").AsString() : b.Text;
+            w += compact && b.HasMeta("icon") ? 32 : UiFonts.Medium.GetStringSize(label, HorizontalAlignment.Left, -1, 12).X + 28;
+            n++;
+        }
+        return w + 6 * Math.Max(0, n - 1);
+    }
+
+    /// <summary>
+    /// Abas que nao cabem na linha (1366 com o menu aberto) vao, a partir da ultima, para o botao "Mais". Quando a
+    /// aba aberta esta nele, o botao fica marcado e mostra o nome dela.
+    /// </summary>
+    private void UpdateTabOverflow()
+    {
+        if (!IsInsideTree() || _tabsRow.Size.X <= 0 || _tabButtons.Count == 0) return;
+        float avail = _tabsRow.Size.X - ActionsWidth(_compactActions) - 12;
+        const float sep = 2;
+        float all = _tabWidths.Sum() + sep * (_tabWidths.Count - 1);
+        _overflow.Clear();
+        string label = "Mais";
+        if (all > avail)
+        {
+            // Duas passadas: a segunda com o nome da aba aberta no botao, se ela foi para o "Mais".
+            for (int pass = 0; pass < 2; pass++)
+            {
+                _overflow.Clear();
+                float more = UiFonts.Medium.GetStringSize(label, HorizontalAlignment.Left, -1, 14).X + 24 + 20;
+                float used = 0;
+                bool full = false;
+                for (int i = 0; i < _tabWidths.Count; i++)
+                {
+                    if (!full && used + _tabWidths[i] + sep + more <= avail) used += _tabWidths[i] + sep;
+                    else { full = true; _overflow.Add(i); }
+                }
+                if (!_overflow.Contains(_current)) break;
+                label = $"Mais · {_tabs[_current].Name}";
+            }
+        }
+        for (int i = 0; i < _tabButtons.Count; i++) _tabButtons[i].Visible = !_overflow.Contains(i);
+        _moreTabs.Visible = _overflow.Count > 0;
+        bool active = _overflow.Contains(_current);
+        _moreTabs.Text = label;
+        _moreTabs.TooltipText = "Outras abas\n~" + string.Join(", ", _overflow.Select(i => _tabs[i].Name));
+        StyleTab(_moreTabs, active);
+        var pop = _moreTabs.GetPopup();
+        pop.Clear();
+        foreach (int i in _overflow)
+        {
+            pop.AddRadioCheckItem(_tabs[i].Name, i);
+            pop.SetItemChecked(pop.ItemCount - 1, i == _current);
+        }
     }
 
     public void RefreshLive()
@@ -522,20 +612,8 @@ public partial class ModalFrame : Control
     private void UpdateCompactActions()
     {
         if (!IsInsideTree() || _tabsRow.Size.X <= 0) return;
-        float tabs = 0;
-        foreach (var t in _tabButtons) tabs += t.GetCombinedMinimumSize().X;
-        tabs += 2 * Math.Max(0, _tabButtons.Count - 1);
-        float full = 0;
-        int n = 0;
-        foreach (var child in Actions.GetChildren())
-        {
-            if (child is not Button b || !b.Visible) continue;
-            string label = b.HasMeta("label") ? b.GetMeta("label").AsString() : b.Text;
-            full += UiFonts.Medium.GetStringSize(label, HorizontalAlignment.Left, -1, 12).X + 28;
-            n++;
-        }
-        full += 6 * Math.Max(0, n - 1);
-        bool compact = tabs + 12 + full > _tabsRow.Size.X;
+        float tabs = _tabWidths.Sum() + 2 * Math.Max(0, _tabWidths.Count - 1);
+        bool compact = tabs + 12 + ActionsWidth(false) > _tabsRow.Size.X;
         if (compact == _compactActions) return;
         _compactActions = compact;
         foreach (var child in Actions.GetChildren())

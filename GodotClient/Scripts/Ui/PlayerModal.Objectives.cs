@@ -13,7 +13,7 @@ namespace GodotClient.Ui;
 /// </summary>
 public partial class PlayerModal
 {
-    private int _objectivesTab = -1;
+
 
     private CharacterDetailView? WatchedDetail => _ctx.Snapshot().Watched is { } d && d.PersonId == _person.Id ? d : null;
 
@@ -35,16 +35,18 @@ public partial class PlayerModal
             : "Sem ambição geral ativa.";
 
         Control Count(int n) => ThemeFactory.Text(n.ToString(), UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Numbers);
-        var row1 = Grid(12,
-            (Card("Objetivos gerais", ObjectiveList(general, noGeneral), info: ObjectivesInfo, headerRight: Count(general.Count)), 6),
-            (Card("Objetivos secundários", ObjectiveList(secondary, "Nenhum projeto secundário: só as ambições gerais."),
-                info: "Projetos de menor prioridade\n~Podem ser do mesmo tema de um objetivo geral ou independentes. Um secundário também pode ser de longo prazo.", headerRight: Count(secondary.Count)), 6));
-        var row2 = Grid(12,
-            (Card("Conquistas e encerrados", ClosedBody(closed), info: "Objetivos que saíram das vagas\n~Conquista definitiva (ex.: concluir a campanha) fica concluída. Condição a manter (ex.: estar entre os mais fortes, ter uma grande fortuna) pode ser alcançada e perdida depois; perder não apaga a conquista passada, e a pessoa pode querer recuperá-la.\n~Deixado de lado: trocado por uma prioridade nova, sem frustração. Não conseguir realizar agora não é motivo para abandonar um objetivo.", headerRight: Count(closed.Count)), 6),
-            (Card("Metas atuais", ObjectiveGoalsBody(v), info: "Metas de curto prazo e o que elas ajudam\n~Uma meta se liga a um objetivo só quando contribui de verdade: avanço real (nível para o nível máximo, missão principal para a campanha, zona nova para conhecer o mundo) ou preparação por um requisito que a pessoa conhece (o nível do chefe, do PvP, do item).\n~A meta ligada tem mais chance de ser adotada e mais comprometimento, pelo objetivo mais forte que ela atende. Metas também surgem por necessidade, oportunidade ou vontade do momento, sem ligação."), 6));
-        var row3 = Grid(12,
-            (Card("Histórico", ObjectiveHistoryBody(d), info: "Mudanças nos objetivos\n~Cada mudança tem o motivo: o acontecimento que levou a um objetivo novo, a conclusão, a perda de uma condição, a troca de prioridade, a substituição ou o abandono. Quando a pessoa buscou um objetivo novo e nenhum era relevante, isso também fica registrado: falta de conteúdo do MMORPG."), 12));
-        return Column(12, row1, row2, row3);
+        // Pagina em telas (D-068), uma tela: em cima as ambicoes ativas e as metas que as servem; embaixo o que ja
+        // saiu das vagas e o historico de mudancas (largo, porque cada linha traz o motivo).
+        return new ScreenPage()
+            .Add(Grid(12,
+                (FillCard("Objetivos gerais", ObjectiveList(general, noGeneral), info: ObjectivesInfo, headerRight: Count(general.Count)), 4),
+                (FillCard("Objetivos secundários", ObjectiveList(secondary, "Nenhum projeto secundário: só as ambições gerais."),
+                    info: "Projetos de menor prioridade\n~Podem ser do mesmo tema de um objetivo geral ou independentes. Um secundário também pode ser de longo prazo.", headerRight: Count(secondary.Count)), 4),
+                (FillCard("Metas atuais", ObjectiveGoalsBody(v), info: "Metas de curto prazo e o que elas ajudam\n~Uma meta se liga a um objetivo só quando contribui de verdade: avanço real (nível para o nível máximo, missão principal para a campanha, zona nova para conhecer o mundo) ou preparação por um requisito que a pessoa conhece (o nível do chefe, do PvP, do item).\n~A meta ligada tem mais chance de ser adotada e mais comprometimento, pelo objetivo mais forte que ela atende. Metas também surgem por necessidade, oportunidade ou vontade do momento, sem ligação.",
+                    headerRight: ThemeFactory.Text($"{N(v.GoalsCompleted, "concluída", "concluídas")} · {N(v.GoalsAbandoned, "abandonada", "abandonadas")}", UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Numbers)), 4)), weight: 55)
+            .Add(Grid(12,
+                (FillCard("Conquistas e encerrados", ClosedBody(closed), info: "Objetivos que saíram das vagas\n~Conquista definitiva (ex.: concluir a campanha) fica concluída. Condição a manter (ex.: estar entre os mais fortes, ter uma grande fortuna) pode ser alcançada e perdida depois; perder não apaga a conquista passada, e a pessoa pode querer recuperá-la.\n~Deixado de lado: trocado por uma prioridade nova, sem frustração. Não conseguir realizar agora não é motivo para abandonar um objetivo.", headerRight: Count(closed.Count)), 4),
+                (FillCard("Histórico", ObjectiveHistoryBody(d), info: "Mudanças nos objetivos\n~Cada mudança tem o motivo: o acontecimento que levou a um objetivo novo, a conclusão, a perda de uma condição, a troca de prioridade, a substituição ou o abandono. Quando a pessoa buscou um objetivo novo e nenhum era relevante, isso também fica registrado: falta de conteúdo do MMORPG.", headerRight: Count(d.ObjectiveHistory.Count)), 8)), weight: 45);
     }
 
     private string DayText(long day) => PtBr.ShortDate(_ctx.Calendar.ToDateTime(_ctx.Calendar.StartOfDay(day)));
@@ -224,19 +226,10 @@ public partial class PlayerModal
 
     private Control ObjectiveGoalsBody(CharacterView v)
     {
-        var col = Column(10);
+        var col = Column(12);
         if (v.Goals.Count == 0)
-            col.AddChild(Wrap("Sem meta agora. Nem todo jogador tem uma o tempo todo.", UiTokens.FontSmall, UiTokens.TextSecondary));
-        foreach (var g in v.Goals)
-        {
-            var (icon, text, progress) = GoalText(v, g);
-            var item = Column(4, GoalRow(icon, text, progress, UiTokens.Accent));
-            item.AddChild(g.Links.Count == 0
-                ? Hint("circle", "Meta independente: não está ligada a nenhum objetivo", UiTokens.TextSecondary)
-                : Hint("link", "Ajuda: " + LinksText(g.Links), UiTokens.AccentSoft));
-            col.AddChild(item);
-        }
-        col.AddChild(ThemeFactory.Text($"{N(v.GoalsCompleted, "concluída", "concluídas")} · {N(v.GoalsAbandoned, "abandonada", "abandonadas")}", UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Numbers));
+            col.AddChild(Wrap("Sem meta agora. Nem todo jogador tem uma o tempo todo; ao conectar, pode adotar uma conforme as preferências, a competitividade e a personalidade.", UiTokens.FontSmall, UiTokens.TextSecondary));
+        foreach (var g in v.Goals) col.AddChild(GoalItem(v, g, full: true));
         return col;
     }
 
@@ -298,7 +291,7 @@ public partial class PlayerModal
         if (d != null && main == null && d.LastObjectiveGapDay >= 0)
         {
             // Sem ambicao ativa por falta de objetivo relevante: aparece, porque e um problema do MMORPG.
-            var g = HoverRow(() => { if (_objectivesTab >= 0) SelectTab(_objectivesTab); }, "Sem ambição ativa|Falta de conteúdo\nBuscou um objetivo novo e nenhum era relevante no conteúdo atual.\n~Clique para abrir a aba Objetivos.");
+            var g = HoverRow(() => OpenTab("Objetivos"), "Sem ambição ativa|Falta de conteúdo\nBuscou um objetivo novo e nenhum era relevante no conteúdo atual.\n~Clique para abrir a aba Objetivos.");
             g.CustomMinimumSize = new Vector2(0, 28);
             var gr = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
             gr.SetAnchorsPreset(LayoutPreset.FullRect);
@@ -316,7 +309,7 @@ public partial class PlayerModal
         if (d == null || main == null) return null;
         int others = d.Objectives.Count(o => o.State == ObjectiveStates.Active) - 1;
         var c = _ctx.Content;
-        var b = HoverRow(() => { if (_objectivesTab >= 0) SelectTab(_objectivesTab); }, $"{ObjectiveInfo.Title(c, main.Id, main.Param)}|{ObjectiveInfo.TierPt(main.Tier)}\n{ObjectiveInfo.ViabilityPt(main.Assessment.Viability)}\n~Clique para abrir a aba Objetivos.");
+        var b = HoverRow(() => OpenTab("Objetivos"), $"{ObjectiveInfo.Title(c, main.Id, main.Param)}|{ObjectiveInfo.TierPt(main.Tier)}\n{ObjectiveInfo.ViabilityPt(main.Assessment.Viability)}\n~Clique para abrir a aba Objetivos.");
         b.CustomMinimumSize = new Vector2(0, 28);
         var r = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
         r.SetAnchorsPreset(LayoutPreset.FullRect);
