@@ -573,10 +573,35 @@ public partial class SpanRow : Container
 /// Lista que cabe no card (D-068): mostra, em ordem, so os itens inteiros que cabem na altura recebida e esconde
 /// o resto, sem rolagem. Offset pula os primeiros (paginas). A altura minima e a de um item, para o card nunca
 /// rolar por causa da lista. Depois de cada arranjo avisa quantos mostrou (Laid), para o paginador do titulo.
+/// Lista grande (milhares de linhas): modo virtual (SetVirtual), em que so as linhas da pagina visivel viram nos.
 /// </summary>
 public partial class FitList : Container
 {
     public int Separation { get; set; } = 6;
+
+    // ----- Modo virtual (D-069): linhas de altura fixa criadas sob demanda -----
+    private Func<int, Control>? _factory;
+    private int _virtualCount = -1;
+    private float _rowHeight;
+    private int _builtFrom = -1, _builtTo = -1;
+    public bool IsVirtual => _virtualCount >= 0;
+
+    /// <summary>
+    /// Linhas virtuais: a lista tem count linhas de altura fixa, mas so cria (factory) as da pagina que cabe agora;
+    /// trocar de pagina recria so essas. Para tabelas e listas de jogadores com milhares de linhas.
+    /// </summary>
+    public void SetVirtual(int count, float rowHeight, Func<int, Control> factory)
+    {
+        _virtualCount = Math.Max(0, count);
+        _rowHeight = Math.Max(1, rowHeight);
+        _factory = factory;
+        _builtFrom = _builtTo = -1;
+        UpdateMinimumSize();
+        QueueSort();
+    }
+
+    /// <summary>Quantas linhas virtuais cabem na altura atual (ao menos uma).</summary>
+    private int Capacity() => Math.Max(1, (int)Math.Floor((Size.Y + Separation + 0.5f) / (_rowHeight + Separation)));
     public int Offset { get; set; }
     /// <summary>Itens do comeco sempre mostrados (contam na altura minima); so os seguintes somem quando nao cabem.</summary>
     public int Keep { get; set; }
@@ -588,13 +613,14 @@ public partial class FitList : Container
     {
         get
         {
+            if (IsVirtual) return _virtualCount * _rowHeight + Separation * Math.Max(0, _virtualCount - 1);
             var items = Items();
             return items.Sum(c => c.GetCombinedMinimumSize().Y) + Separation * Math.Max(0, items.Count - 1);
         }
     }
 
     /// <summary>Itens de verdade (a frase de lista vazia, marcada com AsPlaceholder, nao conta).</summary>
-    public int Total => GetChildren().OfType<Control>().Count(c => !c.HasMeta("placeholder"));
+    public int Total => IsVirtual ? _virtualCount : GetChildren().OfType<Control>().Count(c => !c.HasMeta("placeholder"));
     public event Action? Laid;
 
     public FitList()
@@ -612,6 +638,7 @@ public partial class FitList : Container
     /// </summary>
     public int PreviousOffset()
     {
+        if (IsVirtual) return Math.Max(0, Offset - Capacity());
         var items = Items();
         int start = Math.Min(Offset, items.Count);
         float y = 0;
@@ -628,6 +655,12 @@ public partial class FitList : Container
 
     public override Vector2 _GetMinimumSize()
     {
+        if (IsVirtual)
+        {
+            float vw = 0;
+            foreach (var c in Items()) vw = Mathf.Max(vw, c.GetCombinedMinimumSize().X);
+            return new Vector2(vw, _virtualCount > 0 ? _rowHeight : 0);
+        }
         var items = Items();
         float w = 0;
         foreach (var c in items) w = Mathf.Max(w, c.GetCombinedMinimumSize().X);
@@ -645,6 +678,7 @@ public partial class FitList : Container
     public override void _Notification(int what)
     {
         if (what != NotificationSortChildren) return;
+        if (IsVirtual) { SortVirtual(); return; }
         var items = Items();
         Offset = Math.Clamp(Offset, 0, Math.Max(0, items.Count - 1));
         float y = 0;
@@ -676,6 +710,28 @@ public partial class FitList : Container
         }
         if (StretchLast && last != null && Size.Y > lastY) FitChildInRect(last, new Rect2(0, lastY, Size.X, Size.Y - lastY));
         if (shown != Shown) { Shown = shown; }
+        Laid?.Invoke();
+    }
+
+    /// <summary>Arranjo virtual: (re)cria so as linhas [Offset, Offset + cabem) e as posiciona.</summary>
+    private void SortVirtual()
+    {
+        Offset = Math.Clamp(Offset, 0, Math.Max(0, _virtualCount - 1));
+        int n = Math.Min(Capacity(), _virtualCount - Offset);
+        if (_builtFrom != Offset || _builtTo != Offset + n)
+        {
+            foreach (var c in GetChildren()) { RemoveChild(c); c.QueueFree(); }
+            for (int i = Offset; i < Offset + n; i++) AddChild(_factory!(i));
+            _builtFrom = Offset;
+            _builtTo = Offset + n;
+        }
+        float y = 0;
+        foreach (var c in Items())
+        {
+            FitChildInRect(c, new Rect2(0, y, Size.X, _rowHeight));
+            y += _rowHeight + Separation;
+        }
+        Shown = n;
         Laid?.Invoke();
     }
 }

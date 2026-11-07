@@ -199,7 +199,7 @@ Moldura comum (`ModalFrame`): banner com gradiente na cor do contexto, feixes e 
 **Data:** 04/11/2026 · **Estado:** aceita (o mapa abria vazio)
 
 - A campanha começa à meia-noite do dia do lançamento, e os jogadores simulados entram pela própria rotina, a maioria entre 19h e 22h. Na velocidade 1x o mapa ficava cerca de 19 minutos reais sem ninguém.
-- Por padrão, o cliente avança antes de abrir até o 6º dia, às 19h. Isso não muda o resultado autoritativo: é o mesmo avanço da simulação, com as métricas amostradas no caminho. A opção `--from-launch` começa do zero.
+- Por padrão, o cliente avança antes de abrir até o 6º dia, às 19h (D-069: passou para o 3º dia). Isso não muda o resultado autoritativo: é o mesmo avanço da simulação, com as métricas amostradas no caminho. A opção `--from-launch` começa do zero.
 - Quando ninguém está conectado, um aviso no mapa explica o motivo e oferece "Avançar até o próximo login". O tempo avança minuto a minuto até alguém entrar, no máximo 1 dia, sem pular acontecimentos.
 
 ## D-024 — Validação com metas e várias seeds
@@ -2808,3 +2808,40 @@ O que a conferência achou e foi corrigido:
   - `tools/perf.ps1 -Quick` uma vez no fim.
 
 **D-068 encerrada.** Próximo: retomar a E1b (página Classes e editor).
+
+## D-069 — Seed padrão maior e abertura com tela de carregamento
+
+**Pedido do criador:** abrir o jogo com milhares de contas.
+- **Primeira versão:** 5000 pessoas e 6 dias simulados antes de abrir, cerca de 4.640 contas. Levava uns 30 s com a janela congelada:
+  - cerca de 5 s para gerar as pessoas;
+  - cerca de 25 s para simular os 6 dias com todo mundo jogando.
+- O criador pediu metade das contas e só 3 dias simulados.
+
+**Como ficou:**
+- **Seed padrão:** 4000 pessoas (`Main.DefaultPopulation`). O jogo abre no 3º dia às 19 h com cerca de 2.360 contas e 560 conectados; no pico, às 21 h, cerca de 780.
+  - Precisa de mais pessoas que contas porque o cadastro se espalha pela primeira semana: no 3º dia, cerca de 59% já se cadastraram.
+  - `--population=N` continua valendo.
+- **Tempo de abertura** (máquina do criador): cerca de 10 s no total (4 s gerando as pessoas, 5 s simulando os 3 dias).
+- **Tela de carregamento** (`LoadingScreen`):
+  - a campanha é preparada numa tarefa separada, e a janela não congela;
+  - a tela mostra a marca, a etapa ("Gerando 4.000 pessoas…", "Simulando os primeiros dias · dia 2 de 3"), uma barra de progresso e as contas criadas até ali;
+  - só depois o contexto, o mapa e a interface são montados, na thread principal (`FinishLoading`);
+  - teclado e mouse não agem até lá.
+  - O resultado autoritativo não muda: é o mesmo avanço da simulação, só em outra thread antes de o relógio começar.
+- **Otimizações da abertura:**
+  - a semana típica de cada pessoa (só para a ficha) é calculada em paralelo; o cálculo é puro, então o resultado é o mesmo. Na geração de 5000 pessoas o tempo caiu de 10,5 s para 4,9 s;
+  - no avanço inicial, as métricas só são amostradas nas últimas 24 h, que é o que o histórico guarda;
+  - o mapa personagem → pessoa só é refeito quando alguém cria conta, em vez de a cada quadro.
+- **Listas grandes virtuais** (`FitList.SetVirtual`): só as linhas da página visível viram nós.
+  - Vale para a tabela da página Jogadores (antes limitada a 300 linhas, que agora saiu: todas as contas entram, ordenadas pela coluna escolhida e paginadas) e para as listas de jogadores da zona e da área.
+  - A aba Jogadores do painel lateral mostra até 150 conectados na ordem escolhida, com aviso para usar a busca ou a página Jogadores.
+- **Bolha de agrupamento do mapa** (apontada pelo criador):
+  - **Problema:** com muita gente parada numa zona ou cidade, a bolha crescia com a raiz da quantidade, em pixels de tela e sem olhar o zoom (79 pessoas, 70 px; 218, 100 px). Com o mapa afastado, uma "bola gigante" cobria a zona.
+  - **Correção:** agora é compacta, de 13 a 19 px de raio, crescendo pelo logaritmo da quantidade, e nunca passa de 18% do tamanho da zona na tela.
+  - O anel por perfil ficou mais fino, a fonte se ajusta para caber, e a partir de 1000 o número vira "1,2k".
+- **Desempenho** (`tools/perf.ps1`): todas as vistas passam a medir a seed padrão no pico do 3º dia às 21 h, o que o criador vê ao abrir.
+  - Na máquina do criador: p95 de 6,67 ms com 780 conectados, dentro de 6,9 ms, mas perto do limite.
+  - 5000 pessoas no 6º dia (1.320 conectados) davam 7,3 ms; essa vista fica como informação, fora do orçamento.
+- **Mapa:** o agrupamento das pessoas por lugar passou a ser refeito só quando chega um retrato novo da simulação (até 30 por segundo), e não a cada quadro; as chaves de lugar ficam guardadas. O p95 não mudou com isso.
+- **Próximo passo de desempenho (pendente):** a média do quadro é 5,2 ms e o p95 6,7 ms. A suspeita é a coleta de memória: a thread da simulação monta o retrato de todos os personagens até 30 vezes por segundo. Reaproveitar os retratos deve aproximar o p95 da média.
+

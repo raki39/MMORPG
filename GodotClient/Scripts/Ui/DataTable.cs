@@ -41,7 +41,12 @@ public sealed class DataTable<T>
     public Action? OnSortChanged { get; set; }
 
     /// <summary>Tabela; com fit, as linhas vao para a lista que cabe no card (paginas no titulo), sem rolagem.</summary>
-    public Control Build(IEnumerable<T> rows, FitList? fit = null)
+    /// <summary>Altura de cada linha da tabela (fixa: permite a lista virtual).</summary>
+    public const int RowHeight = 26;
+    /// <summary>Complemento do aviso "Mostrando N de M" quando maxRows corta a lista.</summary>
+    public string MoreHint { get; set; } = "";
+
+    public Control Build(IEnumerable<T> rows, FitList? fit = null, int maxRows = 0)
     {
         var col = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, SizeFlagsVertical = Control.SizeFlags.ExpandFill };
         col.AddThemeConstantOverride("separation", 0);
@@ -98,11 +103,10 @@ public sealed class DataTable<T>
             empty.CustomMinimumSize = new Vector2(0, 28);
             target.AddChild(empty.AsPlaceholder());
         }
-        int r = 0;
-        foreach (var item in list)
+        Button MakeRow(T item, int r)
         {
-            var row = new Button { FocusMode = Control.FocusModeEnum.None, CustomMinimumSize = new Vector2(0, 26), SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
-            var n = new StyleBoxFlat { BgColor = r++ % 2 == 1 ? UiTokens.RowAlt : new Color(0, 0, 0, 0) };
+            var row = new Button { FocusMode = Control.FocusModeEnum.None, CustomMinimumSize = new Vector2(0, RowHeight), SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+            var n = new StyleBoxFlat { BgColor = r % 2 == 1 ? UiTokens.RowAlt : new Color(0, 0, 0, 0) };
             var h = new StyleBoxFlat { BgColor = new Color(UiTokens.Accent, 0.10f), BorderColor = UiTokens.Accent, BorderWidthLeft = 2 };
             row.AddThemeStyleboxOverride("normal", n);
             row.AddThemeStyleboxOverride("hover", h);
@@ -130,7 +134,22 @@ public sealed class DataTable<T>
             row.AddChild(cells);
             var captured = item;
             row.Pressed += () => OnClick?.Invoke(captured);
-            target.AddChild(row);
+            return row;
+        }
+        // Com a lista que cabe no card, so as linhas da pagina visivel viram nos (milhares de jogadores, D-069).
+        if (fit != null && list.Count > 0) fit.SetVirtual(list.Count, RowHeight, i => MakeRow(list[i], i));
+        else
+        {
+            int shown = maxRows > 0 ? Math.Min(maxRows, list.Count) : list.Count;
+            for (int i = 0; i < shown; i++) target.AddChild(MakeRow(list[i], i));
+            if (shown < list.Count)
+            {
+                var more = ThemeFactory.Text($"Mostrando {shown} de {list.Count}{(MoreHint.Length > 0 ? " · " + MoreHint : "")}", UiTokens.FontCaption, UiTokens.TextSecondary);
+                more.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+                more.CustomMinimumSize = new Vector2(0, 28);
+                more.VerticalAlignment = VerticalAlignment.Center;
+                target.AddChild(more);
+            }
         }
         return col;
     }

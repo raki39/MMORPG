@@ -208,6 +208,47 @@ public sealed class SimSnapshot
 }
 
 /// <summary>Dados estaticos de uma pessoa copiados na criacao.</summary>
+/// <summary>
+/// Progresso da abertura (D-069): escrito pela tarefa que prepara a campanha, lido pela tela de carregamento.
+/// </summary>
+public sealed class LoadProgress
+{
+    public const int Generating = 0, Simulating = 1;
+    private volatile int _phase;
+    private long _start, _now, _target;
+    private volatile int _registered;
+
+    public int Phase => _phase;
+    public int Registered => _registered;
+    /// <summary>Fracao simulada do avanco inicial (0 a 1).</summary>
+    public double Fraction
+    {
+        get
+        {
+            long s = Interlocked.Read(ref _start), n = Interlocked.Read(ref _now), t = Interlocked.Read(ref _target);
+            return t > s ? Math.Clamp((n - s) / (double)(t - s), 0, 1) : 0;
+        }
+    }
+    /// <summary>Dia da campanha em que o avanco esta (0 = dia do lancamento).</summary>
+    public int Day => (int)(Interlocked.Read(ref _now) / SimTime.TicksPerDay);
+    public long CreateMs { get; set; }
+    public long AdvanceMs { get; set; }
+
+    public void BeginSimulating(long start, long target)
+    {
+        Interlocked.Exchange(ref _start, start);
+        Interlocked.Exchange(ref _now, start);
+        Interlocked.Exchange(ref _target, target);
+        _phase = Simulating;
+    }
+
+    public void Report(long now, int registered)
+    {
+        Interlocked.Exchange(ref _now, now);
+        _registered = registered;
+    }
+}
+
 public sealed class PersonInfo
 {
     public int Id { get; init; }
@@ -286,14 +327,22 @@ public sealed class SimulationHost : IDisposable
         lock (_metricsLock) _metrics.CopyTo(target);
     }
 
-    /// <summary>Avanca em blocos de 1 minuto, amostrando metricas ao cruzar cada janela.</summary>
-    private void AdvanceSampled(long target, Stopwatch? budget, double budgetSeconds)
+    /// <summary>
+    /// Avanca em blocos de 1 minuto, amostrando metricas ao cruzar cada janela. Amostras antes de sampleFrom nao
+    /// sao tiradas (o avanco inicial so precisa das ultimas 24 h, que e o que o historico guarda).
+    /// </summary>
+    private void AdvanceSampled(long target, Stopwatch? budget, double budgetSeconds, long sampleFrom = 0, LoadProgress? progress = null)
     {
         var w = _engine.World;
         while (w.Clock.Tick < target && (budget == null || budget.Elapsed.TotalSeconds < budgetSeconds))
         {
-            _engine.AdvanceTo(Math.Min(target, w.Clock.Tick + SimTime.TicksPerMinute));
-            if (w.Clock.Tick % (MetricsHistory.SampleMinutes * SimTime.TicksPerMinute) == 0) SampleMetrics();
+            // Sem amostra no trecho: avanca de hora em hora ate o inicio das amostras (so o progresso da abertura).
+            long step = w.Clock.Tick < sampleFrom
+                ? Math.Min(Math.Min(sampleFrom, target), w.Clock.Tick + SimTime.TicksPerHour)
+                : Math.Min(target, w.Clock.Tick + SimTime.TicksPerMinute);
+            _engine.AdvanceTo(step);
+            if (w.Clock.Tick >= sampleFrom && w.Clock.Tick % (MetricsHistory.SampleMinutes * SimTime.TicksPerMinute) == 0) SampleMetrics();
+            progress?.Report(w.Clock.Tick, w.Characters.Count);
         }
     }
 
@@ -303,12 +352,15 @@ public sealed class SimulationHost : IDisposable
         Seed = seed;
         Layout = new ZoneLayout(content);
         _engine = WorldFactory.Create(content, new WorldConfig { Seed = seed, PopulationSize = population });
-        Persons = _engine.World.Persons
-            .Select(p => new PersonInfo { Id = p.Id, Name = p.Name, ProfileId = p.ProfileId, AppearanceSeed = p.AppearanceSeed, Traits = p.Traits, BaseTraits = p.BaseTraits, Preferences = p.Preferences, PersonalityAtCreation = p.PersonalityId, Quirks = p.Quirks.ToArray(),
+        var people = _engine.World.Persons;
+        var weeks = new IReadOnlyList<WeekDayView>[people.Count];
+        System.Threading.Tasks.Parallel.For(0, people.Count, i => weeks[i] = WeekOf(people[i]));
+        Persons = people
+            .Select((p, i) => new PersonInfo { Id = p.Id, Name = p.Name, ProfileId = p.ProfileId, AppearanceSeed = p.AppearanceSeed, Traits = p.Traits, BaseTraits = p.BaseTraits, Preferences = p.Preferences, PersonalityAtCreation = p.PersonalityId, Quirks = p.Quirks.ToArray(),
                 ResidenceId = p.ResidenceId, NationalityId = p.NationalityId, Languages = p.Languages, LocalOffsetMinutes = p.LocalOffsetMinutes,
                 OccupationId = p.OccupationId, SleepNeedMinutes = p.SleepNeedMinutes, BedtimeMinute = p.BedtimeMinute,
                 IncomeCentsPerMonth = p.IncomeCentsPerMonth, SupportCentsPerMonth = p.SupportCentsPerMonth, ExpectedWeeklyMinutes = p.ExpectedWeeklyMinutes,
-                HabitualStartHour = p.HabitualStartHour, SleepDebtTolerance = p.SleepDebtTolerance, Week = WeekOf(p) })
+                HabitualStartHour = p.HabitualStartHour, SleepDebtTolerance = p.SleepDebtTolerance, Week = weeks[i] })
             .ToArray();
         Calendar = _engine.World.Clock.Calendar;
         _snapshot = BuildSnapshot(-1);
@@ -331,12 +383,17 @@ public sealed class SimulationHost : IDisposable
     public void Start() => _thread.Start();
 
     /// <summary>Avanca a simulacao antes de iniciar a thread (capturas reproduziveis).</summary>
-    public void AdvanceBeforeStart(long ticks)
+    public void AdvanceBeforeStart(long ticks, LoadProgress? progress = null)
     {
         if (_thread.IsAlive) throw new InvalidOperationException("A thread da simulação já está rodando.");
         while (_commands.TryDequeue(out var cmd)) _engine.Submit(cmd);
-        SampleMetrics();
-        AdvanceSampled(_engine.World.Clock.Tick + ticks, null, 0);
+        long target = _engine.World.Clock.Tick + ticks;
+        long window = (long)MetricsHistory.Capacity * MetricsHistory.SampleMinutes * SimTime.TicksPerMinute;
+        if (ticks <= window) SampleMetrics();
+        // O historico guarda 24 h: amostras mais antigas seriam descartadas. Com milhares de pessoas, cada amostra
+        // monta o retrato inteiro do mundo, entao o avanco inicial so amostra o trecho final.
+        progress?.BeginSimulating(_engine.World.Clock.Tick, target);
+        AdvanceSampled(target, null, 0, Math.Max(0, target - window), progress);
         foreach (var e in _engine.World.Events.Drain()) _events.Enqueue(e);
         Volatile.Write(ref _snapshot, BuildSnapshot(-1));
     }

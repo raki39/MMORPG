@@ -98,7 +98,6 @@ public abstract partial class ListPage : ModalFrame
 /// <summary>Pagina "Jogadores": todos os personagens com filtros e ordenacao.</summary>
 public partial class PlayersPage : ListPage
 {
-    private const int MaxRows = 300;
     private readonly DataTable<(int Id, CharacterView V)> _table;
     protected override string Title => "Personagens";
 
@@ -184,9 +183,9 @@ public partial class PlayersPage : ListPage
                     Ctx.Content.Classes.TryGetValue(r.V.ClassId, out var c) ? c.Name : "", Ctx.Content.Profiles.TryGetValue(Ctx.Persons[r.Id - 1].ProfileId, out var p) ? p.Name : "",
                     PreferenceInfo.Summary(Ctx.Persons[r.Id - 1].Preferences)))
                 .ToList();
-            var col = Column(6, _table.Build(rows.Take(MaxRows), fit));
-            col.AddChild(ThemeFactory.Text(rows.Count > MaxRows ? $"Mostrando {MaxRows} de {PtBr.Int(rows.Count)} pela ordem atual; refine com a busca ou os filtros." : $"{PtBr.Int(rows.Count)} personagens", UiTokens.FontCaption, UiTokens.TextDisabled));
-            return col;
+            // Todas as linhas, ordenadas pela coluna escolhida; a tabela so cria as da pagina visivel (D-069).
+            // O total fica no paginador do titulo.
+            return _table.Build(rows, fit);
         }, ("personagem", "personagens"), "O tempo está pausado nesta tela.",
             ("Perfil", new[] { "Todos os perfis" }.Concat(profiles.Select(p => p.Name)).ToList()),
             ("Preferência", new[] { "Todas as preferências" }.Concat(prefKeys.Select(k => PreferenceInfo.ByKey[k].Name)).ToList()),

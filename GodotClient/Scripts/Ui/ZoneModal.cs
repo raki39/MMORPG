@@ -302,34 +302,38 @@ public partial class ZoneModal : ModalFrame
     {
         var col = Fit(2);
         if (here.Count == 0) { col.AddChild(ThemeFactory.Text("Ninguém conectado nesta zona agora.", UiTokens.FontSmall, UiTokens.TextDisabled)); return col; }
-        foreach (var v in here.OrderByDescending(x => x.Level).ThenBy(x => x.Name, StringComparer.Ordinal))
-        {
-            var p = _ctx.Persons[v.PersonId - 1];
-            int pid = v.PersonId;
-            var b = HoverRow(() => _ctx.OpenPerson(pid), $"{v.Name}\n~Clique para abrir a ficha.");
-            b.CustomMinimumSize = new Vector2(0, 40);
-            var r = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
-            r.SetAnchorsPreset(LayoutPreset.FullRect);
-            r.OffsetLeft = 6; r.OffsetRight = -6;
-            r.AddThemeConstantOverride("separation", 10);
-            r.AddChild(new PortraitBadge(p.AppearanceSeed, UiTokens.ProfileColor(p.ProfileId), v.Name) { CustomMinimumSize = new Vector2(30, 30), SizeFlagsVertical = SizeFlags.ShrinkCenter, MouseFilter = MouseFilterEnum.Ignore, ClassIcon = PlayerModal.ClassIcon(_ctx.Content.Classes.GetValueOrDefault(v.ClassId)) });
-            var info = Column(0);
-            info.MouseFilter = MouseFilterEnum.Ignore;
-            info.SizeFlagsVertical = SizeFlags.ShrinkCenter;
-            string cls = _ctx.Content.Classes.TryGetValue(v.ClassId, out var c) ? c.Name : v.ClassId;
-            info.AddChild(ThemeFactory.Text($"{v.Name}", UiTokens.FontBody, UiTokens.TextPrimary, UiFonts.Medium));
-            var st = ThemeFactory.Text(StatusText.Of(v, _ctx.Content), UiTokens.FontCaption, UiTokens.TextSecondary);
-            st.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
-            st.CustomMinimumSize = new Vector2(100, 0);
-            info.AddChild(st);
-            r.AddChild(info);
-            var lv = ThemeFactory.Text($"Nv {v.Level} · {cls}", UiTokens.FontSmall, UiTokens.TextLabel, UiFonts.Numbers);
-            lv.SizeFlagsVertical = SizeFlags.ShrinkCenter;
-            r.AddChild(lv);
-            b.AddChild(r);
-            col.AddChild(b);
-        }
+        // Lista virtual: numa zona cheia, so as linhas que cabem viram nos (D-069).
+        var ordered = here.OrderByDescending(x => x.Level).ThenBy(x => x.Name, StringComparer.Ordinal).ToList();
+        col.SetVirtual(ordered.Count, 40, i => WhoRow(ordered[i]));
         return col;
+    }
+
+    private Control WhoRow(Sim.CharacterView v)
+    {
+        var p = _ctx.Persons[v.PersonId - 1];
+        int pid = v.PersonId;
+        var b = HoverRow(() => _ctx.OpenPerson(pid), $"{v.Name}\n~Clique para abrir a ficha.");
+        b.CustomMinimumSize = new Vector2(0, 40);
+        var r = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
+        r.SetAnchorsPreset(LayoutPreset.FullRect);
+        r.OffsetLeft = 6; r.OffsetRight = -6;
+        r.AddThemeConstantOverride("separation", 10);
+        r.AddChild(new PortraitBadge(p.AppearanceSeed, UiTokens.ProfileColor(p.ProfileId), v.Name) { CustomMinimumSize = new Vector2(30, 30), SizeFlagsVertical = SizeFlags.ShrinkCenter, MouseFilter = MouseFilterEnum.Ignore, ClassIcon = PlayerModal.ClassIcon(_ctx.Content.Classes.GetValueOrDefault(v.ClassId)) });
+        var info = Column(0);
+        info.MouseFilter = MouseFilterEnum.Ignore;
+        info.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        string cls = _ctx.Content.Classes.TryGetValue(v.ClassId, out var c) ? c.Name : v.ClassId;
+        info.AddChild(ThemeFactory.Text($"{v.Name}", UiTokens.FontBody, UiTokens.TextPrimary, UiFonts.Medium));
+        var st = ThemeFactory.Text(StatusText.Of(v, _ctx.Content), UiTokens.FontCaption, UiTokens.TextSecondary);
+        st.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+        st.CustomMinimumSize = new Vector2(100, 0);
+        info.AddChild(st);
+        r.AddChild(info);
+        var lv = ThemeFactory.Text($"Nv {v.Level} · {cls}", UiTokens.FontSmall, UiTokens.TextLabel, UiFonts.Numbers);
+        lv.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        r.AddChild(lv);
+        b.AddChild(r);
+        return b;
     }
 
     private Control AreaCard(AreaDefinition area)
@@ -403,10 +407,11 @@ public partial class ZoneModal : ModalFrame
             if (snap.ByPerson[id] is { } v && v.Status != CharacterStatus.Offline && v.RegionId == _zone.Id) here.Add((id, v));
         var list = Fit(6, "zona_jogadores");
         if (here.Count == 0) list.AddChild(ThemeFactory.Text("Ninguém conectado nesta zona agora.", UiTokens.FontBody, UiTokens.TextSecondary).AsPlaceholder());
-        foreach (var (id, v) in here.OrderByDescending(x => x.V.Level).ThenBy(x => x.V.Name, StringComparer.Ordinal))
+        else
         {
-            int pid = id;
-            list.AddChild(PlayerRow.Build(_ctx, id, v, () => { _ctx.OpenPerson(pid); }));
+            // Lista virtual: numa zona cheia, so os jogadores da pagina visivel viram linhas (D-069).
+            var ordered = here.OrderByDescending(x => x.V.Level).ThenBy(x => x.V.Name, StringComparer.Ordinal).ToList();
+            list.SetVirtual(ordered.Count, PlayerRow.Height, i => { int pid = ordered[i].Id; return PlayerRow.Build(_ctx, pid, ordered[i].V, () => { _ctx.OpenPerson(pid); }); });
         }
         return new ScreenPage().Add(Grid(12,
             (FillCard("Jogadores conectados", list, info: "Quem está na zona agora\n~Os de nível mais alto primeiro. Clique para abrir a ficha.", headerRight: Pager(list, "zona_jogadores", "jogador", "jogadores")), 8),
@@ -563,10 +568,13 @@ public partial class ZoneModal : ModalFrame
 /// <summary>Linha de jogador reutilizavel (listas da zona e das aglomeracoes).</summary>
 public static class PlayerRow
 {
+    /// <summary>Altura fixa da linha (permite a lista virtual).</summary>
+    public const int Height = 46;
+
     public static Button Build(ClientContext ctx, int personId, Sim.CharacterView v, Action onClick)
     {
         var p = ctx.Persons[personId - 1];
-        var b = new Button { FocusMode = Control.FocusModeEnum.None, CustomMinimumSize = new Vector2(0, 46), SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+        var b = new Button { FocusMode = Control.FocusModeEnum.None, CustomMinimumSize = new Vector2(0, Height), SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
         b.AddThemeStyleboxOverride("normal", new StyleBoxEmpty());
         var hover = new StyleBoxFlat { BgColor = new Color(1, 1, 1, 0.035f), BorderColor = UiTokens.Accent, BorderWidthLeft = 2 };
         hover.SetCornerRadiusAll(2);

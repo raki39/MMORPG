@@ -87,7 +87,7 @@ public partial class SidePanel : PanelContainer
             new Column<(int Id, CharacterView V)> { Title = "Jogador", Text = r => (_ctx.Favorites.Contains(r.Id) ? "★ " : "") + r.V.Name, SortKey = r => r.V.Name, Color = r => UiTokens.ProfileColor(_ctx.Persons[r.Id - 1].ProfileId).Lightened(0.25f), Tooltip = r => $"{r.V.Name}\nPessoa|{_ctx.Persons[r.Id - 1].Name}\nPerfil|{ProfileName(r.Id)}\n~Clique para abrir o dossiê." },
             new Column<(int Id, CharacterView V)> { Title = "Nv", Width = 40, Right = true, Numeric = true, Text = r => r.V.Level.ToString(), SortKey = r => r.V.Level, Color = _ => UiTokens.Info },
             new Column<(int Id, CharacterView V)> { Title = "Fazendo", Width = 128, Text = r => StatusText.Of(r.V, _ctx.Content), SortKey = r => r.V.ActivityId, Color = _ => UiTokens.TextSecondary, Tooltip = r => $"{StatusText.Of(r.V, _ctx.Content)}\nZona|{_ctx.ZoneName(r.V.RegionId)}" },
-        }, sortColumn: 1) { OnClick = r => _ctx.OpenPerson(r.Id), Gap = 10 };
+        }, sortColumn: 1) { OnClick = r => _ctx.OpenPerson(r.Id), Gap = 10, MoreHint = "busque acima ou abra a página Jogadores" };
         _playerTable.OnSortChanged = () => Refresh(false);
 
         SyncTabs();
@@ -218,7 +218,7 @@ public partial class SidePanel : PanelContainer
         _searchBox.TextChanged += t => { _search = t.Trim(); Refresh(true); };
         return ModalFrame.Column(8, _searchBox,
             ThemeFactory.Text($"{rows.Count} conectados", UiTokens.FontCaption, UiTokens.TextSecondary),
-            _playerTable.Build(rows));
+            _playerTable.Build(rows, maxRows: 150));
     }
 
     // ---------------- Fixados ----------------

@@ -458,17 +458,25 @@ public partial class WorldMapView : Node2D
         return o;
     }
 
-    private void UpdatePopulation()
+    // Agrupamento por lugar, refeito so quando chega um retrato novo da simulacao (ate 30 por segundo), e nao a
+    // cada quadro: as chaves de texto de cada pessoa conectada geravam lixo de memoria e picos no quadro (D-069).
+    private SimSnapshot? _groupedSnap;
+    private readonly Dictionary<string, (string Zone, string Area)> _placeParts = new(StringComparer.Ordinal);
+
+    private (string Zone, string Area) PlaceParts(string key)
+    {
+        if (_placeParts.TryGetValue(key, out var p)) return p;
+        int i = key.IndexOf('#');
+        p = (key[..i], key[(i + 1)..]);
+        _placeParts[key] = p;
+        return p;
+    }
+
+    private void GroupPopulation(SimSnapshot snap)
     {
         _byPlace.Clear();
         _byActivity.Clear();
         _zonePeople.Clear();
-        _crowded.Clear();
-        _clusters.Clear();
-        Array.Clear(_personVisible);
-        if (_snap == null) return;
-        var snap = _snap;
-
         for (int id = 1; id < snap.ByPerson.Length; id++)
         {
             var v = snap.ByPerson[id];
@@ -485,23 +493,34 @@ public partial class WorldMapView : Node2D
             if (!_byPlace.TryGetValue(key, out var list)) _byPlace[key] = list = new List<int>();
             list.Add(id);
         }
+        _groupedSnap = snap;
+    }
+
+    private void UpdatePopulation()
+    {
+        _crowded.Clear();
+        _clusters.Clear();
+        Array.Clear(_personVisible);
+        if (_snap == null) return;
+        var snap = _snap;
+        if (!ReferenceEquals(snap, _groupedSnap)) GroupPopulation(snap);
 
         float diameter = Mathf.Clamp(5.5f * Mathf.Sqrt(Detail) + 1.5f, 6f, 14f);
         int written = 0;
         foreach (var (key, people) in _byPlace)
         {
-            var parts = key.Split('#');
-            bool isArea = parts[1].Length > 0;
+            var (zoneId, areaId) = PlaceParts(key);
+            bool isArea = areaId.Length > 0;
             Vector2 center;
             float maxR;
             if (isArea)
             {
-                center = ToScreen(_layout.AreaCenter(parts[0], parts[1]));
-                maxR = _layout.AreaRadius(parts[0], parts[1]) * _zoom;
+                center = ToScreen(_layout.AreaCenter(zoneId, areaId));
+                maxR = _layout.AreaRadius(zoneId, areaId) * _zoom;
             }
             else
             {
-                center = ToScreen(_layout.Hub(parts[0]));
+                center = ToScreen(_layout.Hub(zoneId));
                 maxR = 40f;
             }
             float start = isArea ? EmblemRadius() + 4f : 7f;
@@ -511,7 +530,7 @@ public partial class WorldMapView : Node2D
             if (people.Count >= CrowdThreshold && (needed > Mathf.Max(maxR, start + spacing * 2.5f) || Detail < 1.6f))
             {
                 if (isArea) _crowded.Add(key);
-                else _clusters.Add((key, center, 12f + Mathf.Sqrt(people.Count) * 2.6f, people));
+                else _clusters.Add((key, center, ClusterRadius(people.Count), people));
                 foreach (var id in people) _personScreen[id] = center;
                 continue;
             }
@@ -1430,23 +1449,44 @@ public partial class WorldMapView : Node2D
         }
     }
 
+    /// <summary>
+    /// Raio da bolha de agrupamento: compacta, cresce pouco com a quantidade (logaritmo, 13 a 19 px) e nunca passa
+    /// de 18% do tamanho da zona na tela, para nao cobrir a cidade ou a zona com o mapa afastado (D-069).
+    /// </summary>
+    private float ClusterRadius(int count)
+    {
+        float r = 13f + Mathf.Log(Mathf.Max(1, count) / 8f + 1f) * 2.4f;
+        float zoneOnScreen = _layout.ZoneRadius * _zoom;
+        return Mathf.Clamp(Mathf.Min(r, 19f), 11f, Mathf.Max(11f, zoneOnScreen * 0.18f));
+    }
+
+    /// <summary>Numero curto da bolha: ate 999 inteiro; depois "1,2k".</summary>
+    private static string ClusterCount(int n) =>
+        n < 1000 ? n.ToString(System.Globalization.CultureInfo.InvariantCulture)
+            : (n / 1000.0).ToString(n < 10000 ? "0.#" : "0", System.Globalization.CultureInfo.GetCultureInfo("pt-BR")) + "k";
+
     private void ClusterBubble(MapOverlay o, (string Key, Vector2 Screen, float Radius, List<int> People) c, bool hover)
     {
         float r = c.Radius * (hover ? 1.08f : 1f);
-        o.DrawCircle(c.Screen + new Vector2(2, 3), r + 3, new Color(0, 0, 0, 0.45f));
+        o.DrawCircle(c.Screen + new Vector2(1.5f, 2.5f), r + 2, new Color(0, 0, 0, 0.45f));
         o.DrawCircle(c.Screen, r, new Color(UiTokens.Background, 0.95f));
+        // Anel por perfil de dedicacao (as cores dos perfis), fino como os marcadores do mapa.
+        float ring = Mathf.Clamp(r * 0.2f, 2.5f, 3.5f);
         float start = -Mathf.Pi / 2f;
         foreach (var g in c.People.GroupBy(id => _persons[id - 1].ProfileId).OrderBy(g => g.Key, StringComparer.Ordinal))
         {
             float span = Mathf.Tau * g.Count() / c.People.Count;
-            o.DrawArc(c.Screen, r - 2.5f, start, start + span - 0.04f, 24, UiTokens.ProfileColor(g.Key), 4.5f, true);
+            o.DrawArc(c.Screen, r - ring / 2f - 0.5f, start, start + span - 0.05f, 24, UiTokens.ProfileColor(g.Key), ring, true);
             start += span;
         }
-        if (hover) o.DrawArc(c.Screen, r + 4, 0, Mathf.Tau, 40, UiTokens.AccentSoft, 2f, true);
+        if (hover) o.DrawArc(c.Screen, r + 3, 0, Mathf.Tau, 40, UiTokens.AccentSoft, 1.6f, true);
         var font = UiFonts.Numbers;
-        string text = c.People.Count.ToString(System.Globalization.CultureInfo.InvariantCulture);
-        var ts = font.GetStringSize(text, HorizontalAlignment.Left, -1, 13);
-        o.DrawString(font, new Vector2(c.Screen.X - ts.X / 2f, c.Screen.Y + font.GetAscent(13) / 2f - 1), text, HorizontalAlignment.Left, -1, 13, UiTokens.TextPrimary);
+        string text = ClusterCount(c.People.Count);
+        // Fonte que cabe dentro do anel (12 px; desce ate 10 em bolha pequena com 3 ou 4 caracteres).
+        int size = 12;
+        while (size > 10 && font.GetStringSize(text, HorizontalAlignment.Left, -1, size).X > (r - ring) * 2f - 4f) size--;
+        var ts = font.GetStringSize(text, HorizontalAlignment.Left, -1, size);
+        o.DrawString(font, new Vector2(Mathf.Round(c.Screen.X - ts.X / 2f), Mathf.Round(c.Screen.Y + font.GetAscent(size) / 2f - 1)), text, HorizontalAlignment.Left, -1, size, UiTokens.TextPrimary);
     }
 
     private void SelectedPersonMarker(MapOverlay o)

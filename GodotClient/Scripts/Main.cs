@@ -20,6 +20,8 @@ namespace GodotClient;
 ///   --open-person=ID | --open-zone=ID | --open-cluster   abre uma ficha ao iniciar (auto, goal, objectives, longplan...)
 ///   --tab=N               aba inicial da ficha aberta  (--scroll=PX ou --section=N: tela da pagina)
 ///   --screenshot=ARQ --frames=N    captura e encerra (--zoom=F, --focus=ZONA, --mouse=XxY)
+///   --screenshot-loading=ARQ      captura a tela de carregamento (~3 s depois de abrir)
+///   --peek-person|--peek-zone|--peek-area   abre o cartao do mapa; --pin=chave,... fixa; --drag=dx,dy[,pin][,zone:id]
 ///   --measure-seconds=S   imprime FPS medio e encerra
 /// </summary>
 public partial class Main : Node
@@ -110,6 +112,11 @@ public partial class Main : Node
     private readonly Dictionary<int, long> _registeredAt = new();
     private readonly MetricsHistory _metrics = new();
     private string _startNote = "";
+    /// <summary>
+    /// Populacao da seed padrao (pedido do criador): cerca de 2.350 contas ao abrir no 3o dia, metade das 4.600
+    /// pedidas antes, para a abertura levar segundos (simular 6 dias com 5000 pessoas levava ~30 s).
+    /// </summary>
+    public const int DefaultPopulation = 4000;
     private PanelContainer? _emptyBanner;
     private Label? _emptyText;
     private Button? _skipButton;
@@ -148,8 +155,60 @@ public partial class Main : Node
         }
         var content = load.Database!;
         ulong seed = ulong.Parse(Arg("seed", "42"), CultureInfo.InvariantCulture);
-        int population = int.Parse(Arg("population", "100"), CultureInfo.InvariantCulture);
-        _host = new SimulationHost(content, seed, population);
+        // Padrao do jogo: 4000 pessoas; no 3o dia as 19h (abertura padrao) cerca de 2.350 ja criaram conta.
+        int population = int.Parse(Arg("population", DefaultPopulation.ToString(CultureInfo.InvariantCulture)), CultureInfo.InvariantCulture);
+        // Preparar a campanha (gerar as pessoas e simular os primeiros dias) leva segundos: roda numa tarefa
+        // separada e a tela de carregamento mostra o progresso (D-069). O resto da abertura vem em FinishLoading.
+        long preRoll = 0;
+        if (_args.TryGetValue("hour", out var hour))
+            preRoll = (long)(double.Parse(hour, CultureInfo.InvariantCulture) * Simulation.Core.Time.SimTime.TicksPerHour);
+        if (_args.TryGetValue("sim-minutes", out var mins))
+            preRoll = long.Parse(mins, CultureInfo.InvariantCulture) * Simulation.Core.Time.SimTime.TicksPerMinute;
+        // Por padrao abre com a campanha em andamento (3o dia, 19h): os jogadores seguem a propria rotina e, no
+        // dia do lancamento a meia-noite, ainda nao ha ninguem. Tres dias (e nao seis) para abrir mais rapido.
+        if (preRoll == 0 && !_args.ContainsKey("from-launch"))
+        {
+            preRoll = (2L * 24 * 60 + 19 * 60) * Simulation.Core.Time.SimTime.TicksPerMinute;
+            _startNote = "Campanha em andamento: 3º dia após o lançamento. Os jogadores seguem a própria rotina (a maioria joga à noite).";
+        }
+        var progress = new LoadProgress();
+        _loadProgress = progress;
+        _loadContent = content;
+        _loadPopulation = population;
+        _loading = System.Threading.Tasks.Task.Run(() =>
+        {
+            var clock = System.Diagnostics.Stopwatch.StartNew();
+            var host = new SimulationHost(content, seed, population);
+            progress.CreateMs = clock.ElapsedMilliseconds;
+            host.Submit(new SetServerOpenCommand(true));
+            if (preRoll > 0) host.AdvanceBeforeStart(preRoll, progress);
+            progress.AdvanceMs = clock.ElapsedMilliseconds - progress.CreateMs;
+            return host;
+        });
+        _map.Visible = false;
+        _map.ProcessMode = ProcessModeEnum.Disabled;
+        int days = (int)Math.Ceiling(preRoll / (double)Simulation.Core.Time.SimTime.TicksPerDay);
+        _loadingScreen = new LoadingScreen(population, Math.Max(1, days));
+        _ui.AddChild(_loadingScreen);
+        _loadingScreen.Show(progress);
+    }
+
+    private System.Threading.Tasks.Task<SimulationHost>? _loading;
+    private double _loadSeconds;
+    private bool _loadShotDone;
+    private LoadProgress? _loadProgress;
+    private LoadingScreen? _loadingScreen;
+    private ContentDatabase? _loadContent;
+    private int _loadPopulation;
+
+    /// <summary>Fim da abertura, na thread principal, com a campanha pronta: contexto, mapa, interface e simulacao.</summary>
+    private void FinishLoading(SimulationHost host)
+    {
+        var content = _loadContent!;
+        int population = _loadPopulation;
+        var progress = _loadProgress!;
+        var openClock = System.Diagnostics.Stopwatch.StartNew();
+        _host = host;
 
         _ctx = new ClientContext
         {
@@ -174,7 +233,10 @@ public partial class Main : Node
             Unpin = key => UnpinCard(key),
         };
 
-        _map.Setup(content, _host.Layout, _host.Persons, terrain);
+        _map.Visible = true;
+        _map.ProcessMode = ProcessModeEnum.Inherit;
+        _map.Setup(content, _host.Layout, _host.Persons, _terrain);
+        long tMap = openClock.ElapsedMilliseconds;
         _map.RegionSelected += id => { if (id.Length > 0) PeekZone(id); else CloseOverlays(); };
         _map.PersonSelected += PeekPerson;
         _map.AreaSelected += PeekArea;
@@ -186,25 +248,16 @@ public partial class Main : Node
         BuildSidePanel();
         BuildEmptyBanner();
         BuildMapControls();
+        long tUi = openClock.ElapsedMilliseconds;
 
-        _host.Submit(new SetServerOpenCommand(true));
-        long preRoll = 0;
-        if (_args.TryGetValue("hour", out var hour))
-            preRoll = (long)(double.Parse(hour, CultureInfo.InvariantCulture) * Simulation.Core.Time.SimTime.TicksPerHour);
-        if (_args.TryGetValue("sim-minutes", out var mins))
-            preRoll = long.Parse(mins, CultureInfo.InvariantCulture) * Simulation.Core.Time.SimTime.TicksPerMinute;
-        // Por padrao abre com a campanha em andamento (6o dia, sabado 19h): os jogadores
-        // seguem a propria rotina e, no dia do lancamento a meia-noite, ainda nao ha ninguem.
-        if (preRoll == 0 && !_args.ContainsKey("from-launch"))
-        {
-            preRoll = (5L * 24 * 60 + 19 * 60) * Simulation.Core.Time.SimTime.TicksPerMinute;
-            _startNote = "Campanha em andamento: 6º dia após o lançamento. Os jogadores seguem a própria rotina (a maioria joga à noite).";
-        }
-        if (preRoll > 0) _host.AdvanceBeforeStart(preRoll);
         if (!ClientSettings.CampaignNote) _startNote = "";
         _host.Speed = int.Parse(Arg("speed", ClientSettings.StartSpeed.ToString(CultureInfo.InvariantCulture)), CultureInfo.InvariantCulture);
         _host.Start();
         CollectEvents();
+        // Tempo de abertura por etapa (conferencia de desempenho com populacoes grandes).
+        GD.Print($"ABERTURA populacao={population} contas={_host.Snapshot.Registered} conectados={_host.Snapshot.Online} criar_ms={progress.CreateMs} avanco_ms={progress.AdvanceMs} mapa_ms={tMap} interface_ms={tUi - tMap} eventos_ms={openClock.ElapsedMilliseconds - tUi} total_ms={progress.CreateMs + progress.AdvanceMs + openClock.ElapsedMilliseconds}");
+        _loadingScreen?.QueueFree();
+        _loadingScreen = null;
         PushHistory("map", "");
 
         SyncSpeedButtons();
@@ -644,11 +697,17 @@ public partial class Main : Node
 
     // ---------- Eventos por pessoa ----------
 
+    private int _mappedRegistered = -1;
+
     private void CollectEvents()
     {
         if (_host == null) return;
         var snap = _host.Snapshot;
-        foreach (var v in snap.ByPerson) if (v != null) _characterToPerson[v.CharacterId] = v.PersonId;
+        if (snap.Registered != _mappedRegistered)
+        {
+            foreach (var v in snap.ByPerson) if (v != null) _characterToPerson[v.CharacterId] = v.PersonId;
+            _mappedRegistered = snap.Registered;
+        }
         foreach (var e in _host.DrainEvents())
         {
             int pid = 0;
@@ -698,6 +757,33 @@ public partial class Main : Node
 
     public override void _Process(double delta)
     {
+        // Abertura: enquanto a campanha e preparada, so a tela de carregamento (capturas e medicoes esperam).
+        if (_loading != null)
+        {
+            if (!_loading.IsCompleted)
+            {
+                _loadingScreen?.Show(_loadProgress!);
+                // Captura da propria tela de carregamento (--screenshot-loading=arquivo, depois de ~3 s).
+                _loadSeconds += delta;
+                if (_args.TryGetValue("screenshot-loading", out var lp) && _loadSeconds >= 3 && !_loadShotDone)
+                {
+                    _loadShotDone = true;
+                    GetViewport().GetTexture().GetImage().SavePng(System.IO.Path.GetFullPath(lp));
+                }
+                return;
+            }
+            var task = _loading;
+            _loading = null;
+            if (task.IsFaulted)
+            {
+                _loadingScreen?.QueueFree();
+                _loadingScreen = null;
+                ShowError("Não foi possível preparar a campanha", new[] { task.Exception?.GetBaseException().Message ?? "" });
+                return;
+            }
+            FinishLoading(task.Result);
+            return;
+        }
         if (_host == null) { HandleAutomation(delta); return; }
         var snap = _host.Snapshot;
         _map.SetSnapshot(snap);
@@ -829,6 +915,7 @@ public partial class Main : Node
         if (e is not InputEventKey k || !k.Pressed || k.Echo) return;
         if (k.Keycode == Key.N && !k.CtrlPressed && GetViewport().GuiGetFocusOwner() is not LineEdit) { _nav?.Toggle(); GetViewport().SetInputAsHandled(); return; }
         if (k.Keycode == Key.F11 || (k.AltPressed && k.Keycode is Key.Enter or Key.KpEnter)) { ClientSettings.ToggleFullscreen(); GetViewport().SetInputAsHandled(); return; }
+        if (_host == null) return;   // abertura em andamento: nada alem de tela cheia
         if (k.AltPressed && k.Keycode is Key.Left or Key.Right) { Navigate(k.Keycode == Key.Left ? -1 : +1); GetViewport().SetInputAsHandled(); return; }
         if (k.Keycode is Key.M or Key.J or Key.Z or Key.Q && !k.CtrlPressed && GetViewport().GuiGetFocusOwner() is not LineEdit)
         {
@@ -857,7 +944,7 @@ public partial class Main : Node
     public override void _Input(InputEvent e)
     {
         // Botoes laterais do mouse: voltar e avancar (em qualquer tela).
-        if (e is InputEventMouseButton { Pressed: true } mb && mb.ButtonIndex is MouseButton.Xbutton1 or MouseButton.Xbutton2)
+        if (_host != null && e is InputEventMouseButton { Pressed: true } mb && mb.ButtonIndex is MouseButton.Xbutton1 or MouseButton.Xbutton2)
         {
             Navigate(mb.ButtonIndex == MouseButton.Xbutton1 ? -1 : +1);
             GetViewport().SetInputAsHandled();

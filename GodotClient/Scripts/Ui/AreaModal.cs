@@ -120,13 +120,9 @@ public partial class AreaModal : ModalFrame
         var ids = _map.PeopleInArea(_zone.Id, _area.Id);
         var who = Fit(6, "area_jogadores");
         var snap = _ctx.Snapshot();
-        if (ids.Count == 0) who.AddChild(ThemeFactory.Text("Ninguém neste lugar agora.", UiTokens.FontBody, UiTokens.TextSecondary).AsPlaceholder());
-        foreach (var id in ids.OrderByDescending(i => snap.ByPerson[i]?.Level ?? 0).ThenBy(i => i))
-            if (snap.ByPerson[id] is { } v)
-            {
-                int pid = id;
-                who.AddChild(PlayerRow.Build(_ctx, id, v, () => { _ctx.OpenPerson(pid); }));
-            }
+        var present = ids.Where(i => snap.ByPerson[i] != null).OrderByDescending(i => snap.ByPerson[i]!.Level).ThenBy(i => i).ToList();
+        if (present.Count == 0) who.AddChild(ThemeFactory.Text("Ninguém neste lugar agora.", UiTokens.FontBody, UiTokens.TextSecondary).AsPlaceholder());
+        else who.SetVirtual(present.Count, PlayerRow.Height, i => { int pid = present[i]; return PlayerRow.Build(_ctx, pid, snap.ByPerson[pid]!, () => { _ctx.OpenPerson(pid); }); });
         return new ScreenPage()
             .Add(Grid(12,
                 (FillCard("Tarefas", TasksBody(), info: "O que se faz aqui\n~Nível, grupo, duração, risco, recompensa de referência e as criaturas de cada tarefa; à direita, quantos fazem cada uma agora.\n~Para fazer uma tarefa, o personagem sai da estrada e vai até este lugar.", headerRight: Caption(_area.Activities.Count.ToString())), 7),

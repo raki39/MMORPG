@@ -234,3 +234,7 @@ Pedido do criador: combate nas caças (PvE), no PvP e contra chefes. Ideia de pe
 ## Marcos seguintes
 
 M3 combate · M4 observação 3D (com teste de estresse visual: centenas de personagens lutando, FPS medido) · M5 economia · M6 social · M7 empresa e patches · M8 versão integrada · M9 expansão · M10 profundidade. Detalhes na seção 16 do plano.
+
+## Desempenho (D-069)
+
+- Reaproveitar os retratos da simulação (`SimulationHost.BuildSnapshot`, até 30 por segundo com todos os personagens) para reduzir a coleta de memória: média de 5,2 ms e p95 de 6,7 ms no pico da seed padrão.

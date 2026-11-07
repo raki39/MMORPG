@@ -29,6 +29,7 @@ Jogo de gestão single-player e offline: o jogador cria e administra um MMORPG e
 - O criador não usa o editor do Godot: cenas, temas e recursos são escritos como texto e validados por linha de comando.
 - Não alegar testes, desempenho ou revisão visual não executados.
 - Desempenho desde já (D-032): nada de redesenhar o mapa inteiro a cada quadro; desenho estático em cache, preenchimentos em lote; rodar `tools/perf.ps1` após mudanças no cliente. Dados de demonstração sempre identificados.
+- Seed padrão do cliente (D-069): 4000 pessoas, abre no 3º dia às 19 h (~2.360 contas) com tela de carregamento; listas com milhares de linhas são virtuais (`FitList.SetVirtual`).
 
 ## Ambiente
 
