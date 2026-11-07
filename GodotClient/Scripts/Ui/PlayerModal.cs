@@ -518,7 +518,15 @@ public partial class PlayerModal : ModalFrame
             KeyValue("Taxa da faixa", $"×{stage}"),
             KeyValue("Próximo nível", eta));
         data.SizeFlagsVertical = SizeFlags.ShrinkCenter;
-        return Row(14, gauge, data);
+        data.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        data.CustomMinimumSize = new Vector2(168, 0);
+        // Lado a lado; em card estreito (1366) os dados descem para baixo do anel, sem cortar valores.
+        var flow = new HFlowContainer();
+        flow.AddThemeConstantOverride("h_separation", 14);
+        flow.AddThemeConstantOverride("v_separation", 10);
+        flow.AddChild(gauge);
+        flow.AddChild(data);
+        return flow;
     }
 
     /// <summary>
@@ -795,10 +803,11 @@ public partial class PlayerModal : ModalFrame
         };
         var col = Column(10);
         var head = new HBoxContainer();
-        foreach (var (t, w, right) in new[] { ("Indicador", 0f, false), ("Este", 80f, true), ("Mediana", 80f, true), ("Diferença", 200f, true) })
+        foreach (var (t, w, right) in new[] { ("Indicador", 0f, false), ("Este", 64f, true), ("Mediana", 64f, true), ("Diferença", -140f, true) })
         {
             var l = ThemeFactory.Text(t, UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Medium);
-            if (w > 0) l.CustomMinimumSize = new Vector2(w, 0); else l.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+            if (w > 0) l.CustomMinimumSize = new Vector2(w, 0);
+            else { l.SizeFlagsHorizontal = SizeFlags.ExpandFill; l.CustomMinimumSize = new Vector2(-w, 0); }
             if (right) l.HorizontalAlignment = HorizontalAlignment.Right;
             head.AddChild(l);
         }
@@ -814,14 +823,14 @@ public partial class PlayerModal : ModalFrame
             name.AddChild(ThemeFactory.Text(r.Name, UiTokens.FontBody, UiTokens.TextLabel, UiFonts.Medium));
             row.AddChild(name);
             var mine = ThemeFactory.Text(r.MineText, UiTokens.FontBody, UiTokens.TextPrimary, UiFonts.Numbers);
-            mine.CustomMinimumSize = new Vector2(80, 0);
+            mine.CustomMinimumSize = new Vector2(64, 0);
             mine.HorizontalAlignment = HorizontalAlignment.Right;
             row.AddChild(mine);
             var med = ThemeFactory.Text(r.MedText, UiTokens.FontBody, UiTokens.TextSecondary, UiFonts.Numbers);
-            med.CustomMinimumSize = new Vector2(80, 0);
+            med.CustomMinimumSize = new Vector2(64, 0);
             med.HorizontalAlignment = HorizontalAlignment.Right;
             row.AddChild(med);
-            var bar = new HBoxContainer { CustomMinimumSize = new Vector2(200, 0) };
+            var bar = new HBoxContainer { CustomMinimumSize = new Vector2(140, 0), SizeFlagsHorizontal = SizeFlags.ExpandFill };
             bar.AddThemeConstantOverride("separation", 8);
             bar.AddChild(new Control { CustomMinimumSize = new Vector2(16, 0) });
             bar.AddChild(new DivergingTrack(Mathf.Clamp(diff, -1, 1), diff >= 0 ? UiTokens.Success : UiTokens.Danger) { SizeFlagsHorizontal = SizeFlags.ExpandFill, CustomMinimumSize = new Vector2(0, 14) });
@@ -841,18 +850,23 @@ public partial class PlayerModal : ModalFrame
     {
         long total = v.XpFromQuests + v.XpFromActivities;
         if (total == 0) return Wrap("Ainda sem XP registrado.");
-        // Rosca e legenda lado a lado, como Uso do tempo.
+        // Rosca e legenda (nome em cima, valor embaixo), o par centrado no card, como Uso do tempo.
         var donut = new DonutChart
         {
-            CustomMinimumSize = new Vector2(124, 124), SizeFlagsVertical = SizeFlags.ShrinkCenter,
+            CustomMinimumSize = new Vector2(108, 108), SizeFlagsVertical = SizeFlags.ShrinkCenter,
             Slices = new[] { ((float)v.XpFromActivities, UiTokens.Info), ((float)v.XpFromQuests, UiTokens.Accent) },
             Center = PtBr.Int(total), Caption = "XP total",
         };
-        var legend = Column(10,
-            KeyValue("Atividades", $"{PtBr.Int(v.XpFromActivities)} · {v.XpFromActivities * 100 / total}%", UiTokens.Info),
-            KeyValue("Missões", $"{PtBr.Int(v.XpFromQuests)} · {v.XpFromQuests * 100 / total}%", UiTokens.AccentSoft));
+        Control Entry(string name, long xp, Color color)
+        {
+            var r = Row(8, new ColorRect { Color = color, CustomMinimumSize = new Vector2(3, 32), SizeFlagsVertical = SizeFlags.ShrinkCenter },
+                Column(1, ThemeFactory.Text(name, UiTokens.FontSmall, UiTokens.TextLabel, UiFonts.Medium),
+                    ThemeFactory.Text($"{PtBr.Int(xp)} · {xp * 100 / total}%", UiTokens.FontBody, UiTokens.TextPrimary, UiFonts.Numbers)));
+            return r;
+        }
+        var legend = Column(14, Entry("Atividades", v.XpFromActivities, UiTokens.Info), Entry("Missões", v.XpFromQuests, UiTokens.Accent));
         legend.SizeFlagsVertical = SizeFlags.ShrinkCenter;
-        return Row(18, donut, legend);
+        return Centered(donut, legend, 14);
     }
 
     private Control ServerLevelsBody(CharacterView v)
@@ -1291,7 +1305,7 @@ public partial class PlayerModal : ModalFrame
             .Select(i => (Type: i.Type, Name: i.Type == "travel" ? "Deslocamento" : i.Type == "idle" ? "Esperando" : PtBr.ActivityType(i.Type),
                 Pct: i.Ticks * 100f / d.PlayedTicks, Hours: Hours(i.Ticks),
                 Color: i.Type == "travel" ? new Color("#5B6573") : ActivityPalette.Color(i.Type))).ToList();
-        var donut = new DonutChart { CustomMinimumSize = new Vector2(124, 124), SizeFlagsVertical = SizeFlags.ShrinkCenter, Slices = list.Select(x => (x.Pct, x.Color)).ToList(), Center = $"{PtBr.Decimal(Hours(d.PlayedTicks))} h", Caption = "conectado" };
+        var donut = new DonutChart { CustomMinimumSize = new Vector2(108, 108), SizeFlagsVertical = SizeFlags.ShrinkCenter, Slices = list.Select(x => (x.Pct, x.Color)).ToList(), Center = $"{PtBr.Decimal(Hours(d.PlayedTicks))} h", Caption = "conectado" };
         var legend = Column(8);
         legend.SizeFlagsVertical = SizeFlags.ShrinkCenter;
         legend.CustomMinimumSize = new Vector2(150, 0);   // sem espaco ao lado da rosca (1366), a legenda desce para baixo dela
@@ -1310,12 +1324,21 @@ public partial class PlayerModal : ModalFrame
             row.AddChild(r);
             legend.AddChild(row);
         }
-        var flow = new HFlowContainer { SizeFlagsVertical = SizeFlags.ShrinkCenter };
-        flow.AddThemeConstantOverride("h_separation", 18);
+        legend.CustomMinimumSize = new Vector2(170, 0);
+        return Centered(donut, legend, 22);
+    }
+
+    /// <summary>
+    /// Rosca e legenda centradas no card (na largura e na altura). Sem espaco ao lado (card estreito em 1366),
+    /// a legenda desce para baixo da rosca.
+    /// </summary>
+    private static Control Centered(Control donut, Control legend, int gap)
+    {
+        var flow = new HFlowContainer { SizeFlagsVertical = SizeFlags.ShrinkCenter, Alignment = FlowContainer.AlignmentMode.Center };
+        flow.AddThemeConstantOverride("h_separation", gap);
         flow.AddThemeConstantOverride("v_separation", 14);
         flow.AddChild(donut);
         flow.AddChild(legend);
-        // Centralizada na altura do card fixo.
         var center = new VBoxContainer { Alignment = BoxContainer.AlignmentMode.Center };
         center.AddChild(flow);
         return center;

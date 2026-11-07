@@ -48,8 +48,13 @@ Referência para qualquer tela nova. Estilo de dossiê de jogo de gestão: escur
    - ações à direita das abas. Se abas e ações não cabem numa linha (1366×768), as ações com ícone mostram só o ícone, com o rótulo no tooltip, e as abas continuam numa linha só.
 2. **Corpo:** linhas de cards numa **grade de 12 colunas** (`Grid` / `SpanRow`).
    - Cada card ocupa N colunas, com vão de 12 px.
-   - As divisas caem sempre nas mesmas linhas verticais, de preferência 3, 6 e 9. Linhas diferentes podem ter cards de tamanhos diferentes, mas as bordas coincidem.
-   - Os cards de uma linha têm a mesma altura.
+   - **Antes de montar, olhar o conteúdo de cada card** e dar a largura que ele pede (correção do criador):
+     - números compactos e listas curtas: 3 colunas;
+     - roscas e histogramas: 4;
+     - gráficos de linha, tabelas e listas com barras: 5 ou 6.
+   - Card largo com pouco conteúdo é defeito.
+   - **As linhas não precisam repetir a mesma divisão:** uma linha pode ter 2 cards e a de baixo 4, e as divisas não precisam coincidir. Agrupar por assunto vale mais que alinhar bordas. Coincidir é bom quando sai naturalmente, nunca à custa de card esticado ou apertado.
+   - Os cards de uma linha têm a mesma altura. Conteúdo pequeno num card mais alto fica centrado (roscas com legenda: `Centered`), nunca encostado num canto com o resto vazio.
 3. **Página em telas** (`ScreenPage`, D-068; `plano-interface.md`):
    - a página se divide em seções; **cada linha tem a altura natural do seu conteúdo** (listas inteiras, gráficos na altura preferida de `Grow`, 200 px), e os cards da linha ficam com a mesma altura;
    - **a seção só ocupa a tela inteira quando tem conteúdo para isso** (correção do criador): se o natural passa da tela, as linhas que pedem menos ficam no tamanho delas e a sobra vai para as que têm mais (listas longas ganham páginas); se o natural chega a 90% da tela, ou se há outra seção embaixo (para ela não aparecer cortada), a seção estica até a tela, dividindo a sobra por peso; senão, fica no tamanho natural e **nenhum card estica para cobrir a tela**;
@@ -61,7 +66,8 @@ Referência para qualquer tela nova. Estilo de dossiê de jogo de gestão: escur
    - a **roda do mouse salta de tela em tela** (animação curta). Dentro de um card com conteúdo maior, a roda rola o card primeiro;
    - **em 1366×768**, a seção mantém as suas linhas, com cards mais baixos e rolagem dentro do card. Só passa para a tela seguinte se uma linha ficaria abaixo de 180 px. Uma linha de cards empilhados vira uma linha por card;
    - capturas: `--section=N` abre a tela N; `--wheel=N` gira a roda N vezes;
-   - **divisas coincidentes:** numa seção, as divisas entre cards de uma linha caem sobre divisas da outra (ex.: 4|8 em cima e 4|4|4 embaixo; nunca 4|4|4 sobre 3|3|6);
+   - **última tela mais baixa que a janela:** a página ganha folga embaixo e a rolagem para com ela no topo. Nunca aparece a tela de cima cortada;
+   - **uma tela só quando cabe:** se três linhas cabem na altura natural, a aba fica numa tela, sem seção extra. As seções servem para conteúdo que passa da tela, não para separar assuntos curtos;
    - **sem empilhar em 1366:** a largura mínima do conteúdo de um card de 3 colunas não passa de ~230 px, senão a linha empilha e os cards esticam. Barras com rótulo ficam no formato dos atributos (nome e valor em cima, barra embaixo); rosca e legenda ficam num fluxo (a legenda desce quando não cabe ao lado).
 4. **Visão geral:** o dossiê completo da pessoa, cheio, em duas telas (correção do criador: nunca um resumo magro). Primeira linha: Situação atual, Atributos do jogador e Personalidade e traços.
    - Os cards que têm uma aba de detalhe levam um atalho (›) no título (`TabLink`).

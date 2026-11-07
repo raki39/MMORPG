@@ -2754,16 +2754,25 @@ Itens como instâncias, inventário, equipamento funcional, carteira e aplicaç�
   - um arrasto simulado do cabeçalho (`--drag=dx,dy,pin,zone:id`), seguido de fixar e abrir outro cartão;
   - relatório de rolagem vazio.
 
-**Progressão e Estatísticas numa aba só (pedido do criador):** as duas tratavam do mesmo assunto, os números do personagem. Agora são a aba **Estatísticas**, em duas telas com as divisas em 4 e 8 colunas:
-- **tela 1, o personagem:** Nível e experiência e Evolução; Uso do tempo, XP por fonte e Zonas frequentadas;
-- **tela 2, contra o servidor:** Classificação e Comparação com o servidor; Níveis no servidor.
-- **Encaixe:**
-  - a Classificação passou para a esquerda, alinhada com o Nível da tela de cima;
-  - a primeira tela enche a tela porque há outra embaixo; a segunda fica na altura do conteúdo.
-- **Sem repetição:** "Zonas conhecidas" saiu do card de nível (está na comparação) e virou a legenda do card Zonas frequentadas ("11 de 15 conhecidas").
-- **Novo no card de nível:** **Próximos níveis**, até cinco, com o XP que falta e as horas de jogo no ritmo atual. A conta usa o XP por hora do personagem, corrigido pela taxa de cada faixa. É uma lista que mostra só o que cabe: em 1366 some inteira, título junto (`FitList.CanBeEmpty`).
-- **Zonas frequentadas** também virou lista que mostra só o que cabe; em 1366 não rola mais.
-- Os atalhos da Visão geral (Evolução e Uso do tempo) levam a Estatísticas.
-- **Conferido em captura:** as duas telas em 1920 sem rolagem em nenhum card. Em 1366 só sobram as rolagens pequenas que já existiam (Comparação +23 px, Uso do tempo +4 px, Classificação +1 px).
+**Progressão e Estatísticas numa aba só (pedido do criador):** as duas tratavam do mesmo assunto, os números do personagem.
+- **Primeira versão rejeitada:** duas telas, com tudo em 4 e 8 colunas. Roscas e listas curtas ficaram em cards largos e esticados, com muito fundo vazio, e ao descer para a segunda tela a primeira aparecia cortada.
+- **Como ficou:** uma tela, três linhas por assunto, cada card na largura que o conteúdo pede, sem forçar as divisas a coincidirem entre as linhas:
+  - **progressão:** Nível e experiência (4) · Evolução (5) · Próximos níveis (3);
+  - **como joga:** Uso do tempo (4) · XP por fonte (3) · Zonas frequentadas (5);
+  - **posição no servidor:** Classificação (3) · Comparação com o servidor (5) · Níveis no servidor (4).
+- **Próximos níveis** (novo): até oito, com o XP que falta e as horas de jogo no ritmo atual. A conta usa o XP por hora do personagem, corrigido pela taxa de cada faixa. A lista mostra só o que cabe.
+- **Sem repetição:** "Zonas conhecidas" saiu do card de nível (está na comparação) e virou a legenda de Zonas frequentadas ("11 de 15 conhecidas").
+- **Roscas centradas** no card, com a legenda ao lado. Em card estreito a legenda desce, e a do XP por fonte mostra o nome em cima e o valor embaixo.
+- **Encaixe em 1366:**
+  - o anel do nível e os dados ficam num fluxo: sem largura, os dados descem;
+  - as colunas da comparação encolhem até caber em 5 colunas;
+  - as zonas mostram só as que cabem.
+- **Rótulos do histograma** ficam dentro do gráfico: o último ("Nv 30") era cortado na borda.
+- **Base das páginas** (`ScreenPage`): com mais de uma tela, a última, se for mais baixa que a janela, ganha folga embaixo. A rolagem para com ela no topo, em vez de mostrar a tela de cima cortada. Vale para todas as páginas.
+- **Regra registrada** (`ui-kit.md`, CLAUDE.md): olhar o conteúdo antes de montar; as linhas não precisam repetir a mesma divisão nem alinhar as bordas; card largo com pouco conteúdo é defeito.
+- **Conferido em captura:**
+  - dois jogadores em 1920, nenhum card rolando;
+  - 1366, nenhum card rolando, com a última linha na tela seguinte começando no topo;
+  - a Visão geral, que usa a mesma rosca.
 
 **Próximo:** etapa 6, a conferência final (todas as telas em 1920×1080 e 1366×768, três jogadores, desempenho).

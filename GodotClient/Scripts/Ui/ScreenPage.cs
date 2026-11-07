@@ -8,7 +8,8 @@ namespace GodotClient.Ui;
 /// natural passa da tela, a linha que precisa de menos fica no tamanho dela e a sobra vai para as que tem mais
 /// (listas longas ganham paginas); se o natural fica perto da tela (FillThreshold) ou ha outra secao embaixo, a
 /// secao estica ate a tela, para a de baixo nao aparecer cortada; senao, fica no tamanho natural, sem esticar
-/// cards.
+/// cards. A ultima tela, se for mais baixa que a janela, ganha folga embaixo: a rolagem para com ela no topo,
+/// sem mostrar a tela de cima cortada.
 /// Em tela baixa (1366×768) a secao mantem as suas linhas, com cards mais baixos e rolagem dentro do card;
 /// so passa para a tela seguinte se uma linha ficaria abaixo do piso (180 px). Uma linha de cards que
 /// empilha na largura estreita vira uma linha por card. A rolagem da pagina salta de tela em tela
@@ -184,6 +185,9 @@ public partial class ScreenPage : Container
             }
             y += height;
         }
+        // Com mais de uma tela, a ultima comeca no topo da janela mesmo sendo mais baixa: folga embaixo, em vez
+        // de a rolagem parar no fim e mostrar a tela de cima cortada.
+        if (_screenTops.Count > 1) y = Mathf.Max(y, _screenTops[^1] + view);
         return (placed, y);
     }
 

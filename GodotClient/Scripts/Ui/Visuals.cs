@@ -309,7 +309,12 @@ public partial class ColumnChart : Control
             else DrawRect(new Rect2(x, Mathf.Floor(plot.End.Y) - 2, w, 2), UiTokens.Track);
             bool label = i < Labels.Count && ((Values.Count - 1 - i) % step == 0);
             if (label || _hover == i)
-                DrawString(UiFonts.Regular, new Vector2(x - 20, Size.Y - 4), i < Labels.Count ? Labels[i] : "", HorizontalAlignment.Center, w + 40, 11, _hover == i ? UiTokens.TextPrimary : UiTokens.AxisText);
+            {
+                string text = i < Labels.Count ? Labels[i] : "";
+                float tw = UiFonts.Regular.GetStringSize(text, HorizontalAlignment.Left, -1, 11).X;
+                float tx = Mathf.Round(Mathf.Clamp(x + w / 2 - tw / 2, 0, Size.X - tw));
+                DrawString(UiFonts.Regular, new Vector2(tx, Size.Y - 4), text, HorizontalAlignment.Left, -1, 11, _hover == i ? UiTokens.TextPrimary : UiTokens.AxisText);
+            }
         }
         var played = Values.Where(v => v > 0).ToList();
         float avg = played.Count == 0 ? 0 : played.Average();
@@ -577,8 +582,6 @@ public partial class FitList : Container
     public int Keep { get; set; }
     /// <summary>O ultimo item mostrado fica com toda a altura que sobra (ex.: um grafico que cresce).</summary>
     public bool StretchLast { get; set; }
-    /// <summary>Complemento opcional de um card: sem espaco, some inteira (normalmente mostra ao menos um item).</summary>
-    public bool CanBeEmpty { get; set; }
     public int Shown { get; private set; }
     /// <summary>Altura da lista inteira (todos os itens): o natural da linha na pagina em telas.</summary>
     public float NaturalHeight
@@ -635,7 +638,7 @@ public partial class FitList : Container
             for (int i = 0; i < n; i++) h += items[i].GetCombinedMinimumSize().Y;
             h += Separation * (n - 1);
         }
-        else if (items.Count > 0 && !CanBeEmpty) h = items[Math.Clamp(Offset, 0, items.Count - 1)].GetCombinedMinimumSize().Y;
+        else if (items.Count > 0) h = items[Math.Clamp(Offset, 0, items.Count - 1)].GetCombinedMinimumSize().Y;
         return new Vector2(w, h);
     }
 
@@ -657,7 +660,7 @@ public partial class FitList : Container
             {
                 float h = c.GetCombinedMinimumSize().Y;
                 float gap = shown > 0 ? Separation : 0;
-                if ((shown == 0 && !CanBeEmpty) || i < Keep || y + gap + h <= Size.Y + 0.5f)
+                if (shown == 0 || i < Keep || y + gap + h <= Size.Y + 0.5f)
                 {
                     y += gap;
                     FitChildInRect(c, new Rect2(0, y, Size.X, h));
