@@ -32,7 +32,7 @@ public partial class PlayerModal
     {
         var v = View;
         var attributes = FillCard("Atributos do jogador", Column(16, AttributeGrid(), Highlights()), info: AttrInfo);
-        var traits = FillCard("Personalidade e traços", TraitsBody(), info: TraitsInfo);
+        var traits = FillCard("Personalidade e traços", TraitsBody(), info: TraitsInfo + "\n~" + ChangesInfo);
         if (v == null)
             return new ScreenPage()
                 .Add(Grid(12,
@@ -53,9 +53,8 @@ public partial class PlayerModal
                 (FillCard("Missões em andamento", QuestSummary(v), info: "Missões do personagem\n~Clique numa missão para abrir a ficha dela. Concluídas e o diário de missões ficam na aba Missões.", headerRight: TabLink("Missões")), 3)), weight: 46)
             .Section()
             .Add(Grid(12,
-                (FillCard("Humor", MoodOverview(v, detail), info: MoodInfo, headerRight: TabLink("Humor e memória")), 3),
-                (FillCard("Memórias marcantes", MemoriesBody(detail), info: "O que ficou na memória (D-038)\n~Conquistas duram mais que frustrações. A saudade dos bons momentos pode trazer de volta quem desistiu. Os lugares que marcaram e o tédio ficam na aba Humor e memória.", headerRight: TabLink("Humor e memória")), 6),
-                (FillCard("Mudanças desde o cadastro", ChangesBody(), info: ChangesInfo), 3)), weight: 50)
+                (FillCard("Humor", MoodOverview(v, detail), info: MoodInfo, headerRight: TabLink("Humor e memória")), 4),
+                (FillCard("Memórias marcantes", MemoriesBody(detail), info: "O que ficou na memória (D-038)\n~Conquistas duram mais que frustrações. A saudade dos bons momentos pode trazer de volta quem desistiu. Os lugares que marcaram e o tédio ficam na aba Humor e memória.", headerRight: TabLink("Humor e memória")), 8)), weight: 50)
             .Add(Grid(12,
                 (FillCard("Preferências", PreferencesBody(1), info: PrefInfo), 3),
                 (FillCard("Últimos acontecimentos", RecentBody(), info: "Últimos acontecimentos\n~Clique numa linha para abrir a área, a zona ou a missão. Histórico completo na aba Histórico.", headerRight: TabLink("Histórico")), 6),
@@ -160,37 +159,34 @@ public partial class PlayerModal
         _ => reason,
     };
 
-    /// <summary>Mudancas desde o cadastro: atributos (antes e agora), tracos ganhos e perdidos, personalidade.</summary>
-    private Control ChangesBody()
+    /// <summary>
+    /// Mudancas desde o cadastro, numa lista so: a personalidade (a ultima troca), os tracos ganhos e perdidos (os 3
+    /// ultimos) e os atributos que mudaram na escala de 1 a 20 (os maiores primeiro). Mostra o que cabe.
+    /// </summary>
+    private FitList ChangesBody()
     {
         var c = _ctx.Content;
         var t = _person.Traits;
         var b0 = _person.BaseTraits;
         string Date(long day) => PtBr.ShortDate(_ctx.Calendar.ToDateTime(_ctx.Calendar.StartOfDay(day)));
-        var col = Fit(10);
+        var col = Fit(8);
 
-        var personality = View?.PersonalityHistory ?? Array.Empty<PersonalityChange>();
-        col.AddChild(Section("Personalidade"));
-        if (personality.Count == 0)
-            col.AddChild(Wrap($"A mesma desde o cadastro: {MainPersonality().Label}.", UiTokens.FontSmall, UiTokens.TextSecondary));
-        foreach (var p in personality.Reverse().Take(1))
+        foreach (var p in (View?.PersonalityHistory ?? Array.Empty<PersonalityChange>()).Reverse().Take(1))
         {
             var from = PersonalityOf(c, p.From);
             var to = PersonalityOf(c, p.To);
             var r = Row(10);
             r.AddChild(new TraitBadge(to.Icon, UiTokens.Accent, 24, round: true));
             var body = Column(2);
-            body.AddChild(ThemeFactory.Text($"Passou de {from.Label} para {to.Label}", UiTokens.FontSmall, UiTokens.TextPrimary, UiFonts.Medium));
+            body.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+            body.AddChild(ThemeFactory.Text($"Personalidade: de {from.Label} para {to.Label}", UiTokens.FontSmall, UiTokens.TextPrimary, UiFonts.Medium));
             body.AddChild(ThemeFactory.Text($"{AttributeInfo.Name(p.Attribute)} {UiTokens.To20(p.Value)} / 20", UiTokens.FontCaption, UiTokens.TextSecondary));
             r.AddChild(body);
             r.AddChild(Caption(Date(p.Day)));
             col.AddChild(r);
         }
 
-        var quirks = View?.QuirkHistory ?? Array.Empty<QuirkChange>();
-        col.AddChild(Section("Traços", Caption(quirks.Count.ToString())));
-        if (quirks.Count == 0) col.AddChild(Wrap("Nenhum traço ganho ou perdido desde o cadastro.", UiTokens.FontSmall, UiTokens.TextSecondary));
-        foreach (var h in quirks.Reverse().Take(3))
+        foreach (var h in (View?.QuirkHistory ?? Array.Empty<QuirkChange>()).Reverse().Take(3))
         {
             var def = c.Quirks.TryGetValue(h.Id, out var d) ? d : null;
             bool gained = h.Change == "acquired";
@@ -200,6 +196,7 @@ public partial class PlayerModal
             var r = Row(10);
             r.AddChild(new TraitBadge(TraitInfo.QuirkIcon(def), color, 24, pending: !gained));
             var body = Column(2);
+            body.SizeFlagsHorizontal = SizeFlags.ExpandFill;
             body.AddChild(ThemeFactory.Text(what, UiTokens.FontSmall, UiTokens.TextPrimary, UiFonts.Medium));
             var wl = ThemeFactory.Text(why, UiTokens.FontCaption, UiTokens.TextSecondary);
             wl.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
@@ -220,8 +217,6 @@ public partial class PlayerModal
             .Select(k => (Key: k, Now: UiTokens.To20(t.Get(k)), Was: UiTokens.To20(b0.Get(k))))
             .Where(x => x.Now != x.Was)
             .OrderByDescending(x => Math.Abs(x.Now - x.Was)).ThenBy(x => x.Key, StringComparer.Ordinal).ToList();
-        col.AddChild(Section("Atributos", Caption($"{changed.Count} de {AttrGroups.Sum(g => g.Keys.Length)}")));
-        if (changed.Count == 0) col.AddChild(Wrap("Nenhum atributo mudou na escala de 1 a 20 desde o cadastro.", UiTokens.FontSmall, UiTokens.TextSecondary));
         foreach (var (key, now, was) in changed)
         {
             var info = AttributeInfo.ByKey[key];
@@ -245,8 +240,16 @@ public partial class PlayerModal
             tip.AddChild(r);
             col.AddChild(tip);
         }
+        if (col.Total == 0)
+            col.AddChild(Wrap("Nada mudou: personalidade, traços e atributos são os mesmos do cadastro.", UiTokens.FontSmall, UiTokens.TextSecondary).AsPlaceholder());
         return col;
     }
+
+    /// <summary>Quantas mudancas desde o cadastro (legenda do subtitulo).</summary>
+    private int ChangesCount() =>
+        Math.Min(1, (View?.PersonalityHistory ?? Array.Empty<PersonalityChange>()).Count)
+        + Math.Min(3, (View?.QuirkHistory ?? Array.Empty<QuirkChange>()).Count)
+        + AttrGroups.SelectMany(g => g.Keys).Count(k => UiTokens.To20(_person.Traits.Get(k)) != UiTokens.To20(_person.BaseTraits.Get(k)));
 
     // ---------------- Estatisticas (com a antiga Progressao) ----------------
 
@@ -491,25 +494,35 @@ public partial class PlayerModal
     }
 
     /// <summary>Tedio acumulado por tipo de atividade, do maior para o menor.</summary>
+    /// <summary>
+    /// Tedio por tipo de atividade: todos os tipos que a pessoa joga (0% quando nao cansou), o mais cansado
+    /// primeiro, com as horas jogadas no tipo ao lado do nome.
+    /// </summary>
     private Control BoredomBody(CharacterDetailView? d)
     {
         var col = Fit(10);
         if (d == null) { col.AddChild(Wrap("Carregando…")); return col; }
-        var list = d.Boredom.Where(kv => kv.Value > 0).OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.Ordinal).ToList();
-        if (list.Count == 0) col.AddChild(Wrap("Sem tédio acumulado agora: nenhum tipo de atividade cansou.", UiTokens.FontSmall, UiTokens.TextSecondary));
-        foreach (var (type, value) in list)
+        var types = d.ActivityTicks.Where(kv => kv.Value > 0 && kv.Key != "idle").Select(kv => kv.Key)
+            .Union(d.Boredom.Where(kv => kv.Value > 0).Select(kv => kv.Key), StringComparer.Ordinal)
+            .Select(k => (Type: k, Value: d.Boredom.GetValueOrDefault(k), Ticks: d.ActivityTicks.GetValueOrDefault(k)))
+            .OrderByDescending(x => x.Value).ThenByDescending(x => x.Ticks).ThenBy(x => x.Type, StringComparer.Ordinal).ToList();
+        if (types.Count == 0) col.AddChild(Wrap("Ainda sem atividades registradas.", UiTokens.FontSmall, UiTokens.TextSecondary).AsPlaceholder());
+        foreach (var (type, value, ticks) in types)
         {
             var color = value >= 600 ? UiTokens.Danger : value >= 300 ? UiTokens.Warning : UiTokens.Info;
-            var t = new TipPanel { TooltipText = $"{PtBr.ActivityType(type)}|{value / 10}%\n~Tédio acumulado neste tipo de atividade. Acima de 60%, pesa bastante contra ele nas escolhas.", MouseFilter = MouseFilterEnum.Stop };
+            var t = new TipPanel { TooltipText = $"{PtBr.ActivityType(type)}|{value / 10}%\nHoras no tipo|{PtBr.Decimal(Hours(ticks))} h\n~Tédio acumulado neste tipo de atividade. Acima de 60%, pesa bastante contra ele nas escolhas.", MouseFilter = MouseFilterEnum.Stop };
             t.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
             var r = Row(10);
             r.AddChild(new Icon(TypeIcon(type), 16, ActivityPalette.Color(type)) { SizeFlagsVertical = SizeFlags.ShrinkCenter });
             var info = Column(4);
+            info.SizeFlagsHorizontal = SizeFlags.ExpandFill;
             var top = new HBoxContainer();
-            var nm = ThemeFactory.Text(PtBr.ActivityType(type), UiTokens.FontSmall, UiTokens.TextLabel, UiFonts.Medium);
-            nm.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-            top.AddChild(nm);
-            top.AddChild(ThemeFactory.Text($"{value / 10}%", UiTokens.FontSmall, UiTokens.TextPrimary, UiFonts.Numbers));
+            top.AddThemeConstantOverride("separation", 8);
+            top.AddChild(ThemeFactory.Text(PtBr.ActivityType(type), UiTokens.FontSmall, UiTokens.TextLabel, UiFonts.Medium));
+            var hrs = ThemeFactory.Text($"{PtBr.Decimal(Hours(ticks))} h", UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Numbers);
+            hrs.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+            top.AddChild(hrs);
+            top.AddChild(ThemeFactory.Text($"{value / 10}%", UiTokens.FontSmall, value > 0 ? UiTokens.TextPrimary : UiTokens.TextSecondary, UiFonts.Numbers));
             info.AddChild(top);
             info.AddChild(new ThinBar(value / 1000f, color) { CustomMinimumSize = new Vector2(0, 4) });
             r.AddChild(info);

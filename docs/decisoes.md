@@ -2775,4 +2775,36 @@ Itens como instâncias, inventário, equipamento funcional, carteira e aplicaç�
   - 1366, nenhum card rolando, com a última linha na tela seguinte começando no topo;
   - a Visão geral, que usa a mesma rosca.
 
-**Próximo:** etapa 6, a conferência final (todas as telas em 1920×1080 e 1366×768, três jogadores, desempenho).
+**Etapa 6 — conferência final (feita):** 71 capturas, com o guia `ux-dicas.md` como critério:
+- todas as abas da ficha para três jogadores (ativo, o que mais mudou de objetivos e uma casual estudante);
+- mapa às 0 h e às 20 h, painel lateral nas cinco abas, cartões, fixados;
+- listas, zona, área, missões principal e diária, Configurações;
+- 1366×768 nas telas principais.
+
+O que a conferência achou e foi corrigido:
+- **Eventos em inglês no painel lateral.** A aba Eventos mostrava códigos crus (`session_delayed`, `objective_gap`, `plan_changed`, `quest_expired`…).
+  - A ficha e o painel agora usam o mesmo texto (`PlayerModal.Describe(ctx, evento)`); o painel põe o nome na frente.
+  - Ganharam texto três tipos que nem a ficha descrevia: sessão adiada (procrastinou), indecisão entre duas opções e mudança de personalidade.
+  - Tipo desconhecido mostra "Acontecimento sem descrição", nunca o código.
+- **Rolagem pesada dentro dos cards em 1366** (até +188 px na Visão geral e na Rotina). Duas linhas eram espremidas numa tela de 470 px.
+  - Cada linha agora tem uma **altura necessária**: a de cada card sem rolar, com listas na altura de um item e gráficos no mínimo.
+  - A linha que não cabe com as de cima vai para a tela seguinte. Só rola dentro do card o que não cabe nem numa tela inteira.
+  - O piso fixo de 180 px por linha saiu, porque esticava linhas de uma frase só.
+  - Em 1920 nada mudou: comparei capturas antes e depois.
+- **Cards quase vazios na Visão geral.**
+  - "Mudanças desde o cadastro" (quase sempre "nada mudou") entrou em **Personalidade e traços**, como uma lista única que mostra o que cabe. O card ganhou também a descrição curta da personalidade.
+  - A segunda tela ficou Humor (4) · Memórias marcantes (8).
+- **Tédio por atividade** mostrava só os tipos que já cansaram (muitas vezes um). Agora lista todos os tipos que a pessoa joga, com as horas em cada um; os que não cansaram aparecem com 0%.
+- **Página de área repetia o cabeçalho.**
+  - "Agora no lugar" (jogadores, tarefas, nível, risco e quem faz cada tarefa) e "Sobre o lugar" (tipo, zona, regras, tamanho) saíram.
+  - Controle virou etiqueta do cabeçalho, e as notas explicativas foram para os ⓘ.
+  - A visão geral da área ficou numa linha: Tarefas (7) · Quem está aqui (5).
+- **Texto explicativo dentro de card** (Resumo do quadro) foi para o ⓘ.
+- **Missão sem ninguém fazendo:** em vez de tabela e gráfico vazios, um card só com a frase.
+- **Plural:** "1 jogadores agora" virou "1 jogador agora" na zona e na área.
+- **Conferido:**
+  - nova rodada completa de capturas depois das correções;
+  - relatório de rolagem vazio em 1920 e em 1366;
+  - `tools/perf.ps1 -Quick` uma vez no fim.
+
+**D-068 encerrada.** Próximo: retomar a E1b (página Classes e editor).

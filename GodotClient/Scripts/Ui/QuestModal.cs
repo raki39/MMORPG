@@ -105,6 +105,15 @@ public partial class QuestModal : ModalFrame
         var doing = Fit(0, "fazendo");
         var table = BuildDoingTable(doing);
         // Uma tela: as etapas, quem pode fazer e o que ganha, e os numeros; embaixo, quem esta fazendo agora.
+        // Sem ninguem fazendo, a linha de baixo e um card so, com a frase (sem tabela e grafico vazios).
+        if (doing.Total == 0)
+            return new ScreenPage()
+                .Add(Grid(12,
+                    (FillCard($"Objetivos · {_quest.Steps.Count + 1} etapas", StepsTimeline(), info: "Etapas da missão\n~As etapas acontecem no mundo; aceitar e entregar são ações rápidas no quadro."), 6),
+                    (FillCard("Requisitos e recompensas", RequirementsBody(), info: "Quem pode fazer e o que ganha\n~Ouro e itens já fazem parte da missão, mas só passam a ter efeito com inventário e economia (M5). Hoje a recompensa aplicada é o XP."), 3),
+                    (FillCard("Desempenho da missão", FunnelBody(), info: "Números da campanha\n~Aceites, quem está fazendo e entregas desde o lançamento."), 3)))
+                .Add(Grid(12, (FillCard("Fazendo agora", ThemeFactory.Text("Ninguém está fazendo esta missão agora.", UiTokens.FontSmall, UiTokens.TextSecondary),
+                    info: "Personagens com a missão em andamento\n~Quando alguém aceitar, aparecem aqui com a etapa e, ao lado, quantos estão em cada etapa."), 12)));
         return new ScreenPage()
             .Add(Grid(12,
                 (FillCard($"Objetivos · {_quest.Steps.Count + 1} etapas", StepsTimeline(), info: "Etapas da missão\n~As etapas acontecem no mundo; aceitar e entregar são ações rápidas no quadro."), 6),

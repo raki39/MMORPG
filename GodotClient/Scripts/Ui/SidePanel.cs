@@ -421,7 +421,11 @@ public partial class SidePanel : PanelContainer
             }
             case "server_opened": return ("Servidor aberto ao público", UiTokens.Success);
             case "server_closed": return ("Servidor fechado", UiTokens.Danger);
-            default: return ($"{who} {e.Type}", UiTokens.TextSecondary);
+            default:
+            {
+                var (text, color) = PlayerModal.Describe(_ctx, e);
+                return (who.Length > 0 ? $"{who} · {text}" : text, color);
+            }
         }
     }
 }

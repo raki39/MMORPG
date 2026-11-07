@@ -62,9 +62,13 @@ O resultado foram três linhas (progressão, como joga e servidor) numa tela só
 - **Card esticado só para cobrir a tela é defeito.**
 - **Faltou conteúdo num card?** Completar com algo que faça sentido, como foi a jornada do dia na Ocupação. Uma barra que nem o criador consegue ler não serve.
 - **Não há card vazio na Visão geral.** O que depende de sistemas futuros vai para uma aba com o marco ("Combate · M3").
+- **Card que quase sempre fica vazio vira parte de outro.** Exemplo: "Mudanças desde o cadastro", quase sempre "nada mudou", entrou em Personalidade e traços.
+- **Lista que costuma ter um item mostra o quadro inteiro.** Exemplo: Tédio por atividade lista todos os tipos jogados, com 0% nos que não cansaram.
+- **Sem dado agora, um card só com a frase.** Nunca tabela e gráfico vazios lado a lado (missão que ninguém está fazendo).
 
 ## 6. Cada dado num lugar
 
+- **O cabeçalho já conta.** Se o tipo, as regras, o tamanho e a contagem estão nas etiquetas do cabeçalho, nenhum card repete. A página de área perdeu dois cards por isso.
 - **Numa mesma página, um dado aparece uma vez.** Se aparece em dois cards, um deles vira legenda ou atalho. Exemplo: "Zonas conhecidas" saiu do card de nível e virou "11 de 15 conhecidas" no título de Zonas frequentadas.
 - **Abas que tratam do mesmo assunto viram uma.** Progressão e Estatísticas foram juntadas.
 - **O mesmo número em dois lugares usa a mesma definição.**
@@ -107,7 +111,9 @@ O resultado foram três linhas (progressão, como joga e servidor) numa tela só
 - [ ] `.rolagem.txt` vazio em 1920. Em 1366, só rolagem pequena e justificada.
 - [ ] Nenhum card largo ou alto com fundo vazio; conteúdo pequeno centrado.
 - [ ] Rolar até a última tela: nada cortado em cima.
-- [ ] Nenhum dado repetido na mesma página.
+- [ ] Nenhum dado repetido na mesma página, nem com o cabeçalho.
+- [ ] Todo texto em português: nenhum código cru (`session_delayed`) na tela; tipo sem texto mostra uma frase genérica.
+- [ ] Plural certo com 1 ("1 jogador", não "1 jogadores").
 - [ ] `tools/perf.ps1 -Quick` **uma vez, no fim da entrega**, salvo pedido em contrário.
 - [ ] Mostrar ao criador com capturas antes de seguir.
 
@@ -123,3 +129,4 @@ O resultado foram três linhas (progressão, como joga e servidor) numa tela só
 | Cartões do mapa pequenos e sem padrão | "básicos e feinhos" | Padrão das páginas, com mais dado útil (seção 9) |
 | 3 \| 6 \| 3 em todas as linhas, para alinhar bordas | "para quê? fica estranho" | Largura pelo conteúdo; linhas diferentes (seção 2) |
 | Estatísticas em duas telas, com a de cima cortada ao rolar | "fica cortado" | Uma tela quando cabe; última tela no topo (seção 3) |
+| Conferência final (etapa 6): eventos crus em inglês, cards quase vazios, área repetindo o cabeçalho, rolagem pesada em 1366 | achado na revisão pelo guia | Itens da lista de conferência (seção 10) e seções 3 e 6 |

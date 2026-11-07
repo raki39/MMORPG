@@ -10,10 +10,11 @@ namespace GodotClient.Ui;
 /// secao estica ate a tela, para a de baixo nao aparecer cortada; senao, fica no tamanho natural, sem esticar
 /// cards. A ultima tela, se for mais baixa que a janela, ganha folga embaixo: a rolagem para com ela no topo,
 /// sem mostrar a tela de cima cortada.
-/// Em tela baixa (1366×768) a secao mantem as suas linhas, com cards mais baixos e rolagem dentro do card;
-/// so passa para a tela seguinte se uma linha ficaria abaixo do piso (180 px). Uma linha de cards que
-/// empilha na largura estreita vira uma linha por card. A rolagem da pagina salta de tela em tela
-/// (ModalFrame); o conteudo que passa do card rola dentro dele.
+/// Cada linha tem uma altura necessaria: a de cada card sem rolar dentro dele, com as listas (FitList) na
+/// altura de um item e os graficos no minimo. Em tela baixa (1366×768) a linha que nao cabe na tela com as
+/// de cima passa para a tela seguinte, em vez de espremer e rolar dentro dos cards; so rola dentro do card o
+/// que nao cabe nem numa tela inteira. Uma linha de cards que empilha na largura estreita vira uma linha por
+/// card. A rolagem da pagina salta de tela em tela (ModalFrame).
 /// </summary>
 public partial class ScreenPage : Container
 {
@@ -44,10 +45,11 @@ public partial class ScreenPage : Container
     }
 
     /// <summary>
-    /// Linha da secao atual: peso na altura da tela e piso (px). Abaixo do piso a linha passa para a tela
-    /// seguinte; acima dele, a secao fica junta e o conteudo que passar rola dentro do card.
+    /// Linha da secao atual: peso na divisao da sobra e piso opcional (px). A altura minima da linha e a
+    /// necessaria para nenhum card rolar (ou o piso, se maior); se nao cabe com as de cima, vai para a tela
+    /// seguinte.
     /// </summary>
-    public ScreenPage Add(Control row, int weight = 1, int min = 180)
+    public ScreenPage Add(Control row, int weight = 1, int min = 0)
     {
         row.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         _rows.Add(new Row { Node = row, Weight = Math.Max(1, weight), Min = Math.Max(0, min), Section = _section });
@@ -111,6 +113,24 @@ public partial class ScreenPage : Container
 
     private static float Natural(Control c, float floor) => Mathf.Max(floor, c.GetCombinedMinimumSize().Y + Extra(c));
 
+    /// <summary>
+    /// Altura necessaria para nada rolar dentro dos cards: o conteudo inteiro de cada card de altura fixa, mas
+    /// listas que cabem (FitList) na altura de um item e graficos no minimo deles.
+    /// </summary>
+    private static float Need(Control c)
+    {
+        float min = c.GetCombinedMinimumSize().Y;
+        if (c is FitList) return min;
+        if (c is ScrollContainer sc)
+            return sc.GetChildCount() > 0 && sc.GetChild(0) is Control child && child.Visible ? Mathf.Max(min, Need(child)) : min;
+        var kids = c.GetChildren().OfType<Control>().Where(k => k.Visible && !k.TopLevel).ToList();
+        if (kids.Count == 0) return min;
+        if (c is VBoxContainer) return min + Mathf.Max(0, kids.Sum(k => Need(k) - k.GetCombinedMinimumSize().Y));
+        // Painel, margem, linha de cards: o filho que mais pede alem do minimo do conjunto.
+        float kidsMin = kids.Max(k => k.GetCombinedMinimumSize().Y);
+        return min + Mathf.Max(0, kids.Max(Need) - kidsMin);
+    }
+
     private sealed class Placed
     {
         public Row Row = null!;
@@ -129,13 +149,13 @@ public partial class ScreenPage : Container
                 var cards = sr.VisibleItems;
                 for (int i = 0; i < cards.Count; i++)
                 {
-                    float min = Mathf.Max(r.Min, cards[i].GetCombinedMinimumSize().Y);
+                    float min = Mathf.Max(r.Min, Mathf.Min(Need(cards[i]), View));
                     units.Add(new Unit(r, i, min, Natural(cards[i], min), r.Weight));
                 }
             }
             else
             {
-                float min = Mathf.Max(r.Min, r.Node.GetCombinedMinimumSize().Y);
+                float min = Mathf.Max(r.Min, Mathf.Min(Need(r.Node), View));
                 units.Add(new Unit(r, -1, min, Natural(r.Node, min), r.Weight));
             }
         }

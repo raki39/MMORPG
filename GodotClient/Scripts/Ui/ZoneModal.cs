@@ -63,7 +63,7 @@ public partial class ZoneModal : ModalFrame
             Info(_zone.IsCity ? "landmark" : "map", kind, ZoneAccent(_zone), UiTokens.TextLabel, "", UiFonts.Medium, 176),
             Info("trending-up", _zone.IsCity ? "Todos os níveis" : $"Níveis {_zone.LevelMin}–{_zone.LevelMax}", UiTokens.AccentSoft, UiTokens.AccentSoft,
                 "Faixa de nível da zona\n~Orientação: o XP vem do nível do desafio de cada atividade.", UiFonts.SemiBold, 150),
-            Info("users", $"{people} jogadores agora", UiTokens.Info, UiTokens.TextLabel, "Jogadores na zona agora\n~Inclui quem está andando pelas estradas da zona.", null, 176),
+            Info("users", people == 1 ? "1 jogador agora" : $"{people} jogadores agora", UiTokens.Info, UiTokens.TextLabel, "Jogadores na zona agora\n~Inclui quem está andando pelas estradas da zona.", null, 176),
             Info("layers", $"{_zone.Areas.Count} áreas", UiTokens.TextSecondary, UiTokens.TextLabel, "Áreas da zona\n~Lista na Visão geral.", null, 150),
             Info("door-open", $"{_zone.Connections.Count} saídas", UiTokens.TextSecondary, UiTokens.TextSecondary, $"Saídas\n~{exits}", null, 176),
             Info("user-check", $"capacidade {_zone.Capacity}", UiTokens.TextSecondary, UiTokens.TextSecondary, "Capacidade\n~Acima dela a zona fica lotada e as atividades disputadas.", null, 150)));
@@ -122,12 +122,19 @@ public partial class ZoneModal : ModalFrame
     {
         float load = people / (float)Math.Max(1, _zone.Capacity);
         float danger = WorldMapView.DangerOf(_zone);
-        var rings = Row(18,
+        // Fluxo: lado a lado em 1920; em card estreito (1366) o numero desce, e a linha de cards nao empilha.
+        var rings = new HFlowContainer();
+        rings.AddThemeConstantOverride("h_separation", 18);
+        rings.AddThemeConstantOverride("v_separation", 10);
+        foreach (var item in new Control[] {
             Column(4, new RingGauge { CustomMinimumSize = new Vector2(84, 84), SizeFlagsHorizontal = SizeFlags.ShrinkCenter, Value = Mathf.Clamp(load * 4f, 0, 1), Color = WorldMapView.Ramp(Mathf.Clamp(load * 4f, 0, 1)), Center = $"{load * 100:0}%", Caption = "lotação" }),
             Column(4, new RingGauge { CustomMinimumSize = new Vector2(84, 84), SizeFlagsHorizontal = SizeFlags.ShrinkCenter, Value = danger, Color = WorldMapView.Ramp(danger), Center = $"{danger * 100:0}", Caption = "perigo" }),
-            Column(2, ThemeFactory.Text(people.ToString(), 28, UiTokens.TextPrimary, UiFonts.Numbers), ThemeFactory.Text("jogadores agora", UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Medium),
-                ThemeFactory.Text($"capacidade {_zone.Capacity}", UiTokens.FontCaption, UiTokens.TextDisabled)));
-        foreach (var c in rings.GetChildren().OfType<Control>()) c.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+            Column(2, ThemeFactory.Text(people.ToString(), 28, UiTokens.TextPrimary, UiFonts.Numbers), ThemeFactory.Text(people == 1 ? "jogador agora" : "jogadores agora", UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Medium),
+                ThemeFactory.Text($"capacidade {_zone.Capacity}", UiTokens.FontCaption, UiTokens.TextDisabled)) })
+        {
+            item.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+            rings.AddChild(item);
+        }
         var col = Column(12, rings, Section("Fazendo agora"));
         var acts = _zone.AllActivities().Select(a => (A: a, N: _map.PeopleAtSpot(_zone.Id, a.Id))).Where(x => x.N > 0).OrderByDescending(x => x.N).ThenBy(x => x.A.Name, StringComparer.Ordinal).ToList();
         var list = Fit(8);

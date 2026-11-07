@@ -65,13 +65,11 @@ public partial class AreaModal : ModalFrame
             new Column<QuestDefinition> { Title = "Agora", Width = 48, Right = true, Numeric = true, Text = q => PtBr.Int(S(q)?.Active ?? 0), SortKey = q => S(q)?.Active ?? 0, Color = _ => UiTokens.Info, Tooltip = _ => "Fazendo agora" },
         }, sortColumn: 2, sortDesc: false) { OnClick = q => { _ctx.OpenQuest(q.Id); } };
         _questTable.OnSortChanged = () => Rebuild(false);
-        var note = ThemeFactory.Text("Aceitar e entregar são ações rápidas aqui no quadro; as etapas acontecem no mundo. Clique numa missão para ver a ficha completa.", UiTokens.FontCaption, UiTokens.TextSecondary);
-        note.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         var rows = Fit(0, "quadro");
         var table = _questTable.Build(quests, rows);
         return new ScreenPage().Add(Grid(12,
             (FillCard(_board.Name, table, info: "Missões deste quadro\n~Clique numa missão para abrir a ficha. Ordene pelas colunas.", headerRight: Pager(rows, "quadro", "missão", "missões")), 9),
-            (FillCard("Resumo do quadro", Column(14, summary, Divider(), note), info: "Números do quadro desde o lançamento"), 3)));
+            (FillCard("Resumo do quadro", summary, info: "Números do quadro desde o lançamento\n~Aceitar e entregar são ações rápidas aqui no quadro; as etapas acontecem no mundo. Clique numa missão para ver a ficha completa."), 3)));
     }
 
     private static int CategoryOrder(string c) => c == QuestCategories.Main ? 0 : c == QuestCategories.Secondary ? 1 : 2;
@@ -89,7 +87,7 @@ public partial class AreaModal : ModalFrame
             Info("trending-up", _area.LevelMin > 0 ? $"Faixa {_area.LevelMin}–{_area.LevelMax}" : "Todos os níveis", UiTokens.AccentSoft, UiTokens.AccentSoft,
                 "Faixa de nível recomendada\n~Orientação: o XP vem do nível do desafio de cada tarefa.", UiFonts.SemiBold, 150),
             Info("map-pin", _zone.Name, UiTokens.TextSecondary, UiTokens.TextLabel, $"{_zone.Name}\n~Clique em \"Ficha da zona\" para ver a zona inteira.", null, 176),
-            Info("users", $"{people} jogadores agora", people > 0 ? UiTokens.Info : UiTokens.TextSecondary, UiTokens.TextLabel, "", null, 150)));
+            Info("users", people == 1 ? "1 jogador agora" : $"{people} jogadores agora", people > 0 ? UiTokens.Info : UiTokens.TextSecondary, UiTokens.TextLabel, "", null, 150)));
         if (_area.Description.Length > 0)
             Header.AddChild(Info("", _area.Description, UiTokens.TextSecondary, UiTokens.TextSecondary, _area.Description, null, 390));
 
@@ -98,8 +96,9 @@ public partial class AreaModal : ModalFrame
         Tag("swords", "Combate", PtBr.Pvp(_zone.Pvp), pvp ? UiTokens.Danger : UiTokens.Success, $"Regra da zona {_zone.Name}.");
         Tag("skull", "Morte", PtBr.Death(_zone.DeathRule), _zone.DeathRule == DeathRules.FullLoot ? UiTokens.Danger : _zone.DeathRule == DeathRules.Partial ? UiTokens.Warning : UiTokens.TextSecondary,
             "Regra de morte da zona\n~O que se perde ao morrer aqui.");
+        Tag("flag", "Controle", PtBr.Control(_zone.Control), UiTokens.TextSecondary, $"Controle da zona {_zone.Name}\n~Combate, morte e controle são regras da zona, herdadas pelo lugar.");
         Tag("list", "Tarefas", _area.Activities.Count.ToString(), UiTokens.AccentSoft, "Tarefas oferecidas neste lugar.");
-        Tag("ruler", "Tamanho", $"{_area.Radius * 20} m", UiTokens.TextSecondary, "Diâmetro da área\n~Configurável no conteúdo (editor de áreas futuro).");
+        Tag("ruler", "Tamanho", $"{_area.Radius * 20} m", UiTokens.TextSecondary, "Diâmetro da área\n~Define o espaço, não a quantidade de monstros ou recursos (configurada à parte). Configurável no conteúdo (editor de áreas futuro).");
         if (AreaKinds.IsPortal(_area.Kind) && _area.LeadsTo.Length > 0)
             Tag("door-open", "Leva a", _area.LeadsTo, Accent, "Destino da passagem.");
         Actions.AddChild(Action("Aproximar no mapa", "Centraliza a área", () => { _ctx.FocusArea(_zone.Id, _area.Id); Close(); }, primary: true));
@@ -113,12 +112,11 @@ public partial class AreaModal : ModalFrame
     // ---------------- Visao geral ----------------
 
     /// <summary>
-    /// Uma tela: as tarefas do lugar e o que acontece agora; embaixo, quem esta aqui e o que o lugar e. Com mais
-    /// tarefas, a linha de cima fica maior.
+    /// Uma linha na altura do conteudo: as tarefas (com quantos fazem cada uma agora) e quem esta aqui. Tipo,
+    /// zona, regras, tamanho e jogadores ficam no cabecalho, sem repetir em card.
     /// </summary>
     private Control BuildOverview()
     {
-        int top = 56 + Math.Min(3, _area.Activities.Count) * 4;
         var ids = _map.PeopleInArea(_zone.Id, _area.Id);
         var who = Fit(6, "area_jogadores");
         var snap = _ctx.Snapshot();
@@ -131,11 +129,8 @@ public partial class AreaModal : ModalFrame
             }
         return new ScreenPage()
             .Add(Grid(12,
-                (FillCard("Tarefas", TasksBody(), info: "O que se faz aqui\n~Nível, grupo, duração, risco, recompensa de referência e as criaturas de cada tarefa.", headerRight: Caption(_area.Activities.Count.ToString())), 8),
-                (FillCard("Agora no lugar", NowBody(ids.Count), info: "Situação ao vivo do lugar"), 4)), weight: top)
-            .Add(Grid(12,
-                (FillCard("Quem está aqui", who, info: "Jogadores neste lugar agora\n~Os de nível mais alto primeiro. Clique para abrir a ficha.", headerRight: Pager(who, "area_jogadores", "jogador", "jogadores")), 8),
-                (FillCard("Sobre o lugar", AboutBody(), info: "O lugar e as regras que ele herda da zona"), 4)), weight: 100 - top);
+                (FillCard("Tarefas", TasksBody(), info: "O que se faz aqui\n~Nível, grupo, duração, risco, recompensa de referência e as criaturas de cada tarefa; à direita, quantos fazem cada uma agora.\n~Para fazer uma tarefa, o personagem sai da estrada e vai até este lugar.", headerRight: Caption(_area.Activities.Count.ToString())), 7),
+                (FillCard("Quem está aqui", who, info: "Jogadores neste lugar agora\n~Os de nível mais alto primeiro. Clique para abrir a ficha.", headerRight: Pager(who, "area_jogadores", "jogador", "jogadores")), 5)));
     }
 
     private Control TasksBody()
@@ -161,53 +156,6 @@ public partial class AreaModal : ModalFrame
     }
 
     /// <summary>Agora no lugar: numeros do lugar e quantos estao em cada tarefa.</summary>
-    private Control NowBody(int people)
-    {
-        var tiles = new GridContainer { Columns = 2, SizeFlagsHorizontal = SizeFlags.ExpandFill };
-        tiles.AddThemeConstantOverride("h_separation", 8);
-        tiles.AddThemeConstantOverride("v_separation", 8);
-        tiles.AddChild(Stat(people.ToString(), "jogadores aqui agora", UiTokens.Info, fill: true));
-        tiles.AddChild(Stat(_area.Activities.Count.ToString(), "tarefas oferecidas", Accent, fill: true));
-        tiles.AddChild(Stat(_area.Activities.Count == 0 ? "–" : $"{_area.Activities.Min(a => a.MinLevel)}+", "nível mínimo", UiTokens.AccentSoft, fill: true));
-        tiles.AddChild(Stat(_area.Activities.Count == 0 ? "–" : $"{_area.Activities.Max(a => a.BaseRiskPermille) / 10}%", "risco máximo",
-            WorldMapView.Ramp(_area.Activities.Count == 0 ? 0 : _area.Activities.Max(a => a.BaseRiskPermille) / 1000f), fill: true));
-        var col = Column(12, tiles);
-        if (_area.Activities.Count > 0)
-        {
-            col.AddChild(Section("Fazendo agora"));
-            int max = Math.Max(1, _area.Activities.Max(a => _map.PeopleAtSpot(_zone.Id, a.Id)));
-            foreach (var a in _area.Activities.OrderByDescending(a => _map.PeopleAtSpot(_zone.Id, a.Id)).ThenBy(a => a.Name, StringComparer.Ordinal))
-            {
-                int n = _map.PeopleAtSpot(_zone.Id, a.Id);
-                col.AddChild(Bar(a.Name, n, max, ActivityPalette.Color(a.Type), n.ToString(), 150));
-            }
-        }
-        return col;
-    }
-
-    private Control AboutBody()
-    {
-        var col = Column(8,
-            KeyValue("Tipo", AreaPalette.Name(_area.Kind)),
-            KeyValue("Tamanho", $"{_area.Radius * 20} m de diâmetro"),
-            KeyValue("Zona", _zone.Name),
-            KeyValue("Combate", PtBr.Pvp(_zone.Pvp), _zone.Pvp == PvpRules.Open ? UiTokens.Danger : null),
-            KeyValue("Morte", PtBr.Death(_zone.DeathRule)),
-            KeyValue("Controle", PtBr.Control(_zone.Control)));
-        foreach (var text in new[]
-        {
-            "O tamanho define o espaço, não a quantidade de monstros ou recursos (configurada à parte).",
-            "Combate, morte e controle são as regras da zona, herdadas pelo lugar.",
-            "Para fazer uma tarefa, o personagem sai da estrada e vai até este lugar.",
-        })
-        {
-            var t = ThemeFactory.Text(text, UiTokens.FontCaption, UiTokens.TextSecondary);
-            t.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-            col.AddChild(t);
-        }
-        return col;
-    }
-
     private Control TaskCard(ActivityDefinition a)
     {
         int doing = _map.PeopleAtSpot(_zone.Id, a.Id);

@@ -105,6 +105,6 @@ O Lucide continua nas ações e nas linhas de dados.
 3. Reorganização das abas da ficha. **Feita** (detalhe abaixo).
 4. Emblemas e ícones do jogo. **Feita** (`GameIcons.cs`, moldura `EmblemBox`; `ui-kit.md`, seção Ícones).
 5. Zona, área, missão e listas. **Feita**, antes da etapa 4, a pedido do criador (detalhe abaixo).
-6. Conferência final: todas as telas em 1920×1080 e 1366×768, três jogadores, `tools/perf.ps1`.
+6. Conferência final: todas as telas em 1920×1080 e 1366×768, três jogadores, `tools/perf.ps1`. **Feita** (D-068, etapa 6: eventos em português no painel, linhas que não cabem passam para a tela seguinte, cards vazios unidos, página de área sem repetir o cabeçalho).
 
 Cada etapa tem capturas de antes e depois para aprovação.

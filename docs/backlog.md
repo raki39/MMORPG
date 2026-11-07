@@ -103,7 +103,7 @@ Uma etapa por vez, fechada por inteiro (testes, validação, documentação, exp
    - ~~teste do sono deslocado (R6): defeito do teste (lia a agenda antes de a recuperação ser fixada); compromisso do dia livre mudava com a sociabilidade do jogo (defeito da simulação)~~ (D-067a).
 1c. **Organização da interface** (pedido do criador antes da E1b; `plano-interface.md`, D-068):
    - ~~etapa 1: base do layout (página em telas, cards fixos, rolagem de tela em tela), aplicada na Rotina~~ (D-068);
-   - ~~etapa 2: cabeçalho da ficha~~ (D-068); ~~etapa 3: abas da ficha (Visão geral, Atributos, Progressão, Humor e memória, Missões, Histórico, futuras; depois Atributos voltou à Visão geral e Progressão entrou em Estatísticas)~~ (D-068); ~~etapa 4: emblemas e ícones próprios~~ (D-068); ~~etapa 5: zona, área, missão e listas~~ (D-068); etapa 6: conferência final;
+   - ~~etapa 2: cabeçalho da ficha~~ (D-068); ~~etapa 3: abas da ficha (Visão geral, Atributos, Progressão, Humor e memória, Missões, Histórico, futuras; depois Atributos voltou à Visão geral e Progressão entrou em Estatísticas)~~ (D-068); ~~etapa 4: emblemas e ícones próprios~~ (D-068); ~~etapa 5: zona, área, missão e listas~~ (D-068); ~~etapa 6: conferência final~~ (D-068);
    - em 1366: dias da Ocupação e valores do Sono cortados (conteúdo).
 2. **Etapa 1 — O personagem** (D-040; escopo reduzido no D-061, `personagem.md`; retoma na E1b com os objetivos fechados):
    - ~~E1a: modelo, estatísticas (com crítico), recurso por tipo, velocidade do personagem e índice de poder candidato~~ (D-061);

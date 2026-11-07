@@ -615,9 +615,10 @@ public partial class PlayerModal : ModalFrame
         var (picon, plabel, ptext) = MainPersonality();
         var col = Column(10);
 
-        // Personalidade e tracos no mesmo padrao: emblema de 30 px e o nome; a descricao fica no tooltip.
+        // Personalidade e tracos no mesmo padrao: emblema de 30 px e o nome; a descricao curta embaixo.
         col.AddChild(Section("Personalidade"));
         col.AddChild(TraitLine(new TraitBadge(picon, UiTokens.Accent, 30, round: true), plabel, null, PersonalityTip(pid, plabel, ptext)));
+        if (ptext.Length > 0) col.AddChild(Wrap(ptext, UiTokens.FontSmall, UiTokens.TextSecondary));
 
         // Tracos atuais (P4d: podem mudar): positivos primeiro, na ordem em que entraram.
         var states = View?.Quirks ?? _person.Quirks;
@@ -640,7 +641,10 @@ public partial class PlayerModal : ModalFrame
             col.AddChild(TraitLine(new TraitBadge(TraitInfo.QuirkIcon(q), color, 30, pending: !TraitInfo.EffectActive(c, q)),
                 q.Name, (TraitInfo.IsPositive(q) ? "+" : "−", color), TraitInfo.Tooltip(c, q, state, Date)));
         }
-        // Tracos ganhos e perdidos (P4d), com data e motivo: card Mudancas desde o cadastro.
+        // O que mudou desde o cadastro (personalidade, tracos ganhos e perdidos, atributos): mostra o que cabe.
+        int changes = ChangesCount();
+        col.AddChild(Section("Mudanças desde o cadastro", ThemeFactory.Text(changes == 0 ? "nenhuma" : changes.ToString(), UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Numbers)));
+        col.AddChild(ChangesBody());
         return col;
     }
 
@@ -1536,30 +1540,33 @@ public partial class PlayerModal : ModalFrame
     }
 
     /// <summary>Texto de um objetivo a partir do detalhe do evento ("tipo|alvo|valor").</summary>
-    private string GoalDetail(string? detail)
+    private string GoalDetail(string? detail) => GoalDetail(_ctx, detail);
+
+    private static string GoalDetail(ClientContext ctx, string? detail)
     {
         var p = (detail ?? "").Split('|');
         if (p.Length != 3) return detail ?? "";
         return p[0] switch
         {
             Simulation.Core.Population.GoalTypes.ReachLevel => $"chegar ao nível {p[2]}",
-            Simulation.Core.Population.GoalTypes.DiscoverZone => $"descobrir {_ctx.ZoneName(p[1])}",
-            Simulation.Core.Population.GoalTypes.CompleteQuest => $"concluir {QuestName(p[1])}",
-            Simulation.Core.Population.GoalTypes.UnlockLevel => UnlockGoalText(p[1], p[2]),
+            Simulation.Core.Population.GoalTypes.DiscoverZone => $"descobrir {ctx.ZoneName(p[1])}",
+            Simulation.Core.Population.GoalTypes.CompleteQuest => $"concluir {QuestName(ctx, p[1])}",
+            Simulation.Core.Population.GoalTypes.UnlockLevel => UnlockGoalText(ctx, p[1], p[2]),
             _ => $"praticar {PtBr.ActivityType(p[1]).ToLowerInvariant()} por {p[2]} min",
         };
     }
 
     /// <summary>Meta de desbloqueio (D-055): "chegar ao nivel N para Atividade (Zona)"; alvo "zona/atividade".</summary>
-    private string UnlockGoalText(string target, string level)
+    private static string UnlockGoalText(ClientContext ctx, string target, string level)
     {
         int slash = target.IndexOf('/');
         string zone = slash > 0 ? target[..slash] : target, act = slash > 0 ? target[(slash + 1)..] : "";
-        string actName = _ctx.Content.Regions.TryGetValue(zone, out var z) && z.FindActivity(act) is { } a ? a.Name : act;
-        return $"chegar ao nível {level} para {actName} ({_ctx.ZoneName(zone)})";
+        string actName = ctx.Content.Regions.TryGetValue(zone, out var z) && z.FindActivity(act) is { } a ? a.Name : act;
+        return $"chegar ao nível {level} para {actName} ({ctx.ZoneName(zone)})";
     }
 
-    private string QuestName(string? id) => id != null && _ctx.Content.Quests.TryGetValue(id, out var q) ? q.Name : id ?? "";
+    private string QuestName(string? id) => QuestName(_ctx, id);
+    private static string QuestName(ClientContext ctx, string? id) => id != null && ctx.Content.Quests.TryGetValue(id, out var q) ? q.Name : id ?? "";
 
     public static string ExtendMotivePt(string key) => key switch
     {
@@ -1591,7 +1598,10 @@ public partial class PlayerModal : ModalFrame
         return $" ({why}{(onTheWay ? ", aproveitando a viagem de outra missão" : "")}{(swap ? ", no lugar de uma mais fraca" : "")})";
     }
 
-    private (string, Color) Describe(SimEvent e)
+    private (string, Color) Describe(SimEvent e) => Describe(_ctx, e);
+
+    /// <summary>Texto e cor de um acontecimento (ficha e painel lateral usam o mesmo texto).</summary>
+    public static (string Text, Color Color) Describe(ClientContext ctx, SimEvent e)
     {
         switch (e.Type)
         {
@@ -1609,19 +1619,19 @@ public partial class PlayerModal : ModalFrame
                     ? "Chamado do trabalho: terminou a atividade e saiu" : "Chamado do trabalho: largou a atividade e saiu", UiTokens.Warning);
             case "session_ended": return ("Desconectou", UiTokens.TextSecondary);
             case "level_up": return ($"Subiu para o {e.Detail}", UiTokens.Accent);
-            case "region_discovered": return ($"Descobriu {_ctx.ZoneName(e.Detail ?? "")}", UiTokens.Info);
+            case "region_discovered": return ($"Descobriu {ctx.ZoneName(e.Detail ?? "")}", UiTokens.Info);
             case "activity_chosen":
                 var p = (e.Detail ?? "/").Split('/');
                 string why = e.Causes.Count > 0 ? " — " + string.Join(", ", e.Causes.Take(2).Select(c => FactorPt(c.Factor).ToLowerInvariant())) : "";
-                return ($"{_ctx.ActivityName(p[0], p[1])} · {_ctx.PlaceName(p[0], p[1])}{why}", UiTokens.Info);
-            case "quest_accepted": return ($"Aceitou a missão {QuestName(e.Detail)}{AcceptMotivePt(e)}", UiTokens.Accent);
-            case "quest_step_completed": return ($"Cumpriu uma etapa de {QuestName((e.Detail ?? "").Split('#')[0])}", UiTokens.Info);
-            case "quest_completed": return ($"Entregou a missão {QuestName(e.Detail)}", UiTokens.Success);
-            case "goal_set": return ($"Nova meta: {GoalDetail(e.Detail)}", UiTokens.Accent);
+                return ($"{ctx.ActivityName(p[0], p[1])} · {ctx.PlaceName(p[0], p[1])}{why}", UiTokens.Info);
+            case "quest_accepted": return ($"Aceitou a missão {QuestName(ctx, e.Detail)}{AcceptMotivePt(e)}", UiTokens.Accent);
+            case "quest_step_completed": return ($"Cumpriu uma etapa de {QuestName(ctx, (e.Detail ?? "").Split('#')[0])}", UiTokens.Info);
+            case "quest_completed": return ($"Entregou a missão {QuestName(ctx, e.Detail)}", UiTokens.Success);
+            case "goal_set": return ($"Nova meta: {GoalDetail(ctx, e.Detail)}", UiTokens.Accent);
             case "objective_completed":
             {
                 var oc = (e.Detail ?? "||").Split('|');
-                return ($"Alcançou o objetivo: {ObjectiveInfo.Title(_ctx.Content, oc[0], oc.Length > 1 ? oc[1] : "")}", UiTokens.Success);
+                return ($"Alcançou o objetivo: {ObjectiveInfo.Title(ctx.Content, oc[0], oc.Length > 1 ? oc[1] : "")}", UiTokens.Success);
             }
             case "objective_set":
             case "objective_paused":
@@ -1631,7 +1641,7 @@ public partial class PlayerModal : ModalFrame
             {
                 var op = (e.Detail ?? "||").Split('|');
                 string tier = op.Length > 2 && op[2] == Simulation.Core.Content.ObjectiveTiers.General ? "geral" : "secundário";
-                string name = ObjectiveInfo.Title(_ctx.Content, op[0], op.Length > 1 ? op[1] : "");
+                string name = ObjectiveInfo.Title(ctx.Content, op[0], op.Length > 1 ? op[1] : "");
                 bool initial = e.Causes.Count == 0 || e.Causes.All(c => !c.Factor.Contains(':') && c.Factor != Simulation.Core.Population.ObjectiveTriggers.MaxLevel);
                 return e.Type switch
                 {
@@ -1645,7 +1655,7 @@ public partial class PlayerModal : ModalFrame
             }
             case "objective_gap":
                 return ("Buscou um objetivo novo e nenhum era relevante", UiTokens.Warning);
-            case "goal_completed": return ($"Concluiu a meta: {GoalDetail(e.Detail)}", UiTokens.Success);
+            case "goal_completed": return ($"Concluiu a meta: {GoalDetail(ctx, e.Detail)}", UiTokens.Success);
             case "board_visit_empty":
             {
                 // D-067a: foi ao quadro para pegar missoes e, na chegada, nada mais valia: o que mudou na viagem.
@@ -1664,7 +1674,7 @@ public partial class PlayerModal : ModalFrame
             {
                 // D-067a: a meta de descoberta largada volta a ser considerada por uma mudança concreta.
                 var gr = (e.Detail ?? "|").Split('|');
-                string zone = gr.Length > 1 ? _ctx.ZoneName(gr[1]) : "";
+                string zone = gr.Length > 1 ? ctx.ZoneName(gr[1]) : "";
                 string grWhy = e.Causes.Count == 0 ? "" : e.Causes[0].Factor switch
                 {
                     "level_requirement" => "o nível novo alcançou o que faltava",
@@ -1683,22 +1693,22 @@ public partial class PlayerModal : ModalFrame
                     "blocked" => " (impedida: a missão não cabia no diário)",
                     _ => " (sem progresso)",
                 };
-                return ($"Desistiu da meta: {GoalDetail(e.Detail)}{goalWhy}", UiTokens.TextSecondary);
+                return ($"Desistiu da meta: {GoalDetail(ctx, e.Detail)}{goalWhy}", UiTokens.TextSecondary);
             }
             case "quest_dropped":
             {
-                string by = e.Causes.Count > 0 && e.Causes[0].Factor.StartsWith("replaced:") ? QuestName(e.Causes[0].Factor["replaced:".Length..]) : "";
-                return (by.Length > 0 ? $"Largou a missão {QuestName(e.Detail)} para pegar {by}" : $"Largou a missão {QuestName(e.Detail)}", UiTokens.TextSecondary);
+                string by = e.Causes.Count > 0 && e.Causes[0].Factor.StartsWith("replaced:") ? QuestName(ctx, e.Causes[0].Factor["replaced:".Length..]) : "";
+                return (by.Length > 0 ? $"Largou a missão {QuestName(ctx, e.Detail)} para pegar {by}" : $"Largou a missão {QuestName(ctx, e.Detail)}", UiTokens.TextSecondary);
             }
             case "quest_expired":
                 return (e.Causes.Any(c => c.Factor == "no_step_done")
-                    ? $"A diária {QuestName(e.Detail)} expirou no reset do servidor sem ser feita"
-                    : $"A diária {QuestName(e.Detail)} expirou no reset do servidor", UiTokens.TextSecondary);
+                    ? $"A diária {QuestName(ctx, e.Detail)} expirou no reset do servidor sem ser feita"
+                    : $"A diária {QuestName(ctx, e.Detail)} expirou no reset do servidor", UiTokens.TextSecondary);
             case "session_plan":
             case "plan_changed":
             {
                 var fp = (e.Detail ?? "/").Split('/');
-                string focus = fp.Length == 2 ? $"{_ctx.ActivityName(fp[0], fp[1])} · {_ctx.PlaceName(fp[0], fp[1])}" : e.Detail ?? "";
+                string focus = fp.Length == 2 ? $"{ctx.ActivityName(fp[0], fp[1])} · {ctx.PlaceName(fp[0], fp[1])}" : e.Detail ?? "";
                 string planWhy = e.Causes.Count > 0 ? FactorPt(e.Causes[0].Factor).ToLowerInvariant() : "";
                 return e.Type == "session_plan" ? ($"Plano da sessão: {focus} ({planWhy})", UiTokens.AccentSoft) : ($"Mudou o plano: {focus} ({planWhy})", UiTokens.AccentSoft);
             }
@@ -1733,7 +1743,19 @@ public partial class PlayerModal : ModalFrame
                 string cause = e.Causes.Count > 0 ? AttributeInfo.CausePt(e.Causes[0].Factor) : "";
                 return ($"{AttributeInfo.Name(parts[0])} {(up ? "subiu" : "caiu")} para {parts[2]} ({cause})", up ? UiTokens.Success : UiTokens.Danger);
             }
-            default: return (e.Type, UiTokens.TextSecondary);
+            case "session_delayed": return ($"Adiou o começo da sessão em {e.Detail} (procrastinou)", UiTokens.Warning);
+            case "hesitated":
+            {
+                // Detalhe: "zona/atividade|zona/atividade" (as duas opcoes empatadas).
+                var opts = (e.Detail ?? "").Split('|').Select(x => x.Split('/')).Where(x => x.Length == 2).Select(x => ctx.ActivityName(x[0], x[1])).ToList();
+                return (opts.Count == 2 ? $"Ficou indeciso entre {opts[0]} e {opts[1]}" : "Ficou indeciso entre duas opções", UiTokens.TextSecondary);
+            }
+            case "personality_changed":
+            {
+                var pc = (e.Detail ?? "").Split('|');
+                return (pc.Length >= 2 ? $"A personalidade mudou: de {PersonalityOf(ctx.Content, pc[0]).Label} para {PersonalityOf(ctx.Content, pc[1]).Label}" : "A personalidade mudou", UiTokens.Accent);
+            }
+            default: return ("Acontecimento sem descrição", UiTokens.TextSecondary);
         }
     }
 

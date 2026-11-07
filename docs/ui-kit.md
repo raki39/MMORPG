@@ -64,7 +64,7 @@ Referência para qualquer tela nova. Estilo de dossiê de jogo de gestão: escur
    - conteúdo complementar (ex.: a jornada do dia na Ocupação) entra só quando cabe: `FitList` com `Keep` (itens sempre mostrados) e `StretchLast` (o último ocupa a sobra);
    - gráficos marcados com `Grow` crescem com o card;
    - a **roda do mouse salta de tela em tela** (animação curta). Dentro de um card com conteúdo maior, a roda rola o card primeiro;
-   - **em 1366×768**, a seção mantém as suas linhas, com cards mais baixos e rolagem dentro do card. Só passa para a tela seguinte se uma linha ficaria abaixo de 180 px. Uma linha de cards empilhados vira uma linha por card;
+   - **altura necessária de cada linha:** a de cada card sem rolar, com as listas (`FitList`) na altura de um item e os gráficos no mínimo. Em tela baixa (1366×768), a linha que não cabe com as de cima **passa para a tela seguinte**, em vez de espremer e rolar dentro dos cards; só rola dentro do card o que não cabe nem numa tela inteira. Uma linha de cards empilhados vira uma linha por card;
    - capturas: `--section=N` abre a tela N; `--wheel=N` gira a roda N vezes;
    - **última tela mais baixa que a janela:** a página ganha folga embaixo e a rolagem para com ela no topo. Nunca aparece a tela de cima cortada;
    - **uma tela só quando cabe:** se três linhas cabem na altura natural, a aba fica numa tela, sem seção extra. As seções servem para conteúdo que passa da tela, não para separar assuntos curtos;
