@@ -173,6 +173,8 @@ Referência para qualquer tela nova. Estilo de dossiê de jogo de gestão: escur
 
 ## Como fazer uma tela boa (lições da aba Rotina, aprovada pelo criador)
 
+O guia completo, com o inventário antes de montar, a lista de conferência e os erros que já cometemos, está em `ux-dicas.md`.
+
 1. **Cada card responde a uma pergunta.** Antes do gráfico, escrever a pergunta, por exemplo "quanto tempo livre ela tem e quanto se espera que jogue?". O título e o ⓘ dizem isso em linguagem simples.
 2. **A ordem conta uma história:**
    - primeiro, quem é a pessoa (contexto: onde mora, finanças, vontade);
