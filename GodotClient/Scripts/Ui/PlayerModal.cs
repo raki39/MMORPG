@@ -30,7 +30,6 @@ public partial class PlayerModal : ModalFrame
         AddTab("Visão geral", BuildProfile, live: true);
         AddTab("Objetivos", BuildObjectives, live: true);
         AddTab("Missões", BuildQuests, live: true);
-        AddTab("Progressão", BuildProgress, live: true);
         AddTab("Estatísticas", BuildStats, live: true);
         AddTab("Rotina", BuildRoutine, live: true);
         AddTab("Humor e memória", BuildMood, live: true);
@@ -1090,7 +1089,7 @@ public partial class PlayerModal : ModalFrame
             if (e.Type == "activity_chosen" && (e.Detail ?? "").Split('/') is { Length: 2 } p) counts[p[0]] = counts.GetValueOrDefault(p[0]) + 1;
         if (counts.Count == 0) return Wrap("Nenhuma escolha registrada desde que o jogo foi aberto.");
         int total = counts.Values.Sum(), max = counts.Values.Max();
-        var col = Column(6);
+        var col = new FitList { Separation = 6, SizeFlagsVertical = SizeFlags.ExpandFill };
         foreach (var (zid, n) in counts.OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.Ordinal).Take(5))
         {
             if (!_ctx.Content.Regions.TryGetValue(zid, out var z)) continue;

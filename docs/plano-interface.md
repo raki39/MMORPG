@@ -23,17 +23,16 @@ Aprovado pelo criador em 06/11/2026. O trabalho é organizar, tirar redundância
 
 ## Abas da ficha do jogador
 
-Visão geral · Objetivos · Missões · Progressão · Estatísticas · Rotina · Humor e memória · Histórico · Combate M3 · Inventário M5 · Banco M5.
+Visão geral · Objetivos · Missões · Estatísticas · Rotina · Humor e memória · Histórico · Combate M3 · Inventário M5 · Banco M5.
 
 - **Visão geral:** o dossiê completo da pessoa (correção do criador na etapa 3: não é um resumo magro e os atributos ficam nela, sem aba própria).
-- **Estatísticas:** o jogador no servidor (comparação, classificação, níveis no servidor).
-- **Progressão:** a evolução do próprio personagem (curva de nível, XP, uso do tempo, zonas).
+- **Estatísticas:** tudo sobre o personagem em números, em duas telas. A primeira mostra a evolução dele (nível, previsão dos próximos, curva, uso do tempo, XP e zonas). A segunda o compara com o servidor (classificação, comparação e níveis). Até a conferência da etapa 4 eram duas abas, Progressão e Estatísticas; o criador pediu para juntar, porque tratam do mesmo assunto.
 
 | Card | Destino |
 |---|---|
 | Situação atual, Atributos do jogador, Personalidade e traços | Visão geral, na primeira linha |
 | Missões | Missões (as ativas na Visão geral) |
-| Evolução, Uso do tempo, Zonas frequentadas | Progressão |
+| Evolução, Uso do tempo, Zonas frequentadas | Estatísticas, tela 1 |
 | Horários de jogo, Sessões · últimos 14 dias | Rotina (feito na etapa 1) |
 | Progresso e metas | Nível no card do personagem; objetivo e meta em Objetivos (resumo na Visão geral); perfil e personalidade já estão no cabeçalho |
 | Humor, Memórias marcantes | Humor e memória (resumo na Visão geral) |
@@ -49,8 +48,8 @@ Todas as abas em telas (`ScreenPage`) com cards de altura fixa. A Visão geral e
 | Visão geral, tela 2 | Humor (3) · Memórias marcantes (6) · Mudanças desde o cadastro (3) | Preferências (3) · Últimos acontecimentos (6) · Uso do tempo (3) |
 | Objetivos | Objetivos gerais (4) · Objetivos secundários (4) · Metas atuais (4) | Conquistas e encerrados (4) · Histórico (8) |
 | Missões | Em andamento (8) · Resumo (4) | Diário de missões (8) · Concluídas (4) |
-| Progressão | Nível e experiência (4) · Evolução (8) | Uso do tempo (4) · XP por fonte (4) · Zonas frequentadas (4) |
-| Estatísticas | Comparação com o servidor (8) · Classificação (4) | Níveis no servidor (12) |
+| Estatísticas, tela 1 | Nível e experiência, com os próximos níveis (4) · Evolução (8) | Uso do tempo (4) · XP por fonte (4) · Zonas frequentadas (4) |
+| Estatísticas, tela 2 | Classificação (4) · Comparação com o servidor (8) | Níveis no servidor (12) |
 | Rotina | (etapa 1, duas telas; a Ocupação sem a semana em 168 horas) | |
 | Humor e memória | Humor (4) · O que pesa no humor (4) · Tédio por atividade (4) | Memórias marcantes (8) · Lugares que marcaram (4) |
 | Histórico | Acontecimentos, até 150 (12) | — |

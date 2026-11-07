@@ -1,4 +1,5 @@
 using Godot;
+using Simulation.Core.Behavior;
 using Simulation.Core.Content;
 using Simulation.Core.Events;
 using Simulation.Core.Population;
@@ -48,7 +49,7 @@ public partial class PlayerModal
             .Add(Grid(12,
                 (FillCard("Progresso e metas", ProgressSummary(v, st, detail), headerRight: TabLink("Objetivos"),
                     info: "Nível, objetivo principal e metas de curto prazo\n~Metas de curto prazo (chegar a um nível, descobrir uma zona, concluir uma missão, praticar uma atividade) influenciam as escolhas sem obrigar. As ambições de longo prazo ficam na aba Objetivos."), 3),
-                (FillCard("Evolução", EvolutionOverview(v, detail, st), info: "Horas jogadas ao atingir cada nível\n~Curva real deste personagem (tempo conectado acumulado). Nível, XP por fonte e zonas na aba Progressão.", headerRight: TabLink("Progressão")), 6),
+                (FillCard("Evolução", EvolutionOverview(v, detail, st), info: "Horas jogadas ao atingir cada nível\n~Curva real deste personagem (tempo conectado acumulado). Nível, XP por fonte, zonas e a comparação com o servidor na aba Estatísticas.", headerRight: TabLink("Estatísticas")), 6),
                 (FillCard("Missões em andamento", QuestSummary(v), info: "Missões do personagem\n~Clique numa missão para abrir a ficha dela. Concluídas e o diário de missões ficam na aba Missões.", headerRight: TabLink("Missões")), 3)), weight: 46)
             .Section()
             .Add(Grid(12,
@@ -58,7 +59,7 @@ public partial class PlayerModal
             .Add(Grid(12,
                 (FillCard("Preferências", PreferencesBody(1), info: PrefInfo), 3),
                 (FillCard("Últimos acontecimentos", RecentBody(), info: "Últimos acontecimentos\n~Clique numa linha para abrir a área, a zona ou a missão. Histórico completo na aba Histórico.", headerRight: TabLink("Histórico")), 6),
-                (FillCard("Uso do tempo", TimeUseBody(detail), info: "Divisão do tempo conectado\n~Por tipo de atividade desde o cadastro; o resto é deslocamento.", headerRight: TabLink("Progressão")), 3)), weight: 50);
+                (FillCard("Uso do tempo", TimeUseBody(detail), info: "Divisão do tempo conectado\n~Por tipo de atividade desde o cadastro; o resto é deslocamento.", headerRight: TabLink("Estatísticas")), 3)), weight: 50);
     }
 
     /// <summary>Progresso e metas: nivel, objetivo principal e metas de curto prazo (detalhes no tooltip).</summary>
@@ -247,22 +248,34 @@ public partial class PlayerModal
         return col;
     }
 
-    // ---------------- Progressao ----------------
+    // ---------------- Estatisticas (com a antiga Progressao) ----------------
 
-    private Control BuildProgress()
+    /// <summary>
+    /// Estatisticas do personagem (D-068; Progressao e Estatisticas juntas a pedido do criador), em duas telas com as
+    /// divisas em 4 e 8 colunas. Tela 1, o personagem: nivel e previsao dos proximos, curva de horas por nivel; para
+    /// onde vai o tempo, de onde vem o XP e onde joga. Tela 2, contra o servidor: classificacao e comparacao com a
+    /// mediana; distribuicao de niveis.
+    /// </summary>
+    private Control BuildStats()
     {
         if (View is not { } v) return Wrap("Ainda sem personagem.");
         var d = WatchedDetail;
         var st = Server(v);
-        // Uma tela: o nivel e a curva de horas por nivel; embaixo, para onde vai o tempo, de onde vem o XP e onde joga.
         return new ScreenPage()
             .Add(Grid(12,
-                (FillCard("Nível e experiência", LevelBody(v, d, st), info: "Progresso no nível atual\n~Faixas de nível mais altas rendem menos XP (taxa da faixa). A previsão do próximo nível usa o XP por hora deste personagem."), 4),
-                (FillCard("Evolução", EvolutionBody(d), info: "Horas jogadas ao atingir cada nível\n~Curva real deste personagem (tempo conectado acumulado)."), 8)), weight: 55)
+                (FillCard("Nível e experiência", LevelBody(v, d, st), info: "Progresso no nível atual\n~Faixas de nível mais altas rendem menos XP (taxa da faixa). A previsão dos próximos níveis usa o XP por hora deste personagem, corrigido pela taxa de cada faixa."), 4),
+                (FillCard("Evolução", EvolutionBody(d), info: "Horas jogadas ao atingir cada nível\n~Curva real deste personagem (tempo conectado acumulado)."), 8)), weight: 60)
             .Add(Grid(12,
                 (FillCard("Uso do tempo", TimeUseBody(d), info: "Divisão do tempo conectado\n~Por tipo de atividade desde o cadastro; o resto é deslocamento."), 4),
                 (FillCard("XP por fonte", XpSourceBody(v), info: "De onde vem a experiência\n~Atividades no mundo contra entregas de missões."), 4),
-                (FillCard("Zonas frequentadas", ZonesBody(), info: "Onde escolhe jogar\n~Escolhas de atividade por zona registradas desde que o jogo foi aberto. Clique para abrir a zona."), 4)), weight: 45);
+                (FillCard("Zonas frequentadas", ZonesBody(), headerRight: Caption($"{v.KnownRegions} de {_ctx.Content.Regions.Count} conhecidas"),
+                    info: "Onde escolhe jogar\n~Escolhas de atividade por zona registradas desde que o jogo foi aberto. Clique para abrir a zona."), 4)), weight: 40)
+            .Section()
+            .Add(Grid(12,
+                (FillCard("Classificação", RankBody(st), info: "Posição no servidor\n~Ordem por nível e XP. XP por hora considera só quem jogou ao menos 1 hora."), 4),
+                (FillCard("Comparação com o servidor", CompareBody(v, st), info: "Este personagem contra a mediana do servidor\n~A barra mostra a diferença percentual; verde acima, vermelho abaixo."), 8)), weight: 50)
+            .Add(Grid(12,
+                (FillCard("Níveis no servidor", ServerLevelsBody(v), info: "Distribuição de níveis dos personagens\n~Dourado: o nível deste personagem."), 12)), weight: 50);
     }
 
     private Control LevelBody(CharacterView v, CharacterDetailView? d, ServerStats st)
@@ -270,26 +283,55 @@ public partial class PlayerModal
         long played = d?.PlayedTicks ?? v.PlayedTicks;
         int ups = d?.LevelTicks.Count ?? 0;
         long atLevel = ups > 0 ? played - d!.LevelTicks[^1] : played;
-        var col = Column(10, LevelBlock(v, st, 104), Divider());
+        var col = Column(8, LevelBlock(v, st, 104), Divider());
         col.AddChild(KeyValue("XP por hora", st.MyXpH < 0 ? "–" : PtBr.Int((long)st.MyXpH)));
         col.AddChild(KeyValue($"No nível {v.Level}", $"{PtBr.Decimal(Hours(atLevel))} h"));
         col.AddChild(KeyValue("Média por nível", ups == 0 ? "–" : $"{PtBr.Decimal(Hours(d!.LevelTicks[^1]) / ups)} h"));
-        col.AddChild(KeyValue("Zonas conhecidas", $"{v.KnownRegions} de {_ctx.Content.Regions.Count}"));
+        if (NextLevelsBody(v, st) is { } next) col.AddChild(next);
         return col;
     }
 
-    // ---------------- Estatisticas ----------------
-
-    private Control BuildStats()
+    /// <summary>
+    /// Previsao dos proximos niveis (ate 5): XP que falta e horas de jogo no XP por hora atual, corrigido pela taxa
+    /// de cada faixa (faixas mais altas rendem menos). Mostra os que cabem no card; o titulo vai junto com a
+    /// primeira linha, para nunca sobrar sozinho em tela pequena.
+    /// </summary>
+    private FitList? NextLevelsBody(CharacterView v, ServerStats st)
     {
-        if (View is not { } v) return Wrap("Ainda sem personagem.");
-        var st = Server(v);
-        return new ScreenPage()
-            .Add(Grid(12,
-                (FillCard("Comparação com o servidor", CompareBody(v, st), info: "Este personagem contra a mediana do servidor\n~A barra mostra a diferença percentual; verde acima, vermelho abaixo."), 8),
-                (FillCard("Classificação", RankBody(st), info: "Posição no servidor\n~Ordem por nível e XP. XP por hora considera só quem jogou ao menos 1 hora."), 4)), weight: 50)
-            .Add(Grid(12,
-                (FillCard("Níveis no servidor", ServerLevelsBody(v), info: "Distribuição de níveis dos personagens\n~Dourado: o nível deste personagem."), 12)), weight: 50);
+        var prog = _ctx.Content.Progression;
+        if (v.Level >= prog.LevelCap || st.MyXpH <= 0) return null;
+        var list = new FitList { Separation = 4, CanBeEmpty = true, SizeFlagsVertical = SizeFlags.ExpandFill };
+        long xp = 0;
+        double hours = 0, rateNow = Math.Max(1, ProgressionRules.StageRate(prog, v.Level));
+        for (int level = v.Level; level < Math.Min(prog.LevelCap, v.Level + 5); level++)
+        {
+            long need = ProgressionRules.XpToNextLevel(prog, level) - (level == v.Level ? v.Experience : 0);
+            xp += need;
+            hours += need / (st.MyXpH * Math.Max(1, ProgressionRules.StageRate(prog, level)) / rateNow);
+            var r = Row(10);
+            var n = ThemeFactory.Text($"Nível {level + 1}", UiTokens.FontBody, UiTokens.TextLabel, UiFonts.Medium);
+            n.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+            r.AddChild(n);
+            var x = ThemeFactory.Text($"{PtBr.Int(xp)} XP", UiTokens.FontSmall, UiTokens.TextSecondary, UiFonts.Numbers);
+            x.HorizontalAlignment = HorizontalAlignment.Right;
+            r.AddChild(x);
+            var h = ThemeFactory.Text($"~{PtBr.Decimal(hours)} h", UiTokens.FontBody, UiTokens.TextPrimary, UiFonts.Numbers);
+            h.CustomMinimumSize = new Vector2(64, 0);
+            h.HorizontalAlignment = HorizontalAlignment.Right;
+            r.AddChild(h);
+            var tip = new TipPanel { TooltipText = $"Nível {level + 1}\nXP que falta|{PtBr.Int(xp)}\nHoras de jogo|~{PtBr.Decimal(hours)} h\n~No XP por hora atual ({PtBr.Int((long)st.MyXpH)}), corrigido pela taxa de cada faixa.", MouseFilter = MouseFilterEnum.Stop };
+            tip.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
+            foreach (var c in r.GetChildren().OfType<Control>()) c.MouseFilter = MouseFilterEnum.Ignore;
+            r.MouseFilter = MouseFilterEnum.Ignore;
+            tip.AddChild(r);
+            if (level == v.Level)
+            {
+                var first = Column(8, Section("Próximos níveis", Caption("no ritmo atual")), tip);
+                list.AddChild(Column(0, new Control { CustomMinimumSize = new Vector2(0, 4) }, first));
+            }
+            else list.AddChild(tip);
+        }
+        return list;
     }
 
     // ---------------- Missoes ----------------
