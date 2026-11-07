@@ -13,116 +13,6 @@ namespace GodotClient.Ui;
 /// </summary>
 public partial class PlayerModal
 {
-    private readonly Dictionary<string, int> _tabAt = new(StringComparer.Ordinal);
-
-    private void Tab(string name, Func<Control> build, bool live = false)
-    {
-        _tabAt[name] = TabCount;
-        AddTab(name, build, live);
-    }
-
-    private void OpenTab(string name)
-    {
-        if (_tabAt.TryGetValue(name, out int i)) SelectTab(i);
-    }
-
-    /// <summary>Atalho no titulo de um card de resumo: abre a aba do assunto.</summary>
-    private Control TabLink(string tab)
-    {
-        var b = new TipButton
-        {
-            TooltipText = $"Abrir a aba {tab}", FocusMode = FocusModeEnum.None, CustomMinimumSize = new Vector2(22, 20),
-            MouseDefaultCursorShape = CursorShape.PointingHand, SizeFlagsVertical = SizeFlags.ShrinkCenter,
-        };
-        b.AddThemeStyleboxOverride("normal", new StyleBoxEmpty());
-        var hover = ThemeFactory.Box(UiTokens.SurfaceHover, 0, radius: 3);
-        b.AddThemeStyleboxOverride("hover", hover);
-        b.AddThemeStyleboxOverride("pressed", hover);
-        var ic = new Icon("chevron-right", 14, UiTokens.TextLabel) { MouseFilter = MouseFilterEnum.Ignore };
-        ic.SetAnchorsPreset(LayoutPreset.FullRect);
-        b.AddChild(ic);
-        b.Pressed += () => OpenTab(tab);
-        return b;
-    }
-
-    /// <summary>Conteudo de uma linha clicavel: nada dentro dela captura o mouse (o clique e o tooltip sao da linha).</summary>
-    private static T IgnoreMouse<T>(T c) where T : Control
-    {
-        c.MouseFilter = MouseFilterEnum.Ignore;
-        foreach (var n in c.GetChildren())
-            if (n is Control k) IgnoreMouse(k);
-        return c;
-    }
-
-    private readonly Dictionary<string, int> _listOffsets = new(StringComparer.Ordinal);
-
-    /// <summary>Lista que cabe no card, sem rolagem (D-068); com key, a pagina fica entre as atualizacoes ao vivo.</summary>
-    private FitList Fit(int separation, string key = "")
-    {
-        var l = new FitList { Separation = separation };
-        if (key.Length > 0) l.Offset = _listOffsets.GetValueOrDefault(key);
-        return l;
-    }
-
-    /// <summary>
-    /// Paginador no titulo do card: "1–12 de 40 ‹ ›" quando a lista nao cabe inteira; quando cabe, so o total.
-    /// </summary>
-    private Control Pager(FitList list, string key, string one, string many)
-    {
-        var row = Row(2);
-        var label = Caption("");
-        label.SizeFlagsVertical = SizeFlags.ShrinkCenter;
-        var prev = PageButton("chevron-left", "Anteriores");
-        var next = PageButton("chevron-right", "Seguintes");
-        row.AddChild(label);
-        row.AddChild(prev);
-        row.AddChild(next);
-        void Update()
-        {
-            int total = list.Total;
-            bool paged = list.Offset > 0 || list.Shown < total;
-            label.Text = paged ? $"{list.Offset + 1}–{list.Offset + list.Shown} de {total}" : N(total, one, many);
-            prev.Visible = paged;
-            next.Visible = paged;
-            prev.Disabled = list.Offset == 0;
-            next.Disabled = list.Offset + list.Shown >= total;
-        }
-        list.Laid += Update;
-        prev.Pressed += () =>
-        {
-            list.Offset = list.PreviousOffset();
-            _listOffsets[key] = list.Offset;
-            list.QueueSort();
-        };
-        next.Pressed += () =>
-        {
-            if (list.Offset + list.Shown >= list.Total) return;
-            list.Offset += Math.Max(1, list.Shown);
-            _listOffsets[key] = list.Offset;
-            list.QueueSort();
-        };
-        return row;
-    }
-
-    private static Button PageButton(string icon, string tip)
-    {
-        var b = new TipButton
-        {
-            TooltipText = tip, FocusMode = FocusModeEnum.None, CustomMinimumSize = new Vector2(20, 20), Icon = Icons.Get(icon, 14),
-            IconAlignment = HorizontalAlignment.Center, SizeFlagsVertical = SizeFlags.ShrinkCenter, MouseDefaultCursorShape = CursorShape.PointingHand,
-        };
-        b.AddThemeStyleboxOverride("normal", new StyleBoxEmpty());
-        var hover = ThemeFactory.Box(UiTokens.SurfaceHover, 0, radius: 3);
-        b.AddThemeStyleboxOverride("hover", hover);
-        b.AddThemeStyleboxOverride("pressed", hover);
-        b.AddThemeStyleboxOverride("disabled", new StyleBoxEmpty());
-        foreach (var st in new[] { "icon_normal_color", "icon_hover_color", "icon_pressed_color", "icon_focus_color" }) b.AddThemeColorOverride(st, UiTokens.TextLabel);
-        b.AddThemeColorOverride("icon_disabled_color", UiTokens.TextDisabled);
-        return b;
-    }
-
-    private static Label Caption(string text) => ThemeFactory.Text(text, UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Numbers);
-
     private const string NowInfo = "O que está fazendo e por quê\n~A última decisão mostra os fatores que somaram ou tiraram pontos da opção escolhida.";
     private const string MoodInfo = "Como a pessoa está se sentindo no jogo (D-038)\n~Cada sessão vira uma nota: gosto pelas atividades, encaixe de nível, lotação, companhia, tédio, risco, progresso contra a expectativa, novidade e conquistas. A satisfação é a média dessas notas; o engajamento muda quanto ela joga; a intenção de continuar decide se fica.";
 
@@ -484,7 +374,7 @@ public partial class PlayerModal
         var col = Fit(2, "concluidas");
         var list = v.CompletedQuests.Where(x => c.Quests.ContainsKey(x.QuestId)).Select(x => (x.QuestId, x.Times, Def: c.Quests[x.QuestId]))
             .OrderBy(x => Array.IndexOf(QuestCategories.All, x.Def.Category)).ThenBy(x => x.Def.Name, StringComparer.Ordinal).ToList();
-        if (list.Count == 0) col.AddChild(Wrap("Nenhuma missão concluída ainda.", UiTokens.FontSmall, UiTokens.TextSecondary));
+        if (list.Count == 0) col.AddChild(Wrap("Nenhuma missão concluída ainda.", UiTokens.FontSmall, UiTokens.TextSecondary).AsPlaceholder());
         foreach (var (id, times, q) in list)
         {
             var color = QuestModal.CategoryColor(q.Category);
@@ -603,7 +493,7 @@ public partial class PlayerModal
         head.AddChild(ColHead("Quando", 110));
         head.AddChild(ColHead("Acontecimento", 0));
         var rows = Fit(0, "historico");
-        if (events.Count == 0) rows.AddChild(Wrap("Nada registrado desde que o jogo foi aberto."));
+        if (events.Count == 0) rows.AddChild(Wrap("Nada registrado desde que o jogo foi aberto.").AsPlaceholder());
         int i = 0;
         foreach (var e in events)
         {

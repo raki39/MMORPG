@@ -27,17 +27,17 @@ public partial class PlayerModal : ModalFrame
         BuildHeader();
         Breadcrumb = $"Jogadores › {View?.Name ?? _person.Name}";
         // Abas (D-068, etapa 3): a Visao geral e o dossie completo da pessoa; as outras detalham um assunto.
-        Tab("Visão geral", BuildProfile, live: true);
-        Tab("Objetivos", BuildObjectives, live: true);
-        Tab("Missões", BuildQuests, live: true);
-        Tab("Progressão", BuildProgress, live: true);
-        Tab("Estatísticas", BuildStats, live: true);
-        Tab("Rotina", BuildRoutine, live: true);
-        Tab("Humor e memória", BuildMood, live: true);
-        Tab("Histórico", BuildHistory, live: true);
-        Tab("Combate", () => FutureTab("Combate", "M3", "Abates, mortes, saque, rivais e desempenho em PvE e PvP aparecem aqui quando o combate existir na simulação. Nada é inventado antes disso."));
-        Tab("Inventário", BuildInventory);
-        Tab("Banco", () => FutureTab("Banco", "M5", "Ouro guardado, depósitos e movimentações aparecem aqui com a economia. Hoje o ouro de missões está definido, mas ainda não é aplicado."));
+        AddTab("Visão geral", BuildProfile, live: true);
+        AddTab("Objetivos", BuildObjectives, live: true);
+        AddTab("Missões", BuildQuests, live: true);
+        AddTab("Progressão", BuildProgress, live: true);
+        AddTab("Estatísticas", BuildStats, live: true);
+        AddTab("Rotina", BuildRoutine, live: true);
+        AddTab("Humor e memória", BuildMood, live: true);
+        AddTab("Histórico", BuildHistory, live: true);
+        AddTab("Combate", () => FutureTab("Combate", "M3", "Abates, mortes, saque, rivais e desempenho em PvE e PvP aparecem aqui quando o combate existir na simulação. Nada é inventado antes disso."));
+        AddTab("Inventário", BuildInventory);
+        AddTab("Banco", () => FutureTab("Banco", "M5", "Ouro guardado, depósitos e movimentações aparecem aqui com a economia. Hoje o ouro de missões está definido, mas ainda não é aplicado."));
     }
 
     private CharacterView? View => _ctx.Snapshot().ByPerson is { } a && _person.Id < a.Length ? a[_person.Id] : null;
@@ -423,7 +423,7 @@ public partial class PlayerModal : ModalFrame
         var col = Fit(8, key);
         var mems = detail?.Memories ?? Array.Empty<MemoryView>();
         if (mems.Count == 0)
-            col.AddChild(Wrap(detail == null ? "Carregando…" : "Nada marcante ainda: as primeiras conquistas e frustrações aparecem aqui.", UiTokens.FontSmall, UiTokens.TextSecondary));
+            col.AddChild(Wrap(detail == null ? "Carregando…" : "Nada marcante ainda: as primeiras conquistas e frustrações aparecem aqui.", UiTokens.FontSmall, UiTokens.TextSecondary).AsPlaceholder());
         foreach (var m in mems)
         {
             bool goodMem = m.Valence >= 0;
@@ -1351,7 +1351,7 @@ public partial class PlayerModal : ModalFrame
     {
         var col = Fit(2, key);
         var events = _ctx.PersonHistory(_person.Id).Where(e => filter == null || filter(e)).Take(take).ToList();
-        if (events.Count == 0) col.AddChild(Wrap(empty));
+        if (events.Count == 0) col.AddChild(Wrap(empty).AsPlaceholder());
         foreach (var e in events) col.AddChild(RecentRow(e));
         return col;
     }

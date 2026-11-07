@@ -63,6 +63,26 @@ Todas as abas em telas (`ScreenPage`) com cards de altura fixa. A Visão geral e
 
 **A Visão geral repete de propósito** a Evolução, o Uso do tempo, o Humor e as Memórias, que também estão nas abas de detalhe: é o dossiê da pessoa numa olhada (pedido do criador).
 
+### Como ficou (etapa 5)
+
+Mesmas regras da ficha da pessoa: telas inteiras, cards fixos sem rolagem em 1920, divisas coincidentes, listas longas com páginas no título.
+
+| Página | Aba | Linha de cima | Linha de baixo |
+|---|---|---|---|
+| Zona | Visão geral | Agora na zona (3) · Áreas (6) · Regras e acesso (3) | Níveis de quem está aqui (3) · Movimento · últimas 24 h (6) · Quem está aqui (3) |
+| Zona | Jogadores | Jogadores conectados, com páginas (8) · Composição: por classe, atividade e perfil (4) | — |
+| Zona | Configuração | Propriedades (4) · Atividades oferecidas (4) · Validação e publicação (4) | — |
+| Área | Missões (quadro) | Quadro, tabela com páginas (9) · Resumo do quadro (3) | — |
+| Área | Visão geral | Tarefas (8) · Agora no lugar (4) | Quem está aqui (8) · Sobre o lugar (4) |
+| Missão | Visão geral | Objetivos (6) · Requisitos e recompensas (3) · Desempenho (3) | Fazendo agora, tabela com páginas (9) · Em que etapa estão (3) |
+| Missão | Concluíram | Quem já entregou, tabela com páginas (9) · Quem concluiu: por perfil e classe (3) | — |
+| Listas (Jogadores, Zonas, Missões) | — | busca e filtros em cima; a tabela num card até o fim da tela, com páginas | — |
+
+**Abas que entraram em outras (o conteúdo continua):**
+- **Zona › Regras:** as explicações das regras estão no tooltip de cada linha de Regras e acesso, com a escala.
+- **Área › Jogadores e Sobre o lugar:** estão na Visão geral da área.
+- **Missão › Objetivos, Requisitos e recompensas e Dados:** repetiam a Visão geral. O que só elas tinham entrou nela: o aviso de PvP na etapa, o limite diário do quadro, as missões que esta libera e a raridade dos itens.
+
 ## Cabeçalho da ficha
 
 - Seis dados fixos numa linha (nível, status, zona, perfil, ritmo e horas), com fonte menor e reticências com tooltip. A altura é a mesma para todos.
@@ -86,7 +106,7 @@ O Lucide continua nas ações e nas linhas de dados.
 2. Cabeçalho da ficha. **Feita.**
 3. Reorganização das abas da ficha. **Feita** (detalhe abaixo).
 4. Emblemas e ícones do jogo.
-5. Zona, área, missão e listas.
+5. Zona, área, missão e listas. **Feita**, antes da etapa 4, a pedido do criador (detalhe abaixo).
 6. Conferência final: todas as telas em 1920×1080 e 1366×768, três jogadores, `tools/perf.ps1`.
 
 Cada etapa tem capturas de antes e depois para aprovação.

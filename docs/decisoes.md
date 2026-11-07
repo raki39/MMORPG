@@ -2682,4 +2682,15 @@ Itens como instâncias, inventário, equipamento funcional, carteira e aplicaç�
   - a meta de desbloqueio (D-055) aparecia nas memórias e no histórico como "praticar zona/atividade"; agora aparece como "chegar ao nível N para Atividade (Zona)";
   - a memória de objetivo alcançado (O3) aparecia como "objective_completed"; agora aparece como "Alcançou o objetivo: …".
 
+**Etapa 5 — zona, área, missão e listas (feita antes da etapa 4, a pedido do criador):**
+- **As mesmas regras da ficha da pessoa:** páginas em telas inteiras, cards fixos sem rolagem em 1920, divisas coincidentes e listas longas com páginas no título.
+- **Tabelas:** a `DataTable` pode pôr as linhas numa lista que cabe no card, com páginas, em Fazendo agora, Concluíram, no quadro de missões e nas listas do menu. Na lista, mudar a busca ou um filtro volta à primeira página.
+- **Composição:** a aba Jogadores da zona e a aba Concluíram da missão ganharam números e barras de quem está ali (por classe, atividade e perfil; por perfil e classe), com dados que já existiam.
+- **Abas que entraram em outras, sem perder conteúdo:**
+  - Zona › Regras: as explicações estão no tooltip de cada linha de Regras e acesso, com a escala;
+  - Área › Jogadores e Sobre o lugar: estão na Visão geral da área;
+  - Missão › Objetivos, Requisitos e recompensas e Dados repetiam a Visão geral; o que só elas tinham entrou nela (aviso de PvP na etapa, limite diário do quadro, missões que esta libera, raridade dos itens).
+- **Peças comuns na base das páginas (`ModalFrame`):** lista que cabe, paginador, atalho de aba e legenda numérica. A frase de lista vazia não entra na contagem do paginador.
+- **Conferido** com o relatório de rolagem: nenhum card rola em 1920 nas páginas de zona (cidade e caça), área (quadro e campo), missão (principal e diária) e nas três listas. Em 1366 a rolagem continua onde é necessária.
+
 **Próximo:** etapa 4, os emblemas e ícones do jogo.

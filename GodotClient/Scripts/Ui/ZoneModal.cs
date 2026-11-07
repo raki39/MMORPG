@@ -30,9 +30,10 @@ public partial class ZoneModal : ModalFrame
         _draft = ctx.Drafts.TryGetValue(zoneId, out var d) ? d : ZoneDraft.From(_zone);
         BuildHeader();
         Breadcrumb = $"Mundo › {_zone.Name}";
+        // Paginas em telas (D-068). A aba Regras entrou na Visao geral: as descricoes ficam no tooltip de cada
+        // regra do card Regras e acesso.
         AddTab("Visão geral", BuildOverview, live: true);
         AddTab("Jogadores", BuildPlayers, live: true);
-        AddTab("Regras", BuildRules);
         AddTab("Configuração", BuildConfig);
     }
 
@@ -98,24 +99,23 @@ public partial class ZoneModal : ModalFrame
         for (int id = 1; id < snap.ByPerson.Length; id++)
             if (snap.ByPerson[id] is { } v && v.Status != CharacterStatus.Offline && v.RegionId == _zone.Id) here.Add(v);
         int people = _map.PeopleInZone(_zone.Id);
-
-        var row1 = Grid(12,
-            (Card("Agora na zona", NowBody(people), info: "Situação ao vivo\n~Lotação contra a capacidade, índice de perigo e o que as pessoas estão fazendo aqui."), 3),
-            (Card($"Áreas · {_zone.Areas.Count}", AreasBody(), info: "Áreas da zona\n~Clique numa área para abrir a página dela. O número à direita é quem está lá agora."), 6),
-            (Card("Regras e acesso", RulesBody(), info: "Regras da zona\n~Combate, morte e controle valem para a zona inteira. As saídas levam às zonas vizinhas pela estrada."), 3));
-
         var series = _ctx.Metrics.OnlineByZone.TryGetValue(_zone.Id, out var zs) ? zs.ToList() : new List<float>();
-        var chart = new LineChart
+        var chart = Grow(new LineChart
         {
-            CustomMinimumSize = new Vector2(0, 190), Dots = false,
+            CustomMinimumSize = new Vector2(0, 110), Dots = false, SizeFlagsHorizontal = SizeFlags.ExpandFill,
             XLabels = _ctx.Metrics.Ticks.Select(t => _ctx.Clock(t)).ToList(),
             Series = new[] { new ChartSeries { Name = "Jogadores na zona", Color = UiTokens.Info, Values = series } },
-        };
-        var row2 = Grid(12,
-            (Card("Movimento · últimas 24 h", chart, info: "Jogadores na zona\n~Amostras a cada 10 minutos de jogo."), 6),
-            (Card("Níveis de quem está aqui", LevelsBody(here), info: "Distribuição de níveis\n~Verde: dentro da faixa da zona. Laranja: fora dela."), 3),
-            (Card("Quem está aqui", WhoBody(here), info: "Jogadores conectados na zona\n~Os de nível mais alto primeiro. Lista completa na aba Jogadores."), 3));
-        return Column(12, row1, row2);
+        });
+        // Uma tela, 3 | 6 | 3 nas duas linhas: agora, areas e regras; niveis, movimento e quem esta aqui.
+        return new ScreenPage()
+            .Add(Grid(12,
+                (FillCard("Agora na zona", NowBody(people), info: "Situação ao vivo\n~Lotação contra a capacidade, índice de perigo e o que as pessoas estão fazendo aqui."), 3),
+                (FillCard("Áreas", AreasBody(), info: "Áreas da zona\n~Clique numa área para abrir a página dela. O número à direita é quem está lá agora.", headerRight: Caption(_zone.Areas.Count.ToString())), 6),
+                (FillCard("Regras e acesso", RulesBody(), info: "Regras da zona\n~Combate, morte e controle valem para a zona inteira; passe o mouse em cada regra para ver o que ela significa. As saídas levam às zonas vizinhas pela estrada."), 3)), weight: 52)
+            .Add(Grid(12,
+                (FillCard("Níveis de quem está aqui", LevelsBody(here), info: "Distribuição de níveis\n~Verde: dentro da faixa da zona. Laranja: fora dela."), 3),
+                (FillCard("Movimento · últimas 24 h", chart, info: "Jogadores na zona\n~Amostras a cada 10 minutos de jogo."), 6),
+                (FillCard("Quem está aqui", WhoBody(here), info: "Jogadores conectados na zona\n~Os de nível mais alto primeiro. Lista completa na aba Jogadores.", headerRight: TabLink("Jogadores")), 3)), weight: 48);
     }
 
     private Control NowBody(int people)
@@ -129,7 +129,8 @@ public partial class ZoneModal : ModalFrame
                 ThemeFactory.Text($"capacidade {_zone.Capacity}", UiTokens.FontCaption, UiTokens.TextDisabled)));
         foreach (var c in rings.GetChildren().OfType<Control>()) c.SizeFlagsVertical = SizeFlags.ShrinkCenter;
         var col = Column(12, rings, Section("Fazendo agora"));
-        var acts = _zone.AllActivities().Select(a => (A: a, N: _map.PeopleAtSpot(_zone.Id, a.Id))).Where(x => x.N > 0).OrderByDescending(x => x.N).Take(5).ToList();
+        var acts = _zone.AllActivities().Select(a => (A: a, N: _map.PeopleAtSpot(_zone.Id, a.Id))).Where(x => x.N > 0).OrderByDescending(x => x.N).ThenBy(x => x.A.Name, StringComparer.Ordinal).ToList();
+        var list = Fit(8);
         if (acts.Count == 0) col.AddChild(ThemeFactory.Text("Ninguém em atividade aqui agora.", UiTokens.FontSmall, UiTokens.TextDisabled));
         int max = acts.Count == 0 ? 1 : acts.Max(x => x.N);
         foreach (var (a, n) in acts)
@@ -146,14 +147,15 @@ public partial class ZoneModal : ModalFrame
             c.AddChild(top);
             c.AddChild(new ThinBar(n / (float)max, ActivityPalette.Color(a.Type)) { CustomMinimumSize = new Vector2(0, 3) });
             r.AddChild(c);
-            col.AddChild(r);
+            list.AddChild(r);
         }
+        col.AddChild(list);
         return col;
     }
 
     private Control AreasBody()
     {
-        var col = Column(2);
+        var col = Fit(2);
         foreach (var area in _zone.Areas.OrderByDescending(a => _map.PeopleInArea(_zone.Id, a.Id).Count).ThenBy(a => a.Name, StringComparer.Ordinal))
         {
             string zid = _zone.Id, aid = area.Id;
@@ -191,8 +193,10 @@ public partial class ZoneModal : ModalFrame
 
     private Control RulesBody()
     {
-        Control Line(string icon, string key, string value, Color color)
+        Control Line(string icon, string key, string value, Color color, string tip)
         {
+            var t = new TipPanel { TooltipText = $"{key}|{value}\n~{tip}", MouseFilter = MouseFilterEnum.Stop };
+            t.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
             var r = new HBoxContainer();
             r.AddThemeConstantOverride("separation", 10);
             r.AddChild(new Icon(icon, 16, color));
@@ -200,16 +204,32 @@ public partial class ZoneModal : ModalFrame
             k.SizeFlagsHorizontal = SizeFlags.ExpandFill;
             r.AddChild(k);
             r.AddChild(ThemeFactory.Text(value, UiTokens.FontBody, UiTokens.TextPrimary, UiFonts.Medium));
-            return r;
+            t.AddChild(r);
+            return t;
         }
-        var col = Column(9,
-            Line("swords", "Combate", PtBr.Pvp(_zone.Pvp), _zone.Pvp == PvpRules.Open ? UiTokens.Danger : UiTokens.Success),
-            Line("skull", "Morte", PtBr.Death(_zone.DeathRule), _zone.DeathRule == DeathRules.FullLoot ? UiTokens.Danger : _zone.DeathRule == DeathRules.Partial ? UiTokens.Warning : UiTokens.TextSecondary),
-            Line("flag", "Controle", PtBr.Control(_zone.Control), _zone.Control == ControlRules.Contestable ? UiTokens.Warning : UiTokens.TextSecondary),
-            Line("trending-up", "Níveis", _zone.IsCity ? "Todos" : $"{_zone.LevelMin}–{_zone.LevelMax}", UiTokens.Accent),
-            Line("users", "Capacidade", _zone.Capacity.ToString(), UiTokens.Info),
-            Line("trees", "Bioma", PtBr.Biome(_zone.Biome), UiTokens.BiomeColor(_zone.Biome).Lightened(0.3f)));
-        col.AddChild(new Control { CustomMinimumSize = new Vector2(0, 2) });
+        var col = Column(7,
+            Line("landmark", "Função", PtBr.Function(_zone.Function), ZoneAccent(_zone), _zone.IsCity
+                ? "Serviços, missões e convivência. Cidades são sempre seguras e sem perdas."
+                : "Conteúdo de caça e coleta. Atrai jogadores do nível indicado."),
+            Line("swords", "Combate", PtBr.Pvp(_zone.Pvp), _zone.Pvp == PvpRules.Open ? UiTokens.Danger : UiTokens.Success, _zone.Pvp switch
+            {
+                PvpRules.Open => "Qualquer jogador pode atacar outro. Jogadores avessos a risco tendem a evitar a zona.",
+                PvpRules.Consensual => "PvP apenas entre quem aceitou o confronto.",
+                _ => "Não há dano entre jogadores.",
+            }),
+            Line("skull", "Morte", PtBr.Death(_zone.DeathRule), _zone.DeathRule == DeathRules.FullLoot ? UiTokens.Danger : _zone.DeathRule == DeathRules.Partial ? UiTokens.Warning : UiTokens.TextSecondary, _zone.DeathRule switch
+            {
+                DeathRules.FullLoot => "Ao morrer, o personagem perde o que carrega (detalhes no M9).",
+                DeathRules.Partial => "Ao morrer, parte do que carrega é perdida (regras completas no M9).",
+                _ => "Morrer não causa perda de itens.",
+            }),
+            Line("flag", "Controle", PtBr.Control(_zone.Control), _zone.Control == ControlRules.Contestable ? UiTokens.Warning : UiTokens.TextSecondary, _zone.Control == ControlRules.Contestable
+                ? "Guildas poderão disputar o domínio da zona (territórios no M9)."
+                : "Nenhuma guilda pode dominar esta zona."),
+            Line("trending-up", "Níveis", _zone.IsCity ? "Todos" : $"{_zone.LevelMin}–{_zone.LevelMax}", UiTokens.Accent, "Faixa recomendada: o conteúdo rende mais para quem está nela."),
+            Line("users", "Capacidade", _zone.Capacity.ToString(), UiTokens.Info, "Jogadores que a zona comporta antes de lotar."),
+            Line("trees", "Bioma", PtBr.Biome(_zone.Biome), UiTokens.BiomeColor(_zone.Biome).Lightened(0.3f), "Aparência da zona no mapa."),
+            Line("ruler", "Escala", $"{_ctx.Layout.ZoneRadius * 2 * 10} m", UiTokens.Info, "Diâmetro. Todas as zonas têm a mesma escala; andar de uma saída à outra leva tempo real de simulação."));
         col.AddChild(Section("Saídas"));
         foreach (var c in _zone.Connections)
         {
@@ -250,7 +270,7 @@ public partial class ZoneModal : ModalFrame
         bool In(int l) => _zone.IsCity || (l >= _zone.LevelMin && l <= _zone.LevelMax);
         var chart = new ColumnChart
         {
-            CustomMinimumSize = new Vector2(0, 160), CountScale = true, ShowAverage = false, Unit = " jogadores",
+            CustomMinimumSize = new Vector2(0, 90), CountScale = true, ShowAverage = false, Unit = " jogadores", SizeFlagsVertical = SizeFlags.ExpandFill,
             Values = values, Labels = Enumerable.Range(lo, hi - lo + 1).Select(l => $"Nv {l}").ToList(),
         };
         var levels = Enumerable.Range(lo, hi - lo + 1).ToList();
@@ -273,9 +293,9 @@ public partial class ZoneModal : ModalFrame
 
     private Control WhoBody(List<Sim.CharacterView> here)
     {
-        var col = Column(2);
+        var col = Fit(2);
         if (here.Count == 0) { col.AddChild(ThemeFactory.Text("Ninguém conectado nesta zona agora.", UiTokens.FontSmall, UiTokens.TextDisabled)); return col; }
-        foreach (var v in here.OrderByDescending(x => x.Level).ThenBy(x => x.Name, StringComparer.Ordinal).Take(6))
+        foreach (var v in here.OrderByDescending(x => x.Level).ThenBy(x => x.Name, StringComparer.Ordinal))
         {
             var p = _ctx.Persons[v.PersonId - 1];
             int pid = v.PersonId;
@@ -302,7 +322,6 @@ public partial class ZoneModal : ModalFrame
             b.AddChild(r);
             col.AddChild(b);
         }
-        if (here.Count > 6) col.AddChild(ThemeFactory.Text($"+{here.Count - 6} na aba Jogadores", UiTokens.FontCaption, UiTokens.TextSecondary));
         return col;
     }
 
@@ -375,47 +394,43 @@ public partial class ZoneModal : ModalFrame
         var here = new List<(int Id, Sim.CharacterView V)>();
         for (int id = 1; id < snap.ByPerson.Length; id++)
             if (snap.ByPerson[id] is { } v && v.Status != CharacterStatus.Offline && v.RegionId == _zone.Id) here.Add((id, v));
-        var col = Column(6);
-        col.AddChild(ThemeFactory.Text($"{here.Count} jogadores conectados nesta zona", UiTokens.FontBody, UiTokens.TextSecondary));
+        var list = Fit(6, "zona_jogadores");
+        if (here.Count == 0) list.AddChild(ThemeFactory.Text("Ninguém conectado nesta zona agora.", UiTokens.FontBody, UiTokens.TextSecondary).AsPlaceholder());
         foreach (var (id, v) in here.OrderByDescending(x => x.V.Level).ThenBy(x => x.V.Name, StringComparer.Ordinal))
-            col.AddChild(PlayerRow.Build(_ctx, id, v, () => { _ctx.OpenPerson(id); }));
-        return col;
+        {
+            int pid = id;
+            list.AddChild(PlayerRow.Build(_ctx, id, v, () => { _ctx.OpenPerson(pid); }));
+        }
+        return new ScreenPage().Add(Grid(12,
+            (FillCard("Jogadores conectados", list, info: "Quem está na zona agora\n~Os de nível mais alto primeiro. Clique para abrir a ficha.", headerRight: Pager(list, "zona_jogadores", "jogador", "jogadores")), 8),
+            (FillCard("Composição", CompositionBody(here), info: "Quem está na zona agora, por classe, pelo que está fazendo e por perfil de dedicação."), 4)));
     }
 
-    // ---------------- Regras ----------------
-
-    private Control BuildRules()
+    /// <summary>Composicao de quem esta na zona: numeros e barras por classe, atividade e perfil.</summary>
+    private Control CompositionBody(List<(int Id, Sim.CharacterView V)> here)
     {
-        Control Rule(string name, string value, string desc, Color color)
+        int doing = here.Count(x => x.V.Status == CharacterStatus.Doing), travel = here.Count(x => x.V.Status == CharacterStatus.Traveling);
+        var col = Column(12, Row(0,
+            Mini(here.Count.ToString(), "Conectados"),
+            Mini(doing.ToString(), "Em atividade"),
+            Mini(travel.ToString(), "Viajando"),
+            Mini(here.Count == 0 ? "–" : PtBr.Decimal(here.Average(x => x.V.Level), 1), "Nível médio")));
+        void Bars(string title, IEnumerable<(string Name, Color Color)> items)
         {
-            var c = Column(4);
-            c.AddChild(Row(10, ThemeFactory.Text(name, UiTokens.FontSmall, UiTokens.TextSecondary, UiFonts.SemiBold), ThemeFactory.Chip(value, color)));
-            var d = ThemeFactory.Text(desc, UiTokens.FontSmall, UiTokens.TextPrimary);
-            d.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-            c.AddChild(d);
-            return c;
+            var groups = items.GroupBy(x => x.Name).Select(g => (Name: g.Key, Color: g.First().Color, N: g.Count()))
+                .OrderByDescending(g => g.N).ThenBy(g => g.Name, StringComparer.Ordinal).ToList();
+            col.AddChild(Section(title));
+            if (groups.Count == 0) { col.AddChild(ThemeFactory.Text("—", UiTokens.FontSmall, UiTokens.TextDisabled)); return; }
+            int max = groups.Max(g => g.N);
+            foreach (var g in groups) col.AddChild(Bar(g.Name, g.N, max, g.Color, g.N.ToString(), 130));
         }
-        var col = Column(16,
-            Rule("Função", PtBr.Function(_zone.Function), _zone.IsCity
-                ? "Serviços, missões e convivência. Cidades são sempre seguras e sem perdas."
-                : "Conteúdo de caça e coleta. Atrai jogadores do nível indicado.", ZoneAccent(_zone)),
-            Rule("Combate", PtBr.Pvp(_zone.Pvp), _zone.Pvp switch
-            {
-                PvpRules.Open => "Qualquer jogador pode atacar outro. Jogadores avessos a risco tendem a evitar a zona.",
-                PvpRules.Consensual => "PvP apenas entre quem aceitou o confronto.",
-                _ => "Não há dano entre jogadores.",
-            }, _zone.Pvp == PvpRules.Open ? UiTokens.Danger : UiTokens.Success),
-            Rule("Morte", PtBr.Death(_zone.DeathRule), _zone.DeathRule switch
-            {
-                DeathRules.FullLoot => "Ao morrer, o personagem perde o que carrega (detalhes no M9).",
-                DeathRules.Partial => "Ao morrer, parte do que carrega é perdida (regras completas no M9).",
-                _ => "Morrer não causa perda de itens.",
-            }, _zone.DeathRule == DeathRules.None ? UiTokens.TextSecondary : UiTokens.Warning),
-            Rule("Controle", PtBr.Control(_zone.Control), _zone.Control == ControlRules.Contestable
-                ? "Guildas poderão disputar o domínio da zona (territórios no M9)."
-                : "Nenhuma guilda pode dominar esta zona.", _zone.Control == ControlRules.Contestable ? UiTokens.Warning : UiTokens.TextSecondary),
-            Rule("Escala", $"{_ctx.Layout.ZoneRadius * 2 * 10} m de diâmetro", "Todas as zonas têm a mesma escala. Andar de uma saída à outra leva tempo real de simulação.", UiTokens.Info));
-        return Card("Regras desta zona", col);
+        Bars("Por classe", here.Select(x => _ctx.Content.Classes.TryGetValue(x.V.ClassId, out var c) ? (c.Name, PlayerModal.RoleColor(c.Role)) : (x.V.ClassId, UiTokens.TextSecondary)));
+        Bars("Fazendo agora", here.Where(x => x.V.Status == CharacterStatus.Doing && x.V.ActivityId.Length > 0)
+            .Select(x => _ctx.Content.Regions.TryGetValue(x.V.TargetRegionId, out var r) && r.FindActivity(x.V.ActivityId) is { } a
+                ? (PtBr.ActivityType(a.Type), ActivityPalette.Color(a.Type)) : ("Outra", UiTokens.TextSecondary)));
+        Bars("Por perfil", here.Select(x => (_ctx.Content.Profiles.TryGetValue(_ctx.Persons[x.Id - 1].ProfileId, out var p) ? p.Name : "",
+            UiTokens.ProfileColor(_ctx.Persons[x.Id - 1].ProfileId))));
+        return col;
     }
 
     // ---------------- Configuracao (rascunho) ----------------
@@ -457,17 +472,18 @@ public partial class ZoneModal : ModalFrame
         _issuesBox = Column(6);
         var buttons = Row(8,
             Action("Salvar rascunho", "Guarda o rascunho nesta sessão", () => { _draft.Saved = true; _ctx.Drafts[_zone.Id] = _draft; Validate(); }, primary: true),
-            Action("Descartar", "Volta aos valores publicados", () => { _ctx.Drafts.Remove(_zone.Id); _draft = ZoneDraft.From(_zone); SelectTab(3); }),
+            Action("Descartar", "Volta aos valores publicados", () => { _ctx.Drafts.Remove(_zone.Id); _draft = ZoneDraft.From(_zone); OpenTabNamed("Configuração"); }),
             Action("Publicar no mundo", "A publicação entra pelo sistema de atualizações (M7) ou pelo modo sandbox", () => { }, enabled: false));
 
         var info = ThemeFactory.Text("Você está editando um rascunho. O mundo ativo não muda até a publicação por atualização (M7) ou pelo modo sandbox. A validação abaixo é a mesma usada pelo Core.",
             UiTokens.FontSmall, UiTokens.TextSecondary);
         info.AutowrapMode = TextServer.AutowrapMode.WordSmart;
 
-        var left = Column(14, Card("Propriedades", form, UiTokens.Accent));
-        var right = Column(14, Card("Atividades oferecidas", acts), Card("Validação", _issuesBox), info, buttons);
         CallDeferred(nameof(Validate));
-        return Row(16, left, right);
+        return new ScreenPage().Add(Grid(12,
+            (FillCard("Propriedades", form, info: "Regras e números da zona (rascunho)\n~Nada muda no mundo ativo até a publicação."), 4),
+            (FillCard("Atividades oferecidas", acts, info: "Atividades de cada área e da zona inteira\n~Desmarcar tira a atividade do rascunho."), 4),
+            (FillCard("Validação e publicação", Column(14, _issuesBox, Divider(), info, buttons), info: "Validação do rascunho\n~A mesma validação usada pelo Core."), 4)));
     }
 
     private static Control Field(string label, Control input)

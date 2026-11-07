@@ -28,12 +28,11 @@ public partial class QuestModal : ModalFrame
         Breadcrumb = _board != null
             ? $"Mundo › {ctx.ZoneName(_board.RegionId)} › {_board.Name} › {_quest.Name}"
             : $"Missões › {_quest.Name}";
+        // Paginas em telas (D-068). Objetivos, Requisitos e recompensas e Dados repetiam a Visao geral: o que so
+        // elas tinham (aviso de PvP na etapa, limite do quadro, missoes que esta libera, raridade dos itens)
+        // entrou na Visao geral.
         AddTab("Visão geral", BuildOverview, live: true);
-        AddTab($"Objetivos · {_quest.Steps.Count + 1}", BuildSteps);
-        AddTab("Requisitos e recompensas", BuildRewards);
-        AddTab("Dados", BuildData, live: true);
-        AddTab($"Concluíram · {Completers().Count}", () => Column(12, Card("Quem já entregou esta missão", CompletersTable(int.MaxValue),
-            info: "Personagens que entregaram a missão\n~Clique para abrir a ficha. Ordene pelas colunas.")), live: true);
+        AddTab($"Concluíram · {Completers().Count}", BuildCompleters, live: true);
     }
 
     public static Color CategoryColor(string category) => category switch
@@ -103,17 +102,61 @@ public partial class QuestModal : ModalFrame
 
     private Control BuildOverview()
     {
-        var row1 = Grid(12,
-            (Card($"Objetivos · {_quest.Steps.Count + 1} etapas", StepsTimeline(), info: "Etapas da missão\n~As etapas acontecem no mundo; aceitar e entregar são ações rápidas no quadro."), 6),
-            (Card("Requisitos e recompensas", RequirementsBody(), info: "Quem pode fazer e o que ganha\n~Ouro e itens já estão definidos, mas só têm efeito com a economia (M5)."), 3),
-            (Card("Desempenho da missão", FunnelBody(), info: "Números da campanha\n~Aceites, quem está fazendo e entregas desde o lançamento."), 3));
-        var row2 = Grid(12,
-            (Card($"Fazendo agora · {Stats?.Active ?? 0}", BuildDoingTable(), info: "Personagens com a missão em andamento\n~Clique para abrir a ficha."), 9),
-            (Card("Em que etapa estão", StageBody(), info: "Distribuição de quem está fazendo\n~Quantos personagens estão em cada etapa agora."), 3));
+        var doing = Fit(0, "fazendo");
+        var table = BuildDoingTable(doing);
+        // Uma tela: as etapas, quem pode fazer e o que ganha, e os numeros; embaixo, quem esta fazendo agora.
+        return new ScreenPage()
+            .Add(Grid(12,
+                (FillCard($"Objetivos · {_quest.Steps.Count + 1} etapas", StepsTimeline(), info: "Etapas da missão\n~As etapas acontecem no mundo; aceitar e entregar são ações rápidas no quadro."), 6),
+                (FillCard("Requisitos e recompensas", RequirementsBody(), info: "Quem pode fazer e o que ganha\n~Ouro e itens já fazem parte da missão, mas só passam a ter efeito com inventário e economia (M5). Hoje a recompensa aplicada é o XP."), 3),
+                (FillCard("Desempenho da missão", FunnelBody(), info: "Números da campanha\n~Aceites, quem está fazendo e entregas desde o lançamento."), 3)), weight: 55)
+            .Add(Grid(12,
+                (FillCard("Fazendo agora", table, info: "Personagens com a missão em andamento\n~Clique para abrir a ficha. Ordene pelas colunas.", headerRight: Pager(doing, "fazendo", "personagem", "personagens")), 9),
+                (FillCard("Em que etapa estão", StageBody(), info: "Distribuição de quem está fazendo\n~Quantos personagens estão em cada etapa agora."), 3)), weight: 45);
+    }
+
+    /// <summary>Concluiram: a lista de quem entregou e, ao lado, quem sao (perfil e classe).</summary>
+    private Control BuildCompleters()
+    {
+        var rows = Fit(0, "concluiram");
+        var table = CompletersTable(rows);
+        return new ScreenPage().Add(Grid(12,
+            (FillCard("Quem já entregou esta missão", table, info: "Personagens que entregaram a missão\n~Mais recentes primeiro. Clique para abrir a ficha. Ordene pelas colunas.", headerRight: Pager(rows, "concluiram", "personagem", "personagens")), 9),
+            (FillCard("Quem concluiu", CompletersMix(), info: "Quem são os personagens que já entregaram\n~Perfil de dedicação e classe."), 3)));
+    }
+
+    private Control CompletersMix()
+    {
         var done = Completers();
-        var row3 = Grid(12,
-            (Card($"Quem concluiu · {done.Count}", CompletersTable(10), info: "Personagens que já entregaram\n~Os 10 mais recentes; a lista completa está na aba Concluíram."), 12));
-        return Column(12, row1, row2, row3);
+        var col = Column(12);
+        var nums = Row(0,
+            Mini(PtBr.Int(done.Count), "Personagens"),
+            Mini(PtBr.Int(done.Sum(x => x.Times)), "Entregas"),
+            Mini(done.Count == 0 ? "–" : PtBr.Decimal(done.Average(x => x.V.Level), 1), "Nível atual médio"));
+        col.AddChild(nums);
+        void Bars(string title, IEnumerable<(string Name, Color Color)> items)
+        {
+            var groups = items.GroupBy(x => x.Name).Select(g => (Name: g.Key, Color: g.First().Color, N: g.Count()))
+                .OrderByDescending(g => g.N).ThenBy(g => g.Name, StringComparer.Ordinal).ToList();
+            col.AddChild(Section(title));
+            if (groups.Count == 0) { col.AddChild(ThemeFactory.Text("—", UiTokens.FontSmall, UiTokens.TextDisabled)); return; }
+            int max = groups.Max(g => g.N);
+            foreach (var g in groups) col.AddChild(Bar(g.Name, g.N, max, g.Color, g.N.ToString(), 120));
+        }
+        Bars("Por perfil", done.Select(x => (_ctx.Content.Profiles.TryGetValue(_ctx.Persons[x.Id - 1].ProfileId, out var p) ? p.Name : "", UiTokens.ProfileColor(_ctx.Persons[x.Id - 1].ProfileId))));
+        Bars("Por classe", done.Select(x => _ctx.Content.Classes.TryGetValue(x.V.ClassId, out var c) ? (c.Name, PlayerModal.RoleColor(c.Role)) : (x.V.ClassId, UiTokens.TextSecondary)));
+        return col;
+    }
+
+    private static Control Mini(string value, string caption)
+    {
+        var c = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        c.AddThemeConstantOverride("separation", 0);
+        c.AddChild(ThemeFactory.Text(value, 20, UiTokens.TextPrimary, UiFonts.Numbers));
+        var cap = ThemeFactory.Text(caption, UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Medium);
+        cap.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        c.AddChild(cap);
+        return c;
     }
 
     private Control StepsTimeline()
@@ -142,6 +185,8 @@ public partial class QuestModal : ModalFrame
                 info.AddChild(ThemeFactory.Text(step!.Text, UiTokens.FontBody, UiTokens.TextPrimary, UiFonts.Medium));
                 string what = step.Type == QuestStepTypes.Visit ? "ponto de missão" : act != null ? PtBr.ActivityType(act.Type) : "atividade";
                 info.AddChild(ThemeFactory.Text($"{_ctx.PlaceName(step.RegionId, step.ActivityId)} · {_ctx.ZoneName(step.RegionId)} · {what} · {step.Minutes} min", UiTokens.FontSmall, UiTokens.TextSecondary));
+                if (_ctx.Content.Regions.TryGetValue(step.RegionId, out var sz) && sz.Pvp == PvpRules.Open)
+                    info.AddChild(ThemeFactory.Text("Zona com PvP aberto: risco de ataque de outros jogadores.", UiTokens.FontCaption, UiTokens.Danger));
             }
             row.AddChild(info);
             if (step != null && QuestSystem.IsProvisional(_ctx.Content, step))
@@ -179,6 +224,8 @@ public partial class QuestModal : ModalFrame
             Line("trending-up", "Nível", _quest.MaxLevel > 0 ? $"{_quest.MinLevel} a {_quest.MaxLevel}" : $"{_quest.MinLevel} ou mais", UiTokens.Accent),
             Line("shield", "Classe", _quest.ClassIds.Count == 0 ? "qualquer" : string.Join(", ", _quest.ClassIds.Select(c => _ctx.Content.Classes.TryGetValue(c, out var cl) ? cl.Name : c)), UiTokens.Info),
             Line("clock", "Repetição", Repetition(_quest), UiTokens.TextSecondary));
+        if (_board != null && _quest.Category == QuestCategories.Daily)
+            col.AddChild(Line("sun", "Limite do quadro", $"{_board.DailyLimit} por dia", UiTokens.Success));
         foreach (var pre in _quest.PrerequisiteQuestIds)
         {
             string id = pre;
@@ -199,13 +246,32 @@ public partial class QuestModal : ModalFrame
             b.AddChild(r);
             col.AddChild(b);
         }
+        foreach (var u in _ctx.Content.Quests.Values.Where(x => x.PrerequisiteQuestIds.Contains(_quest.Id)).OrderBy(x => x.Name, StringComparer.Ordinal))
+        {
+            string id = u.Id;
+            var b = HoverRow(() => _ctx.OpenQuest(id), $"{u.Name}\n~Esta missão libera a seguinte. Clique para abrir.");
+            b.CustomMinimumSize = new Vector2(0, 28);
+            var r = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
+            r.SetAnchorsPreset(LayoutPreset.FullRect);
+            r.AddThemeConstantOverride("separation", 10);
+            r.AddChild(new Icon("door-open", 16, UiTokens.Success));
+            var k = ThemeFactory.Text("Libera", UiTokens.FontSmall, UiTokens.TextSecondary);
+            k.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+            k.VerticalAlignment = VerticalAlignment.Center;
+            r.AddChild(k);
+            var v = ThemeFactory.Text(u.Name + "  ›", UiTokens.FontBody, UiTokens.Success, UiFonts.Medium);
+            v.VerticalAlignment = VerticalAlignment.Center;
+            r.AddChild(v);
+            b.AddChild(r);
+            col.AddChild(b);
+        }
         col.AddChild(new Control { CustomMinimumSize = new Vector2(0, 4) });
         col.AddChild(Section("Recompensas"));
         long xp = QuestSystem.RewardXp(_ctx.Content, Math.Max(_quest.MinLevel, _quest.RecommendedLevel), _quest);
         col.AddChild(Line("award", "Experiência", _quest.ScalesWithLevel ? $"{_quest.Rewards.XpPermille / 10.0:0.#}% do nível" : $"{PtBr.Int(xp)} XP", UiTokens.Success));
         col.AddChild(Line("coins", "Ouro · M5", _quest.Rewards.GoldCopper > 0 ? Coins(_quest.Rewards.GoldCopper) : "—", UiTokens.TextDisabled));
         foreach (var it in _quest.Rewards.ItemIds)
-            col.AddChild(Line("backpack", "Item · M5", _ctx.Content.Items.TryGetValue(it, out var item) ? item.Name : it, UiTokens.TextDisabled));
+            col.AddChild(Line("backpack", "Item · M5", _ctx.Content.Items.TryGetValue(it, out var item) ? $"{item.Name} ({item.Rarity})" : it, UiTokens.TextDisabled));
         return col;
     }
 
@@ -247,89 +313,6 @@ public partial class QuestModal : ModalFrame
         };
     }
 
-    // ---------------- Objetivos ----------------
-
-    private Control BuildSteps()
-    {
-        var col = Column(10);
-        for (int i = 0; i < _quest.Steps.Count; i++) col.AddChild(StepCard(i + 1, _quest.Steps[i]));
-        // Entrega: sempre no quadro de origem.
-        var deliver = Column(4);
-        deliver.AddChild(ThemeFactory.Text(_board != null ? $"Voltar a {_board.Name} ({_ctx.ZoneName(_board.RegionId)}) e entregar" : "Entregar no quadro", UiTokens.FontBody, UiTokens.TextPrimary, UiFonts.Medium));
-        deliver.AddChild(ThemeFactory.Text("A recompensa é dada na entrega. Aceitar e entregar são ações rápidas no quadro.", UiTokens.FontSmall, UiTokens.TextSecondary));
-        col.AddChild(Card($"Etapa {_quest.Steps.Count + 1} · entrega", deliver, CategoryColor(_quest.Category)));
-        return col;
-    }
-
-    private Control StepCard(int n, QuestStepDefinition step)
-    {
-        var act = _ctx.Content.Regions.TryGetValue(step.RegionId, out var r) ? r.FindActivity(step.ActivityId) : null;
-        var row = new HBoxContainer();
-        row.AddThemeConstantOverride("separation", 12);
-        row.AddChild(new GlyphIcon(act?.Type ?? ActivityTypes.Quest) { CustomMinimumSize = new Vector2(36, 36) });
-        var info = Column(3);
-        info.AddChild(ThemeFactory.Text(step.Text, UiTokens.FontBody, UiTokens.TextPrimary, UiFonts.Medium));
-        string where = $"{_ctx.PlaceName(step.RegionId, step.ActivityId)} · {_ctx.ZoneName(step.RegionId)}";
-        string what = step.Type == QuestStepTypes.Visit ? $"ponto de missão · {step.Minutes} min" : $"{(act != null ? PtBr.ActivityType(act.Type) : "atividade")} · {step.Minutes} min";
-        info.AddChild(ThemeFactory.Text($"{where} · {what}", UiTokens.FontSmall, UiTokens.TextSecondary, UiFonts.Numbers));
-        if (r != null && r.Pvp == PvpRules.Open)
-            info.AddChild(ThemeFactory.Text("Zona com PvP aberto: risco de ataque de outros jogadores.", UiTokens.FontCaption, UiTokens.Danger));
-        row.AddChild(info);
-        if (QuestSystem.IsProvisional(_ctx.Content, step))
-        {
-            var chip = ThemeFactory.Chip("Provisório", UiTokens.Warning, dot: true);
-            chip.TooltipText = "Hoje a etapa conta o TEMPO fazendo a atividade.\nAbates e itens coletados só existem a partir do combate (M3) e da economia (M5);\nentão a quest não registra \"derrotou N\" nem \"coletou N\".";
-            chip.MouseFilter = MouseFilterEnum.Stop;
-            row.AddChild(chip);
-        }
-        return Card($"Etapa {n} · {(step.Type == QuestStepTypes.Visit ? "visita" : "atividade")}", row, CategoryColor(_quest.Category));
-    }
-
-    // ---------------- Requisitos e recompensas ----------------
-
-    private Control BuildRewards()
-    {
-        var req = Column(6);
-        req.AddChild(KeyValue("Nível", _quest.MaxLevel > 0 ? $"de {_quest.MinLevel} a {_quest.MaxLevel}" : $"{_quest.MinLevel} ou mais", UiTokens.Info));
-        req.AddChild(KeyValue("Classe", _quest.ClassIds.Count == 0 ? "qualquer" : string.Join(", ", _quest.ClassIds.Select(c => _ctx.Content.Classes.TryGetValue(c, out var cl) ? cl.Name : c))));
-        req.AddChild(KeyValue("Repetição", Repetition(_quest)));
-        if (_board != null && _quest.Category == QuestCategories.Daily)
-            req.AddChild(KeyValue("Limite do quadro", $"{_board.DailyLimit} diárias por dia por personagem"));
-        if (_quest.PrerequisiteQuestIds.Count == 0)
-            req.AddChild(KeyValue("Quest anterior", "nenhuma"));
-        foreach (var pre in _quest.PrerequisiteQuestIds)
-        {
-            var name = _ctx.Content.Quests.TryGetValue(pre, out var pq) ? pq.Name : pre;
-            string id = pre;
-            req.AddChild(Action($"Exige: {name}", "Abre a quest anterior", () => { _ctx.OpenQuest(id); }));
-        }
-        var unlocks = _ctx.Content.Quests.Values.Where(x => x.PrerequisiteQuestIds.Contains(_quest.Id)).ToList();
-        foreach (var u in unlocks)
-        {
-            string id = u.Id;
-            req.AddChild(Action($"Libera: {u.Name}", "Abre a quest seguinte", () => { _ctx.OpenQuest(id); }));
-        }
-
-        var rew = Column(6);
-        long xp = QuestSystem.RewardXp(_ctx.Content, Math.Max(_quest.MinLevel, _quest.RecommendedLevel), _quest);
-        rew.AddChild(KeyValue("Experiência", _quest.ScalesWithLevel
-            ? $"{_quest.Rewards.XpPermille / 10.0:0.#}% do XP do nível de quem entrega"
-            : $"{PtBr.Int(xp)} XP no nível {Math.Max(_quest.MinLevel, _quest.RecommendedLevel)} ({_quest.Rewards.XpPermille / 10.0:0.#}% do nível)", UiTokens.Success));
-        rew.AddChild(KeyValue("Ouro", _quest.Rewards.GoldCopper > 0 ? $"{Coins(_quest.Rewards.GoldCopper)} · não implementado (M5)" : "—", UiTokens.TextSecondary));
-        if (_quest.Rewards.ItemIds.Count == 0) rew.AddChild(KeyValue("Itens", "—"));
-        foreach (var it in _quest.Rewards.ItemIds)
-        {
-            string nm = _ctx.Content.Items.TryGetValue(it, out var item) ? item.Name : it;
-            string rarity = item != null ? $" ({item.Rarity})" : "";
-            rew.AddChild(KeyValue("Item", $"{nm}{rarity} · não implementado (M5)", UiTokens.TextSecondary));
-        }
-        var note = ThemeFactory.Text("Ouro e itens já fazem parte da quest, mas só passam a ter efeito quando existirem inventário e economia (M5). Hoje a recompensa aplicada é o XP.", UiTokens.FontCaption, UiTokens.TextSecondary);
-        note.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        rew.AddChild(note);
-
-        return Row(12, Card("Requisitos", req, UiTokens.Info), Card("Recompensas", rew, UiTokens.Success));
-    }
-
     public static string Coins(long copper)
     {
         long gold = copper / 10000, silver = copper / 100 % 100, cu = copper % 100;
@@ -338,32 +321,6 @@ public partial class QuestModal : ModalFrame
         if (silver > 0) parts.Add($"{silver} prata");
         if (cu > 0 || parts.Count == 0) parts.Add($"{cu} cobre");
         return string.Join(" ", parts);
-    }
-
-    // ---------------- Dados ----------------
-
-    private Control BuildData()
-    {
-        var s = Stats;
-        var snap = _ctx.Snapshot();
-        int accepted = s?.Accepted ?? 0, completed = s?.Completed ?? 0;
-        string rate = accepted == 0 ? "–" : $"{completed * 100 / Math.Max(1, accepted)}%";
-        string avgHours = completed == 0 ? "–" : PtBr.Decimal(s!.SumPlayedTicksToComplete / (double)completed / SimTime.TicksPerHour) + " h";
-        string avgLevel = completed == 0 ? "–" : PtBr.Decimal(s!.SumLevelAtCompletion / (double)completed);
-        string last = s == null || s.LastCompletedTick < 0 ? "nunca" : $"{PtBr.ShortDate(_ctx.Calendar.ToDateTime(s.LastCompletedTick))} {_ctx.Clock(s.LastCompletedTick)}";
-
-        var stats = Row(10,
-            Stat(PtBr.Int(accepted), "aceitaram", UiTokens.Info),
-            Stat(PtBr.Int(completed), "entregas", UiTokens.Success),
-            Stat(rate, "taxa de conclusão", UiTokens.AccentSoft, "Entregas ÷ aceites (inclui quem ainda está fazendo)"),
-            Stat(PtBr.Int(s?.UniqueCompleters ?? 0), "personagens concluíram", UiTokens.Accent));
-        var stats2 = Row(10,
-            Stat(avgHours, "tempo médio jogado até entregar", UiTokens.Info, "Tempo conectado entre aceitar e entregar"),
-            Stat(avgLevel, "nível médio na entrega", UiTokens.Info),
-            Stat(PtBr.Int(s?.XpGranted ?? 0), "XP entregue no total", UiTokens.Success),
-            Stat(last, "última entrega", UiTokens.TextSecondary));
-
-        return Column(12, stats, stats2, Card($"Fazendo agora · {Stats?.Active ?? 0}", BuildDoingTable(), CategoryColor(_quest.Category)));
     }
 
     private DataTable<(int Id, CharacterView V, int Times, long LastDay)>? _doneTable;
@@ -380,7 +337,7 @@ public partial class QuestModal : ModalFrame
         return list;
     }
 
-    private Control CompletersTable(int max)
+    private Control CompletersTable(FitList rows)
     {
         string Day(long day) => day < 0 ? "—" : PtBr.ShortDate(_ctx.Calendar.ToDateTime(day * SimTime.TicksPerDay));
         string Prof(int id) => _ctx.Content.Profiles.TryGetValue(_ctx.Persons[id - 1].ProfileId, out var p) ? p.Name : "";
@@ -398,10 +355,10 @@ public partial class QuestModal : ModalFrame
         _doneTable.OnSortChanged = () => Rebuild(false);
         var done = Completers();
         if (done.Count == 0) return ThemeFactory.Text("Ninguém entregou esta missão ainda.", UiTokens.FontBody, UiTokens.TextSecondary);
-        return _doneTable.Build(done.OrderByDescending(x => x.LastDay).Take(max));
+        return _doneTable.Build(done.OrderByDescending(x => x.LastDay), rows);
     }
 
-    private Control BuildDoingTable()
+    private Control BuildDoingTable(FitList rows)
     {
         var snap = _ctx.Snapshot();
         var doing = new List<(int Id, CharacterView V, QuestProgressView P)>();
@@ -420,8 +377,8 @@ public partial class QuestModal : ModalFrame
         _doingTable.OnSortChanged = () => Rebuild(false);
 
         return doing.Count == 0
-            ? ThemeFactory.Text("Ninguém está fazendo esta quest agora.", UiTokens.FontBody, UiTokens.TextSecondary)
-            : _doingTable.Build(doing.Take(12));
+            ? ThemeFactory.Text("Ninguém está fazendo esta missão agora.", UiTokens.FontBody, UiTokens.TextSecondary)
+            : _doingTable.Build(doing, rows);
     }
 
     private string StepText((int Id, CharacterView V, QuestProgressView P) x)

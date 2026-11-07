@@ -573,7 +573,8 @@ public partial class FitList : Container
     /// <summary>O ultimo item mostrado fica com toda a altura que sobra (ex.: um grafico que cresce).</summary>
     public bool StretchLast { get; set; }
     public int Shown { get; private set; }
-    public int Total => GetChildCount();
+    /// <summary>Itens de verdade (a frase de lista vazia, marcada com AsPlaceholder, nao conta).</summary>
+    public int Total => GetChildren().OfType<Control>().Count(c => !c.HasMeta("placeholder"));
     public event Action? Laid;
 
     public FitList()
@@ -656,6 +657,16 @@ public partial class FitList : Container
         if (StretchLast && last != null && Size.Y > lastY) FitChildInRect(last, new Rect2(0, lastY, Size.X, Size.Y - lastY));
         if (shown != Shown) { Shown = shown; }
         Laid?.Invoke();
+    }
+}
+
+public static class FitListItems
+{
+    /// <summary>Marca a frase de lista vazia: aparece na lista, mas nao entra na contagem do paginador.</summary>
+    public static T AsPlaceholder<T>(this T c) where T : Control
+    {
+        c.SetMeta("placeholder", true);
+        return c;
     }
 }
 

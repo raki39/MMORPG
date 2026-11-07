@@ -40,9 +40,10 @@ public sealed class DataTable<T>
     public Action<T>? OnClick { get; set; }
     public Action? OnSortChanged { get; set; }
 
-    public Control Build(IEnumerable<T> rows)
+    /// <summary>Tabela; com fit, as linhas vao para a lista que cabe no card (paginas no titulo), sem rolagem.</summary>
+    public Control Build(IEnumerable<T> rows, FitList? fit = null)
     {
-        var col = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+        var col = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, SizeFlagsVertical = Control.SizeFlags.ExpandFill };
         col.AddThemeConstantOverride("separation", 0);
 
         var head = new PanelContainer();
@@ -84,6 +85,8 @@ public sealed class DataTable<T>
         }
         head.AddChild(hrow);
         col.AddChild(head);
+        Container target = col;
+        if (fit != null) { fit.Separation = 0; col.AddChild(fit); target = fit; }
 
         var list = rows.ToList();
         var sc = _columns[Math.Clamp(_sortColumn, 0, _columns.Count - 1)];
@@ -93,7 +96,7 @@ public sealed class DataTable<T>
         {
             var empty = ThemeFactory.Text("Nada para mostrar.", UiTokens.FontSmall, UiTokens.TextDisabled);
             empty.CustomMinimumSize = new Vector2(0, 28);
-            col.AddChild(empty);
+            target.AddChild(empty.AsPlaceholder());
         }
         int r = 0;
         foreach (var item in list)
@@ -127,7 +130,7 @@ public sealed class DataTable<T>
             row.AddChild(cells);
             var captured = item;
             row.Pressed += () => OnClick?.Invoke(captured);
-            col.AddChild(row);
+            target.AddChild(row);
         }
         return col;
     }

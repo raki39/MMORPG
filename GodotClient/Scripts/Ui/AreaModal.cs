@@ -29,10 +29,9 @@ public partial class AreaModal : ModalFrame
         BuildHeader();
         Breadcrumb = $"Mundo › {_zone.Name} › {_area.Name}";
         _board = ctx.Content.QuestBoards.Values.FirstOrDefault(b => b.RegionId == zoneId && b.AreaId == areaId);
+        // Paginas em telas (D-068): quem esta aqui e o "sobre o lugar" entraram na Visao geral.
         if (_board != null) AddTab($"Missões · {ctx.Content.QuestsByBoard[_board.Id].Count}", BuildQuests, live: true);
-        AddTab(_area.Activities.Count > 0 ? $"Tarefas · {_area.Activities.Count}" : "Visão geral", BuildTasks, live: true);
-        AddTab("Jogadores", BuildPlayers, live: true);
-        AddTab("Sobre o lugar", BuildAbout);
+        AddTab("Visão geral", BuildOverview, live: true);
     }
 
     private Color Accent => AreaPalette.Color(_area.Kind);
@@ -46,12 +45,15 @@ public partial class AreaModal : ModalFrame
         var quests = _ctx.Content.QuestsByBoard[_board!.Id];
         var stats = _ctx.Snapshot().QuestStats;
         QuestStatsView? S(QuestDefinition q) => stats.TryGetValue(q.Id, out var s) ? s : null;
-        var summary = Row(10,
-            Stat(quests.Count(q => q.Category == QuestCategories.Main).ToString(), "principais", QuestModal.CategoryColor(QuestCategories.Main)),
-            Stat(quests.Count(q => q.Category == QuestCategories.Secondary).ToString(), "secundárias", QuestModal.CategoryColor(QuestCategories.Secondary)),
-            Stat(quests.Count(q => q.Category == QuestCategories.Daily).ToString(), "diárias", QuestModal.CategoryColor(QuestCategories.Daily), $"Limite: {_board.DailyLimit} diárias por dia por personagem"),
-            Stat(PtBr.Int(quests.Sum(q => S(q)?.Completed ?? 0)), "entregas no quadro", UiTokens.Success),
-            Stat(PtBr.Int(quests.Sum(q => S(q)?.Active ?? 0)), "em andamento", UiTokens.Info));
+        var summary = new GridContainer { Columns = 2, SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        summary.AddThemeConstantOverride("h_separation", 8);
+        summary.AddThemeConstantOverride("v_separation", 8);
+        summary.AddChild(Stat(quests.Count(q => q.Category == QuestCategories.Main).ToString(), "principais", QuestModal.CategoryColor(QuestCategories.Main), fill: true));
+        summary.AddChild(Stat(quests.Count(q => q.Category == QuestCategories.Secondary).ToString(), "secundárias", QuestModal.CategoryColor(QuestCategories.Secondary), fill: true));
+        summary.AddChild(Stat(quests.Count(q => q.Category == QuestCategories.Daily).ToString(), "diárias", QuestModal.CategoryColor(QuestCategories.Daily), $"Limite: {_board.DailyLimit} diárias por dia por personagem", fill: true));
+        summary.AddChild(Stat(_board.DailyLimit.ToString(), "diárias por dia", QuestModal.CategoryColor(QuestCategories.Daily), "Limite do quadro por personagem", fill: true));
+        summary.AddChild(Stat(PtBr.Int(quests.Sum(q => S(q)?.Completed ?? 0)), "entregas no quadro", UiTokens.Success, fill: true));
+        summary.AddChild(Stat(PtBr.Int(quests.Sum(q => S(q)?.Active ?? 0)), "em andamento", UiTokens.Info, fill: true));
         _questTable ??= new DataTable<QuestDefinition>(new[]
         {
             new Column<QuestDefinition> { Title = "Tipo", Width = 86, Text = q => QuestModal.CategoryName(q.Category), SortKey = q => CategoryOrder(q.Category), Color = q => QuestModal.CategoryColor(q.Category) },
@@ -65,7 +67,11 @@ public partial class AreaModal : ModalFrame
         _questTable.OnSortChanged = () => Rebuild(false);
         var note = ThemeFactory.Text("Aceitar e entregar são ações rápidas aqui no quadro; as etapas acontecem no mundo. Clique numa missão para ver a ficha completa.", UiTokens.FontCaption, UiTokens.TextSecondary);
         note.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        return Column(12, summary, Card(_board.Name, _questTable.Build(quests), Accent), note);
+        var rows = Fit(0, "quadro");
+        var table = _questTable.Build(quests, rows);
+        return new ScreenPage().Add(Grid(12,
+            (FillCard(_board.Name, table, info: "Missões deste quadro\n~Clique numa missão para abrir a ficha. Ordene pelas colunas.", headerRight: Pager(rows, "quadro", "missão", "missões")), 9),
+            (FillCard("Resumo do quadro", Column(14, summary, Divider(), note), info: "Números do quadro desde o lançamento"), 3)));
     }
 
     private static int CategoryOrder(string c) => c == QuestCategories.Main ? 0 : c == QuestCategories.Secondary ? 1 : 2;
@@ -104,18 +110,37 @@ public partial class AreaModal : ModalFrame
         Actions.AddChild(Action("Observar em 3D", "Disponível a partir do M4", () => { }, enabled: false));
     }
 
-    // ---------------- Tarefas ----------------
+    // ---------------- Visao geral ----------------
 
-    private Control BuildTasks()
+    /// <summary>
+    /// Uma tela: as tarefas do lugar e o que acontece agora; embaixo, quem esta aqui e o que o lugar e. Com mais
+    /// tarefas, a linha de cima fica maior.
+    /// </summary>
+    private Control BuildOverview()
     {
-        var people = _map.PeopleInArea(_zone.Id, _area.Id).Count;
-        var stats = Row(10,
-            Stat(people.ToString(), "jogadores aqui agora", UiTokens.Info),
-            Stat(_area.Activities.Count.ToString(), "tarefas oferecidas", Accent),
-            Stat(_area.Activities.Count == 0 ? "–" : $"{_area.Activities.Min(a => a.MinLevel)}+", "nível mínimo", UiTokens.AccentSoft),
-            Stat(_area.Activities.Count == 0 ? "–" : $"{_area.Activities.Max(a => a.BaseRiskPermille) / 10}%", "risco máximo", WorldMapView.Ramp(_area.Activities.Count == 0 ? 0 : _area.Activities.Max(a => a.BaseRiskPermille) / 1000f)));
+        int top = 56 + Math.Min(3, _area.Activities.Count) * 4;
+        var ids = _map.PeopleInArea(_zone.Id, _area.Id);
+        var who = Fit(6, "area_jogadores");
+        var snap = _ctx.Snapshot();
+        if (ids.Count == 0) who.AddChild(ThemeFactory.Text("Ninguém neste lugar agora.", UiTokens.FontBody, UiTokens.TextSecondary).AsPlaceholder());
+        foreach (var id in ids.OrderByDescending(i => snap.ByPerson[i]?.Level ?? 0).ThenBy(i => i))
+            if (snap.ByPerson[id] is { } v)
+            {
+                int pid = id;
+                who.AddChild(PlayerRow.Build(_ctx, id, v, () => { _ctx.OpenPerson(pid); }));
+            }
+        return new ScreenPage()
+            .Add(Grid(12,
+                (FillCard("Tarefas", TasksBody(), info: "O que se faz aqui\n~Nível, grupo, duração, risco, recompensa de referência e as criaturas de cada tarefa.", headerRight: Caption(_area.Activities.Count.ToString())), 8),
+                (FillCard("Agora no lugar", NowBody(ids.Count), info: "Situação ao vivo do lugar"), 4)), weight: top)
+            .Add(Grid(12,
+                (FillCard("Quem está aqui", who, info: "Jogadores neste lugar agora\n~Os de nível mais alto primeiro. Clique para abrir a ficha.", headerRight: Pager(who, "area_jogadores", "jogador", "jogadores")), 8),
+                (FillCard("Sobre o lugar", AboutBody(), info: "O lugar e as regras que ele herda da zona"), 4)), weight: 100 - top);
+    }
 
-        var col = Column(16, stats);
+    private Control TasksBody()
+    {
+        var col = Column(14);
         if (AreaKinds.IsPortal(_area.Kind))
         {
             var t = ThemeFactory.Text(_area.Kind == AreaKinds.Dungeon
@@ -123,11 +148,63 @@ public partial class AreaModal : ModalFrame
                     : $"Aqui uma guilda poderá erguer seu esconderijo ({_area.LeadsTo}): um espaço seguro dentro de uma zona perigosa. Territórios e esconderijos chegam no M9.",
                 UiTokens.FontBody, UiTokens.TextPrimary);
             t.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-            col.AddChild(Card(_area.Kind == AreaKinds.Dungeon ? "Masmorra" : "Esconderijo de guilda", t, Accent));
+            col.AddChild(Column(8, Section(_area.Kind == AreaKinds.Dungeon ? "Masmorra" : "Esconderijo de guilda"), t));
         }
         if (_area.Activities.Count == 0 && !AreaKinds.IsPortal(_area.Kind))
-            col.AddChild(Card("Tarefas", ThemeFactory.Text("Este lugar ainda não oferece tarefas.", UiTokens.FontBody, UiTokens.TextSecondary)));
-        foreach (var a in _area.Activities) col.AddChild(TaskCard(a));
+            col.AddChild(ThemeFactory.Text("Este lugar ainda não oferece tarefas.", UiTokens.FontBody, UiTokens.TextSecondary));
+        for (int i = 0; i < _area.Activities.Count; i++)
+        {
+            if (i > 0) col.AddChild(Divider());
+            col.AddChild(TaskCard(_area.Activities[i]));
+        }
+        return col;
+    }
+
+    /// <summary>Agora no lugar: numeros do lugar e quantos estao em cada tarefa.</summary>
+    private Control NowBody(int people)
+    {
+        var tiles = new GridContainer { Columns = 2, SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        tiles.AddThemeConstantOverride("h_separation", 8);
+        tiles.AddThemeConstantOverride("v_separation", 8);
+        tiles.AddChild(Stat(people.ToString(), "jogadores aqui agora", UiTokens.Info, fill: true));
+        tiles.AddChild(Stat(_area.Activities.Count.ToString(), "tarefas oferecidas", Accent, fill: true));
+        tiles.AddChild(Stat(_area.Activities.Count == 0 ? "–" : $"{_area.Activities.Min(a => a.MinLevel)}+", "nível mínimo", UiTokens.AccentSoft, fill: true));
+        tiles.AddChild(Stat(_area.Activities.Count == 0 ? "–" : $"{_area.Activities.Max(a => a.BaseRiskPermille) / 10}%", "risco máximo",
+            WorldMapView.Ramp(_area.Activities.Count == 0 ? 0 : _area.Activities.Max(a => a.BaseRiskPermille) / 1000f), fill: true));
+        var col = Column(12, tiles);
+        if (_area.Activities.Count > 0)
+        {
+            col.AddChild(Section("Fazendo agora"));
+            int max = Math.Max(1, _area.Activities.Max(a => _map.PeopleAtSpot(_zone.Id, a.Id)));
+            foreach (var a in _area.Activities.OrderByDescending(a => _map.PeopleAtSpot(_zone.Id, a.Id)).ThenBy(a => a.Name, StringComparer.Ordinal))
+            {
+                int n = _map.PeopleAtSpot(_zone.Id, a.Id);
+                col.AddChild(Bar(a.Name, n, max, ActivityPalette.Color(a.Type), n.ToString(), 150));
+            }
+        }
+        return col;
+    }
+
+    private Control AboutBody()
+    {
+        var col = Column(8,
+            KeyValue("Tipo", AreaPalette.Name(_area.Kind)),
+            KeyValue("Tamanho", $"{_area.Radius * 20} m de diâmetro"),
+            KeyValue("Zona", _zone.Name),
+            KeyValue("Combate", PtBr.Pvp(_zone.Pvp), _zone.Pvp == PvpRules.Open ? UiTokens.Danger : null),
+            KeyValue("Morte", PtBr.Death(_zone.DeathRule)),
+            KeyValue("Controle", PtBr.Control(_zone.Control)));
+        foreach (var text in new[]
+        {
+            "O tamanho define o espaço, não a quantidade de monstros ou recursos (configurada à parte).",
+            "Combate, morte e controle são as regras da zona, herdadas pelo lugar.",
+            "Para fazer uma tarefa, o personagem sai da estrada e vai até este lugar.",
+        })
+        {
+            var t = ThemeFactory.Text(text, UiTokens.FontCaption, UiTokens.TextSecondary);
+            t.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+            col.AddChild(t);
+        }
         return col;
     }
 
@@ -200,7 +277,7 @@ public partial class AreaModal : ModalFrame
         if (a.MinGroupSize > 1)
             body.AddChild(ThemeFactory.Text($"Exige grupo de {a.MinGroupSize}: os jogadores simulados só fazem isso quando existirem grupos (M6).", UiTokens.FontCaption, UiTokens.Warning));
 
-        return Card(PtBr.ActivityType(a.Type), body, ActivityPalette.Color(a.Type));
+        return body;
     }
 
     private static Color RarityColor(string rarity) => rarity switch
@@ -211,35 +288,6 @@ public partial class AreaModal : ModalFrame
         _ => UiTokens.TextSecondary,
     };
 
-    // ---------------- Jogadores ----------------
-
-    private Control BuildPlayers()
-    {
-        var snap = _ctx.Snapshot();
-        var ids = _map.PeopleInArea(_zone.Id, _area.Id);
-        var col = Column(6);
-        col.AddChild(ThemeFactory.Text(ids.Count == 0 ? "Ninguém neste lugar agora." : $"{ids.Count} jogadores neste lugar", UiTokens.FontBody, UiTokens.TextSecondary));
-        foreach (var id in ids.OrderByDescending(i => snap.ByPerson[i]?.Level ?? 0))
-            if (snap.ByPerson[id] is { } v)
-            {
-                int pid = id;
-                col.AddChild(PlayerRow.Build(_ctx, id, v, () => { _ctx.OpenPerson(pid); }));
-            }
-        return col;
-    }
-
-    // ---------------- Sobre ----------------
-
-    private Control BuildAbout()
-    {
-        var t = Column(10,
-            ThemeFactory.Text($"Tipo: {AreaPalette.Name(_area.Kind)}", UiTokens.FontBody, UiTokens.TextPrimary),
-            ThemeFactory.Text($"Tamanho: {_area.Radius * 20} m de diâmetro. O tamanho define o espaço, não a quantidade de monstros ou recursos (configurada à parte).", UiTokens.FontSmall, UiTokens.TextSecondary),
-            ThemeFactory.Text($"Regras herdadas da zona {_zone.Name}: {PtBr.Pvp(_zone.Pvp)} · {PtBr.Death(_zone.DeathRule)} · {PtBr.Control(_zone.Control)}.", UiTokens.FontSmall, UiTokens.TextSecondary),
-            ThemeFactory.Text("Para fazer uma tarefa, o personagem sai da estrada e vai até este lugar.", UiTokens.FontSmall, UiTokens.TextSecondary));
-        foreach (var c in t.GetChildren().OfType<Label>()) c.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        return Card("Sobre o lugar", t, Accent);
-    }
 }
 
 /// <summary>Emblema grande de tipo de area (medalhao com brilho).</summary>

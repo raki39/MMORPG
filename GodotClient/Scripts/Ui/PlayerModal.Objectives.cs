@@ -57,7 +57,7 @@ public partial class PlayerModal
     private FitList ClosedBody(List<ObjectiveView> closed)
     {
         var col = Fit(10, "encerrados");
-        if (closed.Count == 0) col.AddChild(Wrap("Nenhum ainda. Concluídos e encerrados ficam aqui, com a data e o motivo.", UiTokens.FontSmall, UiTokens.TextSecondary));
+        if (closed.Count == 0) col.AddChild(Wrap("Nenhum ainda. Concluídos e encerrados ficam aqui, com a data e o motivo.", UiTokens.FontSmall, UiTokens.TextSecondary).AsPlaceholder());
         int Order(ObjectiveView o) => o.State switch { ObjectiveStates.Held => 0, ObjectiveStates.Completed => 1, ObjectiveStates.Lost => 2, ObjectiveStates.Paused => 3, _ => 4 };
         foreach (var o in closed.OrderBy(Order).ThenByDescending(o => Math.Max(o.CompletedDay, o.EndedDay)))
         {
@@ -249,7 +249,7 @@ public partial class PlayerModal
     private FitList ObjectiveHistoryBody(CharacterDetailView d)
     {
         var col = Fit(8, "objetivos_historico");
-        if (d.ObjectiveHistory.Count == 0) col.AddChild(Wrap("Nenhuma mudança registrada.", UiTokens.FontSmall, UiTokens.TextSecondary));
+        if (d.ObjectiveHistory.Count == 0) col.AddChild(Wrap("Nenhuma mudança registrada.", UiTokens.FontSmall, UiTokens.TextSecondary).AsPlaceholder());
         foreach (var h in d.ObjectiveHistory.Reverse())
         {
             string what = h.Change switch
@@ -293,7 +293,7 @@ public partial class PlayerModal
         if (d != null && main == null && d.LastObjectiveGapDay >= 0)
         {
             // Sem ambicao ativa por falta de objetivo relevante: aparece, porque e um problema do MMORPG.
-            var g = HoverRow(() => OpenTab("Objetivos"), "Sem ambição ativa|Falta de conteúdo\nBuscou um objetivo novo e nenhum era relevante no conteúdo atual.\n~Clique para abrir a aba Objetivos.");
+            var g = HoverRow(() => OpenTabNamed("Objetivos"), "Sem ambição ativa|Falta de conteúdo\nBuscou um objetivo novo e nenhum era relevante no conteúdo atual.\n~Clique para abrir a aba Objetivos.");
             g.CustomMinimumSize = new Vector2(0, 28);
             var gr = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
             gr.SetAnchorsPreset(LayoutPreset.FullRect);
@@ -311,7 +311,7 @@ public partial class PlayerModal
         if (d == null || main == null) return null;
         int others = d.Objectives.Count(o => o.State == ObjectiveStates.Active) - 1;
         var c = _ctx.Content;
-        var b = HoverRow(() => OpenTab("Objetivos"), $"{ObjectiveInfo.Title(c, main.Id, main.Param)}|{ObjectiveInfo.TierPt(main.Tier)}\n{ObjectiveInfo.ViabilityPt(main.Assessment.Viability)}\n~Clique para abrir a aba Objetivos.");
+        var b = HoverRow(() => OpenTabNamed("Objetivos"), $"{ObjectiveInfo.Title(c, main.Id, main.Param)}|{ObjectiveInfo.TierPt(main.Tier)}\n{ObjectiveInfo.ViabilityPt(main.Assessment.Viability)}\n~Clique para abrir a aba Objetivos.");
         b.CustomMinimumSize = new Vector2(0, 28);
         var r = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
         r.SetAnchorsPreset(LayoutPreset.FullRect);

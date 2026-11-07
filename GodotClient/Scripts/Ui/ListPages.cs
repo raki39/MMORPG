@@ -30,20 +30,30 @@ public abstract partial class ListPage : ModalFrame
     protected int Filter(string name) => _filters.TryGetValue(name, out var i) ? i : 0;
 
     /// <summary>
-    /// Corpo padrao: busca, filtros (listas de opcoes; a primeira e "todos") e tabela.
-    /// So a tabela e refeita ao digitar ou filtrar; busca e filtros sobrevivem a ordenacao.
+    /// Corpo padrao (D-068, pagina em telas): busca e filtros (listas de opcoes; a primeira e "todos") em cima e a
+    /// tabela num card que ocupa o resto da tela, com as linhas que cabem e paginas no titulo (sem rolagem). So a
+    /// tabela e refeita ao digitar ou filtrar (e volta a primeira pagina); busca, filtros e pagina sobrevivem a
+    /// ordenacao.
     /// </summary>
-    protected Control Searchable(string placeholder, Func<string, Control> table, string note = "", params (string Name, IReadOnlyList<string> Options)[] filters)
+    protected Control Searchable(string placeholder, Func<string, FitList, Control> table, (string One, string Many) unit, string note = "", params (string Name, IReadOnlyList<string> Options)[] filters)
     {
-        var holder = new VBoxContainer();
+        string page = $"{Title}:{CurrentTab}";
+        var holder = new VBoxContainer { SizeFlagsVertical = SizeFlags.ExpandFill };
+        var pagerSlot = new HBoxContainer();
         var search = new LineEdit { PlaceholderText = placeholder, ClearButtonEnabled = true, Text = _search, CustomMinimumSize = new Vector2(300, 32), SizeFlagsHorizontal = SizeFlags.ShrinkBegin };
-        void Fill()
+        void Fill(bool reset)
         {
+            if (reset) ResetPage(page);
             foreach (var c in holder.GetChildren()) { holder.RemoveChild(c); c.QueueFree(); }
-            holder.AddChild(table(_search));
+            foreach (var c in pagerSlot.GetChildren()) { pagerSlot.RemoveChild(c); c.QueueFree(); }
+            var rows = Fit(0, page);
+            var t = table(_search, rows);
+            t.SizeFlagsVertical = SizeFlags.ExpandFill;
+            holder.AddChild(t);
+            pagerSlot.AddChild(Pager(rows, page, unit.One, unit.Many));
         }
-        search.TextChanged += t => { _search = t.Trim(); Fill(); };
-        Fill();
+        search.TextChanged += t => { _search = t.Trim(); Fill(true); };
+        Fill(false);
         // Busca e filtros quebram linha quando nao cabem (nada passa da borda da direita).
         var top = new HFlowContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
         top.AddThemeConstantOverride("h_separation", 10);
@@ -59,7 +69,7 @@ public abstract partial class ListPage : ModalFrame
                 foreach (var opt in options) o.AddItem(opt);
                 o.Selected = Math.Clamp(Filter(name), 0, Math.Max(0, o.ItemCount - 1));
                 string key = name;
-                o.ItemSelected += i => { _filters[key] = (int)i; Fill(); };
+                o.ItemSelected += i => { _filters[key] = (int)i; Fill(true); };
                 top.AddChild(o);
             }
             var clear = Action("Limpar", "Limpar busca e filtros", () => { _filters.Clear(); _search = ""; Rebuild(false); });
@@ -74,7 +84,9 @@ public abstract partial class ListPage : ModalFrame
             n.HorizontalAlignment = HorizontalAlignment.Right;
             top.AddChild(n);
         }
-        return Column(10, top, Card(Title, holder));
+        var card = FillCard(Title, holder, headerRight: pagerSlot);
+        card.SizeFlagsVertical = SizeFlags.ExpandFill;
+        return new ScreenPage().Add(Column(10, top, card));
     }
 
     protected abstract string Title { get; }
@@ -154,7 +166,7 @@ public partial class PlayersPage : ListPage
         var zones = Ctx.Content.Regions.Values.OrderBy(z => z.Name, StringComparer.Ordinal).ToList();
         var locs = Ctx.Content.LocalitiesOrdered;
         var occs = Ctx.Content.OccupationsOrdered.OrderBy(o => o.Name, StringComparer.Ordinal).ToList();
-        return Searchable("Buscar por nome, pessoa, classe, perfil, preferência ou zona…", search =>
+        return Searchable("Buscar por nome, pessoa, classe, perfil, preferência ou zona…", (search, fit) =>
         {
             var snap = Ctx.Snapshot();
             int fp = Filter("Perfil"), fe = Filter("Preferência"), fc = Filter("Classe"), fq = Filter("Personalidade"), fz = Filter("Zona"), fl = Filter("País"), fo = Filter("Ocupação");
@@ -172,10 +184,10 @@ public partial class PlayersPage : ListPage
                     Ctx.Content.Classes.TryGetValue(r.V.ClassId, out var c) ? c.Name : "", Ctx.Content.Profiles.TryGetValue(Ctx.Persons[r.Id - 1].ProfileId, out var p) ? p.Name : "",
                     PreferenceInfo.Summary(Ctx.Persons[r.Id - 1].Preferences)))
                 .ToList();
-            var col = Column(6, _table.Build(rows.Take(MaxRows)));
+            var col = Column(6, _table.Build(rows.Take(MaxRows), fit));
             col.AddChild(ThemeFactory.Text(rows.Count > MaxRows ? $"Mostrando {MaxRows} de {PtBr.Int(rows.Count)} pela ordem atual; refine com a busca ou os filtros." : $"{PtBr.Int(rows.Count)} personagens", UiTokens.FontCaption, UiTokens.TextDisabled));
             return col;
-        }, "O tempo está pausado nesta tela.",
+        }, ("personagem", "personagens"), "O tempo está pausado nesta tela.",
             ("Perfil", new[] { "Todos os perfis" }.Concat(profiles.Select(p => p.Name)).ToList()),
             ("Preferência", new[] { "Todas as preferências" }.Concat(prefKeys.Select(k => PreferenceInfo.ByKey[k].Name)).ToList()),
             ("Classe", new[] { "Todas as classes" }.Concat(classes.Select(c => c.Name)).ToList()),
@@ -221,12 +233,12 @@ public partial class ZonesPage : ListPage
         _table.OnSortChanged = () => Rebuild(false);
         var functions = zones.Select(z => z.Function).Distinct().OrderBy(f => PtBr.Function(f), StringComparer.Ordinal).ToList();
         var pvps = zones.Select(z => z.Pvp).Distinct().OrderBy(p => PtBr.Pvp(p), StringComparer.Ordinal).ToList();
-        AddTab("Todas", () => Searchable("Buscar zona, função ou bioma…", s =>
+        AddTab("Todas", () => Searchable("Buscar zona, função ou bioma…", (s, fit) =>
         {
             int ff = Filter("Função"), fp = Filter("Combate");
             return _table.Build(Ctx.Content.Regions.Values.Where(z => (ff == 0 || z.Function == functions[ff - 1]) && (fp == 0 || z.Pvp == pvps[fp - 1])
-                && Match(s, z.Name, PtBr.Function(z.Function), PtBr.Biome(z.Biome))));
-        }, "",
+                && Match(s, z.Name, PtBr.Function(z.Function), PtBr.Biome(z.Biome))), fit);
+        }, ("zona", "zonas"), "",
             ("Função", new[] { "Todas as funções" }.Concat(functions.Select(PtBr.Function)).ToList()),
             ("Combate", new[] { "Qualquer combate" }.Concat(pvps.Select(PtBr.Pvp)).ToList())));
     }
@@ -272,14 +284,14 @@ public partial class QuestsPage : ListPage
         {
             string c = cat;
             int n = c.Length == 0 ? quests.Count : quests.Count(q => q.Category == c);
-            AddTab($"{name} · {n}", () => Searchable("Buscar missão, quadro ou zona…", s =>
+            AddTab($"{name} · {n}", () => Searchable("Buscar missão, quadro ou zona…", (s, fit) =>
             {
                 int fb = Filter("Quadro"), fs = Filter("Situação");
                 return _table.Build(Ctx.Content.Quests.Values.Where(q => (c.Length == 0 || q.Category == c)
                     && (fb == 0 || q.BoardId == boards[fb - 1].Id)
                     && (fs == 0 || (fs == 1 ? (S(q)?.Active ?? 0) > 0 : fs == 2 ? (S(q)?.Completed ?? 0) > 0 : (S(q)?.Accepted ?? 0) == 0))
-                    && Match(s, q.Name, Board(q), Zone(q))));
-            }, "",
+                    && Match(s, q.Name, Board(q), Zone(q))), fit);
+            }, ("missão", "missões"), "",
                 ("Quadro", new[] { "Todos os quadros" }.Concat(boards.Select(b => b.Name)).ToList()),
                 ("Situação", new List<string> { "Qualquer situação", "Com gente fazendo", "Já entregue", "Nunca aceita" })));
         }

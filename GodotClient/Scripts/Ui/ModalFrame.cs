@@ -483,6 +483,118 @@ public partial class ModalFrame : Control
         }
     }
 
+    // ---------- Listas que cabem no card, paginas e atalhos (D-068) ----------
+
+    private readonly Dictionary<string, int> _listOffsets = new(StringComparer.Ordinal);
+
+    /// <summary>Lista que cabe no card, sem rolagem (D-068); com key, a pagina fica entre as atualizacoes ao vivo.</summary>
+    public FitList Fit(int separation, string key = "")
+    {
+        var l = new FitList { Separation = separation };
+        if (key.Length > 0) l.Offset = _listOffsets.GetValueOrDefault(key);
+        return l;
+    }
+
+    /// <summary>Volta a lista para a primeira pagina (ex.: a busca ou o filtro mudou).</summary>
+    public void ResetPage(string key) => _listOffsets.Remove(key);
+
+    /// <summary>
+    /// Paginador no titulo do card: "1–12 de 40 ‹ ›" quando a lista nao cabe inteira; quando cabe, so o total.
+    /// A seta de voltar volta uma pagina inteira (calculada para tras pelo que cabe).
+    /// </summary>
+    public Control Pager(FitList list, string key, string one, string many)
+    {
+        var row = Row(2);
+        var label = Caption("");
+        label.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        var prev = PageButton("chevron-left", "Anteriores");
+        var next = PageButton("chevron-right", "Seguintes");
+        row.AddChild(label);
+        row.AddChild(prev);
+        row.AddChild(next);
+        void Update()
+        {
+            int total = list.Total;
+            bool paged = list.Offset > 0 || list.Shown < total;
+            label.Text = paged ? $"{list.Offset + 1}–{list.Offset + list.Shown} de {total}" : $"{total} {(total == 1 ? one : many)}";
+            prev.Visible = paged;
+            next.Visible = paged;
+            prev.Disabled = list.Offset == 0;
+            next.Disabled = list.Offset + list.Shown >= total;
+        }
+        Update();   // ja nasce com o total e sem setas (a lista pode nem entrar na tela, ex.: tabela vazia)
+        list.Laid += Update;
+        prev.Pressed += () =>
+        {
+            list.Offset = list.PreviousOffset();
+            _listOffsets[key] = list.Offset;
+            list.QueueSort();
+        };
+        next.Pressed += () =>
+        {
+            if (list.Offset + list.Shown >= list.Total) return;
+            list.Offset += Math.Max(1, list.Shown);
+            _listOffsets[key] = list.Offset;
+            list.QueueSort();
+        };
+        return row;
+    }
+
+    private static Button PageButton(string icon, string tip)
+    {
+        var b = new TipButton
+        {
+            TooltipText = tip, FocusMode = FocusModeEnum.None, CustomMinimumSize = new Vector2(20, 20), Icon = Icons.Get(icon, 14),
+            IconAlignment = HorizontalAlignment.Center, SizeFlagsVertical = SizeFlags.ShrinkCenter, MouseDefaultCursorShape = CursorShape.PointingHand,
+        };
+        b.AddThemeStyleboxOverride("normal", new StyleBoxEmpty());
+        var hover = ThemeFactory.Box(UiTokens.SurfaceHover, 0, radius: 3);
+        b.AddThemeStyleboxOverride("hover", hover);
+        b.AddThemeStyleboxOverride("pressed", hover);
+        b.AddThemeStyleboxOverride("disabled", new StyleBoxEmpty());
+        foreach (var st in new[] { "icon_normal_color", "icon_hover_color", "icon_pressed_color", "icon_focus_color" }) b.AddThemeColorOverride(st, UiTokens.TextLabel);
+        b.AddThemeColorOverride("icon_disabled_color", UiTokens.TextDisabled);
+        return b;
+    }
+
+    /// <summary>Numero pequeno no titulo de um card (contagens, paginas).</summary>
+    public static Label Caption(string text) => ThemeFactory.Text(text, UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Numbers);
+
+    /// <summary>Abre a aba pelo nome (ignora o numero depois de " · ", ex.: "Missões · 12").</summary>
+    public void OpenTabNamed(string name)
+    {
+        for (int i = 0; i < _tabs.Count; i++)
+            if (_tabs[i].Name == name || _tabs[i].Name.StartsWith(name + " ·", StringComparison.Ordinal)) { SelectTab(i); return; }
+    }
+
+    /// <summary>Atalho no titulo de um card de resumo: abre a aba do assunto.</summary>
+    public Control TabLink(string tab)
+    {
+        var b = new TipButton
+        {
+            TooltipText = $"Abrir a aba {tab}", FocusMode = FocusModeEnum.None, CustomMinimumSize = new Vector2(22, 20),
+            MouseDefaultCursorShape = CursorShape.PointingHand, SizeFlagsVertical = SizeFlags.ShrinkCenter,
+        };
+        b.AddThemeStyleboxOverride("normal", new StyleBoxEmpty());
+        var hover = ThemeFactory.Box(UiTokens.SurfaceHover, 0, radius: 3);
+        b.AddThemeStyleboxOverride("hover", hover);
+        b.AddThemeStyleboxOverride("pressed", hover);
+        var ic = new Icon("chevron-right", 14, UiTokens.TextLabel) { MouseFilter = MouseFilterEnum.Ignore };
+        ic.SetAnchorsPreset(LayoutPreset.FullRect);
+        b.AddChild(ic);
+        b.Pressed += () => OpenTabNamed(tab);
+        return b;
+    }
+
+    /// <summary>Conteudo de uma linha clicavel: nada dentro dela captura o mouse (o clique e o tooltip sao da linha).</summary>
+    public static T IgnoreMouse<T>(T c) where T : Control
+    {
+        c.MouseFilter = MouseFilterEnum.Ignore;
+        foreach (var n in c.GetChildren())
+            if (n is Control k) IgnoreMouse(k);
+        return c;
+    }
+
     // ---------- Blocos reutilizaveis ----------
 
     /// <summary>
