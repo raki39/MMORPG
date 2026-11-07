@@ -56,7 +56,9 @@ public partial class PlayerModal
     private static string KindPt(string kind) => kind switch
     {
         "sleep" => "Sono", "free" => "Tempo livre", "work" => "Trabalho", "study" => "Estudo", "care" => "Cuidados",
-        "remote" => "Trabalho remoto", "break" => "Pausa (pode jogar)", "commute" => "Deslocamento", _ => kind,
+        "remote" => "Trabalho remoto", "break" => "Pausa (pode jogar)", "commute" => "Deslocamento", "transfer" => "Deslocamento entre obrigações",
+        "prep" => "Preparo ao acordar", "arrival" => "Chegada em casa (comer, descansar)", "meal" => "Refeição", "wait" => "Espera fora de casa",
+        "awake" => "Brecha curta demais para jogar", "commitment" => "Compromisso", _ => kind,
     };
 
     private string CommitmentName(string id) =>
@@ -104,7 +106,7 @@ public partial class PlayerModal
                 (FillCard("Vontade de jogar", WillBody(), info: "O que faz a pessoa jogar e parar\n~Importância do jogo, hábito, tendência a prolongar e autocontrole são traços separados: dá para priorizar o jogo e parar na hora, ou ligar pouco e se empolgar.\n~O humor (satisfação e engajamento) muda a vontade de verdade, e a disposição de cada dia varia um pouco (querer descansar ou fazer outra coisa). A estimativa é só a rotina e o hábito; o real inclui humor, cansaço e sessões estendidas."), 6)), weight: 46)
             .Add(Grid(12,
                 (FillCard("Semana típica", AgendaBody(), info: "O que a rotina permite e o que se espera (hora local)\n~Azul (verde em dia livre): o tempo livre do dia, o que sobra depois de sono, obrigações, deslocamento, preparo e chegada. Dourado: o jogo estimado, a chance de jogar no dia (rotina e hábito, calculada na semana real dia a dia) × o tempo desejado do dia que cabe na janela, com as voltas depois de uma pausa e o continuar jogando, pela mesma regra do planejador (dias simulados); sem o humor. É uma estimativa. Embaixo de cada dia, a chance de jogar.\n~Passe o mouse num dia para ver os horários."), 6),
-                (FillCard("Ocupação", OccupationBody(occ), info: "Obrigações da ocupação\n~Horários individuais (cada pessoa varia um pouco), deslocamento e folgas. No trabalho remoto, a pausa permite jogar; com flexibilidade, às vezes há uma escapada no expediente, curta e interrompível por um chamado do trabalho."), 6)), weight: 54)
+                (FillCard("Ocupação", OccupationBody(occ), info: "Obrigações da ocupação\n~Horários individuais (cada pessoa varia um pouco), deslocamento e folgas. No trabalho remoto, a pausa permite jogar; com flexibilidade, às vezes há uma escapada no expediente, curta e interrompível por um chamado do trabalho.\n~Jornada do dia: das 0 às 24 h, um dia com obrigação e um dia livre, no horário desta pessoa; aparece quando cabe no card. Passe o mouse num trecho para ver o horário."), 6)), weight: 54)
             .Section()
             .Add(Grid(12,
                 (FillCard("Últimos 30 dias", DaysBody(detail), info: "O que a pessoa fez com o tempo livre\n~Área azul: tempo livre de cada dia. Linha dourada: tempo jogado. Quando não jogou, o ponto fica no zero com a cor do motivo (sem tempo, outro lazer, cansaço, desânimo). Faixas verdes: dias livres. Losango azul: jogou no horário do trabalho remoto. Ponto roxo no alto: um compromisso no dia livre (festa, visita à família, passeio), que tira horas do tempo livre.\n~A agenda é estado da simulação (30 dias), sem um evento por dia."), 6),
@@ -574,8 +576,23 @@ public partial class PlayerModal
         var tiles = new HBoxContainer();
         tiles.AddThemeConstantOverride("separation", 6);
         foreach (var d in week) tiles.AddChild(DayTile(d, d.Dow == todayDow));
-        return Column(12, head, Wrap(occ.Description, UiTokens.FontSmall, UiTokens.TextSecondary), facts,
-            Column(8, Section("Dia a dia (horário desta pessoa)"), tiles));
+        // Jornada do dia: um dia com obrigacao (hoje, se for um) e um dia livre, de 0 a 24 h. Entra so quando
+        // cabe no card (o card nao rola por causa dela); o resto do card aparece sempre.
+        var busy = week.FirstOrDefault(d => d.Dow == todayDow && !d.FreeDay) ?? week.FirstOrDefault(d => !d.FreeDay);
+        var rest = week.FirstOrDefault(d => d.Dow == todayDow && d.FreeDay) ?? week.FirstOrDefault(d => d.FreeDay);
+        var rows = new List<DayTimeline.Row>();
+        foreach (var d in new[] { busy, rest })
+            if (d != null)
+                rows.Add(new DayTimeline.Row(DowPt[d.Dow], d.Dow == todayDow ? UiTokens.Accent : d.FreeDay ? UiTokens.Success : UiTokens.TextPrimary,
+                    DowLong[d.Dow] + (d.FreeDay ? " · dia livre" : " · dia com obrigação") + (d.Dow == todayDow ? " · hoje" : ""), d.Segments, d.FreeDay));
+        var body = new FitList { Separation = 10, Keep = 4, StretchLast = true };
+        body.AddChild(head);
+        body.AddChild(Wrap(occ.Description, UiTokens.FontSmall, UiTokens.TextSecondary));
+        body.AddChild(facts);
+        body.AddChild(Column(8, Section("Dia a dia (horário desta pessoa)"), tiles));
+        if (rows.Count > 0)
+            body.AddChild(Column(6, Section("Jornada do dia (0 a 24 h)"), new DayTimeline { Rows = rows, NameOf = KindPt, SizeFlagsVertical = SizeFlags.ExpandFill }));
+        return body;
     }
 
     /// <summary>O que a pessoa faz, em linguagem direta.</summary>

@@ -51,7 +51,8 @@ Referência para qualquer tela nova. Estilo de dossiê de jogo de gestão: escur
    - dentro da seção, cada linha recebe a altura por **peso**, com um mínimo legível; os cards preenchem a linha;
    - **card de altura fixa** (`FillCard`): a altura vem do layout, nunca do conteúdo, então é igual para qualquer jogador;
    - **sem rolagem no card em 1920×1080** (pedido do criador): o conteúdo é limitado ao que cabe e ordenado (mais recente ou mais forte primeiro). Listas usam `FitList`, que mostra só os itens inteiros que cabem e esconde o resto. Nas abas de detalhe, listas longas têm páginas no título do card ("1–10 de 27 ‹ ›"; quando cabe tudo, só o total). A rolagem dentro do card fica só como último recurso em tela menor (1366), com barra fina, mantida nas atualizações ao vivo;
-   - conferência: cada captura grava ao lado um `.rolagem.txt` com os cards que passariam da altura (vazio = nenhum);
+   - conferência: cada captura grava ao lado um `.rolagem.txt` com os cards que passariam da altura (vazio = nenhum); `--pager=n,n,p` aperta as setas do primeiro paginador da página;
+   - conteúdo complementar (ex.: a jornada do dia na Ocupação) entra só quando cabe: `FitList` com `Keep` (itens sempre mostrados) e `StretchLast` (o último ocupa a sobra);
    - gráficos marcados com `Grow` crescem com o card;
    - a **roda do mouse salta de tela em tela** (animação curta). Dentro de um card com conteúdo maior, a roda rola o card primeiro;
    - **em 1366×768**, a seção mantém as suas linhas, com cards mais baixos e rolagem dentro do card. Só passa para a tela seguinte se uma linha ficaria abaixo de 180 px. Uma linha de cards empilhados vira uma linha por card;

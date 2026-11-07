@@ -90,7 +90,7 @@ public partial class PlayerModal
         list.Laid += Update;
         prev.Pressed += () =>
         {
-            list.Offset = Math.Max(0, list.Offset - Math.Max(1, list.Shown));
+            list.Offset = list.PreviousOffset();
             _listOffsets[key] = list.Offset;
             list.QueueSort();
         };

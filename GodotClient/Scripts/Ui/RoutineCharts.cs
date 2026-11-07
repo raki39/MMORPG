@@ -383,3 +383,133 @@ public partial class SleepChart : Control
         }
     }
 }
+
+/// <summary>
+/// Jornada do dia (Ocupacao, D-068): uma faixa de 0 a 24 h por dia mostrado (um dia com obrigacao e um dia
+/// livre), com os trechos da rotina desta pessoa no horario local: sono, obrigacao, deslocamento, tempo livre e
+/// pausa. O que nao tem trecho (preparo, refeicao, espera) fica no fundo. Embaixo, as horas e a legenda; o
+/// mouse num trecho mostra o nome e o horario. Desenho estatico.
+/// </summary>
+public partial class DayTimeline : Control
+{
+    public sealed record Row(string Label, Color LabelColor, string Title, IReadOnlyList<(int Start, int End, string Kind)> Segments, bool FreeDay);
+
+    public IReadOnlyList<Row> Rows { get; set; } = Array.Empty<Row>();
+    /// <summary>Nome de um tipo de trecho ("work" → "Trabalho").</summary>
+    public Func<string, string> NameOf { get; set; } = k => k;
+
+    private const float LabelW = 38, RowH = 12, RowGap = 7, AxisH = 16, LegendH = 13;
+    private static readonly Color Rest = new("#262B33");
+
+    public DayTimeline()
+    {
+        MouseFilter = MouseFilterEnum.Stop;
+        SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        TooltipText = "Jornada do dia";
+    }
+
+    /// <summary>Quantos dias cabem na altura recebida (no minimo um): com pouco espaco, so o dia com obrigacao.</summary>
+    private int RowsShown => Math.Clamp((int)((Size.Y - AxisH - LegendH + RowGap) / (RowH + RowGap)), 1, Math.Max(1, Rows.Count));
+    private float RowsHeight => RowsShown * RowH + (RowsShown - 1) * RowGap;
+
+    public override Vector2 _GetMinimumSize() => new(220, RowH + AxisH + LegendH);
+
+    /// <summary>Grupo de cor dos trechos da linha do tempo do dia (R1).</summary>
+    private static string Group(string kind) => kind switch
+    {
+        "sleep" or "free" or "break" or "commitment" => kind,
+        "commute" or "transfer" => "commute",
+        "prep" or "arrival" or "meal" => "personal",
+        "wait" or "awake" => "wait",
+        _ => "obligation",   // trabalho, estudo, cuidados da casa e da familia, remoto
+    };
+
+    public static Color ColorOf(string kind, bool freeDay) => Group(kind) switch
+    {
+        "sleep" => new Color("#5867A8"),
+        "commute" => new Color("#6B7380"),
+        "personal" => new Color("#4A515C"),
+        "wait" => new Color("#343A44"),
+        "commitment" => UiTokens.Exceptional,
+        "free" => freeDay ? UiTokens.Success : UiTokens.Info,
+        "break" => new Color("#9CC9F2"),
+        _ => new Color("#A9B0BA"),
+    };
+
+    private static string Clock(int minute) { int m = ((minute % 1440) + 1440) % 1440; return $"{m / 60:00}:{m % 60:00}"; }
+
+    public override void _Draw()
+    {
+        float x0 = LabelW, w = Mathf.Max(1, Size.X - LabelW);
+        var present = new HashSet<string>(StringComparer.Ordinal);
+        bool rest = false;
+        for (int i = 0; i < RowsShown; i++)
+        {
+            var r = Rows[i];
+            float y = i * (RowH + RowGap);
+            DrawString(UiFonts.SemiBold, new Vector2(0, y + RowH - 1), r.Label, HorizontalAlignment.Left, LabelW - 4, 12, r.LabelColor);
+            DrawRect(new Rect2(x0, y, w, RowH), Rest);
+            int covered = 0;
+            foreach (var (s, e, k) in r.Segments)
+            {
+                int a = Math.Clamp(s, 0, 1440), b = Math.Clamp(e, 0, 1440);
+                if (b <= a) continue;
+                covered += b - a;
+                present.Add(Group(k) == "free" ? (r.FreeDay ? "free_day" : "free") : Group(k));
+                DrawRect(new Rect2(x0 + w * a / 1440f, y, Mathf.Max(1, w * (b - a) / 1440f), RowH), ColorOf(k, r.FreeDay));
+            }
+            if (covered < 1440) rest = true;
+        }
+        // Horas: marca a cada 3 h, rotulo a cada 6 h.
+        float ay = RowsHeight;
+        for (int h = 0; h <= 24; h += 3)
+        {
+            float x = Mathf.Round(x0 + w * h / 24f);
+            DrawLine(new Vector2(x, ay + 2), new Vector2(x, ay + 5), UiTokens.BorderStrong, 1);
+            if (h % 6 != 0) continue;
+            string t = $"{h:00}h";
+            float tw = UiFonts.Regular.GetStringSize(t, HorizontalAlignment.Left, -1, 10).X;
+            float tx = Mathf.Clamp(x - tw / 2, x0, x0 + w - tw);
+            DrawString(UiFonts.Regular, new Vector2(tx, ay + 15), t, HorizontalAlignment.Left, -1, 10, UiTokens.AxisText);
+        }
+        // Legenda numa linha, so com o que aparece; o que nao couber fica de fora (esta no tooltip).
+        var legend = new List<(string Name, Color Color)>();
+        if (present.Contains("sleep")) legend.Add(("Sono", ColorOf("sleep", false)));
+        if (present.Contains("obligation")) legend.Add(("Obrigação", ColorOf("work", false)));
+        if (present.Contains("commute")) legend.Add(("Deslocamento", ColorOf("commute", false)));
+        if (present.Contains("personal")) legend.Add(("Cuidados pessoais", ColorOf("prep", false)));
+        if (present.Contains("commitment")) legend.Add(("Compromisso", ColorOf("commitment", false)));
+        if (present.Contains("free")) legend.Add(("Livre", ColorOf("free", false)));
+        if (present.Contains("free_day")) legend.Add(("Livre (dia livre)", ColorOf("free", true)));
+        if (present.Contains("break")) legend.Add(("Pausa (pode jogar)", ColorOf("break", false)));
+        if (present.Contains("wait") || rest) legend.Add(("Espera e brechas", ColorOf("wait", false)));
+        float lx = x0, ly = ay + AxisH + LegendH - 3;
+        foreach (var (name, color) in legend)
+        {
+            float tw = UiFonts.Medium.GetStringSize(name, HorizontalAlignment.Left, -1, 11).X;
+            if (lx + 14 + tw > x0 + w) break;
+            DrawRect(new Rect2(lx, ly - 8, 8, 8), color);
+            DrawString(UiFonts.Medium, new Vector2(lx + 12, ly), name, HorizontalAlignment.Left, -1, 11, UiTokens.TextSecondary);
+            lx += 12 + tw + 16;
+        }
+    }
+
+    public override string _GetTooltip(Vector2 at)
+    {
+        float x0 = LabelW, w = Mathf.Max(1, Size.X - LabelW);
+        for (int i = 0; i < RowsShown; i++)
+        {
+            float y = i * (RowH + RowGap);
+            if (at.Y < y - RowGap / 2 || at.Y > y + RowH + RowGap / 2) continue;
+            var r = Rows[i];
+            int minute = (int)Math.Clamp((at.X - x0) / w * 1440, 0, 1439);
+            foreach (var (s, e, k) in r.Segments)
+                if (minute >= s && minute < e)
+                    return $"{NameOf(k)}|{Clock(s)}–{Clock(e)}\n^{r.Title}";
+            return $"Espera e brechas\n^{r.Title}\n~Fora das obrigações e do tempo livre.";
+        }
+        return $"Jornada do dia\n~Das 0 às 24 h, no horário desta pessoa. Passe o mouse num trecho para ver o horário.";
+    }
+
+    public override GodotObject _MakeCustomTooltip(string forText) => RichTip.Make(forText);
+}

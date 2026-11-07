@@ -309,6 +309,29 @@ public partial class Main : Node
         if (_modal != null && _args.TryGetValue("scroll", out var sc) && int.TryParse(sc, out int sv)) _modal.ScrollTo(sv);
         if (_modal != null && _args.TryGetValue("section", out var sec) && int.TryParse(sec, out int sn)) _modal.ScrollToSection(sn);
         if (_modal != null && _args.TryGetValue("wheel", out var wh) && int.TryParse(wh, out int wn)) _modal.WheelForCapture(wn);
+        // --pager=n,n,p: aperta as setas do primeiro paginador da pagina (n = seguintes, p = anteriores), um clique
+        // a cada 15 quadros, 40 quadros depois de a ficha abrir (conferencia das paginas nas capturas; por quadros, nao por tempo).
+        if (_args.TryGetValue("pager", out var pagerArg))
+        {
+            _pagerSteps = pagerArg.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(x => x == "p" ? "Anteriores" : "Seguintes").ToList();
+            _pagerStart = _frames + 40;   // conta a partir de quando a ficha abriu
+        }
+    }
+
+    private List<string> _pagerSteps = new();
+    private int _pagerStart;
+
+    /// <summary>Aperta o primeiro botao visivel e ativo com esse tooltip (capturas).</summary>
+    private static bool PressFirst(Node n, string tip)
+    {
+        if (n is BaseButton b && b.TooltipText == tip && b.IsVisibleInTree() && !b.Disabled)
+        {
+            b.EmitSignal(BaseButton.SignalName.Pressed);
+            return true;
+        }
+        foreach (var c in n.GetChildren())
+            if (PressFirst(c, tip)) return true;
+        return false;
     }
 
     private string Arg(string key, string fallback) => _args.TryGetValue(key, out var v) ? v : fallback;
@@ -602,6 +625,9 @@ public partial class Main : Node
     {
         _frames++;
         if (_fakeMouse is { } fm) _map.SimulateMouse(fm);
+        if (_pagerSteps.Count > 0 && _frames >= _pagerStart && (_frames - _pagerStart) % 15 == 0 && (_frames - _pagerStart) / 15 < _pagerSteps.Count
+            && _modal != null && IsInstanceValid(_modal))
+            PressFirst(_modal, _pagerSteps[(_frames - _pagerStart) / 15]);
         if (_args.TryGetValue("screenshot", out var path) && _frames == int.Parse(Arg("frames", "45"), CultureInfo.InvariantCulture))
         {
             var img = GetViewport().GetTexture().GetImage();

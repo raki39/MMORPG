@@ -2669,8 +2669,9 @@ Itens como instâncias, inventário, equipamento funcional, carteira e aplicaç�
   - as listas mostram só o que cabe, na ordem certa: acontecimentos e mudanças mais recentes primeiro, memórias mais fortes primeiro, fatores do humor e tédio do maior para o menor;
   - nas abas de detalhe, as listas longas (diário de missões, concluídas, encerrados, histórico de objetivos, memórias, histórico) têm páginas no título do card;
   - Mudanças desde o cadastro: personalidade e os três últimos traços primeiro; os atributos, da maior mudança para a menor, ocupam o resto;
-  - a Ocupação perdeu a barra "semana em 168 horas";
+  - a Ocupação perdeu a barra "semana em 168 horas", difícil de ler; no lugar entrou a **jornada do dia**: uma faixa de 0 a 24 h para um dia com obrigação (hoje, se for um) e outra para um dia livre, com sono, obrigação, deslocamento, cuidados pessoais, compromisso, tempo livre, pausa e espera, no horário da pessoa, as horas embaixo e a legenda. O mouse num trecho mostra o nome e o horário. Ela só entra quando cabe: com pouco espaço, só o dia com obrigação; sem espaço (1366), não aparece, e o resto do card fica como antes;
   - Missões em andamento ficou só com as missões ativas;
+  - páginas: a seta ‹ volta uma página inteira (calculada para trás pelo que cabe), e não o tamanho da página atual, que na última pode ter um item só; conferido com cliques automáticos nas capturas (`--pager=n,n,p,p`) no diário de missões (1–10, 11–20, 21–27 e de volta) e nas memórias;
   - conferido com o relatório de rolagem das capturas: nenhum card rola em 1920, em todas as abas, para três jogadores. Em 1366 a rolagem continua onde é necessária.
 - **Barras do humor** no formato dos atributos (nome e valor em cima, barra embaixo), legíveis no card estreito; **Uso do tempo** com a legenda descendo para baixo da rosca quando não cabe ao lado.
 - **Correções de conteúdo em 1366 (pendências da etapa 1):**

@@ -568,6 +568,10 @@ public partial class FitList : Container
 {
     public int Separation { get; set; } = 6;
     public int Offset { get; set; }
+    /// <summary>Itens do comeco sempre mostrados (contam na altura minima); so os seguintes somem quando nao cabem.</summary>
+    public int Keep { get; set; }
+    /// <summary>O ultimo item mostrado fica com toda a altura que sobra (ex.: um grafico que cresce).</summary>
+    public bool StretchLast { get; set; }
     public int Shown { get; private set; }
     public int Total => GetChildCount();
     public event Action? Laid;
@@ -581,12 +585,39 @@ public partial class FitList : Container
 
     private List<Control> Items() => GetChildren().OfType<Control>().ToList();
 
+    /// <summary>
+    /// Inicio da pagina anterior: volta item por item enquanto couber na altura do card, para a pagina anterior
+    /// ser inteira (e nao recuar so o tanto da pagina atual, que pode ser a ultima e mais curta).
+    /// </summary>
+    public int PreviousOffset()
+    {
+        var items = Items();
+        int start = Math.Min(Offset, items.Count);
+        float y = 0;
+        for (int i = start - 1; i >= 0; i--)
+        {
+            float h = items[i].GetCombinedMinimumSize().Y;
+            float need = (start < Offset ? Separation : 0) + h;
+            if (start < Offset && y + need > Size.Y + 0.5f) break;
+            y += need;
+            start = i;
+        }
+        return start;
+    }
+
     public override Vector2 _GetMinimumSize()
     {
         var items = Items();
         float w = 0;
         foreach (var c in items) w = Mathf.Max(w, c.GetCombinedMinimumSize().X);
-        float h = items.Count == 0 ? 0 : items[Math.Clamp(Offset, 0, items.Count - 1)].GetCombinedMinimumSize().Y;
+        float h = 0;
+        if (items.Count > 0 && Keep > 0)
+        {
+            int n = Math.Min(Keep, items.Count);
+            for (int i = 0; i < n; i++) h += items[i].GetCombinedMinimumSize().Y;
+            h += Separation * (n - 1);
+        }
+        else if (items.Count > 0) h = items[Math.Clamp(Offset, 0, items.Count - 1)].GetCombinedMinimumSize().Y;
         return new Vector2(w, h);
     }
 
@@ -598,6 +629,8 @@ public partial class FitList : Container
         float y = 0;
         int shown = 0;
         bool full = false;
+        Control? last = null;
+        float lastY = 0;
         for (int i = 0; i < items.Count; i++)
         {
             var c = items[i];
@@ -606,10 +639,12 @@ public partial class FitList : Container
             {
                 float h = c.GetCombinedMinimumSize().Y;
                 float gap = shown > 0 ? Separation : 0;
-                if (shown == 0 || y + gap + h <= Size.Y + 0.5f)
+                if (shown == 0 || i < Keep || y + gap + h <= Size.Y + 0.5f)
                 {
                     y += gap;
                     FitChildInRect(c, new Rect2(0, y, Size.X, h));
+                    last = c;
+                    lastY = y;
                     y += h;
                     shown++;
                     show = true;
@@ -618,6 +653,7 @@ public partial class FitList : Container
             }
             if (c.Visible != show) c.Visible = show;
         }
+        if (StretchLast && last != null && Size.Y > lastY) FitChildInRect(last, new Rect2(0, lastY, Size.X, Size.Y - lastY));
         if (shown != Shown) { Shown = shown; }
         Laid?.Invoke();
     }
