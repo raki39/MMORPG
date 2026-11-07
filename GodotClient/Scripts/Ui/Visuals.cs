@@ -573,6 +573,16 @@ public partial class FitList : Container
     /// <summary>O ultimo item mostrado fica com toda a altura que sobra (ex.: um grafico que cresce).</summary>
     public bool StretchLast { get; set; }
     public int Shown { get; private set; }
+    /// <summary>Altura da lista inteira (todos os itens): o natural da linha na pagina em telas.</summary>
+    public float NaturalHeight
+    {
+        get
+        {
+            var items = Items();
+            return items.Sum(c => c.GetCombinedMinimumSize().Y) + Separation * Math.Max(0, items.Count - 1);
+        }
+    }
+
     /// <summary>Itens de verdade (a frase de lista vazia, marcada com AsPlaceholder, nao conta).</summary>
     public int Total => GetChildren().OfType<Control>().Count(c => !c.HasMeta("placeholder"));
     public event Action? Laid;

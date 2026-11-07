@@ -640,10 +640,14 @@ public partial class ModalFrame : Control
         return card;
     }
 
-    /// <summary>Marca o elemento (um grafico) para crescer com a altura do card fixo.</summary>
-    public static T Grow<T>(T c) where T : Control
+    /// <summary>
+    /// Marca o elemento (um grafico) para crescer com a altura do card; preferred e a altura que ele pede quando a
+    /// secao nao enche a tela (altura natural), nunca menos que o minimo dele.
+    /// </summary>
+    public static T Grow<T>(T c, float preferred = 200) where T : Control
     {
         c.SizeFlagsVertical = SizeFlags.ExpandFill;
+        c.SetMeta("preferred_height", Mathf.Max(preferred, c.CustomMinimumSize.Y));
         return c;
     }
 

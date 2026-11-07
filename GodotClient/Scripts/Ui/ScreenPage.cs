@@ -3,9 +3,12 @@ using Godot;
 namespace GodotClient.Ui;
 
 /// <summary>
-/// Pagina em secoes de tela inteira (D-068). Cada secao ocupa exatamente a altura visivel do corpo da
-/// pagina; dentro dela, as linhas dividem a altura por peso, cada uma com um minimo legivel, e os cards
-/// preenchem a linha (a altura vem do layout, nunca do conteudo: o card e igual para qualquer jogador).
+/// Pagina em secoes (D-068). Cada linha tem a altura natural do seu conteudo (listas inteiras, graficos na
+/// altura preferida). A secao so ocupa a tela inteira quando tem conteudo para isso (pedido do criador): se o
+/// natural passa da tela, a linha que precisa de menos fica no tamanho dela e a sobra vai para as que tem mais
+/// (listas longas ganham paginas); se o natural fica perto da tela (FillThreshold) ou ha outra secao embaixo, a
+/// secao estica ate a tela, para a de baixo nao aparecer cortada; senao, fica no tamanho natural, sem esticar
+/// cards.
 /// Em tela baixa (1366×768) a secao mantem as suas linhas, com cards mais baixos e rolagem dentro do card;
 /// so passa para a tela seguinte se uma linha ficaria abaixo do piso (180 px). Uma linha de cards que
 /// empilha na largura estreita vira uma linha por card. A rolagem da pagina salta de tela em tela
@@ -16,6 +19,8 @@ public partial class ScreenPage : Container
     /// <summary>Vao entre linhas e entre telas (px).</summary>
     public int Gap { get; set; } = 12;
     public int ScreenGap { get; set; } = 16;
+    /// <summary>Fracao da tela a partir da qual a ultima secao estica ate a tela (abaixo disso fica natural).</summary>
+    public float FillThreshold { get; set; } = 0.9f;
 
     private sealed class Row
     {
@@ -75,7 +80,35 @@ public partial class ScreenPage : Container
     }
 
     // Unidade de layout: uma linha, ou um card de uma linha empilhada (Card >= 0).
-    private readonly record struct Unit(Row Row, int Card, float Min, int Weight);
+    private readonly record struct Unit(Row Row, int Card, float Min, float Natural, int Weight);
+
+    /// <summary>
+    /// Altura que o conteudo pede alem do minimo: listas que cabem (FitList) inteiras, graficos na altura
+    /// preferida (meta preferred_height, posta por Grow), o conteudo inteiro dos cards de altura fixa.
+    /// </summary>
+    private static float Extra(Control c)
+    {
+        if (!c.Visible) return 0;
+        float min = c.GetCombinedMinimumSize().Y;
+        if (c is FitList f) return Mathf.Max(0, f.NaturalHeight - min);
+        float own = c.HasMeta("preferred_height") ? Mathf.Max(0, (float)c.GetMeta("preferred_height") - min) : 0;
+        if (c is ScrollContainer sc)
+        {
+            if (sc.GetChildCount() > 0 && sc.GetChild(0) is Control child)
+                own = Mathf.Max(own, child.GetCombinedMinimumSize().Y + Extra(child) - min);
+            return own;
+        }
+        float sum = 0, max = 0;
+        foreach (var k in c.GetChildren().OfType<Control>())
+        {
+            float e = Extra(k);
+            sum += e;
+            max = Mathf.Max(max, e);
+        }
+        return Mathf.Max(own, c is VBoxContainer ? sum : max);
+    }
+
+    private static float Natural(Control c, float floor) => Mathf.Max(floor, c.GetCombinedMinimumSize().Y + Extra(c));
 
     private sealed class Placed
     {
@@ -94,9 +127,16 @@ public partial class ScreenPage : Container
             {
                 var cards = sr.VisibleItems;
                 for (int i = 0; i < cards.Count; i++)
-                    units.Add(new Unit(r, i, Mathf.Max(r.Min, cards[i].GetCombinedMinimumSize().Y), r.Weight));
+                {
+                    float min = Mathf.Max(r.Min, cards[i].GetCombinedMinimumSize().Y);
+                    units.Add(new Unit(r, i, min, Natural(cards[i], min), r.Weight));
+                }
             }
-            else units.Add(new Unit(r, -1, Mathf.Max(r.Min, r.Node.GetCombinedMinimumSize().Y), r.Weight));
+            else
+            {
+                float min = Mathf.Max(r.Min, r.Node.GetCombinedMinimumSize().Y);
+                units.Add(new Unit(r, -1, min, Natural(r.Node, min), r.Weight));
+            }
         }
         return units;
     }
@@ -125,13 +165,17 @@ public partial class ScreenPage : Container
         var placed = new List<Placed>();
         _screenTops.Clear();
         float y = 0;
-        foreach (var s in screens)
+        for (int k = 0; k < screens.Count; k++)
         {
+            var s = screens[k];
             if (_screenTops.Count > 0) y += ScreenGap;
             _screenTops.Add(y);
-            float mins = s.Sum(u => u.Min) + Gap * (s.Count - 1);
-            float height = Mathf.Max(view, mins);
-            var hs = Distribute(s, height - Gap * (s.Count - 1));
+            float gaps = Gap * (s.Count - 1);
+            float avail = Mathf.Max(view, s.Sum(u => u.Min) + gaps) - gaps;
+            // Estica ate a tela se houver outra tela embaixo (nao aparece cortada) ou se o natural ja quase a enche.
+            bool fill = k < screens.Count - 1 || s.Sum(u => u.Natural) >= FillThreshold * avail;
+            var hs = Distribute(s, avail, fill);
+            float height = hs.Sum() + gaps;
             float at = y;
             for (int i = 0; i < s.Count; i++)
             {
@@ -143,10 +187,27 @@ public partial class ScreenPage : Container
         return (placed, y);
     }
 
-    /// <summary>Altura por peso, respeitando o minimo de cada linha; pixels inteiros, o resto na ultima.</summary>
-    private static float[] Distribute(List<Unit> s, float available)
+    /// <summary>
+    /// Altura de cada linha (pixels inteiros). Se o natural cabe: cada linha no seu natural e, com fill, a sobra
+    /// dividida por peso. Se nao cabe: as linhas que pedem menos que a sua parte ficam no natural, as outras
+    /// dividem o resto por peso, sem ficar abaixo do minimo.
+    /// </summary>
+    private static float[] Distribute(List<Unit> s, float available, bool fill)
     {
         var h = new float[s.Count];
+        float need = s.Sum(u => u.Natural);
+        if (need <= available)
+        {
+            for (int i = 0; i < s.Count; i++) h[i] = Mathf.Floor(s[i].Natural);
+            if (fill)
+            {
+                float extra = available - h.Sum();
+                int w = s.Sum(u => u.Weight);
+                for (int i = 0; i < s.Count; i++) h[i] += Mathf.Floor(extra * s[i].Weight / w);
+                h[^1] += available - h.Sum();
+            }
+            return h;
+        }
         var free = Enumerable.Range(0, s.Count).ToList();
         float left = available;
         bool changed = true;
@@ -157,7 +218,13 @@ public partial class ScreenPage : Container
             foreach (int i in free.ToList())
             {
                 float share = left * s[i].Weight / weights;
-                if (share < s[i].Min) { h[i] = s[i].Min; left -= s[i].Min; free.Remove(i); changed = true; }
+                float fixedH = share >= s[i].Natural ? s[i].Natural : share < s[i].Min ? s[i].Min : -1;
+                if (fixedH < 0) continue;
+                h[i] = Mathf.Floor(fixedH);
+                left -= h[i];
+                free.Remove(i);
+                changed = true;
+                break;   // recalcula as partes com o que sobrou
             }
         }
         if (free.Count > 0)

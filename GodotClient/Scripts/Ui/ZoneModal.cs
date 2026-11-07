@@ -276,7 +276,7 @@ public partial class ZoneModal : ModalFrame
         var levels = Enumerable.Range(lo, hi - lo + 1).ToList();
         chart.ColorAt = i => In(levels[i]) ? UiTokens.Success : UiTokens.Warning;
         int inside = here.Count(v => In(v.Level));
-        return Column(12, chart, Row(0,
+        return Column(12, Grow(chart), Row(0,
             Mini($"{here.Average(v => v.Level):0.#}".Replace('.', ','), "Nível médio"),
             Mini($"{inside * 100 / here.Count}%", "Na faixa da zona"),
             Mini(here.Max(v => v.Level).ToString(), "Mais alto")));

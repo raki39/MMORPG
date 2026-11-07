@@ -305,12 +305,12 @@ public partial class QuestModal : ModalFrame
             if (snap.ByPerson[id] is { } v)
                 foreach (var p in v.ActiveQuests)
                     if (p.QuestId == _quest.Id) counts[Math.Min(p.StepIndex, _quest.Steps.Count)]++;
-        return new ColumnChart
+        return Grow(new ColumnChart
         {
-            CustomMinimumSize = new Vector2(0, 190), CountScale = true, ShowAverage = false, Unit = " personagens",
+            CustomMinimumSize = new Vector2(0, 120), CountScale = true, ShowAverage = false, Unit = " personagens",
             Values = counts, Labels = Enumerable.Range(0, counts.Length).Select(i => i == _quest.Steps.Count ? "Entrega" : $"Etapa {i + 1}").ToList(),
             ColorAt = i => i == _quest.Steps.Count ? UiTokens.Success : UiTokens.Info, EmptyText = "Ninguém está fazendo esta missão agora.",
-        };
+        });
     }
 
     public static string Coins(long copper)

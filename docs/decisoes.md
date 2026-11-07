@@ -2693,4 +2693,10 @@ Itens como instâncias, inventário, equipamento funcional, carteira e aplicaç�
 - **Peças comuns na base das páginas (`ModalFrame`):** lista que cabe, paginador, atalho de aba e legenda numérica. A frase de lista vazia não entra na contagem do paginador.
 - **Conferido** com o relatório de rolagem: nenhum card rola em 1920 nas páginas de zona (cidade e caça), área (quadro e campo), missão (principal e diária) e nas três listas. Em 1366 a rolagem continua onde é necessária.
 
+**Altura natural das seções (correção do criador):**
+- **Problema:** as seções esticavam os cards até cobrir a tela mesmo com pouco conteúdo (Estatísticas, Missões, zona com dois jogadores), e os cards ficavam desproporcionais ao que mostravam.
+- **Regra nova:** cada linha tem a altura natural do conteúdo (listas inteiras, gráficos com altura preferida). A seção só ocupa a tela quando o conteúdo pede isso, ou quando há outra seção embaixo, como na Visão geral e na Rotina; aí a sobra se divide por peso. Quando o conteúdo passa da tela, a linha que precisa de menos fica no tamanho dela, e a sobra vai para a que tem lista longa, que ganha páginas.
+- **Efeito:** Estatísticas, Progressão, Objetivos, zona, área, missão diária e a lista de zonas ficaram do tamanho do conteúdo. A Visão geral, a Rotina, o Histórico, a missão principal e as listas longas continuam enchendo a tela.
+- **Conferido:** relatório de rolagem sem nenhum card rolando em 1920 nas 8 abas da ficha, em zona, área, missão e listas. Em 1366 a rolagem continua só onde é necessária.
+
 **Próximo:** etapa 4, os emblemas e ícones do jogo.

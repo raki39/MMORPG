@@ -47,9 +47,9 @@ Referência para qualquer tela nova. Estilo de dossiê de jogo de gestão: escur
    - As divisas caem sempre nas mesmas linhas verticais, de preferência 3, 6 e 9. Linhas diferentes podem ter cards de tamanhos diferentes, mas as bordas coincidem.
    - Os cards de uma linha têm a mesma altura.
 3. **Página em telas** (`ScreenPage`, D-068; `plano-interface.md`):
-   - a página se divide em seções, e **cada seção ocupa exatamente a altura visível**; nada fica cortado no fim da tela;
-   - dentro da seção, cada linha recebe a altura por **peso**, com um mínimo legível; os cards preenchem a linha;
-   - **card de altura fixa** (`FillCard`): a altura vem do layout, nunca do conteúdo, então é igual para qualquer jogador;
+   - a página se divide em seções; **cada linha tem a altura natural do seu conteúdo** (listas inteiras, gráficos na altura preferida de `Grow`, 200 px), e os cards da linha ficam com a mesma altura;
+   - **a seção só ocupa a tela inteira quando tem conteúdo para isso** (correção do criador): se o natural passa da tela, as linhas que pedem menos ficam no tamanho delas e a sobra vai para as que têm mais (listas longas ganham páginas); se o natural chega a 90% da tela, ou se há outra seção embaixo (para ela não aparecer cortada), a seção estica até a tela, dividindo a sobra por peso; senão, fica no tamanho natural e **nenhum card estica para cobrir a tela**;
+   - **card de altura fixa** (`FillCard`): a altura vem da linha, não do card sozinho;
    - **sem rolagem no card em 1920×1080** (pedido do criador): o conteúdo é limitado ao que cabe e ordenado (mais recente ou mais forte primeiro). Listas usam `FitList`, que mostra só os itens inteiros que cabem e esconde o resto. Nas abas de detalhe, listas longas têm páginas no título do card ("1–10 de 27 ‹ ›"; quando cabe tudo, só o total). A rolagem dentro do card fica só como último recurso em tela menor (1366), com barra fina, mantida nas atualizações ao vivo;
    - conferência: cada captura grava ao lado um `.rolagem.txt` com os cards que passariam da altura (vazio = nenhum); `--pager=n,n,p` aperta as setas do primeiro paginador da página;
    - conteúdo complementar (ex.: a jornada do dia na Ocupação) entra só quando cabe: `FitList` com `Keep` (itens sempre mostrados) e `StretchLast` (o último ocupa a sobra);
