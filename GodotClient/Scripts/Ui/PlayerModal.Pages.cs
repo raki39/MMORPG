@@ -61,31 +61,50 @@ public partial class PlayerModal
 
     // ---------------- Visao geral ----------------
 
+    private const string PrefInfo = "Preferências · o que a pessoa gosta de fazer, de 1 a 20\n~Dão o peso principal de gosto nas escolhas, sem obrigar: viagem, risco, tédio, metas, lotação e tempo podem fazer outra opção vencer. Os atributos de especialidade só reforçam um pouco.\n~Crafting ainda não tem efeito (a fabricação não existe no jogo).";
+    private const string ChangesInfo = "O que mudou na pessoa desde que entrou no jogo\n~Atributos mudam devagar com o que a pessoa vive (a seta no card Atributos mostra a direção; aqui, o valor no cadastro e o de agora). Traços são ganhos ou perdidos por evidência repetida (P4d). A personalidade muda se outro atributo passar a ser o mais extremo.";
+
+    /// <summary>
+    /// Visao geral (D-068, refeita com o criador): o dossie completo da pessoa, em duas telas cheias e com as
+    /// divisas alinhadas (3 | 6 | 3 em todas as linhas). Tela 1, quem e e o que faz: situacao, atributos e
+    /// personalidade; progresso e metas, evolucao e missoes. Tela 2, como esta e o que viveu: humor, memorias e
+    /// mudancas; preferencias, ultimos acontecimentos e uso do tempo. As abas detalham cada assunto.
+    /// </summary>
     private Control BuildProfile()
     {
         var v = View;
+        var attributes = FillCard("Atributos do jogador", Column(16, AttributeGrid(), Highlights()), info: AttrInfo);
+        var traits = FillCard("Personalidade e traços", TraitsBody(), info: TraitsInfo);
         if (v == null)
-            return new ScreenPage().Add(Grid(12,
-                (FillCard("Situação", Wrap("Ainda não criou conta no MMORPG; pode se registrar nos próximos dias do lançamento.")), 4),
-                (FillCard("Atributos em destaque", AttributeSummary(), info: AttrInfo, headerRight: TabLink("Atributos")), 4),
-                (FillCard("Personalidade e traços", TraitsBody(), info: TraitsInfo, headerRight: TabLink("Atributos")), 4)));
+            return new ScreenPage()
+                .Add(Grid(12,
+                    (FillCard("Situação atual", Wrap("Ainda não criou conta no MMORPG; pode se registrar nos próximos dias do lançamento.")), 3),
+                    (attributes, 6), (traits, 3)), weight: 60)
+                .Add(Grid(12, (FillCard("Preferências", PreferencesBody(4), info: PrefInfo), 12)), weight: 40);
         var detail = WatchedDetail;
         var st = Server(v);
-        // Uma tela, em tercos alinhados nas duas linhas: o que faz agora, onde esta no progresso e as missoes;
-        // embaixo, humor, atributos e os ultimos acontecimentos. O detalhe de cada assunto fica na aba dele.
         return new ScreenPage()
             .Add(Grid(12,
-                (FillCard("Agora", NowBody(v), info: NowInfo), 4),
-                (FillCard("Progresso e metas", ProgressSummary(v, st, detail), headerRight: TabLink("Progressão"),
-                    info: "Nível, objetivo principal e metas de curto prazo\n~Metas de curto prazo (chegar a um nível, descobrir uma zona, concluir uma missão, praticar uma atividade) influenciam as escolhas sem obrigar. As ambições de longo prazo ficam na aba Objetivos; a curva de nível, na aba Progressão."), 4),
-                (FillCard("Missões em andamento", QuestSummary(v), info: "Missões do personagem\n~Clique numa missão para abrir a ficha dela. Concluídas e o diário de missões ficam na aba Missões.", headerRight: TabLink("Missões")), 4)), weight: 54)
+                (FillCard("Situação atual", NowBody(v), info: NowInfo), 3),
+                (attributes, 6),
+                (traits, 3)), weight: 54)
             .Add(Grid(12,
-                (FillCard("Humor", MoodSummary(v, detail), info: MoodInfo + "\n~Frustração, novidade, tédio e memórias na aba Humor e memória.", headerRight: TabLink("Humor e memória")), 4),
-                (FillCard("Atributos em destaque", AttributeSummary(), info: "Os atributos mais altos e mais baixos do jogador\n~Todos os atributos, as preferências, a personalidade e os traços ficam na aba Atributos.", headerRight: TabLink("Atributos")), 4),
-                (FillCard("Últimos acontecimentos", RecentBody(), info: "Últimos acontecimentos\n~Clique numa linha para abrir a área, a zona ou a missão. Histórico completo na aba Histórico.", headerRight: TabLink("Histórico")), 4)), weight: 46);
+                (FillCard("Progresso e metas", ProgressSummary(v, st, detail), headerRight: TabLink("Objetivos"),
+                    info: "Nível, objetivo principal e metas de curto prazo\n~Metas de curto prazo (chegar a um nível, descobrir uma zona, concluir uma missão, praticar uma atividade) influenciam as escolhas sem obrigar. As ambições de longo prazo ficam na aba Objetivos."), 3),
+                (FillCard("Evolução", EvolutionOverview(v, detail, st), info: "Horas jogadas ao atingir cada nível\n~Curva real deste personagem (tempo conectado acumulado). Nível, XP por fonte e zonas na aba Progressão.", headerRight: TabLink("Progressão")), 6),
+                (FillCard("Missões em andamento", QuestSummary(v), info: "Missões do personagem\n~Clique numa missão para abrir a ficha dela. Concluídas e o diário de missões ficam na aba Missões.", headerRight: TabLink("Missões")), 3)), weight: 46)
+            .Section()
+            .Add(Grid(12,
+                (FillCard("Humor", MoodOverview(v, detail), info: MoodInfo, headerRight: TabLink("Humor e memória")), 3),
+                (FillCard("Memórias marcantes", MemoriesBody(detail), info: "O que ficou na memória (D-038)\n~Conquistas duram mais que frustrações. A saudade dos bons momentos pode trazer de volta quem desistiu. Os lugares que marcaram e o tédio ficam na aba Humor e memória.", headerRight: TabLink("Humor e memória")), 6),
+                (FillCard("Mudanças desde o cadastro", ChangesBody(), info: ChangesInfo), 3)), weight: 50)
+            .Add(Grid(12,
+                (FillCard("Preferências", PreferencesBody(1), info: PrefInfo), 3),
+                (FillCard("Últimos acontecimentos", RecentBody(), info: "Últimos acontecimentos\n~Clique numa linha para abrir a área, a zona ou a missão. Histórico completo na aba Histórico.", headerRight: TabLink("Histórico")), 6),
+                (FillCard("Uso do tempo", TimeUseBody(detail), info: "Divisão do tempo conectado\n~Por tipo de atividade desde o cadastro; o resto é deslocamento.", headerRight: TabLink("Progressão")), 3)), weight: 50);
     }
 
-    /// <summary>Resumo do progresso: nivel, objetivo principal e metas de curto prazo (detalhes no tooltip).</summary>
+    /// <summary>Progresso e metas: nivel, objetivo principal e metas de curto prazo (detalhes no tooltip).</summary>
     private Control ProgressSummary(CharacterView v, ServerStats st, CharacterDetailView? detail)
     {
         var col = Column(12, LevelBlock(v, st, 88));
@@ -100,15 +119,15 @@ public partial class PlayerModal
         return col;
     }
 
-    /// <summary>Resumo do humor: satisfacao, engajamento e intencao de continuar; o que mais agrada e incomoda.</summary>
-    private Control MoodSummary(CharacterView v, CharacterDetailView? detail)
+    /// <summary>Humor na Visao geral: as cinco barras e o que mais agrada e mais incomoda (tres de cada).</summary>
+    private Control MoodOverview(CharacterView v, CharacterDetailView? detail)
     {
-        var col = Column(12, Column(9, MoodBars(v.Mood, all: false).ToArray()));
+        var col = Column(12, Column(9, MoodBars(v.Mood, all: true).ToArray()));
         var drivers = detail?.Drivers ?? new Dictionary<string, int>();
-        var good = drivers.Where(kv => kv.Value > 0).OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.Ordinal).Take(2);
-        var bad = drivers.Where(kv => kv.Value < 0).OrderBy(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.Ordinal).Take(2);
+        var good = drivers.Where(kv => kv.Value > 0).OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.Ordinal).Take(3);
+        var bad = drivers.Where(kv => kv.Value < 0).OrderBy(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.Ordinal).Take(3);
         var list = good.Concat(bad).ToList();
-        col.AddChild(Section("O que mais pesa"));
+        col.AddChild(Section("O que agrada e incomoda"));
         if (list.Count == 0) col.AddChild(Wrap("Nada se destaca ainda.", UiTokens.FontSmall, UiTokens.TextSecondary));
         var lines = Column(6);
         foreach (var kv in list) lines.AddChild(DriverLine(kv.Key, kv.Value));
@@ -116,40 +135,36 @@ public partial class PlayerModal
         return col;
     }
 
-    /// <summary>Resumo dos atributos: os quatro mais altos e os tres mais baixos, no mesmo formato da aba Atributos.</summary>
-    private Control AttributeSummary()
+    /// <summary>Evolucao na Visao geral: a curva e, ao lado, XP por hora, horas no nivel e horas no total.</summary>
+    private Control EvolutionOverview(CharacterView v, CharacterDetailView? d, ServerStats st)
     {
-        var t = _person.Traits;
-        var all = AttrGroups.SelectMany(g => g.Keys).Select(k => (Key: k, Value: t.Get(k))).ToList();
-        var high = all.OrderByDescending(a => a.Value).ThenBy(a => a.Key, StringComparer.Ordinal).Take(4).ToList();
-        var low = all.Where(a => !high.Contains(a)).OrderBy(a => a.Value).ThenBy(a => a.Key, StringComparer.Ordinal).Take(3).ToList();
-        var col = Column(10, Section("Mais altos"));
-        foreach (var a in high) col.AddChild(AttributeCell(a.Key));
-        col.AddChild(Section("Mais baixos"));
-        foreach (var a in low) col.AddChild(AttributeCell(a.Key));
-        return col;
+        long played = d?.PlayedTicks ?? v.PlayedTicks;
+        long atLevel = d != null && d.LevelTicks.Count > 0 ? played - d.LevelTicks[^1] : played;
+        Control Big(string value, string caption) => Column(0,
+            ThemeFactory.Text(value, 20, UiTokens.TextPrimary, UiFonts.Numbers),
+            ThemeFactory.Text(caption, UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Medium));
+        var side = Column(12,
+            Big(st.MyXpH < 0 ? "–" : PtBr.Int((long)st.MyXpH), "XP por hora"),
+            Big($"{PtBr.Decimal(Hours(atLevel))} h", $"no nível {v.Level}"),
+            Big($"{PtBr.Decimal(Hours(played))} h", "jogadas no total"));
+        side.CustomMinimumSize = new Vector2(96, 0);
+        side.SizeFlagsHorizontal = SizeFlags.ShrinkEnd;
+        side.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        var chart = EvolutionBody(d);
+        chart.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        return Row(16, chart, new ColorRect { Color = UiTokens.Divider, CustomMinimumSize = new Vector2(1, 0) }, side);
     }
 
-    // ---------------- Atributos ----------------
-
-    private Control BuildAttributes() => new ScreenPage()
-        .Add(Grid(12,
-            (FillCard("Atributos do jogador", AttributeGrid(), info: AttrInfo), 8),
-            (FillCard("Personalidade e traços", TraitsBody(), info: TraitsInfo), 4)), weight: 52)
-        .Add(Grid(12,
-            (FillCard("Preferências", PreferencesBody(), info: "Preferências · o que a pessoa gosta de fazer, de 1 a 20\n~Dão o peso principal de gosto nas escolhas, sem obrigar: viagem, risco, tédio, metas, lotação e tempo podem fazer outra opção vencer. Os atributos de especialidade só reforçam um pouco.\n~Embaixo, o que mais pesa nas escolhas (gostos fortes e competitividade).\n~Crafting ainda não tem efeito (a fabricação não existe no jogo)."), 8),
-            (FillCard("Mudanças desde o cadastro", ChangesBody(), info: "O que mudou na pessoa desde que entrou no jogo\n~Atributos mudam devagar com o que a pessoa vive (a seta na ficha mostra a direção; aqui, o valor no cadastro e o de agora). Traços são ganhos ou perdidos por evidência repetida (P4d). A personalidade muda se outro atributo passar a ser o mais extremo."), 4)), weight: 48);
-
-    /// <summary>As sete preferencias em duas colunas, da mais forte para a mais fraca, e o gosto marcante.</summary>
-    private Control PreferencesBody()
+    /// <summary>As sete preferencias, da mais forte para a mais fraca, em N colunas.</summary>
+    private Control PreferencesBody(int columns)
     {
         var pr = _person.Preferences;
-        var grid = new GridContainer { Columns = 2, SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        var grid = new GridContainer { Columns = columns, SizeFlagsHorizontal = SizeFlags.ExpandFill };
         grid.AddThemeConstantOverride("h_separation", 24);
         grid.AddThemeConstantOverride("v_separation", 12);
         foreach (var k in PersonPreferences.Keys.OrderByDescending(pr.Get).ThenBy(k => k, StringComparer.Ordinal))
             grid.AddChild(PreferenceCell(k, pr.Get(k)));
-        return Column(6, grid, Highlights());
+        return grid;
     }
 
     private static Control PreferenceCell(string key, int value)
@@ -214,7 +229,6 @@ public partial class PlayerModal
             name.SizeFlagsHorizontal = SizeFlags.ExpandFill;
             name.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
             r.AddChild(name);
-            r.AddChild(ThemeFactory.Text(AttrGroups.First(g => g.Keys.Contains(key)).Title, UiTokens.FontCaption, UiTokens.TextSecondary));
             var values = ThemeFactory.Text($"{was} → {now}", UiTokens.FontBody, UiTokens.TextPrimary, UiFonts.Numbers);
             values.CustomMinimumSize = new Vector2(64, 0);
             values.HorizontalAlignment = HorizontalAlignment.Right;

@@ -23,17 +23,15 @@ Aprovado pelo criador em 06/11/2026. O trabalho é organizar, tirar redundância
 
 ## Abas da ficha do jogador
 
-Visão geral · Atributos · Objetivos · Missões · Progressão · Estatísticas · Rotina · Humor e memória · Histórico · Combate M3 · Inventário M5 · Banco M5.
+Visão geral · Objetivos · Missões · Progressão · Estatísticas · Rotina · Humor e memória · Histórico · Combate M3 · Inventário M5 · Banco M5.
 
-- **Visão geral:** só o resumo de quem é e do que acontece agora.
+- **Visão geral:** o dossiê completo da pessoa (correção do criador na etapa 3: não é um resumo magro e os atributos ficam nela, sem aba própria).
 - **Estatísticas:** o jogador no servidor (comparação, classificação, níveis no servidor).
 - **Progressão:** a evolução do próprio personagem (curva de nível, XP, uso do tempo, zonas).
 
 | Card | Destino |
 |---|---|
-| Situação atual | Visão geral ("Agora") |
-| Atributos do jogador (19 barras) | Atributos (resumo na Visão geral) |
-| Personalidade e traços | Atributos |
+| Situação atual, Atributos do jogador, Personalidade e traços | Visão geral, na primeira linha |
 | Missões | Missões (as ativas na Visão geral) |
 | Evolução, Uso do tempo, Zonas frequentadas | Progressão |
 | Horários de jogo, Sessões · últimos 14 dias | Rotina (feito na etapa 1) |
@@ -43,12 +41,12 @@ Visão geral · Atributos · Objetivos · Missões · Progressão · Estatístic
 
 ### Como ficou (etapa 3)
 
-Todas as abas em telas (`ScreenPage`) com cards de altura fixa, e cada aba cabe numa tela (a Rotina tem duas). Os cards de resumo da Visão geral têm um atalho (›) no título que abre a aba do assunto. As divisas das duas linhas coincidem: as de uma linha estão entre as da outra (colunas entre parênteses).
+Todas as abas em telas (`ScreenPage`) com cards de altura fixa. A Visão geral e a Rotina têm duas telas; as outras abas, uma. Na Visão geral, os cards que têm uma aba de detalhe levam um atalho (›) no título. As divisas das duas linhas coincidem: as de uma linha estão entre as da outra (colunas entre parênteses).
 
 | Aba | Linha de cima | Linha de baixo |
 |---|---|---|
-| Visão geral | Agora (4) · Progresso e metas (4) · Missões em andamento (4) | Humor, resumo (4) · Atributos em destaque (4) · Últimos acontecimentos (4) |
-| Atributos | Atributos do jogador (8) · Personalidade e traços (4) | Preferências, as sete com o gosto marcante (8) · Mudanças desde o cadastro (4) |
+| Visão geral, tela 1 | Situação atual (3) · Atributos do jogador, com o gosto marcante (6) · Personalidade e traços (3) | Progresso e metas (3) · Evolução (6) · Missões em andamento, com as últimas entregas (3) |
+| Visão geral, tela 2 | Humor (3) · Memórias marcantes (6) · Mudanças desde o cadastro (3) | Preferências (3) · Últimos acontecimentos (6) · Uso do tempo (3) |
 | Objetivos | Objetivos gerais (4) · Objetivos secundários (4) · Metas atuais (4) | Conquistas e encerrados (4) · Histórico (8) |
 | Missões | Em andamento (8) · Resumo (4) | Diário de missões (8) · Concluídas (4) |
 | Progressão | Nível e experiência (4) · Evolução (8) | Uso do tempo (4) · XP por fonte (4) · Zonas frequentadas (4) |
@@ -61,7 +59,9 @@ Todas as abas em telas (`ScreenPage`) com cards de altura fixa, e cada aba cabe 
 
 **Informação nova na tela, que já existia na simulação:** as sete preferências com valor (antes só no tooltip), o valor de cada atributo no cadastro, os traços ganhos e perdidos com data e motivo, todos os fatores do humor com a parcela de cada um (antes só os três maiores), o tédio por tipo de atividade, as entregas por categoria e o diário de missões.
 
-**Redundâncias tiradas:** perfil e personalidade repetidos no card de progresso (estão no cabeçalho e em Atributos); horas totais ao lado da Evolução (estão no cabeçalho); "Perdeu: …" no card de traços (vai com data e motivo em Mudanças).
+**Redundâncias tiradas:** perfil e personalidade repetidos no card de progresso (estão no cabeçalho e na Visão geral); "Perdeu: …" no card de traços (vai com data e motivo em Mudanças).
+
+**A Visão geral repete de propósito** a Evolução, o Uso do tempo, o Humor e as Memórias, que também estão nas abas de detalhe: é o dossiê da pessoa numa olhada (pedido do criador).
 
 ## Cabeçalho da ficha
 

@@ -26,9 +26,8 @@ public partial class PlayerModal : ModalFrame
         Closed += () => ctx.WatchPerson(0);
         BuildHeader();
         Breadcrumb = $"Jogadores › {View?.Name ?? _person.Name}";
-        // Abas (D-068, etapa 3): cada uma com o seu assunto; a Visao geral so resume.
+        // Abas (D-068, etapa 3): a Visao geral e o dossie completo da pessoa; as outras detalham um assunto.
         Tab("Visão geral", BuildProfile, live: true);
-        Tab("Atributos", BuildAttributes, live: true);
         Tab("Objetivos", BuildObjectives, live: true);
         Tab("Missões", BuildQuests, live: true);
         Tab("Progressão", BuildProgress, live: true);
@@ -310,11 +309,22 @@ public partial class PlayerModal : ModalFrame
             >= 300 => UiTokens.Warning,
             _ => UiTokens.Danger,
         };
+        // Mesmo formato dos atributos: nome e valor em cima, barra embaixo (a barra fica larga ate no card de 3
+        // colunas em 1366).
         Control Line(string label, int value, int max, Color color, string text, string tip)
         {
             var t = new TipPanel { TooltipText = tip, MouseFilter = MouseFilterEnum.Stop };
             t.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
-            t.AddChild(Bar(label, Math.Max(0, value), max, color, text, 150));
+            var c = Column(5);
+            var r = new HBoxContainer();
+            var l = ThemeFactory.Text(label, UiTokens.FontBody, UiTokens.TextLabel, UiFonts.Medium);
+            l.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+            l.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+            r.AddChild(l);
+            r.AddChild(ThemeFactory.Text(text, UiTokens.FontBody, UiTokens.TextPrimary, UiFonts.Numbers));
+            c.AddChild(r);
+            c.AddChild(new ThinBar(max <= 0 ? 0 : Math.Max(0, value) / (float)max, color) { CustomMinimumSize = new Vector2(0, 3) });
+            t.AddChild(c);
             return t;
         }
         string novelty = m.Novelty >= 0 ? $"{m.Novelty / 10}%" : "saturado";
@@ -385,6 +395,8 @@ public partial class PlayerModal : ModalFrame
             "great_session" => "Uma sessão ótima",
             "bad_session" => "Uma sessão ruim",
             "nothing_to_do" => $"Ficou sem nada para fazer em {_ctx.ZoneName(m.Subject)}",
+            // Objetivo alcancado (O3): o assunto e "objetivo|parametro".
+            "objective_completed" => $"Alcançou o objetivo: {ObjectiveInfo.Title(_ctx.Content, m.Subject.Split('|')[0], m.Subject.Contains('|') ? m.Subject[(m.Subject.IndexOf('|') + 1)..] : "")}",
             _ => m.Kind,
         };
     }
@@ -402,6 +414,7 @@ public partial class PlayerModal : ModalFrame
         "great_session" => "sparkles",
         "bad_session" => "trending-down",
         "nothing_to_do" => "hourglass",
+        "objective_completed" => "trophy",
         _ => "book-open",
     };
 
@@ -871,6 +884,7 @@ public partial class PlayerModal : ModalFrame
             v.Status == CharacterStatus.Offline ? UiTokens.TextSecondary : type == "travel" ? UiTokens.Info : ActivityPalette.Color(type)));
         var heroText = Wrap(StatusText.Of(v, _ctx.Content), 15, UiTokens.TextPrimary, UiFonts.SemiBold);
         heroText.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        heroText.CustomMinimumSize = new Vector2(150, 0);   // card de 3 colunas em 1366 sem empilhar a linha
         hero.AddChild(heroText);
         col.AddChild(hero);
         if (v.Status == CharacterStatus.Doing && v.ActivityEndTick > v.ActivityStartTick)
@@ -1140,6 +1154,33 @@ public partial class PlayerModal : ModalFrame
             col.AddChild(b);
         }
         if (v.ActiveQuests.Count == 0) col.AddChild(Wrap("Nenhuma missão em andamento."));
+        // As ultimas entregas (o dia da ultima vez), para o card mostrar tambem o que acabou de concluir.
+        var recent = v.CompletedQuests.Where(x => _ctx.Content.Quests.ContainsKey(x.QuestId))
+            .OrderByDescending(x => x.LastDay).ThenBy(x => x.QuestId, StringComparer.Ordinal).Take(5).ToList();
+        if (recent.Count > 0) col.AddChild(Section("Entregues por último"));
+        foreach (var (id, times, day) in recent)
+        {
+            var q = _ctx.Content.Quests[id];
+            string qid = id;
+            string when = PtBr.ShortDate(_ctx.Calendar.ToDateTime(_ctx.Calendar.StartOfDay(day)));
+            var b = HoverRow(() => _ctx.OpenQuest(qid), $"{q.Name}|{QuestModal.CategoryName(q.Category)}\nEntregas|{times}\nÚltima|{when}\n~Clique para abrir a missão.");
+            b.CustomMinimumSize = new Vector2(0, 28);
+            var r = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
+            r.SetAnchorsPreset(LayoutPreset.FullRect);
+            r.OffsetLeft = 6; r.OffsetRight = -6;
+            r.AddThemeConstantOverride("separation", 8);
+            r.AddChild(new Icon("medal", 14, QuestModal.CategoryColor(q.Category)) { MouseFilter = MouseFilterEnum.Ignore });
+            var nm = ThemeFactory.Text(times > 1 ? $"{q.Name} ×{times}" : q.Name, UiTokens.FontSmall, UiTokens.TextLabel);
+            nm.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+            nm.VerticalAlignment = VerticalAlignment.Center;
+            nm.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+            r.AddChild(nm);
+            var dl = ThemeFactory.Text(when, UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Numbers);
+            dl.VerticalAlignment = VerticalAlignment.Center;
+            r.AddChild(dl);
+            b.AddChild(r);
+            col.AddChild(b);
+        }
         return col;
     }
 
@@ -1281,6 +1322,7 @@ public partial class PlayerModal : ModalFrame
         var donut = new DonutChart { CustomMinimumSize = new Vector2(124, 124), SizeFlagsVertical = SizeFlags.ShrinkCenter, Slices = list.Select(x => (x.Pct, x.Color)).ToList(), Center = $"{PtBr.Decimal(Hours(d.PlayedTicks))} h", Caption = "conectado" };
         var legend = Column(8);
         legend.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        legend.CustomMinimumSize = new Vector2(150, 0);   // sem espaco ao lado da rosca (1366), a legenda desce para baixo dela
         foreach (var x in list)
         {
             var row = new TipPanel { TooltipText = $"{x.Name}\nTempo|{PtBr.Decimal(x.Hours)} h\nParcela|{PtBr.Decimal(x.Pct)}%", MouseFilter = MouseFilterEnum.Stop };
@@ -1290,12 +1332,21 @@ public partial class PlayerModal : ModalFrame
             r.AddChild(new Icon(x.Type == "travel" ? "footprints" : TypeIcon(x.Type), 14, x.Color));
             var n = ThemeFactory.Text(x.Name, UiTokens.FontSmall, UiTokens.TextLabel, UiFonts.Medium);
             n.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+            n.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;   // card de 3 colunas em 1366
             r.AddChild(n);
             r.AddChild(ThemeFactory.Text($"{x.Pct:0}%", UiTokens.FontSmall, UiTokens.TextPrimary, UiFonts.Numbers));
             row.AddChild(r);
             legend.AddChild(row);
         }
-        return Row(18, donut, legend);
+        var flow = new HFlowContainer { SizeFlagsVertical = SizeFlags.ShrinkCenter };
+        flow.AddThemeConstantOverride("h_separation", 18);
+        flow.AddThemeConstantOverride("v_separation", 14);
+        flow.AddChild(donut);
+        flow.AddChild(legend);
+        // Centralizada na altura do card fixo.
+        var center = new VBoxContainer { Alignment = BoxContainer.AlignmentMode.Center };
+        center.AddChild(flow);
+        return center;
     }
 
     private string ActivityTypeOf(string zone, string activity) =>

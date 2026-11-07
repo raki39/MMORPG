@@ -55,9 +55,9 @@ Referência para qualquer tela nova. Estilo de dossiê de jogo de gestão: escur
    - **em 1366×768**, a seção mantém as suas linhas, com cards mais baixos e rolagem dentro do card. Só passa para a tela seguinte se uma linha ficaria abaixo de 180 px. Uma linha de cards empilhados vira uma linha por card;
    - capturas: `--section=N` abre a tela N; `--wheel=N` gira a roda N vezes;
    - **divisas coincidentes:** numa seção, as divisas entre cards de uma linha caem sobre divisas da outra (ex.: 4|8 em cima e 4|4|4 embaixo; nunca 4|4|4 sobre 3|3|6);
-   - **sem empilhar em 1366:** a largura mínima do conteúdo de um card de 3 colunas não passa de ~230 px, senão a linha empilha e os cards esticam.
-4. **Visão geral:** só o resumo de quem é e do que acontece agora, com cards de dados que já existem.
-   - Cada card de resumo tem um atalho (›) no título que abre a aba do assunto (`TabLink`).
+   - **sem empilhar em 1366:** a largura mínima do conteúdo de um card de 3 colunas não passa de ~230 px, senão a linha empilha e os cards esticam. Barras com rótulo ficam no formato dos atributos (nome e valor em cima, barra embaixo); rosca e legenda ficam num fluxo (a legenda desce quando não cabe ao lado).
+4. **Visão geral:** o dossiê completo da pessoa, cheio, em duas telas (correção do criador: nunca um resumo magro). Primeira linha: Situação atual, Atributos do jogador e Personalidade e traços.
+   - Os cards que têm uma aba de detalhe levam um atalho (›) no título (`TabLink`).
    - O que depende de sistemas futuros fica numa aba própria com o marco ("Combate · M3", "Inventário · M5").
    - Não há card vazio na visão geral.
 5. **Abas numa linha só:** em tela estreita, as ações com ícone viram só ícone; se ainda faltar espaço, as últimas abas vão para o botão "Mais ▾" no fim da linha, que fica marcado e mostra o nome da aba aberta quando ela está nele.

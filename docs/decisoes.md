@@ -2644,9 +2644,13 @@ Itens como instâncias, inventário, equipamento funcional, carteira e aplicaç�
 - **A faixa de dados antiga (`Fact`) saiu**, porque todas as páginas usam o padrão novo. Nenhuma informação saiu.
 
 **Etapa 3 — abas da ficha (feita):**
-- **Abas:** Visão geral, Atributos, Objetivos, Missões, Progressão, Estatísticas, Rotina, Humor e memória, Histórico e as três futuras (Combate, Inventário, Banco). Atributos, Progressão e Humor e memória são novas; cada aba trata de um assunto.
-- **Todas as abas em telas** (`ScreenPage`, cards de altura fixa). Cada uma cabe numa tela; só a Rotina tem duas. A distribuição está em `plano-interface.md`.
-- **Visão geral só resume:** Agora, Progresso e metas, Missões em andamento, Humor (três barras e o que mais pesa), Atributos em destaque (os quatro mais altos e os três mais baixos) e Últimos acontecimentos. Cada resumo tem um atalho (›) para a aba do assunto.
+- **Abas:** Visão geral, Objetivos, Missões, Progressão, Estatísticas, Rotina, Humor e memória, Histórico e as três futuras (Combate, Inventário, Banco). Progressão e Humor e memória são novas.
+- **Todas as abas em telas** (`ScreenPage`, cards de altura fixa). A Visão geral e a Rotina têm duas telas; as outras, uma. A distribuição está em `plano-interface.md`.
+- **Visão geral, o dossiê completo (refeita com o criador):** a primeira versão desta etapa a reduziu a um resumo, com uma aba Atributos à parte e um card "Atributos em destaque". O criador reprovou: a tela ficou vazia, e os atributos são parte da visão geral. Ficou assim:
+  - **tela 1:** Situação atual, Atributos do jogador e Personalidade e traços; embaixo, Progresso e metas, Evolução (com XP por hora e horas) e Missões em andamento (com as últimas entregas);
+  - **tela 2:** Humor, Memórias marcantes e Mudanças desde o cadastro; embaixo, Preferências, Últimos acontecimentos e Uso do tempo;
+  - todas as linhas em 3 | 6 | 3, e os cards com aba de detalhe levam um atalho (›);
+  - a aba Atributos saiu; os cards dela (Preferências, Mudanças) estão na Visão geral.
 - **Informação que já existia na simulação e passou a aparecer:**
   - as sete preferências com valor (antes só no tooltip);
   - o valor de cada atributo no cadastro (antes só a seta);
@@ -2656,16 +2660,18 @@ Itens como instâncias, inventário, equipamento funcional, carteira e aplicaç�
   - as entregas por categoria;
   - o diário de missões, com o motivo dos aceites e das idas ao quadro sem resultado.
 - **Redundâncias tiradas:**
-  - perfil, personalidade e preferências repetidos no card de progresso: já estão no cabeçalho e em Atributos;
-  - horas totais ao lado da Evolução: estão no cabeçalho, e o XP por hora e as horas no nível foram para o card de nível;
+  - perfil, personalidade e preferências repetidos no card de progresso: já estão no cabeçalho e na Visão geral;
   - "Perdeu: …" no card de traços: aparece com data e motivo em Mudanças desde o cadastro.
 - **Movidos:** XP por fonte saiu de Estatísticas (que fica só com o jogador no servidor) e foi para Progressão. O motivo e o comprometimento das metas, antes só na Visão geral, aparecem também em Objetivos.
 - **Divisas coincidentes:** nas duas linhas de uma tela, as divisas de uma caem sobre as da outra (regra no `ui-kit.md`).
 - **Abas numa linha só:** com 12 abas, em 1366 as últimas vão para o botão "Mais ▾", que fica marcado e mostra o nome da aba aberta quando ela está nele. Antes, a linha de abas quebrava em duas.
+- **Barras do humor** no formato dos atributos (nome e valor em cima, barra embaixo), legíveis no card estreito; **Uso do tempo** com a legenda descendo para baixo da rosca quando não cabe ao lado.
 - **Correções de conteúdo em 1366 (pendências da etapa 1):**
   - legenda dos números grandes (Onde mora, Vontade, Ocupação…): quebra a linha em vez de invadir a vizinha;
   - dias da Ocupação: o horário quebra depois do traço em vez de ser cortado, e "hoje" foi para o tooltip (o dia de hoje continua com rótulo e borda dourados);
   - Sono e cansaço: só o déficit e o teto ficam ao lado do anel; os outros dados ocupam a largura do card.
-- **Defeito corrigido:** a meta de desbloqueio (D-055) aparecia nas memórias e no histórico como "praticar zona/atividade". Agora aparece como "chegar ao nível N para Atividade (Zona)".
+- **Defeitos de texto corrigidos:**
+  - a meta de desbloqueio (D-055) aparecia nas memórias e no histórico como "praticar zona/atividade"; agora aparece como "chegar ao nível N para Atividade (Zona)";
+  - a memória de objetivo alcançado (O3) aparecia como "objective_completed"; agora aparece como "Alcançou o objetivo: …".
 
 **Próximo:** etapa 4, os emblemas e ícones do jogo.
