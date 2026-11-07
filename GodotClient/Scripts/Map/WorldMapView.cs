@@ -1318,7 +1318,9 @@ public partial class WorldMapView : Node2D
         }
         o.DrawArc(c, r, 0, Mathf.Tau, 32, col, 2f, true);
         if (focus) o.DrawArc(c, r + 3.5f, 0, Mathf.Tau, 40, new Color(UiTokens.AccentSoft, 0.95f), 2f, true);
-        AreaPalette.DrawGlyph(o, a.Kind, c, r * 0.55f, col);
+        // Icone do tipo de area (etapa 4), em tamanhos pares para o cache de texturas nao crescer com o zoom.
+        int isz = Mathf.Clamp(Mathf.RoundToInt(r * 0.62f) * 2, 10, 48);
+        o.DrawTextureRect(Icons.Get(GameIcons.Area(a.Kind), isz, isz >= 24 ? 2f : 1.6f), new Rect2((c - new Vector2(isz, isz) / 2f).Round(), new Vector2(isz, isz)), false, col);
 
         if (people.Count > 0)
         {

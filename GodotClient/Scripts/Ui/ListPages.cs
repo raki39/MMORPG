@@ -205,7 +205,7 @@ public partial class ZonesPage : ListPage
     private readonly DataTable<RegionDefinition> _table;
     protected override string Title => "Zonas do mundo";
 
-    public ZonesPage(ClientContext ctx, WorldMapView map) : base(ctx, "Zonas", $"{ctx.Content.World.Name} · clique para abrir a ficha da zona", "castle")
+    public ZonesPage(ClientContext ctx, WorldMapView map) : base(ctx, "Zonas", $"{ctx.Content.World.Name} · clique para abrir a ficha da zona", "g-cidade")
     {
         _map = map;
         var zones = ctx.Content.Regions.Values.ToList();
@@ -250,7 +250,7 @@ public partial class QuestsPage : ListPage
     private readonly DataTable<QuestDefinition> _table;
     protected override string Title => "Catálogo de missões";
 
-    public QuestsPage(ClientContext ctx) : base(ctx, "Missões", "Catálogo por quadro de missões · clique para abrir a ficha", "scroll-text")
+    public QuestsPage(ClientContext ctx) : base(ctx, "Missões", "Catálogo por quadro de missões · clique para abrir a ficha", "g-principal")
     {
         var stats = ctx.Snapshot().QuestStats;
         var quests = ctx.Content.Quests.Values.ToList();

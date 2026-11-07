@@ -47,7 +47,7 @@ public partial class PlayerModal : ModalFrame
     /// <summary>Icone da classe (Lucide): o do conteudo e, se faltar ou for desconhecido, um generico pelo papel.</summary>
     public static string ClassIcon(ClassDefinition? cls) =>
         cls != null && cls.Icon.Length > 0 && Icons.Has(cls.Icon) ? cls.Icon
-        : cls?.Role == ClassRoles.Tank ? "shield" : cls?.Role == ClassRoles.Support ? "heart-pulse" : "sword";
+        : GameIcons.Role(cls?.Role);
 
     // ---------------- Cabecalho ----------------
 
@@ -403,12 +403,12 @@ public partial class PlayerModal : ModalFrame
 
     private static string MemoryIcon(string kind) => kind switch
     {
-        "level_milestone" => "award",
-        "main_quest" => "medal",
-        "quest" => "scroll-text",
+        "level_milestone" => "g-nivel",
+        "main_quest" => "g-principal",
+        "quest" => "g-entrega",
         "goal_completed" => "trophy",
         "goal_abandoned" => "circle-x",
-        "discovery" => "map",
+        "discovery" => "g-descoberta",
         "great_activity" => "star",
         "awful_activity" => "trending-down",
         "great_session" => "sparkles",
@@ -1142,7 +1142,7 @@ public partial class PlayerModal : ModalFrame
             c.OffsetLeft = 6; c.OffsetRight = -6; c.OffsetTop = 4;
             var top = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
             top.AddThemeConstantOverride("separation", 8);
-            top.AddChild(new Icon("scroll-text", 14, QuestModal.CategoryColor(q.Category)));
+            top.AddChild(new Icon(GameIcons.Quest(q.Category), 14, QuestModal.CategoryColor(q.Category)));
             var nm = ThemeFactory.Text(q.Name, UiTokens.FontSmall, UiTokens.TextPrimary, UiFonts.Medium);
             nm.SizeFlagsHorizontal = SizeFlags.ExpandFill;
             nm.ClipText = true;
@@ -1377,7 +1377,7 @@ public partial class PlayerModal : ModalFrame
                 break;
             case "session_started": icon = "play"; break;
             case "session_ended": icon = "moon"; break;
-            case "level_up": icon = "award"; break;
+            case "level_up": icon = "g-nivel"; break;
             case "goal_set": icon = "target"; break;
             case "goal_completed": icon = "trophy"; break;
             case "goal_abandoned": icon = "circle-x"; break;
@@ -1392,13 +1392,13 @@ public partial class PlayerModal : ModalFrame
             case "stayed_up_late": icon = "sunrise"; color = UiTokens.Warning; break;
             case "work_interruption": icon = "bell"; color = UiTokens.Warning; break;
             case "player_inactive": icon = "hourglass"; break;
-            case "player_quit": icon = "circle-x"; break;
+            case "player_quit": icon = "heart-crack"; break;
             case "player_returned": icon = "door-open"; break;
             case "person_registered": icon = "user"; break;
-            case "region_discovered": icon = "map"; { string zid = e.Detail ?? ""; go = () => _ctx.OpenZone(zid); } break;
+            case "region_discovered": icon = "g-descoberta"; { string zid = e.Detail ?? ""; go = () => _ctx.OpenZone(zid); } break;
             case "quest_accepted": icon = "scroll-text"; { string q = e.Detail ?? ""; go = () => _ctx.OpenQuest(q); } break;
             case "quest_step_completed": icon = "circle-check"; { string q = (e.Detail ?? "").Split('#')[0]; go = () => _ctx.OpenQuest(q); } break;
-            case "quest_completed": icon = "medal"; { string q = e.Detail ?? ""; go = () => _ctx.OpenQuest(q); } break;
+            case "quest_completed": icon = "g-entrega"; { string q = e.Detail ?? ""; go = () => _ctx.OpenQuest(q); } break;
             case "quest_expired": icon = "hourglass"; { string q = e.Detail ?? ""; go = () => _ctx.OpenQuest(q); } break;
             case "quest_dropped": icon = "circle-x"; { string q = e.Detail ?? ""; go = () => _ctx.OpenQuest(q); } break;
             case "board_visit_empty": icon = "signpost"; break;

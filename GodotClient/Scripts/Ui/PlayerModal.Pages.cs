@@ -331,7 +331,7 @@ public partial class PlayerModal
             c.SetAnchorsPreset(LayoutPreset.FullRect);
             c.OffsetLeft = 8; c.OffsetRight = -8; c.OffsetTop = 7;
             var top = Row(8);
-            top.AddChild(new Icon("scroll-text", 16, color) { SizeFlagsVertical = SizeFlags.ShrinkCenter });
+            top.AddChild(new Icon(GameIcons.Quest(q.Category), 16, color) { SizeFlagsVertical = SizeFlags.ShrinkCenter });
             var nm = ThemeFactory.Text(q.Name, UiTokens.FontBody, UiTokens.TextPrimary, UiFonts.Medium);
             nm.SizeFlagsHorizontal = SizeFlags.ExpandFill;
             nm.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
@@ -384,7 +384,7 @@ public partial class PlayerModal
             var r = Row(10);
             r.SetAnchorsPreset(LayoutPreset.FullRect);
             r.OffsetLeft = 8; r.OffsetRight = -8;
-            r.AddChild(new Icon("scroll-text", 15, color) { SizeFlagsVertical = SizeFlags.ShrinkCenter });
+            r.AddChild(new Icon(GameIcons.Quest(q.Category), 15, color) { SizeFlagsVertical = SizeFlags.ShrinkCenter });
             var nm = ThemeFactory.Text(q.Name, UiTokens.FontBody, UiTokens.TextLabel);
             nm.SizeFlagsHorizontal = SizeFlags.ExpandFill;
             nm.VerticalAlignment = VerticalAlignment.Center;

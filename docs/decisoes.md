@@ -2699,4 +2699,26 @@ Itens como instâncias, inventário, equipamento funcional, carteira e aplicaç�
 - **Efeito:** Estatísticas, Progressão, Objetivos, zona, área, missão diária e a lista de zonas ficaram do tamanho do conteúdo. A Visão geral, a Rotina, o Histórico, a missão principal e as listas longas continuam enchendo a tela.
 - **Conferido:** relatório de rolagem sem nenhum card rolando em 1920 nas 8 abas da ficha, em zona, área, missão e listas. Em 1366 a rolagem continua só onde é necessária.
 
-**Próximo:** etapa 4, os emblemas e ícones do jogo.
+**Etapa 4 — emblemas e ícones do jogo (feita, opção A):**
+- **35 ícones desenhados para o MMORPG** em SVG, no traço de linha do Lucide, rasterizados pelo mesmo código (`GameIcons.cs`, nomes `g-…`):
+  - classes: guerreiro (escudo com espada), mago (chapéu com estrela) e sacerdote (símbolo sagrado);
+  - papéis: tanque, dano e suporte;
+  - zonas: cidade e os oito biomas;
+  - os 14 tipos de área;
+  - as categorias de missão: principal (bandeira com "!"), secundária (pergaminho) e diária (seta circular);
+  - três acontecimentos marcantes: subir de nível, descobrir zona e entregar missão.
+- **Moldura única** (`EmblemBox`, degradê na cor do tipo, borda e faixa no topo) para zona, área, atividade, missão e páginas. Saíram os desenhos preenchidos feitos à mão (`AreaPalette.DrawGlyph`, `ActivityPalette.DrawGlyph`).
+- **Onde aparecem:**
+  - cabeçalhos de zona, área e missão;
+  - listas de áreas;
+  - cartões do mapa;
+  - retrato e texto de classe da ficha;
+  - linhas de missão da ficha;
+  - acontecimentos e memórias;
+  - marcadores de área no mapa.
+- **O Lucide continua** nas ações e nas linhas de dados, como previsto no plano.
+- **Conteúdo:** as classes de `classes.json` apontam para os ícones novos. Classe sem ícone usa o do papel.
+- **Revisão nas capturas da galeria** (`--page=icons`): quatro ícones foram redesenhados por não lerem bem a 16 px (mago, ruínas, sombrio, treino), e a passagem também.
+- O gerador do Lucide (`tools/gen_icons.py`) mantém a busca nos ícones do jogo ao regenerar o `Icons.cs`.
+
+**Próximo:** etapa 6, a conferência final (todas as telas em 1920×1080 e 1366×768, três jogadores, desempenho).

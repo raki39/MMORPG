@@ -124,7 +124,12 @@ Referência para qualquer tela nova. Estilo de dossiê de jogo de gestão: escur
 
 ## Ícones
 
-- Lucide (ISC, `Assets/Icons/Lucide-LICENSE.txt`), embutidos em `Icons.cs` (gerado por `tools/gen_icons.py`).
+- Lucide (ISC, `Assets/Icons/Lucide-LICENSE.txt`), embutidos em `Icons.cs` (gerado por `tools/gen_icons.py`): ações e linhas de dados.
+- **Ícones do jogo** (`GameIcons.cs`, nomes `g-…`, D-068 etapa 4): desenhados para o MMORPG no mesmo traço (SVG 24×24, linha sem preenchimento, pontas redondas) e rasterizados pelo mesmo `Icons.Get`.
+  - Cobrem classes (guerreiro, mago, sacerdote), papéis (tanque, dano, suporte), zonas (cidade e os oito biomas), os 14 tipos de área, as categorias de missão (principal, secundária, diária) e três acontecimentos marcantes (subir de nível, descobrir zona, entregar missão).
+  - Qual ícone usar: `GameIcons.Zone`, `Area`, `Quest`, `Role`. A classe usa o `icon` do conteúdo (`classes.json`); sem ele, o do papel.
+  - Galeria de conferência: `--page=icons` (só nas capturas).
+- **Moldura dos emblemas** (`EmblemBox`): quadrado com degradê na cor do tipo, borda fina e faixa no topo, com o ícone no centro (traço proporcional ao tamanho). Zona, área, atividade, missão e páginas usam a mesma moldura. No mapa, o marcador de área mostra o ícone do tipo.
 - Rasterizados no tamanho exato de uso, com traço visual de cerca de 1,6 px; brancos e tingidos por `Modulate`.
 - Tamanhos: 14 (linhas), 16 (dados), 18–20 (destaques).
 

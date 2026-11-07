@@ -593,40 +593,15 @@ public static class PlayerRow
     }
 }
 
-/// <summary>Icone redondo de tipo de atividade (controle).</summary>
-public partial class GlyphIcon : Control
+/// <summary>Emblema do tipo de atividade: a moldura padrao com o icone do tipo e a cor dele (etapa 4).</summary>
+public partial class GlyphIcon : EmblemBox
 {
-    private readonly string _type;
-    public GlyphIcon(string type) => _type = type;
-
-    public override void _Draw()
-    {
-        var c = Size / 2f;
-        float r = Mathf.Min(Size.X, Size.Y) / 2f - 1;
-        var col = ActivityPalette.Color(_type);
-        DrawCircle(c, r, new Color(UiTokens.Background, 0.9f));
-        DrawArc(c, r, 0, Mathf.Tau, 28, col, 1.8f, true);
-        ActivityPalette.DrawGlyph(this, _type, c, r * 0.52f, col);
-    }
+    public GlyphIcon(string type) : base(PlayerModal.TypeIcon(type), ActivityPalette.Color(type)) { }
 }
 
-/// <summary>Emblema da zona: medalhao com a cor do bioma e o anel da regra de combate.</summary>
-public partial class ZoneEmblem : Control
+/// <summary>Emblema da zona: a moldura padrao com o icone da cidade ou do bioma, na cor da regra (etapa 4).</summary>
+public partial class ZoneEmblem : EmblemBox
 {
-    private readonly RegionDefinition _zone;
-    public ZoneEmblem(RegionDefinition zone) => _zone = zone;
-
-    public override void _Draw()
-    {
-        // Icone plano: cor do bioma, faixa superior na cor da regra (cidade, PvP ou bioma).
-        var rect = new Rect2(Vector2.One, Size - Vector2.One * 2);
-        var biome = UiTokens.BiomeColor(_zone.Biome);
-        var rim = _zone.IsCity ? UiTokens.Accent : _zone.Pvp == PvpRules.Open ? UiTokens.Danger : biome.Lightened(0.3f);
-        DrawRect(rect, biome.Darkened(0.72f));
-        DrawRect(rect, new Color(rim, 0.6f), false, 1f);
-        DrawRect(new Rect2(rect.Position, new Vector2(rect.Size.X, 2)), rim);
-        var main = _zone.AllActivities().FirstOrDefault()?.Type ?? ActivityTypes.Explore;
-        if (_zone.IsCity) main = ActivityTypes.Trade;
-        ActivityPalette.DrawGlyph(this, main, Size / 2f, Mathf.Min(Size.X, Size.Y) * 0.22f, new Color(UiTokens.TextPrimary, 0.9f));
-    }
+    public ZoneEmblem(RegionDefinition zone)
+        : base(GameIcons.Zone(zone), zone.IsCity ? UiTokens.Accent : zone.Pvp == PvpRules.Open ? UiTokens.Danger : UiTokens.BiomeColor(zone.Biome).Lightened(0.35f)) { }
 }

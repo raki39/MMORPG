@@ -290,21 +290,8 @@ public partial class AreaModal : ModalFrame
 
 }
 
-/// <summary>Emblema grande de tipo de area (medalhao com brilho).</summary>
-public partial class KindEmblem : Control
+/// <summary>Emblema do tipo de area: a moldura padrao com o icone do jogo e a cor do tipo (etapa 4).</summary>
+public partial class KindEmblem : EmblemBox
 {
-    private readonly string _kind;
-    public KindEmblem(string kind) => _kind = kind;
-
-    public override void _Draw()
-    {
-        // Icone plano e quadrado (jogo de gestao): fundo escuro, borda fina, simbolo na cor.
-        var rect = new Rect2(Vector2.One, Size - Vector2.One * 2);
-        var col = AreaPalette.Color(_kind);
-        DrawRect(rect, new Color("#0D1117"));
-        DrawRect(rect, new Color(col, 0.10f));
-        DrawRect(rect, new Color(col, 0.55f), false, 1f);
-        DrawRect(new Rect2(rect.Position, new Vector2(rect.Size.X, 2)), col);
-        AreaPalette.DrawGlyph(this, _kind, Size / 2f, Mathf.Min(Size.X, Size.Y) * 0.24f, col.Lightened(0.1f));
-    }
+    public KindEmblem(string kind) : base(GameIcons.Area(kind), AreaPalette.Color(kind)) { }
 }

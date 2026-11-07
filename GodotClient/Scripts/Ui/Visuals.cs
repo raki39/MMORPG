@@ -421,7 +421,10 @@ public partial class StatTile : CardPanel
     public override GodotObject _MakeCustomTooltip(string forText) => RichTip.Make(forText);
 }
 
-/// <summary>Emblema quadrado com icone (missoes, paginas de lista): degrade, borda e faixa no topo.</summary>
+/// <summary>
+/// Moldura dos emblemas do jogo (D-068, etapa 4): quadrado com degrade na cor do tipo, borda fina, faixa no topo e
+/// o icone (do jogo ou Lucide) no centro. Zonas, areas, atividades, missoes e paginas usam a mesma moldura.
+/// </summary>
 public partial class EmblemBox : Control
 {
     private readonly string _icon;
@@ -436,8 +439,10 @@ public partial class EmblemBox : Control
         DrawPolygon(new[] { rect.Position, new Vector2(rect.End.X, rect.Position.Y), rect.End, new Vector2(rect.Position.X, rect.End.Y) }, new[] { top, top, bottom, bottom });
         DrawRect(rect, new Color(_color, 0.45f), false, 1f);
         DrawRect(new Rect2(rect.Position, new Vector2(rect.Size.X, 3)), _color);
-        int sz = (int)(Mathf.Min(Size.X, Size.Y) * 0.44f);
-        DrawTextureRect(Icons.Get(_icon, sz, 2f), new Rect2(((Size - new Vector2(sz, sz)) / 2f).Round(), new Vector2(sz, sz)), false, _color.Lightened(0.25f));
+        float side = Mathf.Min(Size.X, Size.Y);
+        int sz = (int)(side * (side < 40 ? 0.58f : 0.46f));
+        float stroke = sz >= 30 ? 2f : sz >= 18 ? 1.7f : 1.5f;
+        DrawTextureRect(Icons.Get(_icon, sz, stroke), new Rect2(((Size - new Vector2(sz, sz)) / 2f + new Vector2(0, side < 40 ? 0.5f : 1f)).Round(), new Vector2(sz, sz)), false, _color.Lightened(0.25f));
     }
 }
 

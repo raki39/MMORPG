@@ -105,7 +105,7 @@ O Lucide continua nas ações e nas linhas de dados.
 1. **Base do layout:** página em telas, linhas por peso, cards fixos com rolagem interna, rolagem de tela em tela. Aplicada na Rotina. **Feita.**
 2. Cabeçalho da ficha. **Feita.**
 3. Reorganização das abas da ficha. **Feita** (detalhe abaixo).
-4. Emblemas e ícones do jogo.
+4. Emblemas e ícones do jogo. **Feita** (`GameIcons.cs`, moldura `EmblemBox`; `ui-kit.md`, seção Ícones).
 5. Zona, área, missão e listas. **Feita**, antes da etapa 4, a pedido do criador (detalhe abaixo).
 6. Conferência final: todas as telas em 1920×1080 e 1366×768, três jogadores, `tools/perf.ps1`.
 

@@ -71,7 +71,7 @@ public partial class QuestModal : ModalFrame
         // Cabecalho (D-068): emblema da categoria; titulo e o texto que identifica em duas colunas alinhadas;
         // ao lado, os numeros da missao em etiquetas.
         var color = CategoryColor(_quest.Category);
-        string icon = _quest.Category == QuestCategories.Main ? "crown" : _quest.Category == QuestCategories.Daily ? "sun" : "scroll-text";
+        string icon = GameIcons.Quest(_quest.Category);
         Art.AddChild(new EmblemBox(icon, color) { CustomMinimumSize = new Vector2(92, 92) });
         Header.AddChild(TitleText(_quest.Name));
         Header.CustomMinimumSize = new Vector2(410, 0);   // largura fixa: as etiquetas comecam no mesmo lugar em toda missao

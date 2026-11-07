@@ -270,7 +270,7 @@ public partial class Main : Node
         if (_args.TryGetValue("open-zone", out var z) && _ctx.Content.Regions.ContainsKey(z)) OpenZone(z);
         if (_args.TryGetValue("open-area", out var ar) && ar.Split('#') is { Length: 2 } ap) OpenArea(ap[0], ap[1]);
         if (_args.TryGetValue("open-quest", out var oq)) OpenQuest(oq);
-        if (_args.TryGetValue("page", out var pg)) { if (pg == "players") OpenPlayersPage(); else if (pg == "zones") OpenZonesPage(); else if (pg == "quests") OpenQuestsPage(); else if (pg == "settings") OpenSettingsPage(); }
+        if (_args.TryGetValue("page", out var pg)) { if (pg == "players") OpenPlayersPage(); else if (pg == "zones") OpenZonesPage(); else if (pg == "quests") OpenQuestsPage(); else if (pg == "settings") OpenSettingsPage(); else if (pg == "icons") ShowPage("icons", "", () => new IconGallery()); }
         var center = GetViewport().GetVisibleRect().Size / 2f - new Vector2(UiTokens.SidePanelWidth / 2f, 0);
         if (_args.TryGetValue("peek-person", out var pp))
         {
