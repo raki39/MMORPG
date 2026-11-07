@@ -418,9 +418,9 @@ public partial class PlayerModal : ModalFrame
         _ => "book-open",
     };
 
-    private Control MemoriesBody(CharacterDetailView? detail)
+    private FitList MemoriesBody(CharacterDetailView? detail, string key = "")
     {
-        var col = Column(8);
+        var col = Fit(8, key);
         var mems = detail?.Memories ?? Array.Empty<MemoryView>();
         if (mems.Count == 0)
             col.AddChild(Wrap(detail == null ? "Carregando…" : "Nada marcante ainda: as primeiras conquistas e frustrações aparecem aqui.", UiTokens.FontSmall, UiTokens.TextSecondary));
@@ -1154,33 +1154,6 @@ public partial class PlayerModal : ModalFrame
             col.AddChild(b);
         }
         if (v.ActiveQuests.Count == 0) col.AddChild(Wrap("Nenhuma missão em andamento."));
-        // As ultimas entregas (o dia da ultima vez), para o card mostrar tambem o que acabou de concluir.
-        var recent = v.CompletedQuests.Where(x => _ctx.Content.Quests.ContainsKey(x.QuestId))
-            .OrderByDescending(x => x.LastDay).ThenBy(x => x.QuestId, StringComparer.Ordinal).Take(5).ToList();
-        if (recent.Count > 0) col.AddChild(Section("Entregues por último"));
-        foreach (var (id, times, day) in recent)
-        {
-            var q = _ctx.Content.Quests[id];
-            string qid = id;
-            string when = PtBr.ShortDate(_ctx.Calendar.ToDateTime(_ctx.Calendar.StartOfDay(day)));
-            var b = HoverRow(() => _ctx.OpenQuest(qid), $"{q.Name}|{QuestModal.CategoryName(q.Category)}\nEntregas|{times}\nÚltima|{when}\n~Clique para abrir a missão.");
-            b.CustomMinimumSize = new Vector2(0, 28);
-            var r = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
-            r.SetAnchorsPreset(LayoutPreset.FullRect);
-            r.OffsetLeft = 6; r.OffsetRight = -6;
-            r.AddThemeConstantOverride("separation", 8);
-            r.AddChild(new Icon("medal", 14, QuestModal.CategoryColor(q.Category)) { MouseFilter = MouseFilterEnum.Ignore });
-            var nm = ThemeFactory.Text(times > 1 ? $"{q.Name} ×{times}" : q.Name, UiTokens.FontSmall, UiTokens.TextLabel);
-            nm.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-            nm.VerticalAlignment = VerticalAlignment.Center;
-            nm.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
-            r.AddChild(nm);
-            var dl = ThemeFactory.Text(when, UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Numbers);
-            dl.VerticalAlignment = VerticalAlignment.Center;
-            r.AddChild(dl);
-            b.AddChild(r);
-            col.AddChild(b);
-        }
         return col;
     }
 
@@ -1373,11 +1346,12 @@ public partial class PlayerModal : ModalFrame
 
     // ----- Atividades recentes -----
 
-    private Control RecentBody(Func<SimEvent, bool>? filter = null, int take = 15, string empty = "Nada desde que o jogo foi aberto.")
+    /// <summary>Acontecimentos, mais recentes primeiro, so os que cabem no card (key: pagina guardada).</summary>
+    private FitList RecentBody(Func<SimEvent, bool>? filter = null, int take = 40, string empty = "Nada desde que o jogo foi aberto.", string key = "")
     {
-        var col = Column(2);
+        var col = Fit(2, key);
         var events = _ctx.PersonHistory(_person.Id).Where(e => filter == null || filter(e)).Take(take).ToList();
-        if (events.Count == 0) { col.AddChild(Wrap(empty)); return col; }
+        if (events.Count == 0) col.AddChild(Wrap(empty));
         foreach (var e in events) col.AddChild(RecentRow(e));
         return col;
     }

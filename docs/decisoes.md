@@ -2647,7 +2647,7 @@ Itens como instâncias, inventário, equipamento funcional, carteira e aplicaç�
 - **Abas:** Visão geral, Objetivos, Missões, Progressão, Estatísticas, Rotina, Humor e memória, Histórico e as três futuras (Combate, Inventário, Banco). Progressão e Humor e memória são novas.
 - **Todas as abas em telas** (`ScreenPage`, cards de altura fixa). A Visão geral e a Rotina têm duas telas; as outras, uma. A distribuição está em `plano-interface.md`.
 - **Visão geral, o dossiê completo (refeita com o criador):** a primeira versão desta etapa a reduziu a um resumo, com uma aba Atributos à parte e um card "Atributos em destaque". O criador reprovou: a tela ficou vazia, e os atributos são parte da visão geral. Ficou assim:
-  - **tela 1:** Situação atual, Atributos do jogador e Personalidade e traços; embaixo, Progresso e metas, Evolução (com XP por hora e horas) e Missões em andamento (com as últimas entregas);
+  - **tela 1:** Situação atual, Atributos do jogador e Personalidade e traços; embaixo, Progresso e metas, Evolução (com XP por hora e horas) e Missões em andamento;
   - **tela 2:** Humor, Memórias marcantes e Mudanças desde o cadastro; embaixo, Preferências, Últimos acontecimentos e Uso do tempo;
   - todas as linhas em 3 | 6 | 3, e os cards com aba de detalhe levam um atalho (›);
   - a aba Atributos saiu; os cards dela (Preferências, Mudanças) estão na Visão geral.
@@ -2665,6 +2665,13 @@ Itens como instâncias, inventário, equipamento funcional, carteira e aplicaç�
 - **Movidos:** XP por fonte saiu de Estatísticas (que fica só com o jogador no servidor) e foi para Progressão. O motivo e o comprometimento das metas, antes só na Visão geral, aparecem também em Objetivos.
 - **Divisas coincidentes:** nas duas linhas de uma tela, as divisas de uma caem sobre as da outra (regra no `ui-kit.md`).
 - **Abas numa linha só:** com 12 abas, em 1366 as últimas vão para o botão "Mais ▾", que fica marcado e mostra o nome da aba aberta quando ela está nele. Antes, a linha de abas quebrava em duas.
+- **Sem rolagem dentro dos cards em 1920×1080 (pedido do criador, para todos os cards que rolavam):**
+  - as listas mostram só o que cabe, na ordem certa: acontecimentos e mudanças mais recentes primeiro, memórias mais fortes primeiro, fatores do humor e tédio do maior para o menor;
+  - nas abas de detalhe, as listas longas (diário de missões, concluídas, encerrados, histórico de objetivos, memórias, histórico) têm páginas no título do card;
+  - Mudanças desde o cadastro: personalidade e os três últimos traços primeiro; os atributos, da maior mudança para a menor, ocupam o resto;
+  - a Ocupação perdeu a barra "semana em 168 horas";
+  - Missões em andamento ficou só com as missões ativas;
+  - conferido com o relatório de rolagem das capturas: nenhum card rola em 1920, em todas as abas, para três jogadores. Em 1366 a rolagem continua onde é necessária.
 - **Barras do humor** no formato dos atributos (nome e valor em cima, barra embaixo), legíveis no card estreito; **Uso do tempo** com a legenda descendo para baixo da rosca quando não cabe ao lado.
 - **Correções de conteúdo em 1366 (pendências da etapa 1):**
   - legenda dos números grandes (Onde mora, Vontade, Ocupação…): quebra a linha em vez de invadir a vizinha;

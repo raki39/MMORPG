@@ -609,6 +609,19 @@ public partial class Main : Node
             System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(full)!);
             var err = img.SavePng(full);
             GD.Print(err == Error.Ok ? $"CAPTURA_OK {full} {img.GetWidth()}x{img.GetHeight()}" : $"CAPTURA_ERRO {err}");
+            // Cards que precisariam de rolagem (D-068): todos os da pagina aberta, de todas as telas dela.
+            var over = new List<string>();
+            void Scan(Node n)
+            {
+                if (n is ScrollContainer s && s.HasMeta("card") && s.IsVisibleInTree() && s.GetChildCount() > 0 && s.GetChild(0) is Control body)
+                {
+                    float extra = body.GetCombinedMinimumSize().Y - s.Size.Y;
+                    if (extra > 0.5f) over.Add($"{s.GetMeta("card").AsString()}: +{extra:0} px");
+                }
+                foreach (var c in n.GetChildren()) Scan(c);
+            }
+            Scan(GetTree().Root);
+            System.IO.File.WriteAllLines(System.IO.Path.ChangeExtension(full, ".rolagem.txt"), over);
             Quit();
         }
         if (_args.TryGetValue("measure-seconds", out var secs))

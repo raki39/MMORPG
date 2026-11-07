@@ -575,8 +575,7 @@ public partial class PlayerModal
         tiles.AddThemeConstantOverride("separation", 6);
         foreach (var d in week) tiles.AddChild(DayTile(d, d.Dow == todayDow));
         return Column(12, head, Wrap(occ.Description, UiTokens.FontSmall, UiTokens.TextSecondary), facts,
-            Column(8, Section("Dia a dia (horário desta pessoa)"), tiles),
-            Column(8, Section("A semana em 168 horas"), WeekSplit()));
+            Column(8, Section("Dia a dia (horário desta pessoa)"), tiles));
     }
 
     /// <summary>O que a pessoa faz, em linguagem direta.</summary>
@@ -680,45 +679,6 @@ public partial class PlayerModal
             + $"\nAcorda|{Clock(d.Wake)}" + (d.NightShift ? $"\nSai para o turno|{Clock(d.ShiftDeparture)}\nDorme|{Clock(d.Bed)} (depois do turno)" : $"\nDorme|{Clock(d.Bed)}") + $"\nTempo livre|{Hours(d.FreeMinutes)}"
             + (d.Windows.Count > 0 ? $"\n~Janelas livres: {string.Join(", ", d.Windows.Select(w => $"{Clock(w.Start)}–{Clock(w.End)}"))}" : "\n~Sem janela livre que comporte uma sessão.");
         return tile;
-    }
-
-    /// <summary>Como as 168 h da semana tipica se dividem: barra unica proporcional e legenda com as horas.</summary>
-    private Control WeekSplit()
-    {
-        var week = _person.Week;
-        // Semana civil (R1/R2): os dias acordados recortados de meia-noite a meia-noite; a soma fecha 168 h.
-        int sleep = week.Sum(d => d.SleepMinutes), obligations = week.Sum(d => d.ObligationMinutes), commute = week.Sum(d => d.CommuteMinutes);
-        int care = week.Sum(d => d.CareMinutes), wait = week.Sum(d => d.WaitMinutes), commit = week.Sum(d => d.CommitmentMinutes);
-        int free = week.Sum(d => d.CivilFreeMinutes);
-        var parts = new (string Name, int Minutes, Color Color, string Tip)[]
-        {
-            ("Sono", sleep, new Color("#5867A8"), "Sono planejado pela rotina (o que o jogo corta entra no déficit quando a pessoa acorda)."),
-            ("Obrigações", obligations, new Color("#8B94A1"), "Trabalho, estudo ou cuidados, no horário desta pessoa."),
-            ("Deslocamento", commute, new Color("#5E6772"), "Ida, volta e transferência direta entre obrigações (ex.: do trabalho para a faculdade)."),
-            ("Cuidados pessoais", care, new Color("#3A414B"), "Preparo depois de acordar, chegada em casa (comer, descansar) e refeição entre obrigações."),
-            ("Espera e brechas", wait, new Color("#2C3138"), "Espera fora de casa antes da próxima obrigação e brechas curtas demais para virar tempo livre."),
-            ("Compromissos", commit, UiTokens.Exceptional, "Compromissos de dia livre (festa, visita...)."),
-            ("Livre", free, UiTokens.Success, "Janelas em que a pessoa pode jogar ou fazer outra coisa."),
-        };
-        var bar = new HBoxContainer { CustomMinimumSize = new Vector2(0, 12) };
-        bar.AddThemeConstantOverride("separation", 2);
-        var legend = new HFlowContainer();
-        legend.AddThemeConstantOverride("h_separation", 18);
-        legend.AddThemeConstantOverride("v_separation", 4);
-        foreach (var (name, minutes, color, tip) in parts)
-        {
-            if (minutes <= 0) continue;
-            var seg = new TipPanel { TooltipText = $"{name}\nNa semana|{Hours(minutes)}\nPor dia|{Hours(minutes / 7)}\n~{tip}", MouseFilter = MouseFilterEnum.Stop, SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsStretchRatio = minutes };
-            seg.AddThemeStyleboxOverride("panel", new StyleBoxFlat { BgColor = color });
-            bar.AddChild(seg);
-            var item = new HBoxContainer();
-            item.AddThemeConstantOverride("separation", 6);
-            item.AddChild(new ColorRect { Color = color, CustomMinimumSize = new Vector2(10, 10), SizeFlagsVertical = SizeFlags.ShrinkCenter });
-            item.AddChild(ThemeFactory.Text(name, UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Medium));
-            item.AddChild(ThemeFactory.Text($"{Hours(minutes)} · {minutes * 100 / (7 * 1440)}%", UiTokens.FontCaption, UiTokens.TextPrimary, UiFonts.Numbers));
-            legend.AddChild(item);
-        }
-        return Column(8, bar, legend);
     }
 
     private Control PlaceBody()

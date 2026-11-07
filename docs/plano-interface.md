@@ -45,13 +45,13 @@ Todas as abas em telas (`ScreenPage`) com cards de altura fixa. A Visão geral e
 
 | Aba | Linha de cima | Linha de baixo |
 |---|---|---|
-| Visão geral, tela 1 | Situação atual (3) · Atributos do jogador, com o gosto marcante (6) · Personalidade e traços (3) | Progresso e metas (3) · Evolução (6) · Missões em andamento, com as últimas entregas (3) |
+| Visão geral, tela 1 | Situação atual (3) · Atributos do jogador, com o gosto marcante (6) · Personalidade e traços (3) | Progresso e metas (3) · Evolução (6) · Missões em andamento (3) |
 | Visão geral, tela 2 | Humor (3) · Memórias marcantes (6) · Mudanças desde o cadastro (3) | Preferências (3) · Últimos acontecimentos (6) · Uso do tempo (3) |
 | Objetivos | Objetivos gerais (4) · Objetivos secundários (4) · Metas atuais (4) | Conquistas e encerrados (4) · Histórico (8) |
 | Missões | Em andamento (8) · Resumo (4) | Diário de missões (8) · Concluídas (4) |
 | Progressão | Nível e experiência (4) · Evolução (8) | Uso do tempo (4) · XP por fonte (4) · Zonas frequentadas (4) |
 | Estatísticas | Comparação com o servidor (8) · Classificação (4) | Níveis no servidor (12) |
-| Rotina | (etapa 1, duas telas) | |
+| Rotina | (etapa 1, duas telas; a Ocupação sem a semana em 168 horas) | |
 | Humor e memória | Humor (4) · O que pesa no humor (4) · Tédio por atividade (4) | Memórias marcantes (8) · Lugares que marcaram (4) |
 | Histórico | Acontecimentos, até 150 (12) | — |
 

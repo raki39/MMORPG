@@ -37,6 +37,8 @@ public partial class PlayerModal
         Control Count(int n) => ThemeFactory.Text(n.ToString(), UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Numbers);
         // Pagina em telas (D-068), uma tela: em cima as ambicoes ativas e as metas que as servem; embaixo o que ja
         // saiu das vagas e o historico de mudancas (largo, porque cada linha traz o motivo).
+        var closedList = ClosedBody(closed);
+        var historyList = ObjectiveHistoryBody(d);
         return new ScreenPage()
             .Add(Grid(12,
                 (FillCard("Objetivos gerais", ObjectiveList(general, noGeneral), info: ObjectivesInfo, headerRight: Count(general.Count)), 4),
@@ -45,16 +47,16 @@ public partial class PlayerModal
                 (FillCard("Metas atuais", ObjectiveGoalsBody(v), info: "Metas de curto prazo e o que elas ajudam\n~Uma meta se liga a um objetivo só quando contribui de verdade: avanço real (nível para o nível máximo, missão principal para a campanha, zona nova para conhecer o mundo) ou preparação por um requisito que a pessoa conhece (o nível do chefe, do PvP, do item).\n~A meta ligada tem mais chance de ser adotada e mais comprometimento, pelo objetivo mais forte que ela atende. Metas também surgem por necessidade, oportunidade ou vontade do momento, sem ligação.",
                     headerRight: ThemeFactory.Text($"{N(v.GoalsCompleted, "concluída", "concluídas")} · {N(v.GoalsAbandoned, "abandonada", "abandonadas")}", UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Numbers)), 4)), weight: 55)
             .Add(Grid(12,
-                (FillCard("Conquistas e encerrados", ClosedBody(closed), info: "Objetivos que saíram das vagas\n~Conquista definitiva (ex.: concluir a campanha) fica concluída. Condição a manter (ex.: estar entre os mais fortes, ter uma grande fortuna) pode ser alcançada e perdida depois; perder não apaga a conquista passada, e a pessoa pode querer recuperá-la.\n~Deixado de lado: trocado por uma prioridade nova, sem frustração. Não conseguir realizar agora não é motivo para abandonar um objetivo.", headerRight: Count(closed.Count)), 4),
-                (FillCard("Histórico", ObjectiveHistoryBody(d), info: "Mudanças nos objetivos\n~Cada mudança tem o motivo: o acontecimento que levou a um objetivo novo, a conclusão, a perda de uma condição, a troca de prioridade, a substituição ou o abandono. Quando a pessoa buscou um objetivo novo e nenhum era relevante, isso também fica registrado: falta de conteúdo do MMORPG.", headerRight: Count(d.ObjectiveHistory.Count)), 8)), weight: 45);
+                (FillCard("Conquistas e encerrados", closedList, info: "Objetivos que saíram das vagas\n~Conquista definitiva (ex.: concluir a campanha) fica concluída. Condição a manter (ex.: estar entre os mais fortes, ter uma grande fortuna) pode ser alcançada e perdida depois; perder não apaga a conquista passada, e a pessoa pode querer recuperá-la.\n~Deixado de lado: trocado por uma prioridade nova, sem frustração. Não conseguir realizar agora não é motivo para abandonar um objetivo.", headerRight: Pager(closedList, "encerrados", "objetivo", "objetivos")), 4),
+                (FillCard("Histórico", historyList, info: "Mudanças nos objetivos\n~Cada mudança tem o motivo: o acontecimento que levou a um objetivo novo, a conclusão, a perda de uma condição, a troca de prioridade, a substituição ou o abandono. Quando a pessoa buscou um objetivo novo e nenhum era relevante, isso também fica registrado: falta de conteúdo do MMORPG.", headerRight: Pager(historyList, "objetivos_historico", "mudança", "mudanças")), 8)), weight: 45);
     }
 
     private string DayText(long day) => PtBr.ShortDate(_ctx.Calendar.ToDateTime(_ctx.Calendar.StartOfDay(day)));
 
     /// <summary>Encerrados: concluidos, mantidos, perdidos, deixados de lado e abandonados, com data, motivo e resultado.</summary>
-    private Control ClosedBody(List<ObjectiveView> closed)
+    private FitList ClosedBody(List<ObjectiveView> closed)
     {
-        var col = Column(10);
+        var col = Fit(10, "encerrados");
         if (closed.Count == 0) col.AddChild(Wrap("Nenhum ainda. Concluídos e encerrados ficam aqui, com a data e o motivo.", UiTokens.FontSmall, UiTokens.TextSecondary));
         int Order(ObjectiveView o) => o.State switch { ObjectiveStates.Held => 0, ObjectiveStates.Completed => 1, ObjectiveStates.Lost => 2, ObjectiveStates.Paused => 3, _ => 4 };
         foreach (var o in closed.OrderBy(Order).ThenByDescending(o => Math.Max(o.CompletedDay, o.EndedDay)))
@@ -244,9 +246,9 @@ public partial class PlayerModal
             return l.Kind == ObjectiveLinkKinds.Advance ? $"{name} (avanço)" : $"{name} (preparação: {ObjectiveInfo.SubjectPt(_ctx, l.Subject)})";
         }));
 
-    private Control ObjectiveHistoryBody(CharacterDetailView d)
+    private FitList ObjectiveHistoryBody(CharacterDetailView d)
     {
-        var col = Column(8);
+        var col = Fit(8, "objetivos_historico");
         if (d.ObjectiveHistory.Count == 0) col.AddChild(Wrap("Nenhuma mudança registrada.", UiTokens.FontSmall, UiTokens.TextSecondary));
         foreach (var h in d.ObjectiveHistory.Reverse())
         {

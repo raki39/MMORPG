@@ -54,6 +54,73 @@ public partial class PlayerModal
         return c;
     }
 
+    private readonly Dictionary<string, int> _listOffsets = new(StringComparer.Ordinal);
+
+    /// <summary>Lista que cabe no card, sem rolagem (D-068); com key, a pagina fica entre as atualizacoes ao vivo.</summary>
+    private FitList Fit(int separation, string key = "")
+    {
+        var l = new FitList { Separation = separation };
+        if (key.Length > 0) l.Offset = _listOffsets.GetValueOrDefault(key);
+        return l;
+    }
+
+    /// <summary>
+    /// Paginador no titulo do card: "1–12 de 40 ‹ ›" quando a lista nao cabe inteira; quando cabe, so o total.
+    /// </summary>
+    private Control Pager(FitList list, string key, string one, string many)
+    {
+        var row = Row(2);
+        var label = Caption("");
+        label.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        var prev = PageButton("chevron-left", "Anteriores");
+        var next = PageButton("chevron-right", "Seguintes");
+        row.AddChild(label);
+        row.AddChild(prev);
+        row.AddChild(next);
+        void Update()
+        {
+            int total = list.Total;
+            bool paged = list.Offset > 0 || list.Shown < total;
+            label.Text = paged ? $"{list.Offset + 1}–{list.Offset + list.Shown} de {total}" : N(total, one, many);
+            prev.Visible = paged;
+            next.Visible = paged;
+            prev.Disabled = list.Offset == 0;
+            next.Disabled = list.Offset + list.Shown >= total;
+        }
+        list.Laid += Update;
+        prev.Pressed += () =>
+        {
+            list.Offset = Math.Max(0, list.Offset - Math.Max(1, list.Shown));
+            _listOffsets[key] = list.Offset;
+            list.QueueSort();
+        };
+        next.Pressed += () =>
+        {
+            if (list.Offset + list.Shown >= list.Total) return;
+            list.Offset += Math.Max(1, list.Shown);
+            _listOffsets[key] = list.Offset;
+            list.QueueSort();
+        };
+        return row;
+    }
+
+    private static Button PageButton(string icon, string tip)
+    {
+        var b = new TipButton
+        {
+            TooltipText = tip, FocusMode = FocusModeEnum.None, CustomMinimumSize = new Vector2(20, 20), Icon = Icons.Get(icon, 14),
+            IconAlignment = HorizontalAlignment.Center, SizeFlagsVertical = SizeFlags.ShrinkCenter, MouseDefaultCursorShape = CursorShape.PointingHand,
+        };
+        b.AddThemeStyleboxOverride("normal", new StyleBoxEmpty());
+        var hover = ThemeFactory.Box(UiTokens.SurfaceHover, 0, radius: 3);
+        b.AddThemeStyleboxOverride("hover", hover);
+        b.AddThemeStyleboxOverride("pressed", hover);
+        b.AddThemeStyleboxOverride("disabled", new StyleBoxEmpty());
+        foreach (var st in new[] { "icon_normal_color", "icon_hover_color", "icon_pressed_color", "icon_focus_color" }) b.AddThemeColorOverride(st, UiTokens.TextLabel);
+        b.AddThemeColorOverride("icon_disabled_color", UiTokens.TextDisabled);
+        return b;
+    }
+
     private static Label Caption(string text) => ThemeFactory.Text(text, UiTokens.FontCaption, UiTokens.TextSecondary, UiFonts.Numbers);
 
     private const string NowInfo = "O que está fazendo e por quê\n~A última decisão mostra os fatores que somaram ou tiraram pontos da opção escolhida.";
@@ -129,7 +196,7 @@ public partial class PlayerModal
         var list = good.Concat(bad).ToList();
         col.AddChild(Section("O que agrada e incomoda"));
         if (list.Count == 0) col.AddChild(Wrap("Nada se destaca ainda.", UiTokens.FontSmall, UiTokens.TextSecondary));
-        var lines = Column(6);
+        var lines = Fit(6);
         foreach (var kv in list) lines.AddChild(DriverLine(kv.Key, kv.Value));
         col.AddChild(lines);
         return col;
@@ -209,7 +276,54 @@ public partial class PlayerModal
         var t = _person.Traits;
         var b0 = _person.BaseTraits;
         string Date(long day) => PtBr.ShortDate(_ctx.Calendar.ToDateTime(_ctx.Calendar.StartOfDay(day)));
-        var col = Column(10);
+        var col = Fit(10);
+
+        var personality = View?.PersonalityHistory ?? Array.Empty<PersonalityChange>();
+        col.AddChild(Section("Personalidade"));
+        if (personality.Count == 0)
+            col.AddChild(Wrap($"A mesma desde o cadastro: {MainPersonality().Label}.", UiTokens.FontSmall, UiTokens.TextSecondary));
+        foreach (var p in personality.Reverse().Take(1))
+        {
+            var from = PersonalityOf(c, p.From);
+            var to = PersonalityOf(c, p.To);
+            var r = Row(10);
+            r.AddChild(new TraitBadge(to.Icon, UiTokens.Accent, 24, round: true));
+            var body = Column(2);
+            body.AddChild(ThemeFactory.Text($"Passou de {from.Label} para {to.Label}", UiTokens.FontSmall, UiTokens.TextPrimary, UiFonts.Medium));
+            body.AddChild(ThemeFactory.Text($"{AttributeInfo.Name(p.Attribute)} {UiTokens.To20(p.Value)} / 20", UiTokens.FontCaption, UiTokens.TextSecondary));
+            r.AddChild(body);
+            r.AddChild(Caption(Date(p.Day)));
+            col.AddChild(r);
+        }
+
+        var quirks = View?.QuirkHistory ?? Array.Empty<QuirkChange>();
+        col.AddChild(Section("Traços", Caption(quirks.Count.ToString())));
+        if (quirks.Count == 0) col.AddChild(Wrap("Nenhum traço ganho ou perdido desde o cadastro.", UiTokens.FontSmall, UiTokens.TextSecondary));
+        foreach (var h in quirks.Reverse().Take(3))
+        {
+            var def = c.Quirks.TryGetValue(h.Id, out var d) ? d : null;
+            bool gained = h.Change == "acquired";
+            var color = def != null ? TraitInfo.PolarityColor(def) : UiTokens.TextSecondary;
+            string what = $"{(gained ? "Ganhou" : "Perdeu")} {def?.Name ?? h.Id}";
+            string why = QuirkReasonPt(h.Reason);
+            var r = Row(10);
+            r.AddChild(new TraitBadge(TraitInfo.QuirkIcon(def), color, 24, pending: !gained));
+            var body = Column(2);
+            body.AddChild(ThemeFactory.Text(what, UiTokens.FontSmall, UiTokens.TextPrimary, UiFonts.Medium));
+            var wl = ThemeFactory.Text(why, UiTokens.FontCaption, UiTokens.TextSecondary);
+            wl.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+            body.AddChild(wl);
+            r.AddChild(body);
+            r.AddChild(Caption(Date(h.Day)));
+            var tip = new TipPanel
+            {
+                TooltipText = (def != null ? TraitInfo.Tooltip(c, def) + "\n" : $"{what}\n") + $"Quando|{Date(h.Day)}\nMotivo|{why}\nEvidências|{h.For} a favor · {h.Against} contra",
+                MouseFilter = MouseFilterEnum.Stop,
+            };
+            tip.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
+            tip.AddChild(r);
+            col.AddChild(tip);
+        }
 
         var changed = AttrGroups.SelectMany(g => g.Keys)
             .Select(k => (Key: k, Now: UiTokens.To20(t.Get(k)), Was: UiTokens.To20(b0.Get(k))))
@@ -239,53 +353,6 @@ public partial class PlayerModal
             r.AddChild(delta);
             tip.AddChild(r);
             col.AddChild(tip);
-        }
-
-        var quirks = View?.QuirkHistory ?? Array.Empty<QuirkChange>();
-        col.AddChild(Section("Traços", Caption(quirks.Count.ToString())));
-        if (quirks.Count == 0) col.AddChild(Wrap("Nenhum traço ganho ou perdido desde o cadastro.", UiTokens.FontSmall, UiTokens.TextSecondary));
-        foreach (var h in quirks.Reverse())
-        {
-            var def = c.Quirks.TryGetValue(h.Id, out var d) ? d : null;
-            bool gained = h.Change == "acquired";
-            var color = def != null ? TraitInfo.PolarityColor(def) : UiTokens.TextSecondary;
-            string what = $"{(gained ? "Ganhou" : "Perdeu")} {def?.Name ?? h.Id}";
-            string why = QuirkReasonPt(h.Reason);
-            var r = Row(10);
-            r.AddChild(new TraitBadge(TraitInfo.QuirkIcon(def), color, 24, pending: !gained));
-            var body = Column(2);
-            body.AddChild(ThemeFactory.Text(what, UiTokens.FontSmall, UiTokens.TextPrimary, UiFonts.Medium));
-            var wl = ThemeFactory.Text(why, UiTokens.FontCaption, UiTokens.TextSecondary);
-            wl.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
-            body.AddChild(wl);
-            r.AddChild(body);
-            r.AddChild(Caption(Date(h.Day)));
-            var tip = new TipPanel
-            {
-                TooltipText = (def != null ? TraitInfo.Tooltip(c, def) + "\n" : $"{what}\n") + $"Quando|{Date(h.Day)}\nMotivo|{why}\nEvidências|{h.For} a favor · {h.Against} contra",
-                MouseFilter = MouseFilterEnum.Stop,
-            };
-            tip.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
-            tip.AddChild(r);
-            col.AddChild(tip);
-        }
-
-        var personality = View?.PersonalityHistory ?? Array.Empty<PersonalityChange>();
-        col.AddChild(Section("Personalidade"));
-        if (personality.Count == 0)
-            col.AddChild(Wrap($"A mesma desde o cadastro: {MainPersonality().Label}.", UiTokens.FontSmall, UiTokens.TextSecondary));
-        foreach (var p in personality.Reverse())
-        {
-            var from = PersonalityOf(c, p.From);
-            var to = PersonalityOf(c, p.To);
-            var r = Row(10);
-            r.AddChild(new TraitBadge(to.Icon, UiTokens.Accent, 24, round: true));
-            var body = Column(2);
-            body.AddChild(ThemeFactory.Text($"Passou de {from.Label} para {to.Label}", UiTokens.FontSmall, UiTokens.TextPrimary, UiFonts.Medium));
-            body.AddChild(ThemeFactory.Text($"{AttributeInfo.Name(p.Attribute)} {UiTokens.To20(p.Value)} / 20", UiTokens.FontCaption, UiTokens.TextSecondary));
-            r.AddChild(body);
-            r.AddChild(Caption(Date(p.Day)));
-            col.AddChild(r);
         }
         return col;
     }
@@ -344,13 +411,16 @@ public partial class PlayerModal
     {
         if (View is not { } v) return Wrap("Ainda sem personagem.");
         int max = _ctx.Content.QuestSettings.MaxActivePerCharacter;
+        var journal = RecentBody(IsQuestEvent, 200, "Nenhum acontecimento de missão desde que o jogo foi aberto.", "diario");
+        var done = CompletedQuestsBody(v);
         return new ScreenPage()
             .Add(Grid(12,
                 (FillCard("Em andamento", ActiveQuestsBody(v), info: "Missões aceitas e a etapa atual\n~Clique para abrir a missão. A barra mostra o tempo feito na etapa; pronta, falta entregar no quadro.", headerRight: Caption($"{v.ActiveQuests.Count} de {max}")), 8),
                 (FillCard("Resumo", QuestStatsBody(v, max), info: "Números das missões do personagem\n~Entregas contam cada vez que uma missão repetível (diária ou secundária) foi entregue."), 4)), weight: 52)
             .Add(Grid(12,
-                (FillCard("Diário de missões", RecentBody(IsQuestEvent, 40, "Nenhum acontecimento de missão desde que o jogo foi aberto."), info: "Aceites, etapas, entregas, diárias vencidas, missões largadas e idas ao quadro sem resultado\n~Com o motivo de cada aceite e de cada ida sem resultado. Clique para abrir a missão."), 8),
-                (FillCard("Concluídas", CompletedQuestsBody(v), info: "Missões já entregues\n~Principais primeiro. ×N: entregue N vezes (repetíveis). Clique para abrir a missão.", headerRight: Caption(N(v.CompletedQuests.Count, "missão", "missões"))), 4)), weight: 48);
+                (FillCard("Diário de missões", journal, info: "Aceites, etapas, entregas, diárias vencidas, missões largadas e idas ao quadro sem resultado\n~Mais recentes primeiro, com o motivo de cada aceite e de cada ida sem resultado. Clique para abrir a missão.",
+                    headerRight: Pager(journal, "diario", "acontecimento", "acontecimentos")), 8),
+                (FillCard("Concluídas", done, info: "Missões já entregues\n~Principais primeiro. ×N: entregue N vezes (repetíveis). Clique para abrir a missão.", headerRight: Pager(done, "concluidas", "missão", "missões")), 4)), weight: 48);
     }
 
     private Control ActiveQuestsBody(CharacterView v)
@@ -408,10 +478,10 @@ public partial class PlayerModal
         return col;
     }
 
-    private Control CompletedQuestsBody(CharacterView v)
+    private FitList CompletedQuestsBody(CharacterView v)
     {
         var c = _ctx.Content;
-        var col = Column(2);
+        var col = Fit(2, "concluidas");
         var list = v.CompletedQuests.Where(x => c.Quests.ContainsKey(x.QuestId)).Select(x => (x.QuestId, x.Times, Def: c.Quests[x.QuestId]))
             .OrderBy(x => Array.IndexOf(QuestCategories.All, x.Def.Category)).ThenBy(x => x.Def.Name, StringComparer.Ordinal).ToList();
         if (list.Count == 0) col.AddChild(Wrap("Nenhuma missão concluída ainda.", UiTokens.FontSmall, UiTokens.TextSecondary));
@@ -450,6 +520,7 @@ public partial class PlayerModal
     {
         if (View is not { } v) return Wrap("Ainda sem personagem.");
         var d = WatchedDetail;
+        var memories = MemoriesBody(d, "memorias");
         // Uma tela: como esta, o que pesa e o que cansa; embaixo, o que ficou na memoria e os lugares que marcaram.
         return new ScreenPage()
             .Add(Grid(12,
@@ -457,14 +528,15 @@ public partial class PlayerModal
                 (FillCard("O que pesa no humor", DriversBody(d), info: "O que tem agradado e incomodado\n~Soma do que cada sessão trouxe, esmaecendo com os dias. A porcentagem é a parcela de cada fator no total que pesa no humor agora."), 4),
                 (FillCard("Tédio por atividade", BoredomBody(d), info: "Tédio por tipo de atividade (D-037)\n~Cresce com o tempo fazendo o mesmo tipo, mais rápido para quem gosta de variedade; a paciência alivia. Fazer outra coisa alivia, e só uma parte passa para a próxima sessão. Pesa contra o tipo nas escolhas e na nota da sessão."), 4)), weight: 52)
             .Add(Grid(12,
-                (FillCard("Memórias marcantes", MemoriesBody(d), info: "O que ficou na memória (D-038)\n~Conquistas duram mais que frustrações. A saudade dos bons momentos pode trazer de volta quem desistiu."), 8),
+                (FillCard("Memórias marcantes", memories, info: "O que ficou na memória (D-038)\n~As mais fortes primeiro. Conquistas duram mais que frustrações. A saudade dos bons momentos pode trazer de volta quem desistiu.",
+                    headerRight: Pager(memories, "memorias", "memória", "memórias")), 8),
                 (FillCard("Lugares que marcaram", PlacesBody(d), info: "Impressão de cada lugar (D-038)\n~As experiências em cada atividade deixam uma impressão: boa atrai, ruim afasta nas próximas escolhas. Aqui, as mais fortes."), 4)), weight: 48);
     }
 
     /// <summary>Todos os fatores do humor, do que mais agrada ao que mais incomoda, com a parcela de cada um.</summary>
     private Control DriversBody(CharacterDetailView? d)
     {
-        var col = Column(8);
+        var col = Fit(8);
         if (d == null) { col.AddChild(Wrap("Carregando…")); return col; }
         var list = d.Drivers.Where(kv => kv.Value != 0).OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.Ordinal).ToList();
         if (list.Count == 0) { col.AddChild(Wrap("Nada pesa ainda: aparece depois das primeiras sessões avaliadas.", UiTokens.FontSmall, UiTokens.TextSecondary)); return col; }
@@ -496,7 +568,7 @@ public partial class PlayerModal
     /// <summary>Tedio acumulado por tipo de atividade, do maior para o menor.</summary>
     private Control BoredomBody(CharacterDetailView? d)
     {
-        var col = Column(10);
+        var col = Fit(10);
         if (d == null) { col.AddChild(Wrap("Carregando…")); return col; }
         var list = d.Boredom.Where(kv => kv.Value > 0).OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.Ordinal).ToList();
         if (list.Count == 0) col.AddChild(Wrap("Sem tédio acumulado agora: nenhum tipo de atividade cansou.", UiTokens.FontSmall, UiTokens.TextSecondary));
@@ -527,22 +599,21 @@ public partial class PlayerModal
     private Control BuildHistory()
     {
         var events = _ctx.PersonHistory(_person.Id);
-        var col = Column(0);
         var head = new HBoxContainer();
         head.AddChild(ColHead("Quando", 110));
         head.AddChild(ColHead("Acontecimento", 0));
-        col.AddChild(head);
-        if (events.Count == 0) col.AddChild(Wrap("Nada registrado desde que o jogo foi aberto."));
+        var rows = Fit(0, "historico");
+        if (events.Count == 0) rows.AddChild(Wrap("Nada registrado desde que o jogo foi aberto."));
         int i = 0;
-        foreach (var e in events.Take(150))
+        foreach (var e in events)
         {
             var bg = new PanelContainer();
             bg.AddThemeStyleboxOverride("panel", new StyleBoxFlat { BgColor = i++ % 2 == 1 ? UiTokens.RowAlt : new Color(0, 0, 0, 0), ContentMarginLeft = 4 });
             bg.AddChild(EventRow(e, compact: false));
-            col.AddChild(bg);
+            rows.AddChild(bg);
         }
         return new ScreenPage().Add(Grid(12,
-            (FillCard("Acontecimentos", col, info: "Tudo o que a pessoa fez e viveu desde que o jogo foi aberto\n~Mais recente primeiro (até 150). Na Visão geral ficam só os últimos; as missões também têm um diário próprio na aba Missões.",
-                headerRight: Caption(N(Math.Min(150, events.Count), "registro", "registros"))), 12)));
+            (FillCard("Acontecimentos", Column(0, head, rows), info: "Tudo o que a pessoa fez e viveu desde que o jogo foi aberto\n~Mais recente primeiro. Na Visão geral ficam só os últimos; as missões também têm um diário próprio na aba Missões.",
+                headerRight: Pager(rows, "historico", "registro", "registros")), 12)));
     }
 }

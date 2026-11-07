@@ -559,6 +559,70 @@ public partial class SpanRow : Container
 /// Conteiner de uma linha que nao alarga quem o contem (D-068): a altura minima e a do filho, a largura
 /// minima e zero; o que passar da largura e cortado (o filho define reticencias e tooltip).
 /// </summary>
+/// <summary>
+/// Lista que cabe no card (D-068): mostra, em ordem, so os itens inteiros que cabem na altura recebida e esconde
+/// o resto, sem rolagem. Offset pula os primeiros (paginas). A altura minima e a de um item, para o card nunca
+/// rolar por causa da lista. Depois de cada arranjo avisa quantos mostrou (Laid), para o paginador do titulo.
+/// </summary>
+public partial class FitList : Container
+{
+    public int Separation { get; set; } = 6;
+    public int Offset { get; set; }
+    public int Shown { get; private set; }
+    public int Total => GetChildCount();
+    public event Action? Laid;
+
+    public FitList()
+    {
+        SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        SizeFlagsVertical = SizeFlags.ExpandFill;
+        MouseFilter = MouseFilterEnum.Pass;
+    }
+
+    private List<Control> Items() => GetChildren().OfType<Control>().ToList();
+
+    public override Vector2 _GetMinimumSize()
+    {
+        var items = Items();
+        float w = 0;
+        foreach (var c in items) w = Mathf.Max(w, c.GetCombinedMinimumSize().X);
+        float h = items.Count == 0 ? 0 : items[Math.Clamp(Offset, 0, items.Count - 1)].GetCombinedMinimumSize().Y;
+        return new Vector2(w, h);
+    }
+
+    public override void _Notification(int what)
+    {
+        if (what != NotificationSortChildren) return;
+        var items = Items();
+        Offset = Math.Clamp(Offset, 0, Math.Max(0, items.Count - 1));
+        float y = 0;
+        int shown = 0;
+        bool full = false;
+        for (int i = 0; i < items.Count; i++)
+        {
+            var c = items[i];
+            bool show = false;
+            if (i >= Offset && !full)
+            {
+                float h = c.GetCombinedMinimumSize().Y;
+                float gap = shown > 0 ? Separation : 0;
+                if (shown == 0 || y + gap + h <= Size.Y + 0.5f)
+                {
+                    y += gap;
+                    FitChildInRect(c, new Rect2(0, y, Size.X, h));
+                    y += h;
+                    shown++;
+                    show = true;
+                }
+                else full = true;
+            }
+            if (c.Visible != show) c.Visible = show;
+        }
+        if (shown != Shown) { Shown = shown; }
+        Laid?.Invoke();
+    }
+}
+
 public partial class ClipRow : Container
 {
     public ClipRow() { ClipContents = true; MouseFilter = MouseFilterEnum.Pass; }
